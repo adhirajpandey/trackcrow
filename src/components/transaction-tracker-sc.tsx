@@ -42,7 +42,8 @@ const categorySubcategoriesMap: { [key: string]: string[] } = {
   Shopping: ["Apparel", "Gadgets", "Gifts", "Others"],
 };
 
-const api = "http://localhost:5000";
+// const api = "http://localhost:5000";
+const api = "https://trackcrow-dev.adhirajpandey.me";
 const authHeader = `Bearer ${localStorage.getItem("trackcrow-token")}`;
 
 export function TransactionTracker() {
