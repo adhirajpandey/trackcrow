@@ -19,13 +19,15 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { epochToGMT530 } from "./transaction-tracker-c";
 
 type Transaction = {
   uuid: string;
   id: number;
-  timestamp: string;
+  timestamp: number;
   recipient: string;
   amount: number;
+  account: string;
   category?: string;
   subcategory?: string;
   location?: string;
@@ -41,8 +43,7 @@ const categorySubcategoriesMap: { [key: string]: string[] } = {
 };
 
 const api = "http://localhost:5000";
-const authHeader =
-  "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1dWlkIjoiMjkwOWViOTctYTczMi00ZWY4LWIyNTEtZmVkOTllNzgwYzQxIiwiaWF0IjoxNzM0OTgzMjU2fQ.IE-68mkfj3oGRWtv0edBVqT8EI_YNSV6jPmLlohELCU";
+const authHeader = `Bearer ${localStorage.getItem("trackcrow-token")}`;
 
 export function TransactionTracker() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -215,7 +216,7 @@ export function TransactionTracker() {
               <TableHead>Time</TableHead>
               <TableHead>Recipient</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead>Account</TableHead>
               <TableHead>Subcategory</TableHead>
               <TableHead>Location</TableHead>
             </TableRow>
@@ -231,10 +232,10 @@ export function TransactionTracker() {
                     }
                   />
                 </TableCell>
-                <TableCell>{transaction.timestamp}</TableCell>
+                <TableCell>{epochToGMT530(transaction.timestamp)}</TableCell>
                 <TableCell>{transaction.recipient}</TableCell>
                 <TableCell>Rs.{transaction.amount}</TableCell>
-                <TableCell>{transaction.category}</TableCell>
+                <TableCell>{transaction.account}</TableCell>
                 <TableCell>{transaction.subcategory}</TableCell>
                 <TableCell>
                   {transaction.location ? (

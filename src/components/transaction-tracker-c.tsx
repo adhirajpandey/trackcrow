@@ -23,17 +23,31 @@ import { Loader2 } from "lucide-react";
 type Transaction = {
   uuid: string;
   id: number;
-  timestamp: string;
+  timestamp: number;
   recipient: string;
   amount: number;
+  account: string;
   location?: string;
 };
 
 const categories = ["Food", "Transport", "Essentials", "Shopping"];
 
 const api = "http://localhost:5000";
-const authHeader =
-  "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1dWlkIjoiMjkwOWViOTctYTczMi00ZWY4LWIyNTEtZmVkOTllNzgwYzQxIiwiaWF0IjoxNzM0OTgzMjU2fQ.IE-68mkfj3oGRWtv0edBVqT8EI_YNSV6jPmLlohELCU";
+const authHeader = `Bearer ${localStorage.getItem("trackcrow-token")}`;
+
+export const epochToGMT530 = (epoch: number): string => {
+  // Convert epoch to milliseconds
+  const date = new Date(epoch * 1000);
+
+  // Offset in minutes for GMT+5:30
+  const offsetMinutes = 5 * 60 + 30;
+
+  // Apply the offset
+  const gmt530Date = new Date(date.getTime() + offsetMinutes * 60 * 1000);
+
+  // Format the date to a readable string
+  return gmt530Date.toISOString().replace("T", " ").replace("Z", "");
+};
 
 export function TransactionTracker() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -200,6 +214,7 @@ export function TransactionTracker() {
               <TableHead>Time</TableHead>
               <TableHead>Recipient</TableHead>
               <TableHead>Amount</TableHead>
+              <TableHead>Account</TableHead>
               <TableHead>Location</TableHead>
             </TableRow>
           </TableHeader>
@@ -214,9 +229,10 @@ export function TransactionTracker() {
                     }
                   />
                 </TableCell>
-                <TableCell>{transaction.timestamp}</TableCell>
+                <TableCell>{epochToGMT530(transaction.timestamp)}</TableCell>
                 <TableCell>{transaction.recipient}</TableCell>
                 <TableCell>Rs.{transaction.amount}</TableCell>
+                <TableCell>{transaction.account}</TableCell>
                 <TableCell>
                   {transaction.location ? (
                     <a
