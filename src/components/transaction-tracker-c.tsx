@@ -34,7 +34,6 @@ const categories = ["Food", "Transport", "Essentials", "Shopping"];
 
 // const api = "http://localhost:5000";
 const api = "https://trackcrow-dev.adhirajpandey.me";
-const authHeader = `Bearer ${localStorage.getItem("trackcrow-token")}`;
 
 export const epochToGMT530 = (epoch: number): string => {
   // Convert epoch to milliseconds
@@ -69,7 +68,7 @@ export function TransactionTracker() {
     try {
       const response = await fetch(`${api}/transactions/untracked`, {
         headers: {
-          Authorization: authHeader,
+          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },
       });
       if (!response.ok) {
@@ -116,7 +115,7 @@ export function TransactionTracker() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader,
+          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },
         body: JSON.stringify({
           txnIds: selectedTransactions,
