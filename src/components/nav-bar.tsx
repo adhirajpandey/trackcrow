@@ -3,7 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User, LogOut } from "lucide-react";
 
 export function NavBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,12 +33,12 @@ export function NavBar() {
   return (
     <nav className="bg-black text-white py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold">
-          TrackCrow
-        </Link>
-        <ul className="flex space-x-4 items-center">
-          {isLoggedIn ? (
-            <>
+        <div className="flex items-center space-x-6">
+          <Link href="/" className="text-2xl font-bold">
+            TrackCrow
+          </Link>
+          {isLoggedIn && (
+            <ul className="flex space-x-4">
               <li>
                 <Link href="/dashboard" className="hover:text-gray-300">
                   Dashboard
@@ -42,14 +49,39 @@ export function NavBar() {
                   Tracker
                 </Link>
               </li>
-              <li>
-                <Button onClick={handleLogout} variant="destructive">
-                  Log Out
-                </Button>
-              </li>
-            </>
+            </ul>
+          )}
+        </div>
+        <div>
+          {isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="cursor-pointer">
+                  <AvatarImage
+                    src="https://github.com/shadcn.png"
+                    alt="User avatar"
+                  />
+                  <AvatarFallback>TC</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Link href="/user" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>User Details</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-500 cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <>
+            <ul className="flex space-x-4 items-center">
               <li>
                 <Link href="/login" className="hover:text-gray-300">
                   Log In
@@ -60,9 +92,9 @@ export function NavBar() {
                   Sign Up
                 </Link>
               </li>
-            </>
+            </ul>
           )}
-        </ul>
+        </div>
       </div>
     </nav>
   );
