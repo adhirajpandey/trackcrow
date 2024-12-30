@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,6 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +52,7 @@ export default function LoginPage() {
       localStorage.setItem("trackcrow-token", data.result.token);
 
       // Redirect to tracker page after successful login
-      router.push("/tracker");
+      window.location.href = "/dashboard";
     } catch (err) {
       console.error("Login error:", err);
       setError("Invalid username or password");

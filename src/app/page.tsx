@@ -4,41 +4,7 @@ import { Button } from "@/components/ui/button";
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="w-full py-6 px-4 sm:px-6 lg:px-8 bg-black">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-white">TrackCrow</span>
-          </div>
-          <nav>
-            <ul className="flex space-x-4">
-              <li>
-                <Link
-                  href="#features"
-                  className="text-gray-300 hover:text-white"
-                >
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#how-it-works"
-                  className="text-gray-300 hover:text-white"
-                >
-                  How It Works
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#testimonials"
-                  className="text-gray-300 hover:text-white"
-                >
-                  Testimonials
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </header>
+      {/* Removed Header Section */}
 
       <main className="flex-grow">
         {/* Hero Section */}
@@ -50,22 +16,14 @@ export default function LandingPage() {
             <p className="text-xl mb-8">
               TrackCrow helps you manage your finances effortlessly.
             </p>
-            <div className="flex justify-center space-x-4">
+            <Link href="/signup">
               <Button
                 size="lg"
                 className="bg-white text-black hover:bg-gray-200"
               >
                 Get Started for Free
               </Button>
-              <Link href="/tracker">
-                <Button
-                  size="lg"
-                  className="bg-white text-black hover:bg-gray-200"
-                >
-                  Go to Tracker
-                </Button>
-              </Link>
-            </div>
+            </Link>
           </div>
         </section>
 
@@ -129,8 +87,8 @@ export default function LandingPage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <TestimonialCard
-                quote="TrackCrow has completely changed how I manage my finances. It's so easy to use!"
-                author="Sarah L."
+                quote="TrackCrow has completely changed how I manage my finances. Maza aagya use karke."
+                author="Ankit K."
               />
               <TestimonialCard
                 quote="The insights I get from TrackCrow have helped me save hundreds of dollars each month."
@@ -154,9 +112,14 @@ export default function LandingPage() {
               Join thousands of users who have improved their financial health
               with TrackCrow.
             </p>
-            <Button size="lg" className="bg-white text-black hover:bg-gray-200">
-              Sign Up Now
-            </Button>
+            <Link href="/signup">
+              <Button
+                size="lg"
+                className="bg-white text-black hover:bg-gray-200"
+              >
+                Sign Up Now
+              </Button>
+            </Link>
           </div>
         </section>
       </main>
@@ -237,7 +200,7 @@ function StepCard({
 function TestimonialCard({ quote, author }: { quote: string; author: string }) {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <p className="text-gray-600 mb-4">{quote}</p>
+      <p className="text-gray-600 mb-4">&quot;{quote}&quot;</p>
       <p className="font-semibold">- {author}</p>
     </div>
   );
