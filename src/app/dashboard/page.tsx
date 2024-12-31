@@ -28,6 +28,12 @@ type DashboardData = {
   untrackedTransactionsCount: number;
   totalTrackedAmount: number;
   recentTransactions: Transaction[];
+  categoricalTotal: {
+    essentialsTotal: number;
+    foodTotal: number;
+    shoppingTotal: number;
+    transportTotal: number;
+  };
 };
 
 export default function DashboardPage() {
@@ -39,7 +45,8 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const api = "https://trackcrow-dev.adhirajpandey.me";
+  // const api = "https://trackcrow-dev.adhirajpandey.me";
+  const api = "http://localhost:5000";
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -69,10 +76,15 @@ export default function DashboardPage() {
   if (!dashboard) {
     return null;
   }
+
   const totalTransactions = dashboard.totalTransactionsCount;
   const untrackedTransactions = dashboard.untrackedTransactionsCount;
   const totalAmount = dashboard.totalTrackedAmount;
   const recentTransactions = dashboard.recentTransactions;
+  const essentialsTotal = dashboard.categoricalTotal.essentialsTotal;
+  const foodTotal = dashboard.categoricalTotal.foodTotal;
+  const shoppingTotal = dashboard.categoricalTotal.shoppingTotal;
+  const transportTotal = dashboard.categoricalTotal.transportTotal;
 
   if (isLoading) {
     return (
@@ -127,6 +139,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
       <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
       <div className="border rounded-lg overflow-hidden">
         <Table>
@@ -156,6 +169,42 @@ export default function DashboardPage() {
         <Link href="/tracker" className="text-blue-500 hover:underline">
           View all transactions
         </Link>
+      </div>
+
+      <h2 className="text-2xl font-bold mb-4">Categorical Spends</h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Essentials</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Rs.{essentialsTotal}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Food</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Rs.{foodTotal}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Shopping</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Rs.{shoppingTotal}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Transport</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Rs.{transportTotal}</div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
