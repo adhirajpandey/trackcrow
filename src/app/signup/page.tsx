@@ -14,9 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-// const api = "http://localhost:5000";
-const api = "https://trackcrow-dev.adhirajpandey.me";
+import { apiUrl } from "../config";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -37,7 +35,7 @@ export default function SignupPage() {
     // For this example, we'll just simulate a successful signup
     console.log("Signing up with:", { username, password });
 
-    const response = await fetch(`${api}/auth/signup`, {
+    const response = await fetch(`${apiUrl}/auth/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -14,8 +14,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 
-// const api = "http://localhost:5000";
-const api = "https://trackcrow-dev.adhirajpandey.me";
+import { apiUrl } from "@/app/config";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -25,7 +24,6 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
     if (!username || !password) {
       setError("Username and password are required");
       return;
@@ -34,7 +32,7 @@ export default function LoginPage() {
     try {
       // Here you would typically make an API call to authenticate the user
       // For this example, we'll simulate a successful login with a mock token
-      const response = await fetch(`${api}/auth/login`, {
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

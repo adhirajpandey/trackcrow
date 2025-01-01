@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { apiUrl } from "../app/config";
 
 type Transaction = {
   uuid: string;
@@ -31,9 +32,6 @@ type Transaction = {
 };
 
 const categories = ["Food", "Transport", "Essentials", "Shopping"];
-
-// const api = "http://localhost:5000";
-const api = "https://trackcrow-dev.adhirajpandey.me";
 
 export const epochToGMT530 = (epoch: number): string => {
   // Convert epoch to milliseconds
@@ -66,7 +64,7 @@ export function TransactionTracker() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${api}/transactions/untracked`, {
+      const response = await fetch(`${apiUrl}/transactions/untracked`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },
@@ -111,7 +109,7 @@ export function TransactionTracker() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${api}/transactions`, {
+      const response = await fetch(`${apiUrl}/transactions`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

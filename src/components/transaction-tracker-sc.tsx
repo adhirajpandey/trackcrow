@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "./transaction-tracker-c";
+import { apiUrl } from "../app/config";
 
 type Transaction = {
   uuid: string;
@@ -42,9 +43,6 @@ const categorySubcategoriesMap: { [key: string]: string[] } = {
   Shopping: ["Apparel", "Gadgets", "Gifts", "Others"],
 };
 
-// const api = "http://localhost:5000";
-const api = "https://trackcrow-dev.adhirajpandey.me";
-
 export function TransactionTracker() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>(
@@ -65,7 +63,7 @@ export function TransactionTracker() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${api}/transactions/${category}`, {
+      const response = await fetch(`${apiUrl}/transactions/${category}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },
@@ -110,7 +108,7 @@ export function TransactionTracker() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${api}/transactions/${category}`, {
+      const response = await fetch(`${apiUrl}/transactions/${category}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

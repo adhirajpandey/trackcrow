@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "../../components/transaction-tracker-c";
+import { apiUrl } from "../config";
 
 type Transaction = {
   uuid: string;
@@ -45,14 +46,11 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const api = "https://trackcrow-dev.adhirajpandey.me";
-  // const api = "http://localhost:5000";
-
   const fetchDashboardData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${api}/dashboard`, {
+      const response = await fetch(`${apiUrl}/dashboard`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },

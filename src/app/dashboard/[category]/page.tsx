@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { epochToGMT530 } from "../../../components/transaction-tracker-c";
+import { apiUrl } from "../../config";
 
 type Transaction = {
   uuid: string;
@@ -45,16 +46,13 @@ export default function CategoricalDashboard() {
     fetchCategoricalDashboardData();
   }, []);
 
-  const api = "https://trackcrow-dev.adhirajpandey.me";
-  // const api = "http://localhost:5000";
-
   const fetchCategoricalDashboardData = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const category = window.location.pathname.split("/").pop() || "";
 
-      const response = await fetch(`${api}/dashboard/${category}`, {
+      const response = await fetch(`${apiUrl}/dashboard/${category}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },
