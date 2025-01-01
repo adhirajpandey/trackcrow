@@ -45,8 +45,8 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  // const api = "https://trackcrow-dev.adhirajpandey.me";
-  const api = "http://localhost:5000";
+  const api = "https://trackcrow-dev.adhirajpandey.me";
+  // const api = "http://localhost:5000";
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -173,38 +173,47 @@ export default function DashboardPage() {
 
       <h2 className="text-2xl font-bold mb-4">Categorical Spends</h2>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Essentials</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Rs.{essentialsTotal}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Food</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Rs.{foodTotal}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Shopping</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Rs.{shoppingTotal}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transport</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Rs.{transportTotal}</div>
-          </CardContent>
-        </Card>
+        {/* TODO: Make this more Dynamic Later */}
+        <Link href="/dashboard/Essentials">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Essentials</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rs.{essentialsTotal}</div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/Food">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Food</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rs.{foodTotal}</div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/Shopping">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Shopping</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rs.{shoppingTotal}</div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/Transport">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Transport</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Rs.{transportTotal}</div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
