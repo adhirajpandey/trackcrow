@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +20,54 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState(100);
+
+  // Adds a decreasing progress bar with the error message
+  useEffect(() => {
+    let intervalId: number; 
+  
+    if (error) {
+      setProgress(100); 
+      intervalId = window.setInterval(() => { 
+        setProgress((prev) => Math.max(0, prev - 2)); 
+      }, 40);
+  
+      const timeout = window.setTimeout(() => { 
+        setError(""); 
+        setProgress(0); 
+        clearInterval(intervalId); 
+      }, 2200);
+  
+      return () => {
+        clearInterval(intervalId); 
+        clearTimeout(timeout); 
+      };
+    }
+  
+    return () => {
+      if (intervalId) clearInterval(intervalId); 
+    };
+  }, [error]);  
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!username || !password) {
       setError("Username and password are required");
+      setProgress(100);
+      return;
+    }
+
+    if (username.length < 3){
+      setError("Username must be longer");
+      setProgress(100);
+      return;
+    }
+
+    if (password.length < 8){
+      setError("Password too short");
+      setProgress(100);
       return;
     }
 
@@ -89,7 +131,13 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            {/* Error Box with Progress Bar */}
+            {error && (
+              <div className="relative mt-4 border border-red-500 bg-red-100 text-red-700 rounded-md p-3">
+                <p className="text-sm">{error}</p>
+                <div className="absolute bottom-0 left-0 h-1 bg-red-500 transition-all duration-300 ease-linear" style={{ width: `${progress}%` }} />
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button className="w-full" type="submit">
