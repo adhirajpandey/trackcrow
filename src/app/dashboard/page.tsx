@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
-import { epochToGMT530 } from "../../components/transaction-tracker-c";
+import { epochToGMT530 } from "../../utils/datetime_formatter";
 import { apiUrl } from "../config";
 
 type Transaction = {

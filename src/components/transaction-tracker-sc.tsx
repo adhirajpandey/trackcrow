@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { epochToGMT530 } from "./transaction-tracker-c";
+import { epochToGMT530 } from "../utils/datetime_formatter";
 import { apiUrl } from "../app/config";
 
 type Transaction = {
