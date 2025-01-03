@@ -20,6 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { apiUrl } from "../app/config";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { epochToGMT530 } from "../utils/datetime_formatter";
 
 type Transaction = {
   uuid: string;
@@ -32,20 +35,6 @@ type Transaction = {
 };
 
 const categories = ["Food", "Transport", "Essentials", "Shopping"];
-
-export const epochToGMT530 = (epoch: number): string => {
-  // Convert epoch to milliseconds
-  const date = new Date(epoch * 1000);
-
-  // Offset in minutes for GMT+5:30
-  const offsetMinutes = 5 * 60 + 30;
-
-  // Apply the offset
-  const gmt530Date = new Date(date.getTime() + offsetMinutes * 60 * 1000);
-
-  // Format the date to a readable string
-  return gmt530Date.toISOString().replace("T", " ").replace("Z", "");
-};
 
 export function TransactionTracker() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
