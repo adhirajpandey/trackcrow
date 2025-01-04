@@ -20,8 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { apiUrl } from "../app/config";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Transaction = {
   uuid: string;
@@ -168,50 +166,7 @@ export function TransactionTracker() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h2 className="text-2xl font-bold">Categorical Transactions</h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Link href="/tracker/Essentials">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Essentials</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">10</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/tracker/Food">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Food</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">15</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/tracker/Shopping">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Shopping</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">16</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/tracker/Transport">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Transport</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24</div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
+    <div>
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Your Untracked Transactions</h2>
         <div className="flex items-center space-x-2">
