@@ -22,6 +22,7 @@ import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
 import { apiUrl } from "@/app/config";
 import { useParams } from "next/navigation";
+import { categorySubcategoriesMap } from "@/utils/variables";
 
 type Transaction = {
   uuid: string;
@@ -33,13 +34,6 @@ type Transaction = {
   category?: string;
   subcategory?: string;
   location?: string;
-};
-
-const categorySubcategoriesMap: { [key: string]: string[] } = {
-  Food: ["Breakfast", "Lunch", "Dinner", "Snacks"],
-  Transport: ["Cab", "Auto", "Bike", "Others"],
-  Essentials: ["Household", "Groceries", "Utilities", "Others"],
-  Shopping: ["Apparel", "Gadgets", "Gifts", "Others"],
 };
 
 export default function CategoricalTracker() {
