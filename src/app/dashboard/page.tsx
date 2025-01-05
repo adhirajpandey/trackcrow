@@ -196,12 +196,12 @@ export default function DashboardPage() {
                 <TableCell>{transaction.account}</TableCell>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <TableCell
-                      className="text-red-500 hover:underline"
+                  <TableCell
+                      className="text-red-500 hover:underline cursor-pointer"
                       onClick={() => setSelectedTransaction(transaction.uuid)}
                     >
                       Delete
-                    </TableCell>
+                  </TableCell>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
