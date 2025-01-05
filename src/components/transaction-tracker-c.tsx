@@ -266,12 +266,12 @@ export function TransactionTracker() {
                 </TableCell>
                 <Dialog>
                   <DialogTrigger asChild>
-                  <TableCell
+                    <TableCell
                       className="text-red-500 hover:underline cursor-pointer"
                       onClick={() => setSelectedTransaction(transaction.uuid)}
                     >
                       Delete
-                  </TableCell>
+                    </TableCell>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
