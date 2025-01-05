@@ -12,8 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
-import { epochToGMT530 } from "../../utils/datetime_formatter";
-import { apiUrl } from "../config";
+import { epochToGMT530 } from "@/utils/datetime_formatter";
+import { apiUrl } from "@/app/config";
 
 type Transaction = {
   uuid: string;
