@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -52,7 +52,9 @@ export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     fetchDashboardData();
@@ -96,12 +98,12 @@ export default function DashboardPage() {
       if (!response.ok) {
         throw new Error("Failed to delete the transaction");
       }
-      
+
       // Refresh dashboard data after successful deletion
       fetchDashboardData();
     } catch (error) {
       console.error("Error deleting transaction:", error);
-    } 
+    }
   };
 
   if (!dashboard) {
@@ -194,32 +196,40 @@ export default function DashboardPage() {
                 <TableCell>{transaction.account}</TableCell>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <TableCell className="text-red-500 hover:underline" onClick={() => setSelectedTransaction(transaction.uuid)}>Delete</TableCell>
+                    <TableCell
+                      className="text-red-500 hover:underline"
+                      onClick={() => setSelectedTransaction(transaction.uuid)}
+                    >
+                      Delete
+                    </TableCell>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Are you absolutely sure?</DialogTitle>
                       <DialogDescription>
-                        This action cannot be undone. This will permanently delete your transaction
-                        and remove your data from our servers.
+                        This action cannot be undone. This will permanently
+                        delete your transaction and remove your data from our
+                        servers.
                       </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="sm:justify-start">
                       <DialogClose asChild>
-                        <Button 
-                          type="button" 
-                          className="bg-black text-white hover:bg-gray-800">
+                        <Button
+                          type="button"
+                          className="bg-black text-white hover:bg-gray-800"
+                        >
                           Cancel
                         </Button>
                       </DialogClose>
-                      <Button 
-                        type="submit" 
-                        className="bg-red-500 text-white hover:bg-red-600" 
+                      <Button
+                        type="submit"
+                        className="bg-red-500 text-white hover:bg-red-600"
                         onClick={() => {
                           if (selectedTransaction) {
                             deleteTransaction(selectedTransaction);
                           }
-                        }}>
+                        }}
+                      >
                         Delete
                       </Button>
                     </DialogFooter>
