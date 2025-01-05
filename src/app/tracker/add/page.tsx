@@ -25,6 +25,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format, fromUnixTime } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -72,11 +73,10 @@ export default function AddTransactionPage() {
         },
         body: JSON.stringify(formData),
       });
-      alert(JSON.stringify(formData));
       if (!response.ok) {
         throw new Error("Failed to add transaction");
       }
-
+      toast("Transaction added successfully");
       router.push("/tracker");
     } catch (error) {
       console.error("Error adding transaction:", error);
