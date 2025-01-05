@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
+import { numberToINR } from "@/utils/currency-formatter";
 import { apiUrl } from "@/app/config";
 
 type Transaction = {
@@ -132,7 +133,7 @@ export default function CategoricalDashboard() {
                 <TableRow key={transaction.uuid}>
                   <TableCell>{epochToGMT530(transaction.timestamp)}</TableCell>
                   <TableCell>{transaction.recipient}</TableCell>
-                  <TableCell>Rs.{transaction.amount.toString()}</TableCell>
+                  <TableCell>{numberToINR(transaction.amount)}</TableCell>
                   <TableCell>{transaction.subcategory || ""}</TableCell>
                   <TableCell>{transaction.account}</TableCell>
                 </TableRow>

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
+import { numberToINR } from "@/utils/currency-formatter";
 import { apiUrl } from "@/app/config";
 import { useParams } from "next/navigation";
 import { categorySubcategoriesMap } from "@/utils/variables";
@@ -237,7 +238,7 @@ export default function CategoricalTracker() {
                       {epochToGMT530(transaction.timestamp)}
                     </TableCell>
                     <TableCell>{transaction.recipient}</TableCell>
-                    <TableCell>Rs.{transaction.amount}</TableCell>
+                    <TableCell>{numberToINR(transaction.amount)}</TableCell>
                     <TableCell>{transaction.account}</TableCell>
                     <TableCell>{transaction.subcategory}</TableCell>
                     <TableCell>
