@@ -11,6 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
 import { apiUrl } from "@/app/config";
@@ -41,6 +52,7 @@ export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -69,6 +81,27 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const deleteTransaction = async (transactionUUID: string) => {
+    try {
+      // Make an API call to delete the transaction
+      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete the transaction");
+      }
+      
+      // Refresh dashboard data after successful deletion
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    } 
   };
 
   if (!dashboard) {
@@ -148,6 +181,7 @@ export default function DashboardPage() {
               <TableHead>Amount</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Account</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,6 +192,39 @@ export default function DashboardPage() {
                 <TableCell>Rs.{transaction.amount.toString()}</TableCell>
                 <TableCell>{transaction.category || ""}</TableCell>
                 <TableCell>{transaction.account}</TableCell>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <TableCell className="text-red-500 hover:underline" onClick={() => setSelectedTransaction(transaction.uuid)}>Delete</TableCell>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Are you absolutely sure?</DialogTitle>
+                      <DialogDescription>
+                        This action cannot be undone. This will permanently delete your transaction
+                        and remove your data from our servers.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="sm:justify-start">
+                      <DialogClose asChild>
+                        <Button 
+                          type="button" 
+                          className="bg-black text-white hover:bg-gray-800">
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      <Button 
+                        type="submit" 
+                        className="bg-red-500 text-white hover:bg-red-600" 
+                        onClick={() => {
+                          if (selectedTransaction) {
+                            deleteTransaction(selectedTransaction);
+                          }
+                        }}>
+                        Delete
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </TableRow>
             ))}
           </TableBody>
