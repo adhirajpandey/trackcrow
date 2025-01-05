@@ -12,8 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { epochToGMT530 } from "../../../components/transaction-tracker-c";
-import { apiUrl } from "../../config";
+import { epochToGMT530 } from "@/utils/datetime_formatter";
+import { apiUrl } from "@/app/config";
 
 type Transaction = {
   uuid: string;
