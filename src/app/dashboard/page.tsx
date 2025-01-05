@@ -197,7 +197,7 @@ export default function DashboardPage() {
                 <Dialog>
                   <DialogTrigger asChild>
                     <TableCell
-                      className="text-red-500 hover:underline"
+                      className="text-red-500 hover:underline cursor-pointer"
                       onClick={() => setSelectedTransaction(transaction.uuid)}
                     >
                       Delete
