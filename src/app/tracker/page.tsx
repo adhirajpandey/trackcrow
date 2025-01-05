@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 
 import { TransactionTracker } from "@/components/transaction-tracker-c";
 import { apiUrl } from "@/app/config";
+import { Button } from "@/components/ui/button";
 
 type TrackerData = {
   untrackedTransactionsCategoricalCount: {
@@ -73,9 +74,16 @@ export default function TrackerPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <main className="container mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold mb-6">
-          Categorical Untracked Transactions
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">
+            Categorical Untracked Transactions
+          </h2>
+          <Link href="/tracker/add">
+            <Button className="bg-black text-white hover:bg-gray-800">
+              Add Transaction
+            </Button>
+          </Link>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {Object.keys(untrackedTransactionsCategoricalCount).map(
             (category: string) => (
