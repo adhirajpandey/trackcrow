@@ -59,24 +59,24 @@ export function NavBar() {
                 <Avatar className="cursor-pointer">
                   <AvatarImage
                     src="https://github.com/shadcn.png"
-                    alt="User avatar"
+                    alt="@shadcn"
                   />
-                  <AvatarFallback>TC</AvatarFallback>
+                  <AvatarFallback>CN</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Link href="/user" className="flex items-center">
+                <Link href="/user">
+                  <DropdownMenuItem className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
-                    <span>User Details</span>
-                  </Link>
-                </DropdownMenuItem>
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-red-500 cursor-pointer"
+                  className="text-red-600 cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log Out</span>
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

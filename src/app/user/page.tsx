@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiUrl } from "@/app/config";
 
 type UserDetails = {
   name: string;
@@ -34,13 +35,11 @@ export default function UserDetailsPage() {
     fetchUserDetails();
   }, [router]);
 
-  const api = "https://trackcrow-dev.adhirajpandey.me";
-
   const fetchUserDetails = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${api}/user`, {
+      const response = await fetch(`${apiUrl}/user`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
         },
