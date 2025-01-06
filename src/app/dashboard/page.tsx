@@ -108,43 +108,6 @@ export default function DashboardPage() {
     }
   };
 
-  const viewTransaction = async (transactionUUID: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete the transaction");
-      }
-
-    } catch (error) {
-      console.error("Error fetching transaction:", error);
-    }
-  };
-
-  const editTransaction = async (transactionUUID: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete the transaction");
-      }
-
-      fetchDashboardData();
-    } catch (error) {
-      console.error("Error updating transaction:", error);
-    }
-  };
-
   if (!dashboard) {
     return null;
   }
@@ -235,8 +198,12 @@ export default function DashboardPage() {
                 <TableCell>{transaction.account}</TableCell>
                 <Dialog>
                   <TableCell className="text-center"> 
-                    <ViewButton onClick={() => viewTransaction(transaction.uuid)}></ViewButton>
-                    <EditButton onClick={() => editTransaction(transaction.uuid)}></EditButton>
+                    <Link href={`/transaction/${transaction.uuid}`} passHref>
+                        <ViewButton></ViewButton>
+                    </Link>
+                    <Link href={`/transaction/edit/${transaction.uuid}`} passHref>
+                        <EditButton></EditButton>
+                    </Link>
                     <DialogTrigger asChild>
                       <TrashButton onClick={() => setSelectedTransaction(transaction.uuid)}></TrashButton>
                     </DialogTrigger>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -167,43 +168,6 @@ export function TransactionTracker() {
     }
   };
 
-  const viewTransaction = async (transactionUUID: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete the transaction");
-      }
-
-    } catch (error) {
-      console.error("Error fetching transaction:", error);
-    }
-  };
-
-  const editTransaction = async (transactionUUID: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete the transaction");
-      }
-
-      fetchTransactions();
-    } catch (error) {
-      console.error("Error updating transaction:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -305,8 +269,12 @@ export function TransactionTracker() {
                 </TableCell>
                 <Dialog>
                   <TableCell className="text-center"> 
-                    <ViewButton onClick={() => viewTransaction(transaction.uuid)}></ViewButton>
-                    <EditButton onClick={() => editTransaction(transaction.uuid)}></EditButton>
+                    <Link href={`/transaction/${transaction.uuid}`} passHref>
+                        <ViewButton></ViewButton>
+                    </Link>
+                    <Link href={`/transaction/edit/${transaction.uuid}`} passHref>
+                        <EditButton></EditButton>
+                    </Link>
                     <DialogTrigger asChild>
                       <TrashButton onClick={() => setSelectedTransaction(transaction.uuid)}></TrashButton>
                     </DialogTrigger>
