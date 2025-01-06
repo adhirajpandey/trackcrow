@@ -9,6 +9,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut } from "lucide-react";
 
@@ -59,24 +61,35 @@ export function NavBar() {
                 <Avatar className="cursor-pointer">
                   <AvatarImage
                     src="https://github.com/shadcn.png"
-                    alt="User avatar"
+                    alt="@shadcn"
                   />
-                  <AvatarFallback>TC</AvatarFallback>
+                  <AvatarFallback>CN</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Link href="/user" className="flex items-center">
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      First Last
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      username
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href="/user">
+                  <DropdownMenuItem>
                     <User className="mr-2 h-4 w-4" />
-                    <span>User Details</span>
-                  </Link>
-                </DropdownMenuItem>
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-red-500 cursor-pointer"
+                  className="text-red-600"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log Out</span>
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
