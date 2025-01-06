@@ -188,7 +188,7 @@ export function TransactionTracker() {
   return (
     <div>
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Your Untracked Transactions</h2>
+        <h2 className="text-2xl font-bold mb-2">Your Untracked Transactions</h2>
         <div className="flex items-center space-x-2">
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-[180px]">
