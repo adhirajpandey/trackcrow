@@ -73,8 +73,8 @@ export default function TrackerPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
+      <main className="container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-2xl font-bold">
             Categorical Untracked Transactions
           </h2>
@@ -84,7 +84,7 @@ export default function TrackerPage() {
             </Button>
           </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {Object.keys(untrackedTransactionsCategoricalCount).map(
             (category: string) => (
               <Link href={`/tracker/${category}`} key={category}>
