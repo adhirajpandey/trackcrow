@@ -256,7 +256,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Essentials</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rs.{essentialsTotal}</div>
+              <div className="text-2xl font-bold">{numberToINR(essentialsTotal)}</div>
             </CardContent>
           </Card>
         </Link>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Food</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rs.{foodTotal}</div>
+              <div className="text-2xl font-bold">{numberToINR(foodTotal)}</div>
             </CardContent>
           </Card>
         </Link>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Shopping</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rs.{shoppingTotal}</div>
+              <div className="text-2xl font-bold">{numberToINR(shoppingTotal)}</div>
             </CardContent>
           </Card>
         </Link>
@@ -286,7 +286,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Transport</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Rs.{transportTotal}</div>
+              <div className="text-2xl font-bold">{numberToINR(transportTotal)}</div>
             </CardContent>
           </Card>
         </Link>
