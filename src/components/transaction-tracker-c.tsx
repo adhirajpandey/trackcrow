@@ -32,6 +32,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { TrashButton, EditButton, ViewButton } from "@/components/ui/custom-button";
 
 type Transaction = {
   uuid: string;
@@ -166,6 +167,43 @@ export function TransactionTracker() {
     }
   };
 
+  const viewTransaction = async (transactionUUID: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete the transaction");
+      }
+
+    } catch (error) {
+      console.error("Error fetching transaction:", error);
+    }
+  };
+
+  const editTransaction = async (transactionUUID: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete the transaction");
+      }
+
+      fetchTransactions();
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -234,7 +272,7 @@ export function TransactionTracker() {
               <TableHead>Amount</TableHead>
               <TableHead>Account</TableHead>
               <TableHead>Location</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -266,14 +304,13 @@ export function TransactionTracker() {
                   )}
                 </TableCell>
                 <Dialog>
-                  <DialogTrigger asChild>
-                    <TableCell
-                      className="text-red-500 hover:underline cursor-pointer"
-                      onClick={() => setSelectedTransaction(transaction.uuid)}
-                    >
-                      Delete
-                    </TableCell>
-                  </DialogTrigger>
+                  <TableCell className="text-center"> 
+                    <ViewButton onClick={() => viewTransaction(transaction.uuid)}></ViewButton>
+                    <EditButton onClick={() => editTransaction(transaction.uuid)}></EditButton>
+                    <DialogTrigger asChild>
+                      <TrashButton onClick={() => setSelectedTransaction(transaction.uuid)}></TrashButton>
+                    </DialogTrigger>
+                  </TableCell>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Are you absolutely sure?</DialogTitle>
