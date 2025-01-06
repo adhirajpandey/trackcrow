@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
+import { numberToINR } from "@/utils/currency-formatter";
 import { apiUrl } from "@/app/config";
 
 type Transaction = {
@@ -157,7 +158,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              Rs.{totalAmount.toString()}
+              {numberToINR(totalAmount)}
             </div>
           </CardContent>
         </Card>
@@ -191,7 +192,7 @@ export default function DashboardPage() {
               <TableRow key={transaction.uuid}>
                 <TableCell>{epochToGMT530(transaction.timestamp)}</TableCell>
                 <TableCell>{transaction.recipient}</TableCell>
-                <TableCell>Rs.{transaction.amount.toString()}</TableCell>
+                <TableCell>{numberToINR(transaction.amount)}</TableCell> 
                 <TableCell>{transaction.category || ""}</TableCell>
                 <TableCell>{transaction.account}</TableCell>
                 <Dialog>

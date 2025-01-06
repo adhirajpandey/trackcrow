@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { apiUrl } from "@/app/config";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
+import { numberToINR } from "@/utils/currency-formatter";
 import {
   Dialog,
   DialogContent,
@@ -249,7 +250,7 @@ export function TransactionTracker() {
                 </TableCell>
                 <TableCell>{epochToGMT530(transaction.timestamp)}</TableCell>
                 <TableCell>{transaction.recipient}</TableCell>
-                <TableCell>Rs.{transaction.amount}</TableCell>
+                <TableCell>{numberToINR(transaction.amount)}</TableCell>
                 <TableCell>{transaction.account}</TableCell>
                 <TableCell>
                   {transaction.location ? (
