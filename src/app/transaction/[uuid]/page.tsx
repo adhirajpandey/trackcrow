@@ -32,6 +32,7 @@ export default function TransactionPage() {
     remarks: "",
     reference: "",
     timestamp: 0,
+    account: "",
   });
   
   // Track if fields are read-only
@@ -60,6 +61,7 @@ export default function TransactionPage() {
             remarks: transaction.remarks,
             reference: transaction.reference,
             timestamp: transaction.timestamp,
+            account: transaction.account,
           });
           setIsReadOnly(true); // Set fields to read-only after data fetch
         } catch (error) {
@@ -81,101 +83,115 @@ export default function TransactionPage() {
           <CardContent>
             <form className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount *</Label>
-                  <Input
-                    id="amount"
-                    name="amount"
-                    type="number"
-                    defaultValue={formData.amount}
-                    readOnly={isReadOnly}
-                    placeholder="Amount"
-                  />
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount *</Label>
+                    <Input
+                      id="amount"
+                      name="amount"
+                      type="number"
+                      defaultValue={formData.amount}
+                      readOnly={isReadOnly}
+                      placeholder="Amount"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="timestamp">Time</Label>
+                    <Input
+                      id="timestamp"
+                      name="timestamp"
+                      value={epochToGMT530(formData.timestamp)}
+                      readOnly
+                      placeholder="Time"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select
+                      name="category"
+                      value={formData.category}
+                      disabled={isReadOnly}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(categorySubcategoriesMap).map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="account">Account</Label>
+                    <Input
+                      id="account"
+                      name="account"
+                      defaultValue={formData.account}
+                      readOnly={isReadOnly}
+                      placeholder="Account"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recipient">Recipient *</Label>
-                  <Input
-                    id="recipient"
-                    name="recipient"
-                    defaultValue={formData.recipient}
-                    readOnly={isReadOnly}
-                    placeholder="Recipient"
-                  />
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="recipient">Recipient *</Label>
+                      <Input
+                        id="recipient"
+                        name="recipient"
+                        defaultValue={formData.recipient}
+                        readOnly={isReadOnly}
+                        placeholder="Recipient"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reference">Reference</Label>
+                      <Input
+                        id="reference"
+                        name="reference"
+                        defaultValue={formData.reference}
+                        readOnly={isReadOnly}
+                        placeholder="Reference (optional)"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subcategory">Subcategory</Label>
+                      <Select
+                        name="subcategory"
+                        value={formData.subcategory}
+                        disabled={isReadOnly}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subcategory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {formData.category &&
+                            categorySubcategoriesMap[formData.category].map(
+                              (subcategory) => (
+                                <SelectItem key={subcategory} value={subcategory}>
+                                  {subcategory}
+                                </SelectItem>
+                              )
+                            )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="remarks">Remarks</Label>
+                      <Textarea
+                        id="remarks"
+                        name="remarks"
+                        defaultValue={formData.remarks}
+                        readOnly={isReadOnly}
+                        placeholder="Remarks (optional)"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Time *</Label>
-                  <Input
-                    id="timestamp"
-                    name="timestamp"
-                    value={epochToGMT530(formData.timestamp)}
-                    readOnly
-                    placeholder="Time"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Reference</Label>
-                  <Input
-                    id="reference"
-                    name="reference"
-                    defaultValue={formData.reference}
-                    readOnly={isReadOnly}
-                    placeholder="Reference (optional)"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    name="category"
-                    value={formData.category}
-                    disabled={isReadOnly}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(categorySubcategoriesMap).map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategory</Label>
-                  <Select
-                    name="subcategory"
-                    value={formData.subcategory}
-                    disabled={isReadOnly}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subcategory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formData.category &&
-                        categorySubcategoriesMap[formData.category].map(
-                          (subcategory) => (
-                            <SelectItem key={subcategory} value={subcategory}>
-                              {subcategory}
-                            </SelectItem>
-                          )
-                        )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="remarks">Remarks</Label>
-                  <Textarea
-                    id="remarks"
-                    name="remarks"
-                    defaultValue={formData.remarks}
-                    readOnly={isReadOnly}
-                    placeholder="Remarks (optional)"
-                  />
-                </div>
-              </div>
-
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"

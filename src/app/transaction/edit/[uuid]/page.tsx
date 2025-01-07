@@ -31,11 +31,10 @@ type TransactionPayload = {
 
 export default function TransactionPage() {
   const router = useRouter();
-  const { uuid } = useParams(); // uuid is of type string | string[]
+  const { uuid } = useParams();
 
   const transactionUUID = Array.isArray(uuid) ? uuid[0] : uuid;
 
-  // Form data state
   const [formData, setFormData] = useState({
     account: "",
     amount: 0,
@@ -47,7 +46,6 @@ export default function TransactionPage() {
     timestamp: 0,
   });
 
-  // Fetch transaction data based on UUID
   useEffect(() => {
     if (transactionUUID) {
       const fetchTransactionData = async () => {
@@ -81,15 +79,13 @@ export default function TransactionPage() {
     }
   }, [transactionUUID]);
 
-  // Handle Select value changes
-  const handleSelectChange = (name: string, value: any) => {
+  const handleSelectChange = (name: string, value: number | string) => {
     setFormData((prevState) => ({
       ...prevState,
       [name]: value,
     }));
   };
 
-  // Update transaction function
   const updateTransaction = async (transactionUUID: string, payload: TransactionPayload) => {
     try {
       const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
@@ -105,7 +101,6 @@ export default function TransactionPage() {
         throw new Error("Failed to update the transaction");
       }
 
-      // Redirect after update is successful
       router.push(`/transaction/${transactionUUID}`);
     } catch (error) {
       console.error("Error updating transaction:", error);
@@ -113,7 +108,6 @@ export default function TransactionPage() {
     }
   };
 
-  // Submit handler
   const handleSubmit = () => {
     if (transactionUUID) {
       const payload: TransactionPayload = {
@@ -125,7 +119,7 @@ export default function TransactionPage() {
         account: formData.account,
         remarks: formData.remarks,
       };
-      updateTransaction(transactionUUID, payload); 
+      updateTransaction(transactionUUID, payload);
     }
   };
 
@@ -139,110 +133,115 @@ export default function TransactionPage() {
           <CardContent>
             <form className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount *</Label>
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount *</Label>
                     <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        value={formData.amount}
-                        onChange={(e) =>
-                            setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
-                        }
-                        placeholder="Amount"
+                      id="amount"
+                      name="amount"
+                      type="number"
+                      value={formData.amount}
+                      onChange={(e) =>
+                        setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
+                      }
+                      placeholder="Amount"
                     />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recipient">Recipient *</Label>
-                  <Input
-                    id="recipient"
-                    name="recipient"
-                    value={formData.recipient}
-                    readOnly
-                    placeholder="Recipient"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Time *</Label>
-                  <Input
-                    id="timestamp"
-                    name="timestamp"
-                    value={epochToGMT530(formData.timestamp)}
-                    readOnly
-                    placeholder="Time"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Reference</Label>
-                  <Input
-                    id="reference"
-                    name="reference"
-                    value={formData.reference}
-                    onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                    placeholder="Reference (optional)"
-                  />
-                </div>
-                <div className="space-y-2">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    name="category"
-                    value={formData.category}
-                    onValueChange={(value) => handleSelectChange("category", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(categorySubcategoriesMap).map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategory</Label>
-                  <Select
-                    name="subcategory"
-                    value={formData.subcategory}
-                    onValueChange={(value) => handleSelectChange("subcategory", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select subcategory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formData.category &&
-                        categorySubcategoriesMap[formData.category].map((subcategory) => (
-                          <SelectItem key={subcategory} value={subcategory}>
-                            {subcategory}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="timestamp">Time</Label>
+                    <Input
+                      id="timestamp"
+                      name="timestamp"
+                      value={epochToGMT530(formData.timestamp)}
+                      readOnly
+                      placeholder="Time"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select
+                      name="category"
+                      value={formData.category}
+                      onValueChange={(value) => handleSelectChange("category", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(categorySubcategoriesMap).map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
                           </SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="account">Account</Label>
+                    <Input
+                      id="account"
+                      name="account"
+                      value={formData.account}
+                      onChange={(e) => setFormData({ ...formData, account: e.target.value })}
+                      placeholder="Account"
+                    />
+                  </div>
                 </div>
-                <Label htmlFor="Account">Account</Label>
-                  <Input
-                    id="account"
-                    name="account"
-                    value={formData.account}
-                    onChange={(e) => setFormData({ ...formData, account: e.target.value })}
-                    placeholder="Account"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="remarks">Remarks</Label>
-                  <Textarea
-                    id="remarks"
-                    name="remarks"
-                    value={formData.remarks}
-                    onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                    placeholder="Remarks (optional)"
-                  />
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="recipient">Recipient *</Label>
+                    <Input
+                      id="recipient"
+                      name="recipient"
+                      value={formData.recipient}
+                      onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
+                      placeholder="Recipient"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reference">Reference</Label>
+                    <Input
+                      id="reference"
+                      name="reference"
+                      value={formData.reference}
+                      onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                      placeholder="Reference (optional)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subcategory">Subcategory</Label>
+                    <Select
+                      name="subcategory"
+                      value={formData.subcategory}
+                      onValueChange={(value) => handleSelectChange("subcategory", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select subcategory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formData.category &&
+                          categorySubcategoriesMap[formData.category].map((subcategory) => (
+                            <SelectItem key={subcategory} value={subcategory}>
+                              {subcategory}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="remarks">Remarks</Label>
+                    <Textarea
+                      id="remarks"
+                      name="remarks"
+                      value={formData.remarks}
+                      onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                      placeholder="Remarks (optional)"
+                    />
+                  </div>
                 </div>
               </div>
-
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"
