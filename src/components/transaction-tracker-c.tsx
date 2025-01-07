@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -32,6 +33,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { TrashButton, EditButton, ViewButton } from "@/components/ui/custom-button";
 
 type Transaction = {
   uuid: string;
@@ -234,7 +236,7 @@ export function TransactionTracker() {
               <TableHead>Amount</TableHead>
               <TableHead>Account</TableHead>
               <TableHead>Location</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -266,14 +268,17 @@ export function TransactionTracker() {
                   )}
                 </TableCell>
                 <Dialog>
-                  <DialogTrigger asChild>
-                    <TableCell
-                      className="text-red-500 hover:underline cursor-pointer"
-                      onClick={() => setSelectedTransaction(transaction.uuid)}
-                    >
-                      Delete
-                    </TableCell>
-                  </DialogTrigger>
+                  <TableCell className="text-center"> 
+                    <Link href={`/transaction/${transaction.uuid}`} passHref>
+                        <ViewButton></ViewButton>
+                    </Link>
+                    <Link href={`/transaction/edit/${transaction.uuid}`} passHref>
+                        <EditButton></EditButton>
+                    </Link>
+                    <DialogTrigger asChild>
+                      <TrashButton onClick={() => setSelectedTransaction(transaction.uuid)}></TrashButton>
+                    </DialogTrigger>
+                  </TableCell>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Are you absolutely sure?</DialogTitle>

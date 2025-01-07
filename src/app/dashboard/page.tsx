@@ -26,6 +26,7 @@ import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
 import { numberToINR } from "@/utils/currency-formatter";
 import { apiUrl } from "@/app/config";
+import { TrashButton, EditButton, ViewButton } from "@/components/ui/custom-button";
 
 type Transaction = {
   uuid: string;
@@ -184,7 +185,7 @@ export default function DashboardPage() {
               <TableHead>Amount</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Account</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -196,14 +197,17 @@ export default function DashboardPage() {
                 <TableCell>{transaction.category || ""}</TableCell>
                 <TableCell>{transaction.account}</TableCell>
                 <Dialog>
-                  <DialogTrigger asChild>
-                    <TableCell
-                      className="text-red-500 hover:underline cursor-pointer"
-                      onClick={() => setSelectedTransaction(transaction.uuid)}
-                    >
-                      Delete
-                    </TableCell>
-                  </DialogTrigger>
+                  <TableCell className="text-center"> 
+                    <Link href={`/transaction/${transaction.uuid}`} passHref>
+                        <ViewButton></ViewButton>
+                    </Link>
+                    <Link href={`/transaction/edit/${transaction.uuid}`} passHref>
+                        <EditButton></EditButton>
+                    </Link>
+                    <DialogTrigger asChild>
+                      <TrashButton onClick={() => setSelectedTransaction(transaction.uuid)}></TrashButton>
+                    </DialogTrigger>
+                  </TableCell>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Are you absolutely sure?</DialogTitle>
