@@ -6,16 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { apiUrl } from "@/app/config";
-import { categorySubcategoriesMap } from "@/utils/variables";
 import { toast } from "sonner";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
 
@@ -93,7 +85,6 @@ export default function TransactionPage() {
                       type="number"
                       defaultValue={formData.amount}
                       readOnly={isReadOnly}
-                      placeholder="Amount"
                     />
                   </div>
                   <div className="space-y-2">
@@ -101,29 +92,18 @@ export default function TransactionPage() {
                     <Input
                       id="timestamp"
                       name="timestamp"
-                      value={epochToGMT530(formData.timestamp)}
+                      defaultValue={epochToGMT530(formData.timestamp)}
                       readOnly
-                      placeholder="Time"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <Select
+                    <Input
+                      id="category"
                       name="category"
-                      value={formData.category}
-                      disabled={isReadOnly}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(categorySubcategoriesMap).map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      defaultValue={formData.category}
+                      readOnly={isReadOnly}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="account">Account</Label>
@@ -132,21 +112,19 @@ export default function TransactionPage() {
                       name="account"
                       defaultValue={formData.account}
                       readOnly={isReadOnly}
-                      placeholder="Account"
                     />
                   </div>
                 </div>
                 {/* Right Column */}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                      <Label htmlFor="recipient">Recipient *</Label>
-                      <Input
-                        id="recipient"
-                        name="recipient"
-                        defaultValue={formData.recipient}
-                        readOnly={isReadOnly}
-                        placeholder="Recipient"
-                      />
+                    <Label htmlFor="recipient">Recipient *</Label>
+                    <Input
+                      id="recipient"
+                      name="recipient"
+                      defaultValue={formData.recipient}
+                      readOnly={isReadOnly}
+                    />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reference">Reference</Label>
@@ -155,30 +133,16 @@ export default function TransactionPage() {
                         name="reference"
                         defaultValue={formData.reference}
                         readOnly={isReadOnly}
-                        placeholder="Reference (optional)"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="subcategory">Subcategory</Label>
-                      <Select
+                      <Input
+                        id="subcategory"
                         name="subcategory"
-                        value={formData.subcategory}
-                        disabled={isReadOnly}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select subcategory" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formData.category &&
-                            categorySubcategoriesMap[formData.category].map(
-                              (subcategory) => (
-                                <SelectItem key={subcategory} value={subcategory}>
-                                  {subcategory}
-                                </SelectItem>
-                              )
-                            )}
-                        </SelectContent>
-                      </Select>
+                        defaultValue={formData.subcategory}
+                        readOnly={isReadOnly}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="remarks">Remarks</Label>
@@ -187,7 +151,6 @@ export default function TransactionPage() {
                         name="remarks"
                         defaultValue={formData.remarks}
                         readOnly={isReadOnly}
-                        placeholder="Remarks (optional)"
                       />
                     </div>
                   </div>

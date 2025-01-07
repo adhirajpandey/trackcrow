@@ -145,7 +145,7 @@ export default function TransactionPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
                       }
-                      placeholder="Amount"
+                      placeholder="Enter amount"
                     />
                   </div>
                   <div className="space-y-2">
@@ -184,7 +184,7 @@ export default function TransactionPage() {
                       name="account"
                       value={formData.account}
                       onChange={(e) => setFormData({ ...formData, account: e.target.value })}
-                      placeholder="Account"
+                      placeholder="Enter account"
                     />
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export default function TransactionPage() {
                       name="recipient"
                       value={formData.recipient}
                       onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
-                      placeholder="Recipient"
+                      placeholder="Enter recipient"
                     />
                   </div>
                   <div className="space-y-2">
@@ -207,7 +207,7 @@ export default function TransactionPage() {
                       name="reference"
                       value={formData.reference}
                       onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                      placeholder="Reference (optional)"
+                      placeholder="Enter reference (optional)"
                     />
                   </div>
                   <div className="space-y-2">
