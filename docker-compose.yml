@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  next-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HOST_PORT:-3000}:${PORT:-3000}"
+    environment:
+      NODE_ENV: development # Set the environment to production
+    command: ["npm", "start"] # Override default CMD if needed
