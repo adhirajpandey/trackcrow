@@ -14,7 +14,7 @@ import { epochToGMT530 } from "@/utils/datetime_formatter";
 export default function TransactionPage() {
   const router = useRouter();
   const { uuid } = useParams();
-  
+
   // Form data state
   const [formData, setFormData] = useState({
     amount: "",
@@ -23,10 +23,10 @@ export default function TransactionPage() {
     subcategory: "",
     remarks: "",
     reference: "",
-    timestamp: 0,
+    timestamp: null,
     account: "",
   });
-  
+
   // Track if fields are read-only
   const [isReadOnly, setIsReadOnly] = useState(false);
 
@@ -37,7 +37,9 @@ export default function TransactionPage() {
         try {
           const response = await fetch(`${apiUrl}/transaction/${uuid}`, {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
+              Authorization: `Bearer ${localStorage.getItem(
+                "trackcrow-token"
+              )}`,
             },
           });
           if (!response.ok) {
@@ -92,7 +94,11 @@ export default function TransactionPage() {
                     <Input
                       id="timestamp"
                       name="timestamp"
-                      defaultValue={epochToGMT530(formData.timestamp)}
+                      defaultValue={
+                        formData.timestamp
+                          ? epochToGMT530(formData.timestamp)
+                          : ""
+                      }
                       readOnly
                     />
                   </div>
@@ -125,43 +131,43 @@ export default function TransactionPage() {
                       defaultValue={formData.recipient}
                       readOnly={isReadOnly}
                     />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reference">Reference</Label>
-                      <Input
-                        id="reference"
-                        name="reference"
-                        defaultValue={formData.reference}
-                        readOnly={isReadOnly}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="subcategory">Subcategory</Label>
-                      <Input
-                        id="subcategory"
-                        name="subcategory"
-                        defaultValue={formData.subcategory}
-                        readOnly={isReadOnly}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="remarks">Remarks</Label>
-                      <Textarea
-                        id="remarks"
-                        name="remarks"
-                        defaultValue={formData.remarks}
-                        readOnly={isReadOnly}
-                      />
-                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reference">Reference</Label>
+                    <Input
+                      id="reference"
+                      name="reference"
+                      defaultValue={formData.reference}
+                      readOnly={isReadOnly}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subcategory">Subcategory</Label>
+                    <Input
+                      id="subcategory"
+                      name="subcategory"
+                      defaultValue={formData.subcategory}
+                      readOnly={isReadOnly}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="remarks">Remarks</Label>
+                    <Textarea
+                      id="remarks"
+                      name="remarks"
+                      defaultValue={formData.remarks}
+                      readOnly={isReadOnly}
+                    />
                   </div>
                 </div>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"
                   className="bg-black text-white hover:bg-gray-800"
                   onClick={() => router.push(`/transaction/edit/${uuid}`)}
                 >
-                 Edit Transaction
+                  Edit Transaction
                 </Button>
                 <Button
                   type="button"
