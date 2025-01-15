@@ -31,8 +31,8 @@ import {
   EditButton,
   ViewButton,
 } from "@/components/ui/custom-button";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
+import { DateRangePickerMenu } from "@/components/ui/date-range-picker";
 import { convertDateRangeToEpoch } from "@/utils/datetime_formatter";
 
 type Transaction = {
@@ -64,9 +64,6 @@ export default function DashboardPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
     null
   );
-  const [selectedDateRange, setSelectedDateRange] = useState<
-    DateRange | undefined
-  >();
 
   useEffect(() => {
     fetchDashboardData();
@@ -119,8 +116,7 @@ export default function DashboardPage() {
   };
 
   const handleDateRangeChange = (dateRange: DateRange | undefined) => {
-    setSelectedDateRange(dateRange);
-    const epochRange = convertDateRangeToEpoch(selectedDateRange);
+    const epochRange = convertDateRangeToEpoch(dateRange);
     console.log("Selected Date Range:", epochRange);
   };
 
@@ -155,12 +151,12 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">
+      <div className="flex items-center text-3xl font-bold mb-6">
         <span>Dashboard</span>
         <span className="ml-4">
-          <DateRangePicker onDateRangeChange={handleDateRangeChange} />
+          <DateRangePickerMenu onDateRangeChange={handleDateRangeChange} />
         </span>
-      </h1>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
