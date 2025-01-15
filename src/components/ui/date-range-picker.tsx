@@ -14,8 +14,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export function DateRangePicker() {
+interface DateRangePickerProps {
+  onDateRangeChange?: (dateRange: DateRange | undefined) => void;
+}
+
+export function DateRangePicker({ onDateRangeChange }: DateRangePickerProps) {
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
+
+  React.useEffect(() => {
+    if (onDateRangeChange) {
+      onDateRangeChange(dateRange);
+    }
+  }, [dateRange, onDateRangeChange]);
 
   return (
     <Popover>

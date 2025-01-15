@@ -26,7 +26,14 @@ import { Loader2 } from "lucide-react";
 import { epochToGMT530 } from "@/utils/datetime_formatter";
 import { numberToINR } from "@/utils/currency-formatter";
 import { apiUrl } from "@/app/config";
-import { TrashButton, EditButton, ViewButton } from "@/components/ui/custom-button";
+import {
+  TrashButton,
+  EditButton,
+  ViewButton,
+} from "@/components/ui/custom-button";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { convertDateRangeToEpoch } from "@/utils/datetime_formatter";
 
 type Transaction = {
   uuid: string;
@@ -57,6 +64,9 @@ export default function DashboardPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
     null
   );
+  const [selectedDateRange, setSelectedDateRange] = useState<
+    DateRange | undefined
+  >();
 
   useEffect(() => {
     fetchDashboardData();
@@ -108,6 +118,12 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDateRangeChange = (dateRange: DateRange | undefined) => {
+    setSelectedDateRange(dateRange);
+    const epochRange = convertDateRangeToEpoch(selectedDateRange);
+    console.log("Selected Date Range:", epochRange);
+  };
+
   if (!dashboard) {
     return null;
   }
@@ -139,7 +155,12 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6">
+        <span>Dashboard</span>
+        <span className="ml-4">
+          <DateRangePicker onDateRangeChange={handleDateRangeChange} />
+        </span>
+      </h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -158,9 +179,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {numberToINR(totalAmount)}
-            </div>
+            <div className="text-2xl font-bold">{numberToINR(totalAmount)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -193,19 +212,24 @@ export default function DashboardPage() {
               <TableRow key={transaction.uuid}>
                 <TableCell>{epochToGMT530(transaction.timestamp)}</TableCell>
                 <TableCell>{transaction.recipient}</TableCell>
-                <TableCell>{numberToINR(transaction.amount)}</TableCell> 
+                <TableCell>{numberToINR(transaction.amount)}</TableCell>
                 <TableCell>{transaction.category || ""}</TableCell>
                 <TableCell>{transaction.account}</TableCell>
                 <Dialog>
-                  <TableCell className="text-center"> 
+                  <TableCell className="text-center">
                     <Link href={`/transaction/${transaction.uuid}`} passHref>
-                        <ViewButton></ViewButton>
+                      <ViewButton></ViewButton>
                     </Link>
-                    <Link href={`/transaction/edit/${transaction.uuid}`} passHref>
-                        <EditButton></EditButton>
+                    <Link
+                      href={`/transaction/edit/${transaction.uuid}`}
+                      passHref
+                    >
+                      <EditButton></EditButton>
                     </Link>
                     <DialogTrigger asChild>
-                      <TrashButton onClick={() => setSelectedTransaction(transaction.uuid)}></TrashButton>
+                      <TrashButton
+                        onClick={() => setSelectedTransaction(transaction.uuid)}
+                      ></TrashButton>
                     </DialogTrigger>
                   </TableCell>
                   <DialogContent>
@@ -260,7 +284,9 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Essentials</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{numberToINR(essentialsTotal)}</div>
+              <div className="text-2xl font-bold">
+                {numberToINR(essentialsTotal)}
+              </div>
             </CardContent>
           </Card>
         </Link>
@@ -280,7 +306,9 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Shopping</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{numberToINR(shoppingTotal)}</div>
+              <div className="text-2xl font-bold">
+                {numberToINR(shoppingTotal)}
+              </div>
             </CardContent>
           </Card>
         </Link>
@@ -290,7 +318,9 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">Transport</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{numberToINR(transportTotal)}</div>
+              <div className="text-2xl font-bold">
+                {numberToINR(transportTotal)}
+              </div>
             </CardContent>
           </Card>
         </Link>
