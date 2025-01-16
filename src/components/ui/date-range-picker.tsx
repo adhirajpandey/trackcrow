@@ -140,15 +140,29 @@ export function DateRangePickerMenu({
   return (
     <div className="flex flex-col items-start space-y-2">
       <Select onValueChange={handleSelectChange}>
-        <SelectTrigger className="w-[300px]">
-          <SelectValue placeholder="Filter by date range">
+        <SelectTrigger className="w-full md:w-[300px]">
+          <SelectValue
+            placeholder={
+              <div className="flex items-center">
+                <CalendarIcon className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">
+                  Filter by date range
+                </span>
+              </div>
+            }
+          >
             <div className="flex items-center">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <span>{formatDateRange()}</span>
+              <CalendarIcon className="h-4 w-4" />
+              <span className="hidden md:inline ml-2">{formatDateRange()}</span>
             </div>
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
+          {selectedOption && (
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+              {formatDateRange()}
+            </div>
+          )}
           <SelectItem value="all-time">All time</SelectItem>
           <SelectItem value="today">Today</SelectItem>
           <SelectItem value="this-week">This Week</SelectItem>
@@ -160,7 +174,7 @@ export function DateRangePickerMenu({
       </Select>
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-[675px]">
+        <DialogContent className="w-[90vw] md:w-[600px] p-3">
           <DialogHeader>
             <DialogTitle>Select Date Range</DialogTitle>
           </DialogHeader>
@@ -170,13 +184,13 @@ export function DateRangePickerMenu({
                 mode="range"
                 selected={tempDateRange}
                 onSelect={setTempDateRange}
-                numberOfMonths={2}
+                numberOfMonths={window.innerWidth >= 768 ? 2 : 1}
                 initialFocus
-                className="flex-1"
+                className="mx-auto"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => {

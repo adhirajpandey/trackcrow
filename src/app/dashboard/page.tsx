@@ -151,9 +151,9 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center text-3xl font-bold mb-6">
+      <div className="flex flex-row items-center justify-between text-3xl font-bold mb-6 w-full">
         <span>Dashboard</span>
-        <span className="mt-4 md:mt-0 md:ml-4">
+        <span className="flex items-center ml-auto">
           <DateRangePickerMenu onDateRangeChange={handleDateRangeChange} />
         </span>
       </div>
