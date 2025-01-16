@@ -114,10 +114,46 @@ export default function DashboardPage() {
       console.error("Error deleting transaction:", error);
     }
   };
+  const handleDateRangeChange = async (dateRange: DateRange | undefined) => {
+    if (!dateRange) return;
 
-  const handleDateRangeChange = (dateRange: DateRange | undefined) => {
     const epochRange = convertDateRangeToEpoch(dateRange);
-    console.log("Selected Date Range:", epochRange);
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams({
+        from: epochRange.from?.toString() ?? "",
+        to: epochRange.to?.toString() ?? "",
+      });
+
+      const response = await fetch(
+        `${apiUrl}/dashboard?${queryParams.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard data");
+      }
+
+      const res = await response.json();
+      const data = res.result;
+      setDashboard(data);
+    } catch (err) {
+      setError(
+        "An error occurred while fetching dashboard data. Please try again later."
+      );
+      console.error("Error fetching dashboard data:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!dashboard) {
