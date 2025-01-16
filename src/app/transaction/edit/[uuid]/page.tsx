@@ -43,18 +43,23 @@ export default function TransactionPage() {
     subcategory: "",
     remarks: "",
     reference: "",
-    timestamp: 0,
+    timestamp: null,
   });
 
   useEffect(() => {
     if (transactionUUID) {
       const fetchTransactionData = async () => {
         try {
-          const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-            },
-          });
+          const response = await fetch(
+            `${apiUrl}/transaction/${transactionUUID}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem(
+                  "trackcrow-token"
+                )}`,
+              },
+            }
+          );
           if (!response.ok) {
             throw new Error("Failed to fetch transaction data");
           }
@@ -86,7 +91,10 @@ export default function TransactionPage() {
     }));
   };
 
-  const updateTransaction = async (transactionUUID: string, payload: TransactionPayload) => {
+  const updateTransaction = async (
+    transactionUUID: string,
+    payload: TransactionPayload
+  ) => {
     try {
       const response = await fetch(`${apiUrl}/transaction/${transactionUUID}`, {
         method: "PUT",
@@ -143,7 +151,10 @@ export default function TransactionPage() {
                       type="number"
                       value={formData.amount}
                       onChange={(e) =>
-                        setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
+                        setFormData({
+                          ...formData,
+                          amount: parseFloat(e.target.value) || 0,
+                        })
                       }
                       placeholder="Enter amount"
                     />
@@ -153,7 +164,11 @@ export default function TransactionPage() {
                     <Input
                       id="timestamp"
                       name="timestamp"
-                      value={epochToGMT530(formData.timestamp)}
+                      value={
+                        formData.timestamp
+                          ? epochToGMT530(formData.timestamp)
+                          : ""
+                      }
                       readOnly
                       placeholder="Time"
                     />
@@ -163,17 +178,21 @@ export default function TransactionPage() {
                     <Select
                       name="category"
                       value={formData.category}
-                      onValueChange={(value) => handleSelectChange("category", value)}
+                      onValueChange={(value) =>
+                        handleSelectChange("category", value)
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.keys(categorySubcategoriesMap).map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
+                        {Object.keys(categorySubcategoriesMap).map(
+                          (category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -183,7 +202,9 @@ export default function TransactionPage() {
                       id="account"
                       name="account"
                       value={formData.account}
-                      onChange={(e) => setFormData({ ...formData, account: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, account: e.target.value })
+                      }
                       placeholder="Enter account"
                     />
                   </div>
@@ -196,7 +217,9 @@ export default function TransactionPage() {
                       id="recipient"
                       name="recipient"
                       value={formData.recipient}
-                      onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, recipient: e.target.value })
+                      }
                       placeholder="Enter recipient"
                     />
                   </div>
@@ -206,7 +229,9 @@ export default function TransactionPage() {
                       id="reference"
                       name="reference"
                       value={formData.reference}
-                      onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, reference: e.target.value })
+                      }
                       placeholder="Enter reference (optional)"
                     />
                   </div>
@@ -215,18 +240,22 @@ export default function TransactionPage() {
                     <Select
                       name="subcategory"
                       value={formData.subcategory}
-                      onValueChange={(value) => handleSelectChange("subcategory", value)}
+                      onValueChange={(value) =>
+                        handleSelectChange("subcategory", value)
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select subcategory" />
                       </SelectTrigger>
                       <SelectContent>
                         {formData.category &&
-                          categorySubcategoriesMap[formData.category].map((subcategory) => (
-                            <SelectItem key={subcategory} value={subcategory}>
-                              {subcategory}
-                            </SelectItem>
-                          ))}
+                          categorySubcategoriesMap[formData.category].map(
+                            (subcategory) => (
+                              <SelectItem key={subcategory} value={subcategory}>
+                                {subcategory}
+                              </SelectItem>
+                            )
+                          )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -236,7 +265,9 @@ export default function TransactionPage() {
                       id="remarks"
                       name="remarks"
                       value={formData.remarks}
-                      onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, remarks: e.target.value })
+                      }
                       placeholder="Remarks (optional)"
                     />
                   </div>
