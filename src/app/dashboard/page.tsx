@@ -120,7 +120,6 @@ export default function DashboardPage() {
     const epochRange = convertDateRangeToEpoch(dateRange);
 
     try {
-      setIsLoading(true);
       setError(null);
 
       const queryParams = new URLSearchParams({
@@ -151,8 +150,6 @@ export default function DashboardPage() {
         "An error occurred while fetching dashboard data. Please try again later."
       );
       console.error("Error fetching dashboard data:", err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
