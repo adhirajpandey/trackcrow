@@ -1,16 +1,30 @@
 "use client";
 
 import * as React from "react";
-import { format, subDays, subMonths, startOfDay, endOfDay } from "date-fns";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  startOfYear,
+  endOfYear,
+  startOfYear as startOfAllTime,
+} from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -20,10 +34,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type DateOption = "today" | "last-week" | "last-month" | "custom";
+type DateOption =
+  | "today"
+  | "this-week"
+  | "this-month"
+  | "past-month"
+  | "this-year"
+  | "all-time"
+  | "custom";
 
 interface DateRangePickerMenuProps {
-  onDateRangeChange: (dateRange: DateRange) => void; // Callback to send date range to parent
+  onDateRangeChange: (dateRange: DateRange | undefined) => void;
 }
 
 export function DateRangePickerMenu({
@@ -32,6 +53,9 @@ export function DateRangePickerMenu({
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
     undefined
   );
+  const [tempDateRange, setTempDateRange] = React.useState<
+    DateRange | undefined
+  >(undefined);
   const [selectedOption, setSelectedOption] = React.useState<
     DateOption | undefined
   >(undefined);
@@ -43,6 +67,7 @@ export function DateRangePickerMenu({
 
     if (option === "custom") {
       setIsOpen(true);
+      setTempDateRange(dateRange);
     } else {
       let from: Date, to: Date;
       const now = new Date();
@@ -51,12 +76,24 @@ export function DateRangePickerMenu({
           from = startOfDay(now);
           to = endOfDay(now);
           break;
-        case "last-week":
-          from = startOfDay(subDays(now, 7));
-          to = endOfDay(now);
+        case "this-week":
+          from = startOfWeek(now);
+          to = endOfWeek(now);
           break;
-        case "last-month":
-          from = startOfDay(subMonths(now, 1));
+        case "this-month":
+          from = startOfMonth(now);
+          to = endOfMonth(now);
+          break;
+        case "past-month":
+          from = startOfMonth(subMonths(now, 1));
+          to = endOfMonth(subMonths(now, 1));
+          break;
+        case "this-year":
+          from = startOfYear(now);
+          to = endOfYear(now);
+          break;
+        case "all-time":
+          from = startOfAllTime(new Date(2000, 0, 1)); // Assuming data starts from year 2000
           to = endOfDay(now);
           break;
         default:
@@ -65,8 +102,26 @@ export function DateRangePickerMenu({
       }
       const newRange = { from, to };
       setDateRange(newRange);
-      onDateRangeChange(newRange); // Notify parent component
+      onDateRangeChange(newRange);
     }
+  };
+
+  const handleApply = () => {
+    if (tempDateRange?.from && tempDateRange?.to) {
+      setDateRange(tempDateRange);
+      onDateRangeChange(tempDateRange);
+      setSelectedOption("custom");
+    } else {
+      setDateRange(undefined);
+      onDateRangeChange(undefined);
+      setSelectedOption(undefined);
+    }
+    setIsOpen(false);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setTempDateRange(dateRange);
   };
 
   const formatDateRange = () => {
@@ -94,14 +149,17 @@ export function DateRangePickerMenu({
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="all-time">All time</SelectItem>
           <SelectItem value="today">Today</SelectItem>
-          <SelectItem value="last-week">Last Week</SelectItem>
-          <SelectItem value="last-month">Last Month</SelectItem>
+          <SelectItem value="this-week">This Week</SelectItem>
+          <SelectItem value="this-month">This Month</SelectItem>
+          <SelectItem value="past-month">Past Month</SelectItem>
+          <SelectItem value="this-year">This Year</SelectItem>
           <SelectItem value="custom">Custom Range</SelectItem>
         </SelectContent>
       </Select>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-[675px]">
           <DialogHeader>
             <DialogTitle>Select Date Range</DialogTitle>
@@ -110,21 +168,25 @@ export function DateRangePickerMenu({
             <div className="flex justify-center">
               <Calendar
                 mode="range"
-                selected={dateRange}
-                onSelect={(newDateRange) => {
-                  setDateRange(newDateRange);
-                  if (newDateRange?.from && newDateRange?.to) {
-                    setSelectedOption("custom");
-                    setIsOpen(false);
-                    onDateRangeChange(newDateRange); // Notify parent component
-                  }
-                }}
+                selected={tempDateRange}
+                onSelect={setTempDateRange}
                 numberOfMonths={2}
                 initialFocus
                 className="flex-1"
               />
             </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTempDateRange(undefined);
+              }}
+            >
+              Clear
+            </Button>
+            <Button onClick={handleApply}>Apply</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
