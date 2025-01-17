@@ -68,12 +68,12 @@ export default function LandingPage() {
               <StepCard
                 number={2}
                 title="Add Transactions"
-                description="Log your expenses and income easily."
+                description="Log your expenses from SMS easily."
               />
               <StepCard
                 number={3}
                 title="Gain Insights"
-                description="View reports and optimize your spending."
+                description="Analyse and optimize your spending."
               />
             </div>
           </div>
@@ -91,12 +91,12 @@ export default function LandingPage() {
                 author="Ankit K."
               />
               <TestimonialCard
-                quote="The insights I get from TrackCrow have helped me save hundreds of dollars each month."
-                author="Mike T."
+                quote="The insights I get from TrackCrow have helped me save thousands of rupees each month."
+                author="Adhiraj P."
               />
               <TestimonialCard
                 quote="I love how I can set budgets and get notifications. It keeps me accountable."
-                author="Emily R."
+                author="Muskan S."
               />
             </div>
           </div>
