@@ -116,6 +116,40 @@ export default function TransactionPage() {
     }
   };
 
+  const handleGetSuggestion = async () => {
+    if (transactionUUID) {
+      try {
+        const response = await fetch(
+          `${apiUrl}/suggest/${transactionUUID}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem(
+                "trackcrow-token"
+              )}`,
+            },
+          }
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch transaction data");
+        }
+        const data = await response.json();
+        setFormData((prevState) => ({
+          ...prevState,
+          category: data.result.suggestedCategory || prevState.category,
+        }));
+        setTimeout(() => {
+          setFormData((prevState) => ({
+            ...prevState,
+            subcategory: data.result.suggestedSubcategory || prevState.subcategory,
+          }));
+        }, 10);
+      } catch (error) {
+        console.error("Error fetching suggestion:", error);
+        toast.error("Error fetching suggestion.");
+      }
+    }
+  }
+
   const handleSubmit = () => {
     if (transactionUUID) {
       const payload: TransactionPayload = {
@@ -273,7 +307,16 @@ export default function TransactionPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-between">
+                <Button
+                  variant="secondary"
+                  type="button"
+                  className="bg-gray-100 text-black hover:bg-gray-200"
+                  onClick={handleGetSuggestion}
+                >
+                Get Suggestion
+                </Button>
+              <div className="flex space-x-2">
                 <Button
                   type="button"
                   className="bg-black text-white hover:bg-gray-800"
@@ -289,6 +332,7 @@ export default function TransactionPage() {
                   Go Back
                 </Button>
               </div>
+            </div>
             </form>
           </CardContent>
         </Card>
