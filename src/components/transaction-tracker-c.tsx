@@ -45,9 +45,13 @@ type Transaction = {
   location?: string;
 };
 
+type TransactionTrackerProps = {
+  categoricalCountRefresh?: () => void;
+};
+
 const categories = ["Food", "Transport", "Essentials", "Shopping"];
 
-export function TransactionTracker() {
+export function TransactionTracker({ categoricalCountRefresh }: TransactionTrackerProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>(
     []
@@ -123,13 +127,6 @@ export function TransactionTracker() {
           category: selectedCategory,
         }),
       });
-      console.log(
-        JSON.stringify({
-          transactionIds: selectedTransactions,
-          category: selectedCategory,
-        })
-      );
-      console.log(response);
 
       if (!response.ok) {
         throw new Error("Failed to categorize transactions");
@@ -137,6 +134,9 @@ export function TransactionTracker() {
 
       // Refresh transactions after categorization
       await fetchTransactions();
+
+      // update categorical count in tracker page if refreshTracker is true and fetchTrackerData func is provided as prop
+      if (categoricalCountRefresh) categoricalCountRefresh();
     } catch (err) {
       setError(
         "An error occurred while categorizing transactions. Please try again."
@@ -319,3 +319,4 @@ export function TransactionTracker() {
     </div>
   );
 }
+
