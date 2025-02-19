@@ -187,14 +187,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-row items-center justify-between text-3xl font-bold mb-6 w-full">
+    <div className="container mx-auto px-4 py-4">
+      <div className="flex flex-row items-center justify-between text-3xl font-bold mb-4 w-full">
         <span>Dashboard</span>
         <span className="flex items-center ml-auto">
           <DateRangePickerMenu onDateRangeChange={handleDateRangeChange} />
         </span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {isPartialLoading ? (
           <>
             <Card>
@@ -267,6 +267,73 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      <h2 className="text-2xl font-bold mb-4">Categorical Spends</h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {isPartialLoading ? (
+          <div className="col-span-4 flex justify-center items-center h-32">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <Link href="/dashboard/Essentials">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Essentials
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {numberToINR(essentialsTotal)}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/dashboard/Food">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Food</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {numberToINR(foodTotal)}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/dashboard/Shopping">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Shopping
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {numberToINR(shoppingTotal)}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/dashboard/Transport">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Transport
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {numberToINR(transportTotal)}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </>
+        )}
+      </div>
+
 
       <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
       <div className="border rounded-lg overflow-hidden">
@@ -357,71 +424,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <h2 className="text-2xl font-bold mb-4">Categorical Spends</h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {isPartialLoading ? (
-          <div className="col-span-4 flex justify-center items-center h-32">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <Link href="/dashboard/Essentials">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Essentials
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {numberToINR(essentialsTotal)}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link href="/dashboard/Food">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Food</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {numberToINR(foodTotal)}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link href="/dashboard/Shopping">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Shopping
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {numberToINR(shoppingTotal)}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link href="/dashboard/Transport">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Transport
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {numberToINR(transportTotal)}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </>
-        )}
-      </div>
+  
     </div>
   );
 }

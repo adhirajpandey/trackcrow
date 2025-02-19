@@ -19,12 +19,14 @@ export default function TrackerPage() {
   const [trackerData, setTrackerData] = useState<TrackerData>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showLoader, setShowLoader] = useState(true);
 
   useEffect(() => {
-    fetchTrackerData();
+    fetchTrackerData(true);
   }, []);
 
-  const fetchTrackerData = async () => {
+  const fetchTrackerData = async (showLoader: boolean = false) => {
+    setShowLoader(showLoader);
     setIsLoading(true);
     setError(null);
     try {
@@ -53,7 +55,7 @@ export default function TrackerPage() {
     return null;
   }
 
-  if (isLoading) {
+  if (isLoading && showLoader) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -104,7 +106,7 @@ export default function TrackerPage() {
             )
           )}
         </div>
-        <TransactionTracker />
+        <TransactionTracker categoricalCountRefresh={fetchTrackerData}/>
       </main>
     </div>
   );
