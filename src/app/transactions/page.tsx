@@ -177,7 +177,7 @@ export default function Transactions() {
       <div className="flex flex-row items-center justify-between text-3xl font-bold mb-4 w-full">
         <span>Transactions</span>
         <span className="flex items-center ml-auto">
-          <DateRangePickerMenu onDateRangeChange={handleDateRangeChange} />
+          <DateRangePickerMenu onChange={handleDateRangeChange} />
           <Select onValueChange={handleRecipientChange}>
             <SelectTrigger className="w-full md:w-[200px] mx-1 ">
               <SelectValue placeholder="Recipient">
