@@ -49,6 +49,11 @@ export function NavBar() {
                   Tracker
                 </Link>
               </li>
+              <li>
+                <Link href="/transactions" className="hover:text-gray-300">
+                  Transactions
+                </Link>
+              </li>
             </ul>
           )}
         </div>
