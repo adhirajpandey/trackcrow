@@ -234,7 +234,10 @@ export default function CategoricalDashboard() {
               </Table>
             </div>
             <div className="mt-4 text-right">
-              <Link href="/tracker" className="text-blue-500 hover:underline">
+              <Link
+                href="/transactions"
+                className="text-blue-500 hover:underline"
+              >
                 View all transactions
               </Link>
             </div>

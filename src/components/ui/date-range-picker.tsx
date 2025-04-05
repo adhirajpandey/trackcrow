@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { useDateRange } from "@/context/date-range-context";
 import {
@@ -55,6 +57,19 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
     DateOption | undefined
   >(undefined);
   const [isOpen, setIsOpen] = React.useState(false);
+  const [numMonths, setNumMonths] = React.useState(1);
+
+  // Safe usage of window
+  React.useEffect(() => {
+    const updateMonths = () => {
+      if (typeof window !== "undefined") {
+        setNumMonths(window.innerWidth >= 768 ? 2 : 1);
+      }
+    };
+    updateMonths();
+    window.addEventListener("resize", updateMonths);
+    return () => window.removeEventListener("resize", updateMonths);
+  }, []);
 
   React.useEffect(() => {
     if (!dateRange?.from || !dateRange?.to) {
@@ -211,7 +226,7 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
                 mode="range"
                 selected={tempDateRange}
                 onSelect={setTempDateRange}
-                numberOfMonths={window.innerWidth >= 768 ? 2 : 1}
+                numberOfMonths={numMonths}
                 initialFocus
                 className="mx-auto"
               />
