@@ -347,7 +347,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-
       <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
       <div className="border rounded-lg overflow-hidden">
         {isPartialLoading ? (
@@ -436,8 +435,6 @@ export default function DashboardPage() {
           View all transactions
         </Link>
       </div>
-
-  
     </div>
   );
 }
