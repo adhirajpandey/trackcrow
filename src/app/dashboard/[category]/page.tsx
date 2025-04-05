@@ -157,6 +157,12 @@ export default function CategoricalDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       <main className="container mx-auto px-4 py-8">
+        <div className="flex flex-row items-center justify-between text-3xl font-bold mb-4 w-full">
+          <span>Subcategorical Distribution</span>
+          <span className="flex items-center ml-auto">
+            <DateRangePickerMenu onChange={handleDateRangeChange} />
+          </span>
+        </div>
         {isPartialLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             {Object.keys(subcategoricalTotal).map((subcategory: string) => (
@@ -194,9 +200,6 @@ export default function CategoricalDashboard() {
         )}
         <div className="flex flex-row items-center justify-between text-3xl font-bold mb-6 w-full">
           <h2 className="text-2xl font-bold mb-4">Recent Transactions</h2>
-          <span className="flex items-center ml-auto">
-            <DateRangePickerMenu onChange={handleDateRangeChange} />
-          </span>
         </div>
         {isPartialLoading ? (
           <div className="flex justify-center items-center h-64">
