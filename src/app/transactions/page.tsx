@@ -142,19 +142,12 @@ export default function Transactions() {
   };
 
   useEffect(() => {
-    if (selectedDateRange) {
-      fetchTransactionsData();
-    }
-
-    if (selectedRecipient) {
-      fetchTransactionsData();
-    }
-
-    if (selectedCategory) {
-      fetchTransactionsData();
-    }
-
-    if (selectedSubCategory) {
+    if (
+      selectedDateRange ||
+      selectedRecipient ||
+      selectedCategory ||
+      selectedSubCategory
+    ) {
       fetchTransactionsData();
     }
   }, [
@@ -208,8 +201,8 @@ export default function Transactions() {
           {selectedCategory && (
             <Select onValueChange={handleSubCategoryChange}>
               <SelectTrigger className="w-full md:w-[200px] mr-1 ">
-                <SelectValue placeholder="Sub-Category">
-                  {selectedSubCategory || "Sub-Category"}
+                <SelectValue placeholder="Subcategory">
+                  {selectedSubCategory || "Subcategory"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -232,7 +225,7 @@ export default function Transactions() {
               <TableHead>Amount</TableHead>
               <TableHead>Account</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Sub-Category</TableHead>
+              <TableHead>Subcategory</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
