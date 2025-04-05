@@ -1,5 +1,6 @@
+"use client";
+
 import * as React from "react";
-import { useDateRange } from "@/context/date-range-context";
 import {
   format,
   startOfDay,
@@ -11,6 +12,7 @@ import {
   subMonths,
   startOfYear,
   endOfYear,
+  startOfYear as startOfAllTime,
 } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
@@ -41,13 +43,16 @@ type DateOption =
   | "all-time"
   | "custom";
 
-type DateRangePickerMenuProps = {
-  onChange: (dateRange: DateRange | undefined) => void;
-};
+interface DateRangePickerMenuProps {
+  onDateRangeChange: (dateRange: DateRange | undefined) => void;
+}
 
-export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
-  const { dateRange, setDateRange } = useDateRange();
-
+export function DateRangePickerMenu({
+  onDateRangeChange,
+}: DateRangePickerMenuProps) {
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
+    undefined
+  );
   const [tempDateRange, setTempDateRange] = React.useState<
     DateRange | undefined
   >(undefined);
@@ -55,48 +60,6 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
     DateOption | undefined
   >(undefined);
   const [isOpen, setIsOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!dateRange?.from || !dateRange?.to) {
-      setSelectedOption(undefined);
-      return;
-    }
-
-    const now = new Date();
-    if (
-      dateRange.from.getTime() === startOfDay(now).getTime() &&
-      dateRange.to.getTime() === endOfDay(now).getTime()
-    ) {
-      setSelectedOption("today");
-    } else if (
-      dateRange.from.getTime() === startOfWeek(now).getTime() &&
-      dateRange.to.getTime() === endOfWeek(now).getTime()
-    ) {
-      setSelectedOption("this-week");
-    } else if (
-      dateRange.from.getTime() === startOfMonth(now).getTime() &&
-      dateRange.to.getTime() === endOfMonth(now).getTime()
-    ) {
-      setSelectedOption("this-month");
-    } else if (
-      dateRange.from.getTime() === startOfMonth(subMonths(now, 1)).getTime() &&
-      dateRange.to.getTime() === endOfMonth(subMonths(now, 1)).getTime()
-    ) {
-      setSelectedOption("past-month");
-    } else if (
-      dateRange.from.getTime() === startOfYear(now).getTime() &&
-      dateRange.to.getTime() === endOfYear(now).getTime()
-    ) {
-      setSelectedOption("this-year");
-    } else if (
-      dateRange.from.getTime() === new Date(2000, 0, 1).getTime() &&
-      dateRange.to.getTime() === endOfDay(now).getTime()
-    ) {
-      setSelectedOption("all-time");
-    } else {
-      setSelectedOption("custom");
-    }
-  }, [dateRange]);
 
   const handleSelectChange = (value: string) => {
     const option = value as DateOption;
@@ -130,7 +93,7 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
           to = endOfYear(now);
           break;
         case "all-time":
-          from = new Date(2000, 0, 1);
+          from = startOfAllTime(new Date(2000, 0, 1)); // Assuming data starts from year 2000
           to = endOfDay(now);
           break;
         default:
@@ -139,21 +102,26 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
       }
       const newRange = { from, to };
       setDateRange(newRange);
-      onChange(newRange);
+      onDateRangeChange(newRange);
     }
   };
 
   const handleApply = () => {
     if (tempDateRange?.from && tempDateRange?.to) {
       setDateRange(tempDateRange);
+      onDateRangeChange(tempDateRange);
       setSelectedOption("custom");
-      onChange(tempDateRange);
     } else {
       setDateRange(undefined);
+      onDateRangeChange(undefined);
       setSelectedOption(undefined);
-      onChange(undefined);
     }
     setIsOpen(false);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setTempDateRange(dateRange);
   };
 
   const formatDateRange = () => {
@@ -171,7 +139,7 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
 
   return (
     <div className="flex flex-col items-start space-y-2">
-      <Select onValueChange={handleSelectChange} value={selectedOption}>
+      <Select onValueChange={handleSelectChange}>
         <SelectTrigger className="w-full md:w-[300px]">
           <SelectValue
             placeholder={
@@ -190,6 +158,11 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
+          {selectedOption && (
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+              {formatDateRange()}
+            </div>
+          )}
           <SelectItem value="all-time">All time</SelectItem>
           <SelectItem value="today">Today</SelectItem>
           <SelectItem value="this-week">This Week</SelectItem>
@@ -200,7 +173,7 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
         </SelectContent>
       </Select>
 
-      <Dialog open={isOpen} onOpenChange={() => setIsOpen(false)}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="w-[90vw] md:w-[600px] p-3">
           <DialogHeader>
             <DialogTitle>Select Date Range</DialogTitle>
@@ -220,7 +193,9 @@ export function DateRangePickerMenu({ onChange }: DateRangePickerMenuProps) {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              onClick={() => setTempDateRange(undefined)}
+              onClick={() => {
+                setTempDateRange(undefined);
+              }}
             >
               Clear
             </Button>

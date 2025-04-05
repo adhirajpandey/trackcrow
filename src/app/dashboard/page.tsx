@@ -34,7 +34,6 @@ import {
 import { DateRange } from "react-day-picker";
 import { DateRangePickerMenu } from "@/components/ui/date-range-picker";
 import { convertDateRangeToEpoch } from "@/utils/datetime_formatter";
-import { useDateRange } from "@/context/date-range-context";
 
 type Transaction = {
   uuid: string;
@@ -66,7 +65,6 @@ export default function DashboardPage() {
     null
   );
   const [isPartialLoading, setIsPartialLoading] = useState(false);
-  const { dateRange } = useDateRange();
 
   useEffect(() => {
     fetchDashboardData();
@@ -76,22 +74,11 @@ export default function DashboardPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const epochRange = convertDateRangeToEpoch(dateRange);
-      const queryParams = new URLSearchParams({
-        from: epochRange.from?.toString() ?? "",
-        to: epochRange.to?.toString() ?? "",
+      const response = await fetch(`${apiUrl}/dashboard`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
+        },
       });
-      const response = await fetch(
-        `${apiUrl}/dashboard?${queryParams.toString()}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
@@ -104,7 +91,7 @@ export default function DashboardPage() {
       );
       console.error("Error fetching transactions:", err);
     } finally {
-      setTimeout(() => setIsLoading(false), 500);
+      setIsLoading(false);
     }
   };
 
@@ -204,7 +191,7 @@ export default function DashboardPage() {
       <div className="flex flex-row items-center justify-between text-3xl font-bold mb-4 w-full">
         <span>Dashboard</span>
         <span className="flex items-center ml-auto">
-          <DateRangePickerMenu onChange={handleDateRangeChange} />
+          <DateRangePickerMenu onDateRangeChange={handleDateRangeChange} />
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
