@@ -178,9 +178,11 @@ export default function Transactions() {
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {recipients.map((recipient, index) => (
+              {recipients
+              .filter((recipient) => recipient.trim() !== "")
+              .map((recipient, index) => (
                 <SelectItem key={index} value={recipient}>
-                  {recipient}
+                {recipient}
                 </SelectItem>
               ))}
             </SelectContent>
