@@ -31,9 +31,10 @@ model Transaction {
 model User {
   uuid        String        @id
   id          Int           @default(autoincrement())
-  username    String        @unique
-  password    String
-  name        String?
+  email       String        @unique
+  name        String
+  image       String?
+  provider    String
   premium     Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime

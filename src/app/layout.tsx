@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { NavBar } from "@/components/nav-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { DateRangeProvider } from "@/context/date-range-context";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <NavBar />
-        <DateRangeProvider>{children}</DateRangeProvider>
+        <Providers>
+          <NavBar />
+          <DateRangeProvider>{children}</DateRangeProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>
