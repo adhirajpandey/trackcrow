@@ -57,7 +57,7 @@ export function NavBar() {
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="text-red-400 hover:!text-white hover:!bg-red-500/90 cursor-pointer transition-all duration-200 px-4 py-3 rounded-lg font-medium focus:!bg-red-500/90 focus:!text-white data-[highlighted]:!bg-red-500/90 data-[highlighted]:!text-white"
+                      className="cursor-pointer text-red-500 hover:bg-gray-800/50 hover:text-red-500 transition-all duration-200 px-4 py-3 rounded-lg font-medium"
                       onClick={() => signOut({ callbackUrl: "/" })}
                     >
                       Logout
@@ -69,7 +69,9 @@ export function NavBar() {
                   <Button
                     variant="outline"
                     className="border-2 border-border hover:bg-muted px-6 py-2 rounded-xl font-medium transition-all duration-300 hover:border-primary/50"
-                    onClick={() => signIn("google", { callbackUrl: "/" })}
+                    onClick={() =>
+                      signIn("google", { callbackUrl: "/dashboard" })
+                    }
                   >
                     Sign In
                   </Button>
