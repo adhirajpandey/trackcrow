@@ -58,8 +58,8 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
     },
-    async jwt({ token, user }) {
-      if (token && user?.email) {
+    async jwt({ token, user, account }) {
+      if (account && user.email) {
         const dbUser = await prisma.user.findUnique({
           where: {
             email: user.email,
@@ -73,16 +73,15 @@ export const authOptions: NextAuthOptions = {
           token.subscription = dbUser.subscription;
         }
       }
+
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token) {
-        session.user.id = token.id as number;
-        session.user.uuid = token.uuid as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-        session.user.subscription = token.subscription as number;
-      }
+      session.user.id = token.id as number | undefined;
+      session.user.uuid = token.uuid as string | undefined;
+      session.user.email = token.email;
+      session.user.name = token.name;
+      session.user.subscription = token.subscription as number | undefined;
       return session;
     },
   },
