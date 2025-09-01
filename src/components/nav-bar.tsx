@@ -2,6 +2,7 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import {
@@ -18,7 +19,7 @@ export function NavBar() {
     <nav className="bg-black/90 backdrop-blur-sm text-white py-1.5 shadow-2xl border-b border-white/10">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <div className="flex items-center space-x-6">
-          <a
+          <Link
             href="/"
             className="flex items-center hover:opacity-80 transition-opacity duration-200"
           >
@@ -30,7 +31,7 @@ export function NavBar() {
               className="cursor-pointer"
               priority
             />
-          </a>
+          </Link>
         </div>
         <div>
           <ul className="flex space-x-2 items-center">
@@ -39,9 +40,11 @@ export function NavBar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Avatar className="cursor-pointer w-8 h-8">
-                      <img
-                        src={session.data.user.image ?? undefined}
+                      <Image
+                        src={session.data.user.image ?? ""}
                         alt={session.data.user.name || "Profile"}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full"
                       />
                     </Avatar>

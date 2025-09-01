@@ -1,5 +1,7 @@
 "use client";
+export const dynamic = 'force-dynamic';
 
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
@@ -117,11 +119,16 @@ export default function UserPage() {
 
       const data = await response.json();
       const transactions = data.transactions || [];
+
+      interface Transaction {
+        amount: number;
+        category?: string;
+      }
       
       // Calculate user statistics
       const totalTransactions = transactions.length;
-      const totalSpent = transactions.reduce((sum: number, transaction: any) => sum + transaction.amount, 0);
-      const categoriesUsed = new Set(transactions.map((t: any) => t.category).filter(Boolean)).size;
+      const totalSpent = transactions.reduce((sum: number, transaction: Transaction) => sum + transaction.amount, 0);
+      const categoriesUsed = new Set(transactions.map((t: Transaction) => t.category).filter(Boolean)).size;
       
       setUserStats({
         totalTransactions,
@@ -169,9 +176,11 @@ export default function UserPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-16 w-16">
-                <img
-                  src={session?.user?.image ?? undefined}
+                <Image
+                  src={session?.user?.image ?? ""}
                   alt={session?.user?.name || "Profile"}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-full"
                 />
               </Avatar>

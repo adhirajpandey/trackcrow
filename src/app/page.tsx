@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LandingPage() {
   return (
@@ -168,9 +169,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-3 mb-4">
-                <img
+                <Image
                   src="/trackcrow.png"
                   alt="Trackcrow Logo"
+                  width={32}
+                  height={32}
                   className="h-8 w-auto"
                 />
                 <span className="text-xl font-bold">TrackCrow</span>
