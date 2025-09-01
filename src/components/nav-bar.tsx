@@ -1,6 +1,14 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 export function NavBar() {
   const session = useSession();
@@ -13,19 +21,38 @@ export function NavBar() {
           <ul className="flex space-x-4 items-center">
             <li>
               {session.data?.user ? (
-                <button
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                  onClick={() => signOut()}
-                >
-                  Logout
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className="cursor-pointer w-8 h-8">
+                      <img
+                        src={session.data.user.image ?? undefined}
+                        alt={session.data.user.name || "Profile"}
+                        className="w-8 h-8 rounded-full"
+                      />
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => (window.location.href = "/user")}
+                    >
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600 hover:text-red-800"
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                    >
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <button
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  onClick={() => signIn("google")}
+                <Button
+                  variant="outline"
+                  className="border-white bg-black text-white hover:bg-white hover:text-black"
+                  onClick={() => signIn("google", { callbackUrl: "/" })}
                 >
-                  Sign in with Google
-                </button>
+                  Sign in / Sign up
+                </Button>
               )}
             </li>
           </ul>

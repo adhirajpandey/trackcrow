@@ -1,6 +1,20 @@
 import prisma from "@/lib/prisma";
-import NextAuth, { NextAuthOptions } from "next-auth";
+import NextAuth, { NextAuthOptions, Session } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+
+// Extend the Session and User types to include custom properties
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id?: number;
+      uuid?: string;
+      email?: string | null;
+      name?: string | null;
+      image?: string | null;
+      subscription?: number;
+    };
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -56,9 +70,20 @@ export const authOptions: NextAuthOptions = {
           token.uuid = dbUser.uuid;
           token.email = dbUser.email;
           token.name = dbUser.name;
+          token.subscription = dbUser.subscription;
         }
       }
       return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token) {
+        session.user.id = token.id as number;
+        session.user.uuid = token.uuid as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.subscription = token.subscription as number;
+      }
+      return session;
     },
   },
 };

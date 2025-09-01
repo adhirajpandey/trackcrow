@@ -1,161 +1,63 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { apiUrl } from "@/app/config";
+import { useSession } from "next-auth/react";
+import { Avatar } from "@/components/ui/avatar";
 
-type UserDetails = {
-  name: string;
-  username: string;
-  premium: boolean;
-  token?: string;
-  avatar?: string;
-};
 
-export default function UserDetailsPage() {
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+export default function UserProfile() {
+  const { data: session } = useSession();
+  const user = session?.user;
 
-  useEffect(() => {
-    fetchUserDetails();
-  }, [router]);
-
-  const fetchUserDetails = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${apiUrl}/user`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("trackcrow-token")}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch user details");
-      }
-      const res = await response.json();
-      const data = res.result.userDetails;
-      setUserDetails(data);
-    } catch (err) {
-      setError(
-        "An error occurred while fetching user details. Please try again later."
-      );
-      console.error("Error fetching user details:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isLoading) {
+  if (!user) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <Card className="w-[350px]">
-          <CardHeader>
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <Skeleton className="h-4 w-[250px]" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Skeleton className="h-4 w-[200px]" />
-              <Skeleton className="h-4 w-[150px]" />
-              <Skeleton className="h-4 w-[180px]" />
-              <Skeleton className="h-4 w-[220px]" />
-              <Skeleton className="h-4 w-[100px]" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-900 text-white px-4">
+        <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">Not signed in</h2>
+        <p className="text-gray-400 text-center">Please sign in to view your profile.</p>
       </div>
     );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <Card className="w-[350px]">
-          <CardHeader>
-            <CardTitle>Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button onClick={fetchUserDetails}>Try Again</Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!userDetails) {
-    return null;
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <Card className="w-[350px]">
-        <CardHeader>
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage
-                src={userDetails.avatar || "https://github.com/shadcn.png"}
-                alt={userDetails.name || "User"}
-              />
-              <AvatarFallback>
-                {userDetails.premium ? userDetails.name.charAt(0) : "User"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle>{userDetails.name || "User"}</CardTitle>
-              <CardDescription>User Details</CardDescription>
+    <div className="flex flex-col items-center justify-start min-h-screen pt-16 md:pt-24 bg-neutral-900 text-white px-2 sm:px-4">
+      <div className="backdrop-blur-lg bg-black/60 rounded-2xl md:rounded-3xl shadow-2xl p-5 sm:p-10 w-full max-w-md md:max-w-xl flex flex-col items-center border border-gray-800/40">
+        <div className="relative mb-4 md:mb-6">
+          <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-white/30 shadow-xl">
+            <img
+              src={user.image ?? undefined}
+              alt={user.name || "Profile"}
+              className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover"
+            />
+          </Avatar>
+          <span className="absolute bottom-2 right-2 md:bottom-3 md:right-3 bg-gradient-to-tr from-green-400 to-green-600 border-2 border-white/40 rounded-full w-4 h-4 md:w-5 md:h-5 shadow" />
+        </div>
+        <h2 className="text-2xl md:text-3xl font-extrabold mb-1 md:mb-2 text-white drop-shadow-xl tracking-tight text-center">
+          {user.name}
+        </h2>
+        <p className="text-base md:text-lg text-gray-300 mb-4 md:mb-8 font-medium text-center">{user.email}</p>
+        <div className="w-full">
+          <div className="rounded-xl p-4 md:p-7 bg-black/40 border border-gray-700 shadow-lg">
+            <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-5 border-b border-gray-700 pb-2 md:pb-3 text-gray-200 tracking-wide text-center md:text-left">
+              Profile Details
+            </h3>
+            <div className="space-y-4 md:space-y-5">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-1 md:gap-0">
+                <span className="font-medium text-gray-400">Name</span>
+                <span className="text-gray-100 font-semibold md:text-right">{user.name}</span>
+              </div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-1 md:gap-0">
+                <span className="font-medium text-gray-400">Email</span>
+                <span className="text-gray-100 font-semibold md:text-right">{user.email}</span>
+              </div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-1 md:gap-0">
+                <span className="font-medium text-gray-400">Subscription</span>
+                <span className="text-gray-100 font-semibold md:text-right">
+                    {session.user.subscription === 0 ? "Free" : "Premium"}
+                </span>
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" value={userDetails.username} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Name</Label>
-              <Input id="name" value={userDetails.name || "User"} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="token">Token</Label>
-              <Input
-                id="token"
-                value={
-                  userDetails.token ||
-                  localStorage.getItem("trackcrow-token") ||
-                  ""
-                }
-                readOnly
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="plan">Plan</Label>
-              <Input
-                id="plan"
-                value={userDetails.premium ? "Premium" : "Free"}
-                readOnly
-              />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter></CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
