@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import {
@@ -14,14 +15,20 @@ export function NavBar() {
   const session = useSession();
 
   return (
-    <nav className="bg-black/90 backdrop-blur-sm text-white py-3 shadow-2xl border-b border-white/10">
+    <nav className="bg-black/90 backdrop-blur-sm text-white py-1.5 shadow-2xl border-b border-white/10">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <div className="flex items-center space-x-6">
-          <a href="/" className="flex items-center hover:opacity-80 transition-opacity duration-200">
-            <img
+          <a
+            href="/"
+            className="flex items-center hover:opacity-80 transition-opacity duration-200"
+          >
+            <Image
               src="/trackcrow.png"
               alt="Trackcrow Logo"
-              className="h-8 w-auto cursor-pointer"
+              width={100}
+              height={100}
+              className="cursor-pointer"
+              priority
             />
           </a>
         </div>
@@ -39,7 +46,10 @@ export function NavBar() {
                       />
                     </Avatar>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 bg-black/95 backdrop-blur-sm border border-gray-700/50 shadow-2xl rounded-xl p-1">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 bg-black/95 backdrop-blur-sm border border-gray-700/50 shadow-2xl rounded-xl p-1"
+                  >
                     <DropdownMenuItem
                       onClick={() => (window.location.href = "/user")}
                       className="cursor-pointer text-gray-200 hover:bg-gray-800/50 hover:text-white transition-all duration-200 px-4 py-3 rounded-lg font-medium"

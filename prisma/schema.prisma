@@ -9,34 +9,36 @@ datasource db {
 }
 
 model Transaction {
-  uuid         String    @id
-  id           Int       @default(autoincrement())
-  user_uuid    String
-  input_mode   String
-  timestamp    Int
-  amount       Int
-  recipient    String
-  category     String?
-  subcategory  String?
-  reference    String?
-  account      String?
-  remarks      String?
-  location     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime
-  ist_datetime DateTime?
-  User         User      @relation(fields: [user_uuid], references: [uuid])
+  uuid           String    @id
+  id             Int       @default(autoincrement())
+  type           String    @default("UPI")
+  user_uuid      String
+  timestamp      Int
+  amount         Int
+  recipient      String
+  input_mode     String
+  recipient_name String?
+  category       String?
+  subcategory    String?
+  reference      String?
+  account        String?
+  remarks        String?
+  location       String?
+  ist_datetime   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+  User           User      @relation(fields: [user_uuid], references: [uuid])
 }
 
 model User {
   uuid         String        @id
   id           Int           @default(autoincrement())
   subscription Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime
   email        String        @unique
-  provider     String
   name         String
   image        String?
+  provider     String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now())
   Transaction  Transaction[]
 }
