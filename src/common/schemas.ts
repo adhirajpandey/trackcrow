@@ -21,4 +21,6 @@ export const transactionRead = z.object({
   updatedAt: z.string(),
 });
 
+export type Transaction = z.infer<typeof transactionRead>;
+
 export const transactionReadArray = z.array(transactionRead);

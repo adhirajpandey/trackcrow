@@ -1,13 +1,16 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
-import { NavBar } from "@/components/nav-bar";
+import { AuthenticatedLayout } from "@/components/authenticated-layout";
 import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "TrackCrow - Expense Tracker",
+  title: "TrackCrow",
   description: "Track your expenses with ease using TrackCrow",
+  icons: {
+    icon: [{ url: "/trackcrow-beak.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -19,8 +22,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={inter.className}>
         <Providers>
-          <NavBar />
-          {children}
+          <AuthenticatedLayout>
+            {children}
+          </AuthenticatedLayout>
         </Providers>
       </body>
     </html>

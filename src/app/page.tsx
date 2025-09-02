@@ -1,5 +1,5 @@
-
 import { Button } from "@/components/ui/button";
+import { LandingActionButton } from "@/components/ui/landing-action-button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
@@ -10,7 +10,7 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-background via-background/95 to-muted/10 py-16 lg:py-20 overflow-hidden">
           <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-purple-500/5" />
           <div className="container mx-auto text-center px-4 relative z-10">
             <div className="max-w-4xl mx-auto">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
@@ -18,20 +18,17 @@ export default function LandingPage() {
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-8 bg-gradient-to-r from-foreground via-primary to-muted-foreground bg-clip-text text-transparent">
                 Track Your Expenses with
-                <span className="block bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">Precision</span>
+                <span className="block bg-gradient-to-r from-primary to-gray-500 bg-clip-text text-transparent">
+                  Precision
+                </span>
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-                Your SMS receipts become smart insights. Crow Bot does the math. You stay in control.
+                Your SMS receipts become smart insights. Crow Bot does the math.
+                You stay in control.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/api/auth/signin/google">
-                  <Button
-                    size="lg"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    Get Started Free
-                  </Button>
-                </Link>
+                {/* Client-side button for Get Started/Open Dashboard */}
+                <LandingActionButton />
                 <Button
                   variant="outline"
                   size="lg"
@@ -45,7 +42,10 @@ export default function LandingPage() {
         </section>
 
         {/* How It Works Section */}
-        <section id="how-it-works" className="py-20 bg-gradient-to-b from-muted/10 via-background/98 to-background relative overflow-hidden">
+        <section
+          id="how-it-works"
+          className="py-20 bg-gradient-to-b from-muted/10 via-background/98 to-background relative overflow-hidden"
+        >
           <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
           <div className="container mx-auto px-4 relative">
             <div className="text-center mb-12">
@@ -56,7 +56,8 @@ export default function LandingPage() {
                 Three Steps to Financial Freedom
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Transform your financial habits in minutes with our streamlined onboarding process
+                Transform your financial habits in minutes with our streamlined
+                onboarding process
               </p>
             </div>
             <div className="max-w-6xl mx-auto">
@@ -65,7 +66,7 @@ export default function LandingPage() {
                   title="Connect & Sign Up"
                   description="Securely link your Google account and grant SMS permissions for seamless, automated expense tracking."
                   icon="🔗"
-                  gradient="from-blue-500/10 to-indigo-500/10"
+                  gradient="from-gray-200/10 to-indigo-500/10"
                 />
                 <StepCard
                   title="Automatic Tracking"
@@ -85,7 +86,10 @@ export default function LandingPage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-20 bg-gradient-to-b from-background to-muted/20 relative overflow-hidden">
+        <section
+          id="features"
+          className="py-20 bg-gradient-to-b from-background to-muted/20 relative overflow-hidden"
+        >
           <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
           <div className="container mx-auto px-4 relative">
             <div className="text-center mb-12">
@@ -96,7 +100,8 @@ export default function LandingPage() {
                 Track Smart, Save More
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Because manually tracking expenses is so 2010. Let AI do the heavy lifting while you focus on what matters.
+                Because manually tracking expenses is so 2010. Let AI do the
+                heavy lifting while you focus on what matters.
               </p>
             </div>
             <div className="max-w-4xl mx-auto">
@@ -138,8 +143,8 @@ export default function LandingPage() {
                 </span>
               </h2>
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Join users who have taken control of their finances with TrackCrow. 
-                Start your journey to financial freedom today.
+                Join users who have taken control of their finances with
+                TrackCrow. Start your journey to financial freedom today.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link href="/api/auth/signin/google">
@@ -176,29 +181,79 @@ export default function LandingPage() {
                 <span className="text-xl font-bold">TrackCrow</span>
               </div>
               <p className="text-muted-foreground max-w-md">
-                The smartest way to track your expenses and take control of your financial future.
+                The smartest way to track your expenses and take control of your
+                financial future.
               </p>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Security</a></li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Security
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Contact Us
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Terms of Service
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
           <div className="border-t border-border pt-8 text-center text-muted-foreground">
-            © 2024 TrackCrow. All rights reserved.
+            © 2025 TrackCrow. All rights reserved.
           </div>
         </div>
       </footer>
@@ -219,7 +274,9 @@ function FeatureListItem({
     <div className="flex items-start space-x-6 p-6 rounded-2xl bg-card/30 backdrop-blur-sm border border-border/50 hover:bg-card/50 hover:border-primary/30 transition-all duration-300 group">
       <div className="flex-shrink-0">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 group-hover:scale-110 transition-all duration-300">
-          <span className="text-2xl text-primary group-hover:scale-110 transition-transform duration-300">{icon}</span>
+          <span className="text-2xl text-primary group-hover:scale-110 transition-transform duration-300">
+            {icon}
+          </span>
         </div>
       </div>
       <div className="flex-1 min-w-0">
@@ -246,14 +303,24 @@ function StepCard({
   gradient: string;
 }) {
   return (
-    <Card className={`bg-card/50 backdrop-blur-sm border-border/50 text-center hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-3 group relative overflow-hidden`}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+    <Card
+      className={`bg-card/50 backdrop-blur-sm border-border/50 text-center hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-3 group relative overflow-hidden`}
+    >
+      <div
+        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+      />
       <CardContent className="p-8 relative z-10">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6 group-hover:scale-110 transition-all duration-500">
-          <span className="text-3xl text-primary group-hover:scale-110 transition-transform duration-300">{icon}</span>
+          <span className="text-3xl text-primary group-hover:scale-110 transition-transform duration-300">
+            {icon}
+          </span>
         </div>
-        <h3 className="text-2xl font-bold mb-4 text-card-foreground group-hover:text-primary transition-colors duration-300 leading-tight">{title}</h3>
-        <p className="text-muted-foreground leading-relaxed text-lg group-hover:text-foreground/80 transition-colors duration-300">{description}</p>
+        <h3 className="text-2xl font-bold mb-4 text-card-foreground group-hover:text-primary transition-colors duration-300 leading-tight">
+          {title}
+        </h3>
+        <p className="text-muted-foreground leading-relaxed text-lg group-hover:text-foreground/80 transition-colors duration-300">
+          {description}
+        </p>
       </CardContent>
     </Card>
   );
