@@ -106,7 +106,7 @@ export function getDailySpendingForCurrentMonth(transactions: Transaction[]) {
  * Each entry's `cumulative` is the sum of all spending up to and including that day.
  */
 export function getCumulativeDailySpendingForCurrentMonth(
-  transactions: Transaction[]
+  transactions: Transaction[],
 ) {
   const daily = getDailySpendingForCurrentMonth(transactions);
   let running = 0;

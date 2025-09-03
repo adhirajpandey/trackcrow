@@ -7,8 +7,13 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
+interface ColumnMeta {
+  thClassName?: string;
+  tdClassName?: string;
+}
+
 interface DataTableProps<T> {
-  columns: ColumnDef<T, any>[];
+  columns: ColumnDef<T, unknown>[];
   data: T[];
 }
 
@@ -26,8 +31,11 @@ export function DataTable<T>({ columns, data }: DataTableProps<T>) {
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
               {hg.headers.map((header) => {
+                const meta = header.column.columnDef.meta as
+                  | ColumnMeta
+                  | undefined;
                 const thClass =
-                  (header.column.columnDef as any).meta?.thClassName ??
+                  meta?.thClassName ??
                   "text-left py-2 px-4 font-medium text-sm";
                 return (
                   <th key={header.id} className={thClass}>
@@ -35,7 +43,7 @@ export function DataTable<T>({ columns, data }: DataTableProps<T>) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </th>
                 );
@@ -47,9 +55,10 @@ export function DataTable<T>({ columns, data }: DataTableProps<T>) {
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id} className="hover:bg-accent/40">
               {row.getVisibleCells().map((cell) => {
-                const tdClass =
-                  (cell.column.columnDef as any).meta?.tdClassName ??
-                  "py-3 px-4 align-top";
+                const meta = cell.column.columnDef.meta as
+                  | ColumnMeta
+                  | undefined;
+                const tdClass = meta?.tdClassName ?? "py-3 px-4 align-top";
                 return (
                   <td key={cell.id} className={tdClass}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

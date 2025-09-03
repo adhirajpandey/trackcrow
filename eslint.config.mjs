@@ -10,7 +10,13 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // Your existing Next.js + TypeScript presets
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+
+  // Add ignores here
+  {
+    ignores: [".next", "node_modules", "dist", "coverage", "src/generated"],
+  },
 ];
 
 export default eslintConfig;

@@ -7,6 +7,8 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { z } from "zod";
+import Image from "next/image";
+import Link from "next/link";
 
 interface UserStats {
   totalTransactions: number;
@@ -100,12 +102,12 @@ export default async function UserPage() {
         totalTransactions: transactions.length,
         totalSpent: transactions.reduce((sum, t) => sum + t.amount, 0),
         categoriesUsed: new Set(
-          transactions.map((t) => t.category).filter(Boolean)
+          transactions.map((t) => t.category).filter(Boolean),
         ).size,
         accountCreated: new Date().toISOString(), // fallback to current date
       };
     }
-  } catch (err) {
+  } catch {
     error = "Failed to load user statistics";
   }
 
@@ -136,9 +138,11 @@ export default async function UserPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-16 w-16">
-                <img
-                  src={session.user.image ?? undefined}
+                <Image
+                  src={session.user.image ?? "/default-profile.png"}
                   alt={session.user.name || "Profile"}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-full"
                 />
               </Avatar>
@@ -223,10 +227,10 @@ export default async function UserPage() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button variant="outline" asChild className="flex-1">
-              <a href="/dashboard">Go to Dashboard</a>
+              <Link href="/dashboard">Go to Dashboard</Link>
             </Button>
             <Button variant="destructive" asChild className="flex-1">
-              <a href="/api/auth/signout?callbackUrl=/">Sign Out</a>
+              <Link href="/api/auth/signout?callbackUrl=/">Sign Out</Link>
             </Button>
           </div>
         </CardContent>

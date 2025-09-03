@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface NavBarProps {
   isMobileOpen?: boolean;
@@ -12,7 +13,11 @@ interface NavBarProps {
   showSidebarToggle?: boolean;
 }
 
-export function NavBar({ isMobileOpen, onMobileToggle, showSidebarToggle = false }: NavBarProps) {
+export function NavBar({
+  isMobileOpen,
+  onMobileToggle,
+  showSidebarToggle = false,
+}: NavBarProps) {
   const session = useSession();
 
   return (
@@ -25,19 +30,24 @@ export function NavBar({ isMobileOpen, onMobileToggle, showSidebarToggle = false
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Button clicked, calling onMobileToggle');
+                console.log("Button clicked, calling onMobileToggle");
                 onMobileToggle?.();
               }}
               aria-label="Toggle sidebar"
             >
-              <ChevronRight className={cn("h-5 w-5 transition-transform", isMobileOpen && "rotate-180")} />
+              <ChevronRight
+                className={cn(
+                  "h-5 w-5 transition-transform",
+                  isMobileOpen && "rotate-180",
+                )}
+              />
             </button>
           )}
-          <a
+          <Link
             href="/"
             className={cn(
               "flex items-center hover:opacity-80 transition-opacity duration-200",
-              showSidebarToggle && "lg:block hidden"
+              showSidebarToggle && "lg:block hidden",
             )}
           >
             <Image
@@ -48,7 +58,7 @@ export function NavBar({ isMobileOpen, onMobileToggle, showSidebarToggle = false
               className="cursor-pointer"
               priority
             />
-          </a>
+          </Link>
         </div>
 
         <div>
@@ -57,9 +67,7 @@ export function NavBar({ isMobileOpen, onMobileToggle, showSidebarToggle = false
               <Button
                 variant="outline"
                 className="border-2 border-border hover:bg-muted px-6 py-2 rounded-xl font-medium transition-all duration-300 hover:border-primary/50"
-                onClick={() =>
-                  signIn("google", { callbackUrl: "/dashboard" })
-                }
+                onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
               >
                 Sign In
               </Button>

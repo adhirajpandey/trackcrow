@@ -18,19 +18,22 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
   }
 
   const totalExpense = transactions.reduce((sum, t) => sum + t.amount, 0);
-  const topCat = transactions.reduce((acc, t) => {
-    if (t.category && t.category.trim() !== "") {
-      acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  const topCat = transactions.reduce(
+    (acc, t) => {
+      if (t.category && t.category.trim() !== "") {
+        acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
+      }
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
   const topCatKeys = Object.keys(topCat);
   const topCatName = topCatKeys.length
     ? topCatKeys.reduce((a, b) => (topCat[a] > topCat[b] ? a : b))
     : "Uncategorized";
 
   const trackedCount = transactions.filter(
-    (t) => t.category && t.category.trim() !== ""
+    (t) => t.category && t.category.trim() !== "",
   ).length;
   const untrackedCount = transactions.length - trackedCount;
   const trackedPct = Math.round((trackedCount / transactions.length) * 100);
@@ -73,29 +76,53 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
             <div className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Tracked</div>
-                  <div className="mt-1 text-lg font-semibold">{numberToINR(trackedAmount)}</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Tracked
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">
+                    {numberToINR(trackedAmount)}
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">{trackedCount} txns</div>
+                <div className="text-sm text-muted-foreground">
+                  {trackedCount} txns
+                </div>
               </div>
               <div className="mt-2">
-                <Progress value={trackedPct} className="h-2" color="bg-emerald-500" />
+                <Progress
+                  value={trackedPct}
+                  className="h-2"
+                  color="bg-emerald-500"
+                />
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">Transactions with a category</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Transactions with a category
+              </div>
             </div>
 
             <div className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Untracked</div>
-                  <div className="mt-1 text-lg font-semibold">{numberToINR(untrackedAmount)}</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Untracked
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">
+                    {numberToINR(untrackedAmount)}
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">{untrackedCount} txns</div>
+                <div className="text-sm text-muted-foreground">
+                  {untrackedCount} txns
+                </div>
               </div>
               <div className="mt-2">
-                <Progress value={untrackedPct} className="h-2" color="bg-red-500" />
+                <Progress
+                  value={untrackedPct}
+                  className="h-2"
+                  color="bg-red-500"
+                />
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">No category assigned</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                No category assigned
+              </div>
             </div>
           </div>
         </div>

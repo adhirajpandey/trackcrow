@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { transactionReadArray } from "@/common/schemas";
 import { z } from "zod";
 import type { Transaction } from "@/common/schemas";
 import { TransactionsClient } from "@/components/transactions-client";
@@ -33,7 +32,7 @@ export default async function TransactionsPage() {
     const { transactionRead } = await import("@/common/schemas");
     const validate = z.array(transactionRead).safeParse(serialized);
     if (validate.success) transactions = validate.data;
-  } catch (err) {
+  } catch {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <div className="text-center text-red-500 p-4">

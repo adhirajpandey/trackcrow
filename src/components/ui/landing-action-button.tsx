@@ -4,7 +4,7 @@ import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
 
 export function LandingActionButton() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const isLoggedIn = status === "authenticated";
 
   if (isLoggedIn) {

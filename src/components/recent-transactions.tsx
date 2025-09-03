@@ -34,7 +34,7 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
             };
 
             const sorted = [...txns].sort(
-              (a, b) => getTimeMs(b) - getTimeMs(a)
+              (a, b) => getTimeMs(b) - getTimeMs(a),
             );
             const displayed = sorted.slice(0, 5);
             const placeholders = Math.max(0, 5 - displayed.length);
@@ -48,7 +48,9 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
                   >
                     <Avatar className="h-8 w-8 text-xs">
                       <AvatarFallback className="text-xs">
-                        {(txn.recipient_name?.[0] || txn.recipient[0])?.toUpperCase()}
+                        {(
+                          txn.recipient_name?.[0] || txn.recipient[0]
+                        )?.toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">

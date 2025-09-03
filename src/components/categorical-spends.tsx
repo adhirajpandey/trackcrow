@@ -89,7 +89,7 @@ export function CategoricalSpends({
                 />
 
                 {/* segments */}
-                {segments.map((seg, idx) => {
+                {segments.map((seg) => {
                   const dash = (seg.percent / 100) * circumference;
                   const dashArray = `${dash} ${circumference - dash}`;
                   const dashOffset = -offsetAccumulator;

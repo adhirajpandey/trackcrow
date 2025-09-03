@@ -22,7 +22,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
         </div>
       </div>
     );
-  }
+  },
 );
 
 Progress.displayName = "Progress";

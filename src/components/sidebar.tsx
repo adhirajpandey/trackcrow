@@ -29,6 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import Image from "next/image";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -38,7 +39,7 @@ const navigation = [
   { name: "Profile", href: "/user", icon: User },
 ];
 
-interface SidebarProps {  
+interface SidebarProps {
   isMobileOpen: boolean;
   onMobileClose: () => void;
 }
@@ -53,7 +54,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     "Sidebar render - isMobileOpen:",
     isMobileOpen,
     "isCollapsed:",
-    isCollapsed
+    isCollapsed,
   );
 
   const NavItem = ({ item }: { item: (typeof navigation)[0] }) => (
@@ -66,7 +67,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             pathname === item.href
               ? "bg-secondary text-secondary-foreground"
               : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground",
-            isCollapsed && !isMobileOpen && "justify-center px-2"
+            isCollapsed && !isMobileOpen && "justify-center px-2",
           )}
         >
           <item.icon
@@ -99,14 +100,14 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             isMobileOpen ? "w-64" : isCollapsed ? "w-[72px]" : "w-64",
             isMobileOpen
               ? "translate-x-0"
-              : "-translate-x-full lg:translate-x-0"
+              : "-translate-x-full lg:translate-x-0",
           )}
         >
           <div className="border-b border-border">
             <div
               className={cn(
                 "flex h-16 items-center gap-2 px-4",
-                isCollapsed && !isMobileOpen && "justify-center px-2"
+                isCollapsed && !isMobileOpen && "justify-center px-2",
               )}
             >
               {(!isCollapsed || isMobileOpen) && (
@@ -119,7 +120,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                 size="sm"
                 className={cn(
                   "ml-auto h-8 w-8",
-                  isCollapsed && !isMobileOpen && "ml-0"
+                  isCollapsed && !isMobileOpen && "ml-0",
                 )}
                 onClick={(e) => {
                   // Prevent any outer click handlers from running
@@ -135,7 +136,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                 <ChevronLeft
                   className={cn(
                     "h-4 w-4 transition-transform",
-                    isCollapsed && !isMobileOpen && "rotate-180"
+                    isCollapsed && !isMobileOpen && "rotate-180",
                   )}
                 />
                 <span className="sr-only">
@@ -156,16 +157,19 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               <div
                 className={cn(
                   "flex items-center",
-                  isCollapsed && !isMobileOpen ? "justify-center" : "gap-2"
+                  isCollapsed && !isMobileOpen ? "justify-center" : "gap-2",
                 )}
               >
                 {(!isCollapsed || isMobileOpen) && (
                   <>
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                      <img
-                        src={session.user.image ?? undefined}
+                      <Image
+                        src={session.user.image || "/trackcrow.png"}
                         alt={session.user.name || "Profile"}
+                        width={32}
+                        height={32}
                         className="h-8 w-8 rounded-full"
+                        priority
                       />
                     </Avatar>
                     <div className="flex-1 text-left min-w-0">
@@ -217,10 +221,13 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                         className="h-8 w-8 p-0 hover:bg-secondary rounded-full"
                       >
                         <Avatar className="h-8 w-8">
-                          <img
-                            src={session.user.image ?? undefined}
+                          <Image
+                            src={session.user.image || "/trackcrow.png"}
                             alt={session.user.name || "Profile"}
+                            width={32}
+                            height={32}
                             className="h-8 w-8 rounded-full"
+                            priority
                           />
                         </Avatar>
                       </Button>

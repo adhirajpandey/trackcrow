@@ -25,13 +25,21 @@ function toMonthKey(date: Date): MonthKey {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-function parseTxnDate(txn: Transaction): Date {
-  if (typeof (txn as any).timestamp === "number") {
-    const ts = (txn as any).timestamp as number;
+// Interface for transaction with optional timestamp and date fields
+interface TransactionWithTimestamp {
+  timestamp?: number;
+  ist_datetime?: string | null | undefined;
+  createdAt?: string | null | undefined;
+  [key: string]: unknown;
+}
+
+function parseTxnDate(txn: TransactionWithTimestamp): Date {
+  if (typeof txn.timestamp === "number") {
+    const ts = txn.timestamp;
     return new Date(ts > 1e12 ? ts : ts * 1000);
   }
   const iso = txn.ist_datetime || txn.createdAt;
-  return new Date(iso);
+  return new Date(iso ?? "");
 }
 
 function monthLabelFromKey(key: MonthKey): string {
@@ -79,22 +87,14 @@ export function TransactionsClient({
     // initialize search query from URL
     const qq = searchParams?.get("q") || "";
     setQuery(qq);
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
     params.set("month", selected === "all" ? "all" : selected);
     params.set("page", String(page));
     router.replace(`?${params.toString()}`);
-  }, [selected]);
-
-  // Keep URL in sync when page changes
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    params.set("month", selected === "all" ? "all" : selected);
-    params.set("page", String(page));
-    router.replace(`?${params.toString()}`);
-  }, [page]);
+  }, [selected, page, router, searchParams]);
 
   // Keep URL in sync when query changes
   useEffect(() => {
@@ -107,7 +107,7 @@ export function TransactionsClient({
     params.set("month", selected === "all" ? "all" : selected);
     params.set("page", String(page));
     router.replace(`?${params.toString()}`);
-  }, [query]);
+  }, [query, selected, page, router, searchParams]);
 
   const filtered = useMemo(() => {
     const base =
@@ -143,13 +143,13 @@ export function TransactionsClient({
   // Ensure current page is within bounds
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
-  }, [totalPages]);
+  }, [totalPages, page]);
 
   const start = (page - 1) * ITEMS_PER_PAGE;
   const end = Math.min(start + ITEMS_PER_PAGE, totalCount);
   const paginated = filtered.slice(start, end);
 
-  const columns = useMemo<ColumnDef<Transaction, any>[]>(
+  const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
         header: "Recipient",
@@ -242,7 +242,7 @@ export function TransactionsClient({
     ],
     [
       /* stable */
-    ]
+    ],
   );
 
   return (

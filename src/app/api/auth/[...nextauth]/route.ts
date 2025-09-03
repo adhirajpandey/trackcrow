@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import NextAuth, { NextAuthOptions, Session } from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
 // Extend the Session and User types to include custom properties

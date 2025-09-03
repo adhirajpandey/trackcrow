@@ -25,8 +25,8 @@ function toMonthKey(date: Date): MonthKey {
 }
 
 function parseTxnDate(txn: Transaction): Date {
-  if (typeof (txn as any).timestamp === "number") {
-    const ts = (txn as any).timestamp as number;
+  if (typeof txn.timestamp === "number") {
+    const ts = txn.timestamp;
     return new Date(ts > 1e12 ? ts : ts * 1000);
   }
   const iso = txn.ist_datetime || txn.createdAt;
@@ -36,10 +36,18 @@ function parseTxnDate(txn: Transaction): Date {
 function monthLabelFromKey(key: MonthKey): string {
   const [y, m] = key.split("-").map((v) => parseInt(v, 10));
   const d = new Date(y, m - 1, 1);
-  return d.toLocaleString("en-GB", { timeZone: "Asia/Kolkata", month: "long", year: "numeric" });
+  return d.toLocaleString("en-GB", {
+    timeZone: "Asia/Kolkata",
+    month: "long",
+    year: "numeric",
+  });
 }
 
-export function DashboardClient({ transactions }: { transactions: Transaction[] }) {
+export function DashboardClient({
+  transactions,
+}: {
+  transactions: Transaction[];
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const monthKeysDescending = useMemo(() => {
@@ -69,20 +77,22 @@ export function DashboardClient({ transactions }: { transactions: Transaction[] 
     const params = new URLSearchParams(searchParams?.toString() ?? "");
     params.set("month", selected === "all" ? "all" : selected);
     router.replace(`?${params.toString()}`);
-  }, [selected]);
+  }, [selected, router, searchParams]);
 
   const filtered = useMemo(() => {
     if (selected === "all") return transactions;
     return transactions.filter((t) => toMonthKey(parseTxnDate(t)) === selected);
   }, [transactions, selected]);
 
-  const selectedLabel = selected === "all" ? "All time" : monthLabelFromKey(selected);
-  const selectedMonth = selected === "all"
-    ? null
-    : (() => {
-        const [y, m] = selected.split("-").map((v) => parseInt(v, 10));
-        return { year: y, month: m - 1 } as { year: number; month: number };
-      })();
+  const selectedLabel =
+    selected === "all" ? "All time" : monthLabelFromKey(selected);
+  const selectedMonth =
+    selected === "all"
+      ? null
+      : (() => {
+          const [y, m] = selected.split("-").map((v) => parseInt(v, 10));
+          return { year: y, month: m - 1 } as { year: number; month: number };
+        })();
 
   return (
     <div className="space-y-6">
@@ -107,7 +117,9 @@ export function DashboardClient({ transactions }: { transactions: Transaction[] 
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSelected("all")}>All time</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelected("all")}>
+              All time
+            </DropdownMenuItem>
             {monthKeysDescending.map((key) => (
               <DropdownMenuItem key={key} onClick={() => setSelected(key)}>
                 {monthLabelFromKey(key)}
@@ -124,11 +136,17 @@ export function DashboardClient({ transactions }: { transactions: Transaction[] 
         <div className="col-span-1 md:col-span-2 lg:col-span-1">
           <CategoricalSpends
             categoricalSpends={(() => {
-              const categoryMap = new Map<string, { total: number; count: number }>();
+              const categoryMap = new Map<
+                string,
+                { total: number; count: number }
+              >();
               filtered.forEach((transaction) => {
                 const category = transaction.category?.trim();
                 if (!category) return;
-                const current = categoryMap.get(category) || { total: 0, count: 0 };
+                const current = categoryMap.get(category) || {
+                  total: 0,
+                  count: 0,
+                };
                 categoryMap.set(category, {
                   total: current.total + transaction.amount,
                   count: current.count + 1,
@@ -148,11 +166,12 @@ export function DashboardClient({ transactions }: { transactions: Transaction[] 
           <RecentTransactions txns={filtered.slice(0, 5)} />
         </div>
         <div className="col-span-1 md:col-span-2 lg:col-span-1">
-          <MonthlySpendingChart transactions={filtered} selectedMonth={selectedMonth} />
+          <MonthlySpendingChart
+            transactions={filtered}
+            selectedMonth={selectedMonth}
+          />
         </div>
       </div>
     </div>
   );
 }
-
-

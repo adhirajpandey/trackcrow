@@ -1,6 +1,11 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { numberToINR, getCurrentMonthMeta, formatCurrentMonthDayLabel, formatISTMonthYear } from "@/common/utils";
+import {
+  numberToINR,
+  getCurrentMonthMeta,
+  formatCurrentMonthDayLabel,
+  formatISTMonthYear,
+} from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
 import {
   LineChart,
@@ -11,8 +16,21 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// Custom tooltip props interface
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number }>;
+  label?: number | string;
+  selectedMonth: SelectedMonth;
+}
+
 // Custom tooltip to match app styling (uses same tokens/classes as dropdown/card)
-function CustomTooltip({ active, payload, label, selectedMonth }: any) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+  selectedMonth,
+}: CustomTooltipProps) {
   if (!active || !payload || !payload.length) return null;
   const cumulative = payload[0]?.value ?? 0;
   const day = Number(label);
@@ -21,7 +39,9 @@ function CustomTooltip({ active, payload, label, selectedMonth }: any) {
   return (
     <div className="rounded-md border bg-popover p-2 text-popover-foreground shadow-md">
       <div className="text-sm font-semibold">{dateStr}</div>
-      <div className="text-sm text-muted-foreground">Cumulative Expenses: {numberToINR(cumulative)}</div>
+      <div className="text-sm text-muted-foreground">
+        Cumulative Expenses: {numberToINR(cumulative)}
+      </div>
     </div>
   );
 }
@@ -33,12 +53,14 @@ function getCurrentMonthName() {
 type SelectedMonth = { year: number; month: number } | null; // month: 0-11
 
 function parseTxnDate(txn: Transaction): Date {
-  if (typeof (txn as any).timestamp === "number") {
-    const ts = (txn as any).timestamp as number;
+  if (typeof (txn as { timestamp?: number }).timestamp === "number") {
+    const ts = (txn as { timestamp: number }).timestamp;
     return new Date(ts > 1e12 ? ts : ts * 1000);
   }
-  const iso = (txn as any).ist_datetime || (txn as any).createdAt;
-  return new Date(iso);
+  const iso =
+    (txn as { ist_datetime?: string; createdAt?: string }).ist_datetime ||
+    (txn as { createdAt?: string }).createdAt;
+  return new Date(iso!);
 }
 
 function getMonthMeta(target: SelectedMonth) {
@@ -59,7 +81,10 @@ function formatDayLabel(day: number, target: SelectedMonth) {
   });
 }
 
-function getCumulativeDailySpendingForMonth(transactions: Transaction[], target: SelectedMonth) {
+function getCumulativeDailySpendingForMonth(
+  transactions: Transaction[],
+  target: SelectedMonth,
+) {
   const { year, month, daysInMonth } = getMonthMeta(target);
   const dailyTotals: { [day: number]: number } = {};
   for (let i = 1; i <= daysInMonth; i++) dailyTotals[i] = 0;
@@ -135,7 +160,9 @@ export function MonthlySpendingChart({
               tick={{ fontSize: 12 }}
               width={60}
             />
-            <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
+            <Tooltip
+              content={<CustomTooltip selectedMonth={selectedMonth} />}
+            />
             <Line
               type="monotone"
               dataKey="cumulative"
@@ -148,7 +175,9 @@ export function MonthlySpendingChart({
         <div className="w-full text-center text-sm text-muted-foreground">
           {(() => {
             if (!selectedMonth) return getCurrentMonthName();
-            return formatISTMonthYear(new Date(selectedMonth.year, selectedMonth.month, 1));
+            return formatISTMonthYear(
+              new Date(selectedMonth.year, selectedMonth.month, 1),
+            );
           })()}
         </div>
       </CardContent>
