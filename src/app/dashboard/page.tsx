@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import type { Transaction } from "@/common/schemas";
 import { z } from "zod";
 import { DashboardClient } from "@/components/dashboard-client";
+import prisma from "@/lib/prisma";
 
 // Main dashboard page component
 export default async function DashboardPage() {
