@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   LogOut,
   MoreVertical,
+  PlusSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import Image from "next/image";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Transactions", href: "/transactions", icon: Wallet },
+  { name: "Add Transaction", href: "/transactions/add", icon: PlusSquare },
   { name: "Crow Bot", href: "/crow-bot", icon: Bot },
   { name: "Preferences", href: "/preferences", icon: Settings },
   { name: "Profile", href: "/user", icon: User },
