@@ -9,6 +9,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { z } from "zod";
 import Image from "next/image";
 import Link from "next/link";
+import { SignOutButton } from "@/components/sign-out-button";
 
 interface UserStats {
   totalTransactions: number;
@@ -241,9 +242,7 @@ export default async function UserPage() {
             <Button variant="outline" asChild className="flex-1">
               <Link href="/dashboard">Go to Dashboard</Link>
             </Button>
-            <Button variant="destructive" asChild className="flex-1">
-              <Link href="/api/auth/signout?callbackUrl=/">Sign Out</Link>
-            </Button>
+            <SignOutButton className="flex-1" />
           </div>
         </CardContent>
       </Card>
