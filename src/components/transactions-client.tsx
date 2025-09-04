@@ -254,52 +254,47 @@ export function TransactionsClient({
             All transactions — Search or filter to focus on a specific period.
           </p>
         </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-3 shrink-0 font-bold w-[140px] sm:w-auto sm:ml-auto justify-center"
+            >
+              {selected === "all" ? "All time" : monthLabelFromKey(selected)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSelected("all")}>
+              All time
+            </DropdownMenuItem>
+            {monthKeysDescending.map((key) => (
+              <DropdownMenuItem key={key} onClick={() => setSelected(key)}>
+                {monthLabelFromKey(key)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         <Card>
           <CardHeader className="px-2 pt-4 sm:px-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-base font-semibold">
                 Transactions
               </CardTitle>
 
-              <div className="flex items-center gap-3">
+              <div className="flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search"
-                  className="rounded-md border px-3 py-2 text-sm w-60 bg-background text-foreground"
+                  className="w-full sm:w-60 min-w-0 rounded-md border px-3 py-2 text-sm bg-background text-foreground"
                 />
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="ml-3 shrink-0 font-bold w-[140px] sm:w-auto sm:ml-auto justify-center"
-                    >
-                      {selected === "all"
-                        ? "All time"
-                        : monthLabelFromKey(selected)}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setSelected("all")}>
-                      All time
-                    </DropdownMenuItem>
-                    {monthKeysDescending.map((key) => (
-                      <DropdownMenuItem
-                        key={key}
-                        onClick={() => setSelected(key)}
-                      >
-                        {monthLabelFromKey(key)}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </div>
           </CardHeader>
