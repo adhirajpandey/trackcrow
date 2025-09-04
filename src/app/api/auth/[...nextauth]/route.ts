@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { defaultCategoriesMap } from "@/common/utils";
 
 // Extend the Session and User types to include custom properties
 declare module "next-auth" {
@@ -17,14 +18,9 @@ declare module "next-auth" {
 }
 
 async function createDefaultCategoriesAndSubcategories(user_uuid: string) {
-  const defaultCategories = [
-    { name: "Food", subcategories: ["Breakfast", "Lunch", "Dinner", "Snacks"] },
-    { name: "Essentials", subcategories: ["Household", "Groceries", "Utilities", "Others"] },
-    { name: "Transport", subcategories: ["Cab", "Auto", "Bike", "Others"] },
-    { name: "Shopping", subcategories: ["Apparel", "Gadgets", "Gifts", "Others"] },
-  ];
+  
 
-  for (const cat of defaultCategories) {
+  for (const cat of defaultCategoriesMap) {
     const category = await prisma.category.create({
       data: {
         name: cat.name,

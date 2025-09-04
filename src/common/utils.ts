@@ -115,3 +115,11 @@ export function getCumulativeDailySpendingForCurrentMonth(
     return { day: d.day, cumulative: running };
   });
 }
+
+
+export const defaultCategoriesMap = [
+    { name: "Food", subcategories: ["Breakfast", "Lunch", "Dinner", "Snacks"] },
+    { name: "Essentials", subcategories: ["Household", "Groceries", "Utilities", "Others"] },
+    { name: "Transport", subcategories: ["Cab", "Auto", "Bike", "Others"] },
+    { name: "Shopping", subcategories: ["Apparel", "Gadgets", "Gifts", "Others"] },
+  ];
