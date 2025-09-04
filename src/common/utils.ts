@@ -123,3 +123,10 @@ export const defaultCategoriesMap = [
     { name: "Transport", subcategories: ["Cab", "Auto", "Bike", "Others"] },
     { name: "Shopping", subcategories: ["Apparel", "Gadgets", "Gifts", "Others"] },
   ];
+
+/**
+ * Fetches all transactions for a user, ordered by latest first, and serializes
+ * Prisma-specific types (Decimal, Date) into plain JSON-compatible values.
+ * Also fills a numeric `timestamp` derived from `ist_datetime` for consumers that expect it.
+ */
+// Note: server-only data helpers live in src/common/server.ts to avoid bundling prisma in client code

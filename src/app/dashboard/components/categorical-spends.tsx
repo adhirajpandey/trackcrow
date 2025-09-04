@@ -176,3 +176,4 @@ export function CategoricalSpends({
     </Card>
   );
 }
+

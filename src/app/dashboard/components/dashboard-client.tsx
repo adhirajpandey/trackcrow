@@ -2,10 +2,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Transaction } from "@/common/schemas";
-import { Summary } from "@/components/summary";
-import { CategoricalSpends } from "@/components/categorical-spends";
-import { RecentTransactions } from "@/components/recent-transactions";
-import { MonthlySpendingChart } from "@/components/monthly-spending-chart";
+import { Summary } from "./summary";
+import { CategoricalSpends } from "./categorical-spends";
+import { RecentTransactions } from "./recent-transactions";
+import { MonthlySpendingChart } from "./monthly-spending-chart";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

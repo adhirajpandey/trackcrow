@@ -130,3 +130,4 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
     </Card>
   );
 }
+

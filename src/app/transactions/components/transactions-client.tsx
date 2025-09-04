@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import {
@@ -126,120 +125,101 @@ export function TransactionsClient({
     return base.filter((t) => {
       // check amount (both raw and formatted)
       const amt = Math.abs(t.amount ?? 0);
-      const amtStr = String(amt);
-      const formatted = numberToINR(amt).toLowerCase();
-      if (qDigits && amtStr.includes(qDigits)) return true;
-      if (formatted.includes(q)) return true;
+      const amtMatch =
+        qDigits.length > 0 &&
+        (String(amt).includes(qDigits) ||
+          numberToINR(amt).toLowerCase().includes(q));
 
-      // only search these text fields per request
-      const fields = [t.recipient, t.recipient_name, t.remarks];
-      for (const f of fields) {
-        if (f && String(f).toLowerCase().includes(q)) return true;
-      }
-      return false;
+      // check recipient/remarks/category fields
+      const r = (t.recipient || "").toLowerCase();
+      const rn = (t.recipient_name || "").toLowerCase();
+      const rem = (t.remarks || "").toLowerCase();
+      const cat = (t.category || "").toLowerCase();
+      const sub = (t.subcategory || "").toLowerCase();
+
+      const textMatch =
+        r.includes(q) ||
+        rn.includes(q) ||
+        rem.includes(q) ||
+        cat.includes(q) ||
+        sub.includes(q);
+
+      return amtMatch || textMatch;
     });
   }, [transactions, selected, query]);
 
   const totalCount = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
-  // Ensure current page is within bounds
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [totalPages, page]);
-
   const start = (page - 1) * ITEMS_PER_PAGE;
-  const end = Math.min(start + ITEMS_PER_PAGE, totalCount);
+  const end = Math.min(start + ITEMS_PER_PAGE, filtered.length);
   const paginated = filtered.slice(start, end);
 
-  const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
+  const columns: ColumnDef<Transaction>[] = useMemo(
     () => [
       {
-        header: "Recipient",
-        accessorFn: (row) => row.recipient_name || row.recipient,
+        header: "Date",
+        accessorFn: (row) => row.ist_datetime || row.createdAt || row.timestamp,
         cell: ({ row }) => {
-          const txn = row.original as Transaction;
-          const initial = (
-            txn.recipient_name?.[0] || txn.recipient[0]
-          )?.toUpperCase();
+          const t = row.original as Transaction;
+          const getTimeMs = (tx: Transaction) => {
+            if (typeof tx.timestamp === "number") {
+              return tx.timestamp > 1e12 ? tx.timestamp : tx.timestamp * 1000;
+            }
+            if (tx.ist_datetime) return Date.parse(tx.ist_datetime);
+            return Date.parse(tx.createdAt);
+          };
+          const timeMs = getTimeMs(t);
           return (
-            <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8 text-xs">
-                <AvatarFallback className="text-xs">{initial}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate">
-                  {txn.recipient_name || txn.recipient}
-                </div>
-                <div className="text-xs text-muted-foreground truncate flex items-center gap-2">
-                  <span className="truncate">{txn.remarks || ""}</span>
-                </div>
-              </div>
+            <div className="text-sm text-muted-foreground">
+              <div>{formatISTDate(timeMs)}</div>
+              <div>{formatISTTime(timeMs)}</div>
             </div>
           );
         },
       },
       {
-        header: "Category",
-        accessorFn: (row) => row.category || "Uncategorized",
+        header: "Recipient",
+        accessorFn: (row) => row.recipient_name || row.recipient,
         cell: ({ row }) => {
-          const txn = row.original as Transaction;
+          const t = row.original as Transaction;
+          const primary = t.recipient_name || t.recipient;
           return (
-            <div className="text-sm">
-              <div className="font-medium">
-                {txn.category || "Uncategorized"}
-              </div>
-              {txn.subcategory ? (
-                <div className="text-xs text-muted-foreground">
-                  {txn.subcategory}
-                </div>
-              ) : null}
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">{primary}</div>
             </div>
           );
         },
       },
       {
         header: "Type",
-        accessorKey: "type",
-        cell: ({ getValue }) =>
-          getValue() ? (
-            <span className="inline-block shrink-0 rounded px-2 py-0.5 bg-muted text-muted-foreground text-[10px]">
-              {String(getValue())}
-            </span>
-          ) : null,
-      },
-      {
-        header: "Time",
-        accessorFn: (row) => parseTxnDate(row),
-        meta: {
-          thClassName: "w-36 text-right py-2 px-4 font-medium text-sm",
-          tdClassName: "py-3 px-4 align-top text-right",
-        },
-        cell: ({ row }) => {
-          const d = parseTxnDate(row.original as Transaction);
-          return (
-            <div className="text-sm text-muted-foreground">
-              <div className="text-right">{formatISTDate(d)}</div>
-              <div className="text-xs text-muted-foreground text-right">
-                {formatISTTime(d)}
-              </div>
-            </div>
-          );
-        },
+        accessorFn: () => "UPI",
+        cell: () => (
+          <div className="text-sm text-muted-foreground">UPI</div>
+        ),
       },
       {
         header: "Amount",
         accessorFn: (row) => row.amount,
-        meta: {
-          thClassName: "w-36 text-right py-2 px-4 font-medium text-sm",
-          tdClassName: "py-3 px-4 align-top text-right",
-        },
         cell: ({ row }) => (
-          <div className="text-right">
+          <div>
             <div className="font-semibold text-sm">
               {numberToINR(Math.abs((row.original as Transaction).amount))}
             </div>
           </div>
         ),
+      },
+      {
+        header: "Category",
+        accessorFn: (row) => `${row.category ?? "Uncategorized"}${row.subcategory ? ` · ${row.subcategory}` : ""}`,
+        cell: ({ row }) => {
+          const t = row.original as Transaction;
+          return (
+            <div className="text-sm text-muted-foreground truncate">
+              {t.category || "Uncategorized"}
+              {t.subcategory ? ` · ${t.subcategory}` : ""}
+            </div>
+          );
+        },
       },
     ],
     [
@@ -253,7 +233,7 @@ export function TransactionsClient({
         <div className="space-y-2 flex-1 min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
           <p className="text-muted-foreground leading-snug">
-            All transactions — Search or filter to focus on a specific period.
+            All transactions — search or filter to focus on a specific period.
           </p>
         </div>
 
@@ -297,7 +277,6 @@ export function TransactionsClient({
               <CardTitle className="text-base font-semibold">
                 Transactions
               </CardTitle>
-
               <div className="flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <input
                   value={query}
@@ -317,9 +296,9 @@ export function TransactionsClient({
 
         <div className="flex items-center justify-between text-sm text-muted-foreground px-2 sm:px-4">
           <div>
-            Showing{" "}
-            <span className="font-medium text-foreground">{start + 1}</span> -{" "}
-            <span className="font-medium text-foreground">{end}</span> of{" "}
+            Showing {" "}
+            <span className="font-medium text-foreground">{start + 1}</span> - {" "}
+            <span className="font-medium text-foreground">{end}</span> of {" "}
             <span className="font-medium text-foreground">{totalCount}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -349,3 +328,5 @@ export function TransactionsClient({
     </div>
   );
 }
+
+export default TransactionsClient;

@@ -1,9 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import prisma from "@/lib/prisma";
-import { z } from "zod";
 import type { Transaction } from "@/common/schemas";
-import { TransactionsClient } from "@/components/transactions-client";
+import { TransactionsClient } from "@/app/transactions/components/transactions-client";
+import { getUserTransactions } from "@/common/server";
 
 export default async function TransactionsPage() {
   const session = await getServerSession(authOptions);
@@ -19,19 +18,7 @@ export default async function TransactionsPage() {
 
   let transactions: Transaction[] = [];
   try {
-    const txns = await prisma.transaction.findMany({
-      where: { user_uuid: session.user.uuid },
-      orderBy: { ist_datetime: "desc" },
-    });
-    const serialized = txns.map((t) => ({
-      ...t,
-      createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
-      ist_datetime: t.ist_datetime ? t.ist_datetime.toISOString() : null,
-    }));
-    const { transactionRead } = await import("@/common/schemas");
-    const validate = z.array(transactionRead).safeParse(serialized);
-    if (validate.success) transactions = validate.data;
+    transactions = await getUserTransactions(session.user.uuid);
   } catch {
     return (
       <div className="container mx-auto p-6 space-y-6">

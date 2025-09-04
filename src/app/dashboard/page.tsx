@@ -1,10 +1,8 @@
-import { transactionRead } from "@/common/schemas";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { DashboardClient } from "@/app/dashboard/components/dashboard-client";
 import type { Transaction } from "@/common/schemas";
-import { z } from "zod";
-import { DashboardClient } from "@/components/dashboard-client";
-import prisma from "@/lib/prisma";
+import { getUserTransactions } from "@/common/server";
 
 // Main dashboard page component
 export default async function DashboardPage() {
@@ -20,21 +18,7 @@ export default async function DashboardPage() {
   }
   let transactions: Transaction[] = [];
   try {
-    const txns = await prisma.transaction.findMany({
-      where: { user_uuid: session.user.uuid },
-      orderBy: { ist_datetime: "desc" },
-    });
-    // Convert Date fields to ISO string for zod validation
-    const serialized = txns.map((t) => ({
-      ...t,
-      createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
-      ist_datetime: t.ist_datetime ? t.ist_datetime.toISOString() : null,
-    }));
-    const validate = z.array(transactionRead).safeParse(serialized);
-    if (validate.success) {
-      transactions = validate.data;
-    }
+    transactions = await getUserTransactions(session.user.uuid);
   } catch {
 
     return (

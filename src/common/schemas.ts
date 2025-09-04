@@ -24,3 +24,16 @@ export const transactionRead = z.object({
 export type Transaction = z.infer<typeof transactionRead>;
 
 export const transactionReadArray = z.array(transactionRead);
+
+// Minimal transaction shape used for aggregated stats (server components)
+export const transactionStats = z.object({
+  id: z.number(),
+  // Amount should be a number after serialization; coerce to be tolerant
+  amount: z.coerce.number(),
+  categoryId: z.number().nullable().optional(),
+  ist_datetime: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type TransactionStats = z.infer<typeof transactionStats>;

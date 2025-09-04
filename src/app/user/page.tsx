@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Transaction, transactionRead } from "@/common/schemas";
+import { TransactionStats } from "@/common/schemas";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { z } from "zod";
 import Image from "next/image";
+import { getUserTransactions } from "@/common/server";
 
 interface UserStats {
   totalTransactions: number;
@@ -78,45 +78,27 @@ export default async function UserPage() {
     );
   }
 
-  let transactions: Transaction[] = [];
+  let transactions: TransactionStats[] = [];
   let userStats: UserStats | null = null;
   let error: string | null = null;
 
   try {
-    const txns = await prisma.transaction.findMany({
-      where: { user_uuid: session.user.uuid },
-      orderBy: { ist_datetime: "desc" },
-      select: {
-        id: true,
-        amount: true,
-        ist_datetime: true,
-        createdAt: true,
-        updatedAt: true,
-        Category: {
-          select: {
-            name: true,
-          },
-        },
-      },
+    // Fetch user's createdAt for accurate "Member Since"
+    const user = await prisma.user.findUnique({
+      where: { uuid: session.user.uuid },
+      select: { createdAt: true },
     });
-    const serialized = txns.map((t) => ({
-      ...t,
-      createdAt: t.createdAt.toISOString(),
-      updatedAt: t.updatedAt.toISOString(),
-      ist_datetime: t.ist_datetime ? t.ist_datetime.toISOString() : null,
-    }));
-    const validate = z.array(transactionRead).safeParse(serialized);
-    if (validate.success) {
-      transactions = validate.data;
-      userStats = {
-        totalTransactions: transactions.length,
-        totalSpent: transactions.reduce((sum, t) => sum + t.amount, 0),
-        categoriesUsed: new Set(
-          transactions.map((t) => t.categoryId).filter(Boolean),
-        ).size,
-        accountCreated: new Date().toISOString(),
-      };
-    }
+    const txns = await getUserTransactions(session.user.uuid);
+    console.log("Serialized Transactions:", txns);
+    transactions = txns as unknown as TransactionStats[];
+    userStats = {
+      totalTransactions: txns.length,
+      totalSpent: txns.reduce((sum, t: any) => sum + t.amount, 0),
+      categoriesUsed: new Set(txns.map((t: any) => t.categoryId).filter(Boolean)).size,
+      accountCreated: user?.createdAt
+        ? user.createdAt.toISOString()
+        : (txns.at(-1)?.createdAt as string) || new Date().toISOString(),
+    };
   } catch {
     error = "Failed to load user statistics";
   }

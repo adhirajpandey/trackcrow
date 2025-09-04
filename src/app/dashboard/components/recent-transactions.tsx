@@ -105,3 +105,4 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
     </Card>
   );
 }
+
