@@ -29,7 +29,7 @@ export function CategoricalSpends({
 }) {
   if (categoricalSpends.length === 0) {
     return (
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader className="px-2 pt-4 sm:px-4">
           <CardTitle className="text-base font-semibold">
             Categorical Expenses
@@ -64,7 +64,7 @@ export function CategoricalSpends({
   let offsetAccumulator = 0;
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="px-2 pt-4 sm:px-4">
         <CardTitle className="text-base font-semibold">
           Categorical Expenses

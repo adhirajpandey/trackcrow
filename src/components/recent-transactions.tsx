@@ -6,15 +6,20 @@ import type { Transaction } from "@/common/schemas";
 export function RecentTransactions({ txns }: { txns: Transaction[] }) {
   if (!txns || !txns.length) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-32">
-          <p className="text-muted-foreground">No recent transactions</p>
+      <Card className="h-full flex flex-col">
+        <CardHeader className="px-2 pt-4 sm:px-4">
+          <CardTitle className="text-base font-semibold">
+            Recent Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="h-80 px-2 pb-4 sm:px-4 flex items-center justify-center">
+          <div className="text-sm text-muted-foreground">No data available</div>
         </CardContent>
       </Card>
     );
   }
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="px-2 pt-4 sm:px-4">
         <CardTitle className="text-base font-semibold">
           Recent Transactions

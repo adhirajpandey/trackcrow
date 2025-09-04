@@ -117,7 +117,7 @@ export function MonthlySpendingChart({
 }) {
   if (!selectedMonth) {
     return (
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader className="px-2 pt-4 sm:px-4">
           <CardTitle className="text-base font-semibold">
             Expense Timeline
@@ -135,7 +135,7 @@ export function MonthlySpendingChart({
   const xTicks = [1, 10, 20].filter((t) => t < daysInMonth).concat(daysInMonth);
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="px-2 pt-4 sm:px-4">
         <CardTitle className="text-base font-semibold">
           Expense Timeline

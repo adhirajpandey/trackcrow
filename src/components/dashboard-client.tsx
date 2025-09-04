@@ -129,11 +129,11 @@ export function DashboardClient({
         </DropdownMenu>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        <div className="col-span-1 md:col-span-2 lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <div>
           <Summary transactions={filtered} />
         </div>
-        <div className="col-span-1 md:col-span-2 lg:col-span-1">
+        <div>
           <CategoricalSpends
             categoricalSpends={(() => {
               const categoryMap = new Map<
@@ -162,10 +162,10 @@ export function DashboardClient({
             })()}
           />
         </div>
-        <div className="col-span-1 md:col-span-2 lg:col-span-1">
+        <div>
           <RecentTransactions txns={filtered.slice(0, 5)} />
         </div>
-        <div className="col-span-1 md:col-span-2 lg:col-span-1">
+        <div>
           <MonthlySpendingChart
             transactions={filtered}
             selectedMonth={selectedMonth}

@@ -7,11 +7,11 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
   if (!transactions || transactions.length === 0) {
     return (
       <Card className="h-full flex flex-col">
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
+        <CardHeader className="px-2 pt-4 sm:px-4">
+          <CardTitle className="text-base font-semibold">Summary</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 h-full flex items-center justify-center">
-          <div className="text-muted-foreground">No transaction data</div>
+        <CardContent className="h-80 px-2 pb-4 sm:px-4 flex items-center justify-center">
+          <div className="text-sm text-muted-foreground">No data available</div>
         </CardContent>
       </Card>
     );
