@@ -16,6 +16,32 @@ declare module "next-auth" {
   }
 }
 
+async function createDefaultCategoriesAndSubcategories(user_uuid: string) {
+  const defaultCategories = [
+    { name: "Food", subcategories: ["Breakfast", "Lunch", "Dinner", "Snacks"] },
+    { name: "Essentials", subcategories: ["Household", "Groceries", "Utilities", "Others"] },
+    { name: "Transport", subcategories: ["Cab", "Auto", "Bike", "Others"] },
+    { name: "Shopping", subcategories: ["Apparel", "Gadgets", "Gifts", "Others"] },
+  ];
+
+  for (const cat of defaultCategories) {
+    const category = await prisma.category.create({
+      data: {
+        name: cat.name,
+        user_uuid: user_uuid,
+      },
+    });
+
+    await prisma.subcategory.createMany({
+      data: cat.subcategories.map((sub) => ({
+        name: sub,
+        categoryId: category.id,
+        user_uuid: user_uuid,
+      })),
+    });
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -42,7 +68,7 @@ export const authOptions: NextAuthOptions = {
         if (existingUser) {
           return true;
         }
-        await prisma.user.create({
+        const user = await prisma.user.create({
           data: {
             email: params.user.email,
             name: params.user.name ?? "No Name",
@@ -52,6 +78,9 @@ export const authOptions: NextAuthOptions = {
             updatedAt: new Date(),
           },
         });
+
+        await createDefaultCategoriesAndSubcategories(user.uuid);
+
         return true;
       } catch (error) {
         console.error("Error creating user:", error);
