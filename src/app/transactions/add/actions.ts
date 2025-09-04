@@ -7,11 +7,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 
 const addTransactionSchema = z.object({
-  amount: z.coerce.number(),
-  recipient: z.string(),
+  amount: z.coerce.number().positive(),
+  recipient: z.string().min(1),
   recipient_name: z.string().optional(),
-  category: z.string().optional(),
-  subcategory: z.string().optional(),
+  categoryId: z.coerce.number().int().positive(),
+  subcategoryId: z.coerce.number().int().positive().optional(),
+  type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   remarks: z.string().optional(),
   timestamp: z.coerce.date(),
 });
@@ -26,8 +27,9 @@ export async function addTransaction(formData: FormData) {
     amount: formData.get("amount"),
     recipient: formData.get("recipient"),
     recipient_name: formData.get("recipient_name"),
-    category: formData.get("category"),
-    subcategory: formData.get("subcategory"),
+    categoryId: formData.get("categoryId"),
+    subcategoryId: formData.get("subcategoryId"),
+    type: formData.get("type"),
     remarks: formData.get("remarks"),
     timestamp: formData.get("timestamp"),
   });
@@ -36,7 +38,7 @@ export async function addTransaction(formData: FormData) {
     return { error: "Invalid fields", issues: validatedFields.error.issues };
   }
 
-  const { amount, recipient, recipient_name, category, subcategory, remarks, timestamp } = validatedFields.data;
+  const { amount, recipient, recipient_name, categoryId, subcategoryId, type, remarks, timestamp } = validatedFields.data;
 
   try {
     await prisma.transaction.create({
@@ -45,16 +47,17 @@ export async function addTransaction(formData: FormData) {
         amount,
         recipient,
         recipient_name,
-        category,
-        subcategory,
+        categoryId,
+        subcategoryId,
+        type,
         remarks,
-        timestamp: Math.floor(timestamp.getTime() / 1000),
-        type: "MANUAL",
+        ist_datetime: timestamp,
         input_mode: "MANUAL",
         uuid: crypto.randomUUID(),
       },
     });
-  } catch {
+  } catch(error) {
+    console.error("Failed to create transaction", error);
     return { error: "Failed to create transaction" };
   }
 
