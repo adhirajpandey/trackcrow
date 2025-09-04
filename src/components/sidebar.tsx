@@ -30,7 +30,7 @@ const navigation = [
   { name: "Transactions", href: "/transactions", icon: Wallet },
   { name: "Crow Bot", href: "/crow-bot", icon: Bot },
   { name: "Preferences", href: "/preferences", icon: Settings },
-  { name: "Profile", href: "/user", icon: User },
+  { name: "Profile", href: "/profile", icon: User },
 ];
 
 interface SidebarProps {
@@ -42,14 +42,6 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Debug logging
-  console.log(
-    "Sidebar render - isMobileOpen:",
-    isMobileOpen,
-    "isCollapsed:",
-    isCollapsed,
-  );
 
   const NavItem = ({ item }: { item: (typeof navigation)[0] }) => (
     <Tooltip delayDuration={0}>

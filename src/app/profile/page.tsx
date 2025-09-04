@@ -89,7 +89,6 @@ export default async function UserPage() {
       select: { createdAt: true },
     });
     const txns = await getUserTransactions(session.user.uuid);
-    console.log("Serialized Transactions:", txns);
     transactions = txns as unknown as TransactionStats[];
     userStats = {
       totalTransactions: txns.length,
@@ -215,3 +214,4 @@ export default async function UserPage() {
     </div>
   );
 }
+

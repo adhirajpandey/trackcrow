@@ -30,7 +30,6 @@ export function NavBar({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log("Button clicked, calling onMobileToggle");
                 onMobileToggle?.();
               }}
               aria-label="Toggle sidebar"

@@ -74,10 +74,6 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
           <NavBar
             isMobileOpen={isMobileOpen}
             onMobileToggle={() => {
-              console.log(
-                "Mobile toggle clicked, current state:",
-                isMobileOpen,
-              );
               setIsMobileOpen(!isMobileOpen);
             }}
             showSidebarToggle={true}
