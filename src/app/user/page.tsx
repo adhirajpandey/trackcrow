@@ -87,7 +87,19 @@ export default async function UserPage() {
   try {
     const txns = await prisma.transaction.findMany({
       where: { user_uuid: session.user.uuid },
-      orderBy: { timestamp: "desc" },
+      orderBy: { ist_datetime: "desc" },
+      select: {
+        id: true,
+        amount: true,
+        ist_datetime: true,
+        createdAt: true,
+        updatedAt: true,
+        Category: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
     const serialized = txns.map((t) => ({
       ...t,
@@ -102,9 +114,9 @@ export default async function UserPage() {
         totalTransactions: transactions.length,
         totalSpent: transactions.reduce((sum, t) => sum + t.amount, 0),
         categoriesUsed: new Set(
-          transactions.map((t) => t.category).filter(Boolean),
+          transactions.map((t) => t.categoryId).filter(Boolean),
         ).size,
-        accountCreated: new Date().toISOString(), // fallback to current date
+        accountCreated: new Date().toISOString(),
       };
     }
   } catch {

@@ -11,7 +11,20 @@ export async function GET() {
   }
   const transactions = await prisma.transaction.findMany({
     where: { user_uuid: session.user.uuid },
-    orderBy: { timestamp: "desc" },
+    orderBy: { ist_datetime: "desc" },
+    select: {
+      id: true,
+      amount: true,
+      ist_datetime: true,
+      createdAt: true,
+      updatedAt: true,
+      Category: {
+        select: {
+          name: true,
+        },
+      },
+      // add other fields as needed
+    },
   });
 
   // Convert Date fields to ISO string for zod validation
@@ -20,6 +33,7 @@ export async function GET() {
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
     ist_datetime: t.ist_datetime ? t.ist_datetime.toISOString() : null,
+    category: t.Category?.name ?? null,
   }));
 
   const validate = transactionReadArray.safeParse(serialized);

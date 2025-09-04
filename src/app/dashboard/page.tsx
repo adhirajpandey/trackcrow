@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   try {
     const txns = await prisma.transaction.findMany({
       where: { user_uuid: session.user.uuid },
-      orderBy: { timestamp: "desc" },
+      orderBy: { ist_datetime: "desc" },
     });
     // Convert Date fields to ISO string for zod validation
     const serialized = txns.map((t) => ({
@@ -36,6 +36,7 @@ export default async function DashboardPage() {
       transactions = validate.data;
     }
   } catch {
+
     return (
       <div className="container mx-auto p-6 space-y-6">
         <div className="text-center text-red-500 p-4">

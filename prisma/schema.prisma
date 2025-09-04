@@ -8,37 +8,85 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TransactionType {
+  UPI
+  CARD
+  CASH
+  NETBANKING
+  OTHER
+}
+
 model Transaction {
-  uuid           String    @id
-  id             Int       @default(autoincrement())
-  type           String    @default("UPI")
+  uuid           String          @id
+  id             Int             @default(autoincrement()) @unique
   user_uuid      String
-  timestamp      Int
-  amount         Int
+  amount         Decimal
+  type           TransactionType @default(UPI)
   recipient      String
   input_mode     String
+  ist_datetime   DateTime
   recipient_name String?
-  category       String?
-  subcategory    String?
   reference      String?
   account        String?
   remarks        String?
   location       String?
-  ist_datetime   DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @default(now())
-  User           User      @relation(fields: [user_uuid], references: [uuid])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  User           User            @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
+  categoryId     Int?
+  Category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategoryId  Int?
+  Subcategory    Subcategory?    @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  @@map("transaction")
 }
 
 model User {
   uuid         String        @id
-  id           Int           @default(autoincrement())
+  id           Int           @default(autoincrement()) @unique
   subscription Int           @default(0)
   email        String        @unique
   name         String
   image        String?
   provider     String
   createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
   Transaction  Transaction[]
+  Category     Category[]
+  Subcategory  Subcategory[]
+
+  @@map("user")
+}
+
+model Category {
+  id          Int           @id @default(autoincrement())
+  name        String
+  user_uuid   String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  User        User          @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
+  Subcategory Subcategory[]
+  Transaction Transaction[]
+
+  @@unique([name, user_uuid])
+  @@map("category")
+}
+
+model Subcategory {
+  id          Int           @id @default(autoincrement())
+  name        String
+  categoryId  Int
+  user_uuid   String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  Category    Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  User        User          @relation(fields: [user_uuid], references: [uuid])
+  Transaction Transaction[]
+
+  @@unique([name, categoryId])
+  @@map("subcategory")
 }

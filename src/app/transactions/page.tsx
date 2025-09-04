@@ -21,7 +21,7 @@ export default async function TransactionsPage() {
   try {
     const txns = await prisma.transaction.findMany({
       where: { user_uuid: session.user.uuid },
-      orderBy: { timestamp: "desc" },
+      orderBy: { ist_datetime: "desc" },
     });
     const serialized = txns.map((t) => ({
       ...t,
