@@ -12,8 +12,6 @@ import {
   User,
   ChevronLeft,
   LogOut,
-  MoreVertical,
-  PlusSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,18 +22,12 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+// Removed dropdown menu for avatar actions
 import Image from "next/image";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Transactions", href: "/transactions", icon: Wallet },
-  { name: "Add Transaction", href: "/transactions/add", icon: PlusSquare },
   { name: "Crow Bot", href: "/crow-bot", icon: Bot },
   { name: "Preferences", href: "/preferences", icon: Settings },
   { name: "Profile", href: "/user", icon: User },
@@ -71,6 +63,9 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground",
             isCollapsed && !isMobileOpen && "justify-center px-2",
           )}
+          onClick={() => {
+            if (isMobileOpen) onMobileClose();
+          }}
         >
           <item.icon
             className={cn("h-4 w-4", (!isCollapsed || isMobileOpen) && "mr-3")}
@@ -182,79 +177,38 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                         {session.user.email}
                       </p>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-secondary"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-48 bg-background border border-border shadow-lg rounded-xl p-1"
-                      >
-                        <DropdownMenuItem
-                          onClick={() => (window.location.href = "/user")}
-                          className="cursor-pointer text-foreground hover:bg-secondary hover:text-secondary-foreground transition-all duration-200 px-4 py-3 rounded-lg font-medium"
-                        >
-                          <User className="h-4 w-4 mr-2" />
-                          Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer text-red-500 hover:bg-secondary hover:text-red-500 transition-all duration-200 px-4 py-3 rounded-lg font-medium"
-                          onClick={() => signOut({ callbackUrl: "/" })}
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Logout
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </>
                 )}
                 {isCollapsed && !isMobileOpen && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 hover:bg-secondary rounded-full"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <Image
-                            src={session.user.image || "/trackcrow.png"}
-                            alt={session.user.name || "Profile"}
-                            width={32}
-                            height={32}
-                            className="h-8 w-8 rounded-full"
-                            priority
-                          />
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-48 bg-background border border-border shadow-lg rounded-xl p-1"
-                    >
-                      <DropdownMenuItem
-                        onClick={() => (window.location.href = "/user")}
-                        className="cursor-pointer text-foreground hover:bg-secondary hover:text-secondary-foreground transition-all duration-200 px-4 py-3 rounded-lg font-medium"
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        Profile
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer text-red-500 hover:bg-secondary hover:text-red-500 transition-all duration-200 px-4 py-3 rounded-lg font-medium"
-                        onClick={() => signOut({ callbackUrl: "/" })}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Avatar className="h-8 w-8">
+                    <Image
+                      src={session.user.image || "/trackcrow.png"}
+                      alt={session.user.name || "Profile"}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full"
+                      priority
+                    />
+                  </Avatar>
                 )}
+              </div>
+            )}
+            {session?.user && (!isCollapsed || isMobileOpen) && (
+              <div className="mt-3">
+                <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    signOut({ callbackUrl: "/" });
+                  }}
+                  className={cn(
+                    "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "text-red-500 hover:bg-secondary hover:text-red-500",
+                  )}
+                >
+                  <LogOut className="h-4 w-4 mr-3" />
+                  <span>Logout</span>
+                </Link>
               </div>
             )}
           </div>

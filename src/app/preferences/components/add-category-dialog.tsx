@@ -20,7 +20,7 @@ export function AddCategoryDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
+        <Button size="sm">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Category
         </Button>

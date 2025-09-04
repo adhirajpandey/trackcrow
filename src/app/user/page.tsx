@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Transaction, transactionRead } from "@/common/schemas";
 import prisma from "@/lib/prisma";
@@ -8,8 +7,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { z } from "zod";
 import Image from "next/image";
-import Link from "next/link";
-import { SignOutButton } from "@/components/sign-out-button";
 
 interface UserStats {
   totalTransactions: number;
@@ -232,20 +229,7 @@ export default async function UserPage() {
           </CardContent>
         </Card>
       </div>
-      {/* Account Actions Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button variant="outline" asChild className="flex-1">
-              <Link href="/dashboard">Go to Dashboard</Link>
-            </Button>
-            <SignOutButton className="flex-1" />
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }

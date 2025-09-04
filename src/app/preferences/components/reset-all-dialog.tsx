@@ -18,7 +18,7 @@ export function ResetAllDialog() {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive">Reset All</Button>
+        <Button variant="destructive" size="sm">Reset All</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

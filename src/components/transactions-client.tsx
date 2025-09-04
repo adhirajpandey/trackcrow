@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -247,7 +249,7 @@ export function TransactionsClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start sm:items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div className="space-y-2 flex-1 min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
           <p className="text-muted-foreground leading-snug">
@@ -255,29 +257,37 @@ export function TransactionsClient({
           </p>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-3 shrink-0 font-bold w-[140px] sm:w-auto sm:ml-auto justify-center"
-            >
-              {selected === "all" ? "All time" : monthLabelFromKey(selected)}
+        <div className="flex gap-2 self-start md:self-auto">
+          <Link href="/transactions/add" className="shrink-0">
+            <Button size="sm" className="font-bold whitespace-nowrap">
+              <Plus className="h-4 w-4 mr-2" /> Add Transaction
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSelected("all")}>
-              All time
-            </DropdownMenuItem>
-            {monthKeysDescending.map((key) => (
-              <DropdownMenuItem key={key} onClick={() => setSelected(key)}>
-                {monthLabelFromKey(key)}
+          </Link>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 font-bold w-[140px] md:w-auto justify-center"
+              >
+                {selected === "all" ? "All time" : monthLabelFromKey(selected)}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSelected("all")}>
+                All time
               </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {monthKeysDescending.map((key) => (
+                <DropdownMenuItem key={key} onClick={() => setSelected(key)}>
+                  {monthLabelFromKey(key)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
