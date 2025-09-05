@@ -289,7 +289,16 @@ export function TransactionsClient({
           </CardHeader>
           <CardContent className="divide-y divide-border px-2 pb-4 sm:px-4 max-h-[60vh] overflow-auto no-scrollbar">
             <div className="py-2">
-              <DataTable columns={columns} data={paginated} />
+              <DataTable
+                columns={columns}
+                data={paginated}
+                onRowClick={(row) => {
+                  const t = row as Transaction;
+                  if (t && typeof t.id === "number") {
+                    router.push(`/transactions/${t.id}`);
+                  }
+                }}
+              />
             </div>
           </CardContent>
         </Card>

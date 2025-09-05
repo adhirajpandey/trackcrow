@@ -18,7 +18,8 @@ export default async function TransactionsPage() {
 
   let transactions: Transaction[] = [];
   try {
-    transactions = await getUserTransactions(session.user.uuid);
+    // Populate category and subcategory names for display
+    transactions = await getUserTransactions(session.user.uuid, true);
   } catch {
     return (
       <div className="container mx-auto p-6 space-y-6">

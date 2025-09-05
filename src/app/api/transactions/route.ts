@@ -9,7 +9,7 @@ export async function GET() {
   if (!session || !session.user?.uuid) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  const data = await getUserTransactions(session.user.uuid);
+  const data = await getUserTransactions(session.user.uuid, true);
   const validate = transactionReadArray.safeParse(data);
   if (!validate.success) {
     return NextResponse.json(

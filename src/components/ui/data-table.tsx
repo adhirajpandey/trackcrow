@@ -15,9 +15,11 @@ interface ColumnMeta {
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];
   data: T[];
+  onRowClick?: (row: T) => void;
+  rowClassName?: string | ((row: T) => string);
 }
 
-export function DataTable<T>({ columns, data }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, onRowClick, rowClassName }: DataTableProps<T>) {
   const table = useReactTable({
     data,
     columns,
@@ -52,8 +54,33 @@ export function DataTable<T>({ columns, data }: DataTableProps<T>) {
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="hover:bg-accent/40">
+          {table.getRowModel().rows.map((row) => {
+            const orig = row.original as T;
+            const extraClass =
+              typeof rowClassName === "function"
+                ? rowClassName(orig)
+                : rowClassName || "";
+            const clickable = Boolean(onRowClick);
+            const cls = `hover:bg-accent/40 ${clickable ? "cursor-pointer" : ""} ${extraClass}`.trim();
+            const handleClick = () => {
+              if (onRowClick) onRowClick(orig);
+            };
+            const handleKeyDown: React.KeyboardEventHandler<HTMLTableRowElement> = (e) => {
+              if (!onRowClick) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onRowClick(orig);
+              }
+            };
+            return (
+              <tr
+                key={row.id}
+                className={cls}
+                onClick={handleClick}
+                onKeyDown={handleKeyDown}
+                tabIndex={onRowClick ? 0 : -1}
+                role={onRowClick ? "button" : undefined}
+              >
               {row.getVisibleCells().map((cell) => {
                 const meta = cell.column.columnDef.meta as
                   | ColumnMeta
@@ -65,8 +92,9 @@ export function DataTable<T>({ columns, data }: DataTableProps<T>) {
                   </td>
                 );
               })}
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

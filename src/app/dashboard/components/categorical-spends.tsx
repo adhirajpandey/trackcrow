@@ -11,8 +11,6 @@ export interface CategoricalSpend {
 function getCategoryColor(i: number) {
   // A set of distinct, vibrant colors (hex for SVG + Tailwind bg class for progress)
   const palette: { hex: string; bgClass: string }[] = [
-    // Updated palette: removed yellow/amber/orange and chose distinct colors
-    { hex: "#ef4444", bgClass: "bg-red-500" }, // red
     { hex: "#10b981", bgClass: "bg-emerald-500" }, // green
     { hex: "#3b82f6", bgClass: "bg-blue-500" }, // blue
     { hex: "#5b21b6", bgClass: "bg-indigo-600" }, // deep indigo

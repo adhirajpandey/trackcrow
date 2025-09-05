@@ -88,12 +88,16 @@ export default async function UserPage() {
       where: { uuid: session.user.uuid },
       select: { createdAt: true },
     });
-    const txns = await getUserTransactions(session.user.uuid);
+    const txns = await getUserTransactions(session.user.uuid, true);
     transactions = txns as unknown as TransactionStats[];
     userStats = {
       totalTransactions: txns.length,
       totalSpent: txns.reduce((sum, t: any) => sum + t.amount, 0),
-      categoriesUsed: new Set(txns.map((t: any) => t.categoryId).filter(Boolean)).size,
+      categoriesUsed: new Set(
+        txns
+          .map((t: any) => (t.category ? String(t.category).trim() : ""))
+          .filter((name: string) => name.length > 0),
+      ).size,
       accountCreated: user?.createdAt
         ? user.createdAt.toISOString()
         : (txns.at(-1)?.createdAt as string) || new Date().toISOString(),
@@ -214,4 +218,3 @@ export default async function UserPage() {
     </div>
   );
 }
-

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { numberToINR, formatISTDateTime } from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
+import Link from "next/link";
 
 export function RecentTransactions({ txns }: { txns: Transaction[] }) {
   if (!txns || !txns.length) {
@@ -47,10 +48,8 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
             return (
               <>
                 {displayed.map((txn) => (
-                  <li
-                    key={txn.uuid}
-                    className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors"
-                  >
+                  <li key={txn.uuid}>
+                    <Link href={`/transactions/${txn.id}`} className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors">
                     <Avatar className="h-8 w-8 text-xs">
                       <AvatarFallback className="text-xs">
                         {(
@@ -87,6 +86,7 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
                         {formatISTDateTime(getTimeMs(txn))}
                       </div>
                     </div>
+                    </Link>
                   </li>
                 ))}
                 {Array.from({ length: placeholders }).map((_, idx) => (
@@ -105,4 +105,3 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
     </Card>
   );
 }
-

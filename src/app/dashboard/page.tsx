@@ -18,7 +18,8 @@ export default async function DashboardPage() {
   }
   let transactions: Transaction[] = [];
   try {
-    transactions = await getUserTransactions(session.user.uuid);
+    // Populate category and subcategory names for dashboard summaries
+    transactions = await getUserTransactions(session.user.uuid, true);
   } catch {
 
     return (

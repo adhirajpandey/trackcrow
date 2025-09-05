@@ -1,35 +1,42 @@
 import { z } from "zod";
 
-export const transactionRead = z.object({
+// Core transaction coming from DB after serialization
+export const transactionCore = z.object({
   uuid: z.string(),
   id: z.number(),
   type: z.string(),
   user_uuid: z.string(),
-  timestamp: z.number(),
-  amount: z.number(),
+  // Accept number-like inputs and coerce to number
+  timestamp: z.coerce.number(),
+  amount: z.coerce.number(),
   recipient: z.string(),
   input_mode: z.string(),
   recipient_name: z.string().nullable().optional(),
-  categoryId: z.number().nullable().optional(),
-  subcategoryId: z.number().nullable().optional(),
   reference: z.string().nullable().optional(),
   account: z.string().nullable().optional(),
   remarks: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
+  // We allow nullable or missing ist_datetime; consumers use createdAt fallback
   ist_datetime: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
-export type Transaction = z.infer<typeof transactionRead>;
+// For consumers that also need populated names
+export const transactionWithNames = transactionCore.extend({
+  category: z.string().nullable().optional(),
+  subcategory: z.string().nullable().optional(),
+});
 
-export const transactionReadArray = z.array(transactionRead);
+export const transactionReadArray = z.array(transactionWithNames);
 
-// Minimal transaction shape used for aggregated stats (server components)
+export type Transaction = z.infer<typeof transactionWithNames>;
+
+// Minimal transaction shape used for aggregated stats or charts
 export const transactionStats = z.object({
   id: z.number(),
-  // Amount should be a number after serialization; coerce to be tolerant
   amount: z.coerce.number(),
+  // If consumers filter by category id
   categoryId: z.number().nullable().optional(),
   ist_datetime: z.string().nullable().optional(),
   createdAt: z.string(),
@@ -37,3 +44,4 @@ export const transactionStats = z.object({
 });
 
 export type TransactionStats = z.infer<typeof transactionStats>;
+
