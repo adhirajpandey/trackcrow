@@ -1,29 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TransactionStats } from "@/common/schemas";
-import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Image from "next/image";
-import { getUserTransactions } from "@/common/server";
+import { AccountUtilities } from "./components/account-utilities";
+import prisma from "@/lib/prisma";
 
-interface UserStats {
-  totalTransactions: number;
-  totalSpent: number;
-  categoriesUsed: number;
-  accountCreated: string;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
+// Skeleton kept for consistency while server data loads
 function UserProfileSkeleton() {
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -78,43 +62,12 @@ export default async function UserPage() {
     );
   }
 
-  let transactions: TransactionStats[] = [];
-  let userStats: UserStats | null = null;
-  let error: string | null = null;
-
-  try {
-    // Fetch user's createdAt for accurate "Member Since"
-    const user = await prisma.user.findUnique({
-      where: { uuid: session.user.uuid },
-      select: { createdAt: true },
-    });
-    const txns = await getUserTransactions(session.user.uuid, true);
-    transactions = txns as unknown as TransactionStats[];
-    userStats = {
-      totalTransactions: txns.length,
-      totalSpent: txns.reduce((sum, t: any) => sum + t.amount, 0),
-      categoriesUsed: new Set(
-        txns
-          .map((t: any) => (t.category ? String(t.category).trim() : ""))
-          .filter((name: string) => name.length > 0),
-      ).size,
-      accountCreated: user?.createdAt
-        ? user.createdAt.toISOString()
-        : (txns.at(-1)?.createdAt as string) || new Date().toISOString(),
-    };
-  } catch {
-    error = "Failed to load user statistics";
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>{error}</p>
-        </div>
-      </div>
-    );
-  }
+  // Determine if a token exists to control revoke button initial state
+  const me = await prisma.user.findUnique({
+    where: { uuid: session.user.uuid },
+    select: { lt_token: true },
+  });
+  const hasTokenInitially = Boolean(me?.lt_token);
 
   return (
     <div className="container mx-auto p-6 lg:pl-8 space-y-6">
@@ -167,54 +120,19 @@ export default async function UserPage() {
             </div>
           </CardContent>
         </Card>
-        {/* Account Statistics Card */}
+        {/* Account Utilities Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Account Statistics</CardTitle>
+            <CardTitle>Account Utilities</CardTitle>
           </CardHeader>
-          <CardContent>
-            {userStats ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Transactions
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {userStats.totalTransactions}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Spent
-                  </p>
-                  <p className="text-2xl font-bold">
-                    ₹{userStats.totalSpent.toLocaleString()}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Categories Used
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {userStats.categoriesUsed}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Member Since
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {formatDate(userStats.accountCreated)}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <UserProfileSkeleton />
-            )}
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Create or revoke a device token to authenticate client devices.
+            </p>
+            <AccountUtilities hasTokenInitially={hasTokenInitially} />
           </CardContent>
         </Card>
       </div>
-      
     </div>
   );
 }
