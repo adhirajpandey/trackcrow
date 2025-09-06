@@ -4,7 +4,9 @@ import {
   numberToINR,
   getCurrentMonthMeta,
   formatCurrentMonthDayLabel,
-  formatISTMonthYear,
+  formatMonthYear,
+  formatDate,
+  toDate,
 } from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
 import {
@@ -47,19 +49,12 @@ function CustomTooltip({
 }
 
 function getCurrentMonthName() {
-  return formatISTMonthYear(new Date());
+  return formatMonthYear(new Date());
 }
 
 type SelectedMonth = { year: number; month: number } | null; // month: 0-11
 
-function parseTxnDate(txn: Transaction): Date {
-  if (typeof (txn as { timestamp?: number }).timestamp === "number") {
-    const ts = (txn as { timestamp: number }).timestamp;
-    return new Date(ts > 1e12 ? ts : ts * 1000);
-  }
-  const iso = (txn as { createdAt?: string }).createdAt;
-  return new Date(iso!);
-}
+// Use only timestamp
 
 function getMonthMeta(target: SelectedMonth) {
   if (!target) return getCurrentMonthMeta();
@@ -71,12 +66,7 @@ function getMonthMeta(target: SelectedMonth) {
 function formatDayLabel(day: number, target: SelectedMonth) {
   if (!target) return formatCurrentMonthDayLabel(day);
   const d = new Date(target.year, target.month, day);
-  return d.toLocaleDateString("en-GB", {
-    timeZone: "Asia/Kolkata",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(d);
 }
 
 function getCumulativeDailySpendingForMonth(
@@ -89,7 +79,7 @@ function getCumulativeDailySpendingForMonth(
 
   let lastTxnDay = 0;
   for (const txn of transactions) {
-    const date = parseTxnDate(txn);
+    const date = toDate(txn.timestamp as any);
     if (date.getFullYear() === year && date.getMonth() === month) {
       const day = date.getDate();
       dailyTotals[day] += Math.abs(txn.amount);
@@ -173,7 +163,7 @@ export function MonthlySpendingChart({
         <div className="w-full text-center text-sm text-muted-foreground">
           {(() => {
             if (!selectedMonth) return getCurrentMonthName();
-            return formatISTMonthYear(
+            return formatMonthYear(
               new Date(selectedMonth.year, selectedMonth.month, 1),
             );
           })()}

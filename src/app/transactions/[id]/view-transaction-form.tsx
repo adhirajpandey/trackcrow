@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { time } from "console";
 
 type CategoryWithSubs = {
   id: number;
@@ -41,8 +42,8 @@ const formSchema = z.object({
   subcategoryId: z.coerce.number().int().positive().optional(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   remarks: z.string().optional(),
-  timestamp: z.coerce.date(),
   same_as_recipient: z.boolean().default(true),
+  timestamp: z.string()
 });
 
 export type ViewTransactionDefaults = z.infer<typeof formSchema>;
@@ -75,11 +76,11 @@ export function ViewTransactionForm({
       ["amount", values.amount],
       ["recipient", values.recipient],
       ["recipient_name", values.recipient_name ?? ""],
+      ["timestamp", values.timestamp],
       ["categoryId", values.categoryId],
       ["subcategoryId", values.subcategoryId],
       ["type", values.type],
       ["remarks", values.remarks ?? ""],
-      ["timestamp", values.timestamp],
     ];
     for (const [k, v] of entries) {
       if (k === "recipient_name" || k === "remarks") {
@@ -205,18 +206,13 @@ export function ViewTransactionForm({
                     <FormControl>
                       <Input
                         type="datetime-local"
-                        value={
-                          field.value
-                            ? new Date(field.value.getTime() - field.value.getTimezoneOffset() * 60000)
-                                .toISOString()
-                                .slice(0, 16)
-                            : ""
-                        }
+                        value={field.value ?? ""}
                         onChange={(e) => {
-                          field.onChange(e.target.value ? new Date(e.target.value) : undefined);
+                          const v = e.target.value;
+                          field.onChange(v === "" ? undefined : v);
                         }}
-                        readOnly={!isEditing}
                         disabled={!isEditing}
+                        readOnly={!isEditing}
                       />
                     </FormControl>
                     <FormMessage />

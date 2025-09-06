@@ -56,8 +56,6 @@ export default async function ViewTransactionPage({
     typeof (txn as any).amount?.toNumber === "function"
       ? (txn as any).amount.toNumber()
       : Number((txn as any).amount);
-  const tsDate = (txn as any).timestamp ?? txn.createdAt;
-
   const defaults: ViewTransactionDefaults = {
     amount,
     recipient: txn.recipient,
@@ -66,8 +64,8 @@ export default async function ViewTransactionPage({
     subcategoryId: txn.subcategoryId ?? undefined,
     type: String(txn.type) as ViewTransactionDefaults["type"],
     remarks: txn.remarks ?? "",
-    timestamp: new Date(tsDate),
     same_as_recipient: (txn.recipient_name ?? "") === (txn.recipient ?? ""),
+    timestamp: txn.timestamp.toISOString().slice(0, 16),
   };
 
   return (
@@ -80,7 +78,7 @@ export default async function ViewTransactionPage({
       </div>
       <div className="py-2 md:py-4">
         <ViewTransactionForm
-          categories={categories as any}
+          categories={categories}
           defaults={defaults}
           transactionId={txn.id}
         />

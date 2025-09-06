@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Transaction } from "@/common/schemas";
+import { formatMonthYear, toDate } from "@/common/utils";
 import { Summary } from "./summary";
 import { CategoricalSpends } from "./categorical-spends";
 import { RecentTransactions } from "./recent-transactions";
@@ -24,23 +25,10 @@ function toMonthKey(date: Date): MonthKey {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-function parseTxnDate(txn: Transaction): Date {
-  if (typeof txn.timestamp === "number") {
-    const ts = txn.timestamp;
-    return new Date(ts > 1e12 ? ts : ts * 1000);
-  }
-  const iso = txn.createdAt;
-  return new Date(iso);
-}
-
 function monthLabelFromKey(key: MonthKey): string {
   const [y, m] = key.split("-").map((v) => parseInt(v, 10));
   const d = new Date(y, m - 1, 1);
-  return d.toLocaleString("en-GB", {
-    timeZone: "Asia/Kolkata",
-    month: "long",
-    year: "numeric",
-  });
+  return formatMonthYear(d);
 }
 
 export function DashboardClient({
@@ -53,7 +41,7 @@ export function DashboardClient({
   const monthKeysDescending = useMemo(() => {
     const set = new Set<MonthKey>();
     for (const t of transactions) {
-      const d = parseTxnDate(t);
+      const d = toDate(t.timestamp as any);
       set.add(toMonthKey(d));
     }
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
@@ -81,7 +69,7 @@ export function DashboardClient({
 
   const filtered = useMemo(() => {
     if (selected === "all") return transactions;
-    return transactions.filter((t) => toMonthKey(parseTxnDate(t)) === selected);
+    return transactions.filter((t) => toMonthKey(toDate(t.timestamp as any)) === selected);
   }, [transactions, selected]);
 
   const selectedLabel =

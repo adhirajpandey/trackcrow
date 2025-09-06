@@ -23,18 +23,22 @@ export async function addTransaction(formData: FormData) {
     return { error: "Unauthorized" };
   }
 
+  // Normalize optional fields: convert null to undefined so optional() is respected
+  const getOpt = (v: FormDataEntryValue | null) => (v === null ? undefined : v);
+
   const validatedFields = addTransactionSchema.safeParse({
     amount: formData.get("amount"),
     recipient: formData.get("recipient"),
-    recipient_name: formData.get("recipient_name"),
+    recipient_name: getOpt(formData.get("recipient_name")),
     categoryId: formData.get("categoryId"),
-    subcategoryId: formData.get("subcategoryId"),
+    subcategoryId: getOpt(formData.get("subcategoryId")),
     type: formData.get("type"),
-    remarks: formData.get("remarks"),
+    remarks: getOpt(formData.get("remarks")),
     timestamp: formData.get("timestamp"),
   });
 
   if (!validatedFields.success) {
+    console.log("Validation failed", validatedFields.error.issues);
     return { error: "Invalid fields", issues: validatedFields.error.issues };
   }
 

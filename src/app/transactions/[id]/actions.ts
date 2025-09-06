@@ -17,7 +17,6 @@ const updateTransactionSchema = z.object({
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   // allow empty string (treated as null)
   remarks: z.string().optional(),
-  timestamp: z.coerce.date(),
 });
 
 export async function updateTransaction(formData: FormData) {
@@ -35,14 +34,13 @@ export async function updateTransaction(formData: FormData) {
     subcategoryId: formData.get("subcategoryId"),
     type: formData.get("type"),
     remarks: formData.get("remarks"),
-    timestamp: formData.get("timestamp"),
   });
 
   if (!parsed.success) {
     return { error: "Invalid fields", issues: parsed.error.issues } as const;
   }
 
-  const { id, amount, recipient, recipient_name, categoryId, subcategoryId, type, remarks, timestamp } = parsed.data;
+  const { id, amount, recipient, recipient_name, categoryId, subcategoryId, type, remarks } = parsed.data;
 
   try {
     const existing = await prisma.transaction.findFirst({ where: { id, user_uuid: session.user.uuid } });
@@ -69,7 +67,6 @@ export async function updateTransaction(formData: FormData) {
         subcategoryId,
         type,
         remarks: remarksForDb,
-        timestamp: timestamp,
       },
     });
   } catch (error) {

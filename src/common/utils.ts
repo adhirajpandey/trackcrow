@@ -6,50 +6,59 @@ export const numberToINR = (amount: number): string => {
   }).format(amount);
 };
 
-// Use fixed locale and timezone for deterministic SSR/CSR formatting
-const DATE_LOCALE = "en-GB"; // 24h by default, e.g., 18:34, and "Sept"
-const IST_TIMEZONE = "Asia/Kolkata";
+// Minimal, consistent IST formatting utilities
+const LOCALE = "en-GB"; // 24h clock by default
+const TZ = "Asia/Kolkata"; // GMT+5:30
 
-export function formatISTDateTime(dateInput: number | string | Date): string {
-  const d = new Date(dateInput);
-  return d.toLocaleString(DATE_LOCALE, {
-    timeZone: IST_TIMEZONE,
+export function toDate(input: number | string | Date): Date {
+  if (input instanceof Date) return input;
+  if (typeof input === "number") {
+    const ms = input > 1e12 ? input : input * 1000; // support seconds
+    return new Date(ms);
+  }
+  return new Date(input);
+}
+
+export function formatDate(input: number | string | Date): string {
+  const d = toDate(input);
+  return new Intl.DateTimeFormat(LOCALE, {
+    timeZone: TZ,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+export function formatTime(input: number | string | Date): string {
+  const d = toDate(input);
+  return new Intl.DateTimeFormat(LOCALE, {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
+export function formatDateTime(input: number | string | Date): string {
+  const d = toDate(input);
+  return new Intl.DateTimeFormat(LOCALE, {
+    timeZone: TZ,
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  });
+  }).format(d);
 }
 
-export function formatISTDate(dateInput: number | string | Date): string {
-  const d = new Date(dateInput);
-  return d.toLocaleDateString(DATE_LOCALE, {
-    timeZone: IST_TIMEZONE,
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-export function formatISTTime(dateInput: number | string | Date): string {
-  const d = new Date(dateInput);
-  return d.toLocaleTimeString(DATE_LOCALE, {
-    timeZone: IST_TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-export function formatISTMonthYear(dateInput: number | string | Date): string {
-  const d = new Date(dateInput);
-  return d.toLocaleString(DATE_LOCALE, {
-    timeZone: IST_TIMEZONE,
+export function formatMonthYear(input: number | string | Date): string {
+  const d = toDate(input);
+  return new Intl.DateTimeFormat(LOCALE, {
+    timeZone: TZ,
     month: "long",
     year: "numeric",
-  });
+  }).format(d);
 }
 
 /** Returns details for the current month */
@@ -65,12 +74,7 @@ export function getCurrentMonthMeta() {
 export function formatCurrentMonthDayLabel(day: number): string {
   const { year, month } = getCurrentMonthMeta();
   const date = new Date(year, month, day);
-  return date.toLocaleDateString(DATE_LOCALE, {
-    timeZone: IST_TIMEZONE,
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(date);
 }
 
 import type { Transaction } from "@/common/schemas";
@@ -86,13 +90,7 @@ export function getDailySpendingForCurrentMonth(transactions: Transaction[]) {
 
   let lastTxnDay = 0;
   for (const txn of transactions) {
-    let date: Date;
-    if (typeof (txn as any).timestamp === "number") {
-      const ts = (txn as any).timestamp as number;
-      date = new Date(ts > 1e12 ? ts : ts * 1000);
-    } else {
-      date = new Date((txn as any).createdAt);
-    }
+    const date = toDate((txn as any).timestamp as any);
     if (date.getFullYear() === year && date.getMonth() === month) {
       const day = date.getDate();
       dailyTotals[day] += Math.abs(txn.amount);
@@ -133,6 +131,6 @@ export const defaultCategoriesMap = [
 /**
  * Fetches all transactions for a user, ordered by latest first, and serializes
  * Prisma-specific types (Decimal, Date) into plain JSON-compatible values.
- * Also fills a numeric `timestamp` derived from DB `timestamp` for consumers that expect it.
+ * The `timestamp` field is provided as an ISO string for consistency across UI.
  */
 // Note: server-only data helpers live in src/common/server.ts to avoid bundling prisma in client code

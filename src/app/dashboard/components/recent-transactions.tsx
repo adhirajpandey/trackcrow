@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { numberToINR, formatISTDateTime } from "@/common/utils";
+import { numberToINR, formatDateTime, toDate } from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
 import Link from "next/link";
 
@@ -29,17 +29,8 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
       <CardContent className="divide-y divide-border px-2 pb-4 sm:px-4">
         <ul className="divide-y divide-border">
           {(() => {
-            // normalize timestamp to milliseconds for consistent sorting
-            const getTimeMs = (t: Transaction) => {
-              if (typeof t.timestamp === "number") {
-                // if timestamp seems like seconds (<= 1e12), convert to ms
-                return t.timestamp > 1e12 ? t.timestamp : t.timestamp * 1000;
-              }
-              return Date.parse(t.createdAt);
-            };
-
             const sorted = [...txns].sort(
-              (a, b) => getTimeMs(b) - getTimeMs(a),
+              (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime(),
             );
             const displayed = sorted.slice(0, 5);
             const placeholders = Math.max(0, 5 - displayed.length);
@@ -82,7 +73,7 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
                         {numberToINR(Math.abs(txn.amount))}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {formatISTDateTime(getTimeMs(txn))}
+                        {formatDateTime(txn.timestamp as any)}
                       </div>
                     </div>
                     </Link>

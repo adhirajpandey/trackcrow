@@ -25,14 +25,26 @@ export async function getUserTransactions(
     return [];
   }
 
+  function formatISTISO(d: Date): string {
+    const pad = (n: number, w: number = 2) => String(n).padStart(w, "0");
+    const yyyy = d.getUTCFullYear();
+    const mm = pad(d.getUTCMonth() + 1);
+    const dd = pad(d.getUTCDate());
+    const HH = pad(d.getUTCHours());
+    const MM = pad(d.getUTCMinutes());
+    const SS = pad(d.getUTCSeconds());
+    const mmm = pad(d.getUTCMilliseconds(), 3);
+    return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}.${mmm}+05:30`;
+  }
+
   const serialized = txns.map((t) => {
     const amount =
       typeof t.amount?.toNumber === "function" ? t.amount.toNumber() : Number(t.amount);
     const createdAtISO = t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt);
     const updatedAtISO = t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt);
-    const timestamp = t.timestamp instanceof Date
-      ? t.timestamp.getTime()
-      : new Date(t.createdAt).getTime();
+    const timestampISO = t.timestamp instanceof Date
+      ? formatISTISO(t.timestamp)
+      : String(t.timestamp);
 
     const base = {
       uuid: t.uuid,
@@ -49,7 +61,7 @@ export async function getUserTransactions(
       location: t.location ?? null,
       createdAt: createdAtISO,
       updatedAt: updatedAtISO,
-      timestamp,
+      timestamp: timestampISO,
     } as any;
 
     if (populateCategories) {

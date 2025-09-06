@@ -6,8 +6,8 @@ export const transactionCore = z.object({
   id: z.number(),
   type: z.string(),
   user_uuid: z.string(),
-  // Accept number-like inputs and coerce to number
-  timestamp: z.coerce.number(),
+  // ISO string from server for timestamp
+  timestamp: z.string(),
   amount: z.coerce.number(),
   recipient: z.string(),
   input_mode: z.string(),

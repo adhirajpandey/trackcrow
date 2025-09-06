@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateTime } from "@/common/utils";
 import { Toaster, toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -188,21 +189,38 @@ export function AddTransactionForm({
                     <FormItem>
                       <FormLabel>Timestamp</FormLabel>
                       <FormControl>
-                        <Input
-                          type="datetime-local"
-                          value={
-                            field.value
-                              ? new Date(field.value.getTime() - field.value.getTimezoneOffset() * 60000)
-                                  .toISOString()
-                                  .slice(0, 16)
-                              : ""
+                        {(() => {
+                          const val = field.value as Date | undefined;
+                          let istInput = "";
+                          if (val) {
+                            const parts = new Intl.DateTimeFormat("en-GB", {
+                              timeZone: "Asia/Kolkata",
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            }).formatToParts(val);
+                            const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+                            const yyyy = get("year");
+                            const mm = get("month");
+                            const dd = get("day");
+                            const HH = get("hour");
+                            const MM = get("minute");
+                            istInput = yyyy && mm && dd && HH && MM ? `${yyyy}-${mm}-${dd}T${HH}:${MM}` : "";
                           }
-                          onChange={(e) => {
-                            field.onChange(
-                              e.target.value ? new Date(e.target.value) : undefined,
-                            );
-                          }}
-                        />
+                          return (
+                            <Input
+                              type="datetime-local"
+                              value={istInput}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                field.onChange(v ? new Date(`${v}:00.000+05:30`) : undefined);
+                              }}
+                            />
+                          );
+                        })()}
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { numberToINR, formatISTDate, formatISTTime } from "@/common/utils";
+import { numberToINR, formatDateTime, formatMonthYear, toDate } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -26,30 +26,12 @@ function toMonthKey(date: Date): MonthKey {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-// Interface for transaction with optional timestamp and date fields
-interface TransactionWithTimestamp {
-  timestamp?: number;
-  createdAt?: string | null | undefined;
-  [key: string]: unknown;
-}
-
-function parseTxnDate(txn: TransactionWithTimestamp): Date {
-  if (typeof txn.timestamp === "number") {
-    const ts = txn.timestamp;
-    return new Date(ts > 1e12 ? ts : ts * 1000);
-  }
-  const iso = txn.createdAt;
-  return new Date(iso ?? "");
-}
+// Use only `timestamp` everywhere
 
 function monthLabelFromKey(key: MonthKey): string {
   const [y, m] = key.split("-").map((v) => parseInt(v, 10));
   const d = new Date(y, m - 1, 1);
-  return d.toLocaleString("en-GB", {
-    timeZone: "Asia/Kolkata",
-    month: "long",
-    year: "numeric",
-  });
+  return formatMonthYear(d);
 }
 export function TransactionsClient({
   transactions,
@@ -62,7 +44,7 @@ export function TransactionsClient({
   const monthKeysDescending = useMemo(() => {
     const set = new Set<MonthKey>();
     for (const t of transactions) {
-      const d = parseTxnDate(t);
+      const d = toDate(t.timestamp as any);
       set.add(toMonthKey(d));
     }
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
@@ -113,7 +95,7 @@ export function TransactionsClient({
     const base =
       selected === "all"
         ? transactions
-        : transactions.filter((t) => toMonthKey(parseTxnDate(t)) === selected);
+        : transactions.filter((t) => toMonthKey(toDate(t.timestamp as any)) === selected);
 
     const q = (query || "").trim().toLowerCase();
     if (!q) return base;
@@ -157,21 +139,12 @@ export function TransactionsClient({
     () => [
       {
         header: "Date",
-        accessorFn: (row) => (row.timestamp as any) || (row.createdAt as any),
+        accessorFn: (row) => row.timestamp as any,
         cell: ({ row }) => {
           const t = row.original as Transaction;
-          const getTimeMs = (tx: Transaction) => {
-            if (typeof tx.timestamp === "number") {
-              return tx.timestamp > 1e12 ? tx.timestamp : tx.timestamp * 1000;
-            }
-            return Date.parse(tx.createdAt);
-          };
-          const timeMs = getTimeMs(t);
+          const ts = t.timestamp as any;
           return (
-            <div className="text-sm text-muted-foreground">
-              <div>{formatISTDate(timeMs)}</div>
-              <div>{formatISTTime(timeMs)}</div>
-            </div>
+            <div className="text-sm text-muted-foreground">{formatDateTime(ts)}</div>
           );
         },
       },
