@@ -16,8 +16,6 @@ export const transactionCore = z.object({
   account: z.string().nullable().optional(),
   remarks: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
-  // We allow nullable or missing ist_datetime; consumers use createdAt fallback
-  ist_datetime: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -38,7 +36,6 @@ export const transactionStats = z.object({
   amount: z.coerce.number(),
   // If consumers filter by category id
   categoryId: z.number().nullable().optional(),
-  ist_datetime: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

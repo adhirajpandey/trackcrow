@@ -29,7 +29,6 @@ function toMonthKey(date: Date): MonthKey {
 // Interface for transaction with optional timestamp and date fields
 interface TransactionWithTimestamp {
   timestamp?: number;
-  ist_datetime?: string | null | undefined;
   createdAt?: string | null | undefined;
   [key: string]: unknown;
 }
@@ -39,7 +38,7 @@ function parseTxnDate(txn: TransactionWithTimestamp): Date {
     const ts = txn.timestamp;
     return new Date(ts > 1e12 ? ts : ts * 1000);
   }
-  const iso = txn.ist_datetime || txn.createdAt;
+  const iso = txn.createdAt;
   return new Date(iso ?? "");
 }
 
@@ -158,14 +157,13 @@ export function TransactionsClient({
     () => [
       {
         header: "Date",
-        accessorFn: (row) => row.ist_datetime || row.createdAt || row.timestamp,
+        accessorFn: (row) => (row.timestamp as any) || (row.createdAt as any),
         cell: ({ row }) => {
           const t = row.original as Transaction;
           const getTimeMs = (tx: Transaction) => {
             if (typeof tx.timestamp === "number") {
               return tx.timestamp > 1e12 ? tx.timestamp : tx.timestamp * 1000;
             }
-            if (tx.ist_datetime) return Date.parse(tx.ist_datetime);
             return Date.parse(tx.createdAt);
           };
           const timeMs = getTimeMs(t);

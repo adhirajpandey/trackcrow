@@ -35,7 +35,6 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
                 // if timestamp seems like seconds (<= 1e12), convert to ms
                 return t.timestamp > 1e12 ? t.timestamp : t.timestamp * 1000;
               }
-              if (t.ist_datetime) return Date.parse(t.ist_datetime);
               return Date.parse(t.createdAt);
             };
 

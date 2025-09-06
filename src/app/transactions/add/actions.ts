@@ -51,7 +51,7 @@ export async function addTransaction(formData: FormData) {
         subcategoryId,
         type,
         remarks,
-        ist_datetime: timestamp,
+        timestamp: timestamp,
         input_mode: "MANUAL",
         uuid: crypto.randomUUID(),
       },

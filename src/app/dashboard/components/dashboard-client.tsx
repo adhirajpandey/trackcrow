@@ -29,7 +29,7 @@ function parseTxnDate(txn: Transaction): Date {
     const ts = txn.timestamp;
     return new Date(ts > 1e12 ? ts : ts * 1000);
   }
-  const iso = txn.ist_datetime || txn.createdAt;
+  const iso = txn.createdAt;
   return new Date(iso);
 }
 

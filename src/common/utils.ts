@@ -86,7 +86,13 @@ export function getDailySpendingForCurrentMonth(transactions: Transaction[]) {
 
   let lastTxnDay = 0;
   for (const txn of transactions) {
-    const date = new Date(txn.ist_datetime || txn.createdAt);
+    let date: Date;
+    if (typeof (txn as any).timestamp === "number") {
+      const ts = (txn as any).timestamp as number;
+      date = new Date(ts > 1e12 ? ts : ts * 1000);
+    } else {
+      date = new Date((txn as any).createdAt);
+    }
     if (date.getFullYear() === year && date.getMonth() === month) {
       const day = date.getDate();
       dailyTotals[day] += Math.abs(txn.amount);
@@ -127,6 +133,6 @@ export const defaultCategoriesMap = [
 /**
  * Fetches all transactions for a user, ordered by latest first, and serializes
  * Prisma-specific types (Decimal, Date) into plain JSON-compatible values.
- * Also fills a numeric `timestamp` derived from `ist_datetime` for consumers that expect it.
+ * Also fills a numeric `timestamp` derived from DB `timestamp` for consumers that expect it.
  */
 // Note: server-only data helpers live in src/common/server.ts to avoid bundling prisma in client code

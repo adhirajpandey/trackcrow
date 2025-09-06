@@ -56,7 +56,7 @@ export default async function ViewTransactionPage({
     typeof (txn as any).amount?.toNumber === "function"
       ? (txn as any).amount.toNumber()
       : Number((txn as any).amount);
-  const tsDate = txn.ist_datetime ?? txn.createdAt;
+  const tsDate = (txn as any).timestamp ?? txn.createdAt;
 
   const defaults: ViewTransactionDefaults = {
     amount,

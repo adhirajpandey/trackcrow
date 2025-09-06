@@ -1,4 +1,4 @@
-import { transactionRead, transactionReadArray, type Transaction } from "@/common/schemas";
+import { transactionReadArray, type Transaction } from "@/common/schemas";
 import prisma from "@/lib/prisma";
 
 /**
@@ -12,7 +12,7 @@ export async function getUserTransactions(
   try {
     txns = await prisma.transaction.findMany({
       where: { user_uuid: uuid },
-      orderBy: { ist_datetime: "desc" },
+      orderBy: { timestamp: "desc" },
       include: populateCategories
         ? {
             Category: { select: { id: true, name: true } },
@@ -30,9 +30,8 @@ export async function getUserTransactions(
       typeof t.amount?.toNumber === "function" ? t.amount.toNumber() : Number(t.amount);
     const createdAtISO = t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt);
     const updatedAtISO = t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt);
-    const istISO = t.ist_datetime instanceof Date ? t.ist_datetime.toISOString() : t.ist_datetime ?? null;
-    const timestamp = t.ist_datetime instanceof Date
-      ? t.ist_datetime.getTime()
+    const timestamp = t.timestamp instanceof Date
+      ? t.timestamp.getTime()
       : new Date(t.createdAt).getTime();
 
     const base = {
@@ -50,7 +49,6 @@ export async function getUserTransactions(
       location: t.location ?? null,
       createdAt: createdAtISO,
       updatedAt: updatedAtISO,
-      ist_datetime: istISO,
       timestamp,
     } as any;
 

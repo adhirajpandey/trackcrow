@@ -69,7 +69,7 @@ export async function updateTransaction(formData: FormData) {
         subcategoryId,
         type,
         remarks: remarksForDb,
-        ist_datetime: timestamp,
+        timestamp: timestamp,
       },
     });
   } catch (error) {

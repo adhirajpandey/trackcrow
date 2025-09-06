@@ -24,7 +24,7 @@ model Transaction {
   type           TransactionType @default(UPI)
   recipient      String
   input_mode     String
-  ist_datetime   DateTime
+  timestamp      DateTime
   recipient_name String?
   reference      String?
   account        String?
