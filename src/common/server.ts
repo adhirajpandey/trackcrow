@@ -1,5 +1,29 @@
 import { transactionReadArray, type Transaction } from "@/common/schemas";
 import prisma from "@/lib/prisma";
+import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
+import { TransactionType, InputType } from "../generated/prisma"; // Import enums
+
+interface PrismaTransaction {
+  uuid: string;
+  id: number;
+  type: TransactionType; // Use enum
+  user_uuid: string;
+  timestamp: Date;
+  amount: Decimal;
+  recipient: string;
+  input_mode: InputType; // Use enum
+  recipient_name: string | null;
+  reference: string | null;
+  account: string | null;
+  remarks: string | null;
+  location: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  categoryId: number | null;
+  subcategoryId: number | null;
+  Category?: { id: number; name: string } | null;
+  Subcategory?: { id: number; name: string } | null;
+}
 
 /**
  * Server-only: Fetch all transactions for a user and serialize Prisma types.
@@ -8,7 +32,7 @@ export async function getUserTransactions(
   uuid: string,
   populateCategories: boolean = false,
 ): Promise<Transaction[]> {
-  let txns: (Transaction & { Category?: { id: number; name: string } | null; Subcategory?: { id: number; name: string } | null; })[] = [];
+  let txns: (PrismaTransaction & { Category?: { id: number; name: string } | null; Subcategory?: { id: number; name: string } | null; })[] = [];
   try {
     txns = await prisma.transaction.findMany({
       where: { user_uuid: uuid },
@@ -31,22 +55,19 @@ export async function getUserTransactions(
   }
 
   const serialized = txns.map((t) => {
-    const amount =
-      typeof t.amount?.toNumber === "function" ? t.amount.toNumber() : Number(t.amount);
-    const createdAtISO = t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt);
-    const updatedAtISO = t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt);
-    const timestampISO = t.timestamp instanceof Date
-      ? toUTCISOString(t.timestamp)
-      : String(t.timestamp);
+    const amount = t.amount.toNumber(); // Direct call, as t.amount is Decimal
+    const createdAtISO = toUTCISOString(t.createdAt);
+    const updatedAtISO = toUTCISOString(t.updatedAt);
+    const timestampISO = toUTCISOString(t.timestamp);
 
     const base = {
       uuid: t.uuid,
       id: t.id,
       user_uuid: t.user_uuid,
-      type: String(t.type),
+      type: String(t.type), // Convert enum to string
       amount,
       recipient: t.recipient,
-      input_mode: t.input_mode,
+      input_mode: String(t.input_mode), // Convert enum to string
       recipient_name: t.recipient_name ?? null,
       reference: t.reference ?? null,
       account: t.account ?? null,
@@ -55,7 +76,7 @@ export async function getUserTransactions(
       createdAt: createdAtISO,
       updatedAt: updatedAtISO,
       timestamp: timestampISO,
-    } as Transaction;
+    } as Transaction; // Cast to Transaction, which expects string dates and number amount
 
     if (populateCategories) {
       base.category = t.Category?.name ?? null;

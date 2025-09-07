@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -16,8 +17,21 @@ import { Trash2 } from 'lucide-react';
 import { deleteCategory } from '../actions';
 
 export function DeleteCategoryForm({ categoryId }: { categoryId: number }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    const result = await deleteCategory(categoryId);
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      setError(null);
+      setOpen(false);
+    }
+  };
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="icon" className="text-red-500">
           <Trash2 className="h-4 w-4" />
@@ -29,13 +43,12 @@ export function DeleteCategoryForm({ categoryId }: { categoryId: number }) {
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete this
             category and all its subcategories.
+            {error && <p className="text-red-500 text-sm pt-2">{error}</p>}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <form action={() => deleteCategory(categoryId)}>
-            <AlertDialogAction type="submit">Continue</AlertDialogAction>
-          </form>
+          <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

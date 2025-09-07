@@ -2,6 +2,28 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ViewTransactionForm, type ViewTransactionDefaults } from "./view-transaction-form";
+import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
+import { TransactionType, InputType } from "../../../generated/prisma"; // Import enums
+
+interface PrismaTransactionResult {
+  uuid: string;
+  id: number;
+  type: TransactionType;
+  user_uuid: string;
+  timestamp: Date;
+  amount: Decimal;
+  recipient: string;
+  input_mode: InputType;
+  recipient_name: string | null;
+  reference: string | null;
+  account: string | null;
+  remarks: string | null;
+  location: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  categoryId: number | null;
+  subcategoryId: number | null;
+}
 
 export default async function ViewTransactionPage({
   params,
@@ -40,7 +62,7 @@ export default async function ViewTransactionPage({
     }),
     prisma.transaction.findFirst({
       where: { id: idNum, user_uuid: session.user.uuid },
-    }),
+    }) as Promise<PrismaTransactionResult | null>, // Explicitly cast txn
   ]);
 
   if (!txn) {
@@ -53,10 +75,7 @@ export default async function ViewTransactionPage({
     );
   }
 
-  const amount =
-    typeof (txn as { amount: { toNumber: () => number } }).amount?.toNumber === "function"
-      ? (txn as { amount: { toNumber: () => number } }).amount.toNumber()
-      : Number((txn as { amount: number }).amount);
+  const amount = txn.amount.toNumber();
   const defaults: ViewTransactionDefaults = {
     amount,
     recipient: txn.recipient,

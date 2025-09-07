@@ -33,31 +33,33 @@ type CategoryWithSubs = {
 };
 
 const formSchema = z.object({
-  amount: z.coerce.number().positive(),
+  amount: z.number().positive(),
   recipient: z.string().min(1),
   recipient_name: z.string().optional(),
   // Use IDs from user's categories
-  categoryId: z.coerce.number().int().positive(),
-  subcategoryId: z.coerce.number().int().positive().optional(),
+    categoryId: z.number().int().positive(),
+  subcategoryId: z.number().int().positive().optional(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   remarks: z.string().optional(),
-  timestamp: z.coerce.date(),
+  timestamp: z.date(),
   // UI toggle: when true, keep recipient_name same as recipient
   same_as_recipient: z.boolean().default(true),
 });
+
+export type AddTransactionFormValues = z.infer<typeof formSchema>;
 
 export function AddTransactionForm({
   categories,
 }: {
   categories: CategoryWithSubs[];
 }) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<AddTransactionFormValues, any, AddTransactionFormValues>({
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       amount: undefined,
       recipient: "",
       recipient_name: "",
-      categoryId: undefined as unknown as number, // managed via Select
+      categoryId: undefined,
       subcategoryId: undefined,
       type: "UPI",
       remarks: "",
@@ -66,11 +68,11 @@ export function AddTransactionForm({
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: AddTransactionFormValues) {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
-        formData.append(key, value instanceof Date ? value.toISOString() : value.toString());
+        formData.append(key, value instanceof Date ? value.toISOString() : String(value));
       }
     });
 

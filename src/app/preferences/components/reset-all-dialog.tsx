@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -15,8 +16,21 @@ import {
 import { resetToDefault } from '../actions';
 
 export function ResetAllDialog() {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleReset = async () => {
+    const result = await resetToDefault();
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      setError(null);
+      setOpen(false);
+    }
+  };
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="destructive" size="sm">Reset All</Button>
       </AlertDialogTrigger>
@@ -28,11 +42,10 @@ export function ResetAllDialog() {
             categories and subcategories and reset them to the default settings.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {error && <p className="text-red-500 text-sm pt-2">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <form action={resetToDefault}>
-            <AlertDialogAction type="submit">Continue</AlertDialogAction>
-          </form>
+          <AlertDialogAction onClick={handleReset}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

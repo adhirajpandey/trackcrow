@@ -34,29 +34,31 @@ type CategoryWithSubs = {
 };
 
 const formSchema = z.object({
-  amount: z.coerce.number().positive(),
+  amount: z.number().positive(),
   recipient: z.string().min(1),
   recipient_name: z.string().optional(),
   // Category can be missing for uncategorized transactions
-  categoryId: z
-    .preprocess(
-      (v) => (v === "" || v === undefined ? undefined : v),
-      z.coerce.number().int().positive()
-    )
-    .optional(),
-  subcategoryId: z
-    .preprocess(
-      (v) => (v === "" || v === undefined ? undefined : v),
-      z.coerce.number().int().positive()
-    )
-    .optional(),
+  categoryId: z.number().int().positive().optional(),
+  subcategoryId: z.number().int().positive().optional(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   remarks: z.string().optional(),
   same_as_recipient: z.boolean().default(true),
-  timestamp: z.coerce.date(),
+  timestamp: z.date(),
 });
 
 export type ViewTransactionDefaults = z.infer<typeof formSchema>;
+
+export type ViewTransactionFormValues = {
+  amount: number;
+  recipient: string;
+  recipient_name?: string;
+  categoryId?: number;
+  subcategoryId?: number;
+  type: "UPI" | "CARD" | "CASH" | "NETBANKING" | "OTHER";
+  remarks?: string;
+  same_as_recipient: boolean;
+  timestamp: Date;
+};
 
 export function ViewTransactionForm({
   categories,
@@ -64,12 +66,12 @@ export function ViewTransactionForm({
   transactionId,
 }: {
   categories: CategoryWithSubs[];
-  defaults: ViewTransactionDefaults;
+  defaults: ViewTransactionFormValues;
   transactionId: number;
 }) {
   const [isEditing, setIsEditing] = React.useState(false);
-  const form = useForm<ViewTransactionDefaults>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<ViewTransactionFormValues, any, ViewTransactionFormValues>({
+    resolver: zodResolver(formSchema) as any,
     defaultValues: defaults,
     mode: "onChange",
   });
@@ -78,7 +80,7 @@ export function ViewTransactionForm({
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subs = selectedCat?.Subcategory ?? [];
 
-  async function onSubmit(values: ViewTransactionDefaults) {
+  async function onSubmit(values: ViewTransactionFormValues) {
     const fd = new FormData();
     fd.append("id", String(transactionId));
     // Always include recipient_name and remarks so they can be cleared

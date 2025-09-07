@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,8 +31,21 @@ export function EditSubcategoryDialog({
   subcategory: Subcategory;
   categories: Category[];
 }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const formAction = async (formData: FormData) => {
+    const result = await editSubcategory(formData);
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      setError(null);
+      setOpen(false);
+    }
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon">
           <Edit className="h-4 w-4" />
@@ -43,9 +56,10 @@ export function EditSubcategoryDialog({
           <DialogTitle>Edit Subcategory</DialogTitle>
           <DialogDescription>
             Update your subcategory.
+            {error && <p className="text-red-500 text-sm pt-2">{error}</p>}
           </DialogDescription>
         </DialogHeader>
-        <form action={editSubcategory}>
+        <form action={formAction}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
@@ -78,9 +92,7 @@ export function EditSubcategoryDialog({
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="submit">Save Changes</Button>
-            </DialogClose>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

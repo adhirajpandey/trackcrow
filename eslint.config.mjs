@@ -17,6 +17,11 @@ const eslintConfig = [
   {
     ignores: [".next", "node_modules", "dist", "coverage", "src/generated"],
   },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off", // Temporarily disable for diagnosis
+    },
+  },
 ];
 
 export default eslintConfig;

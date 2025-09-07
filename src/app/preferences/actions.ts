@@ -162,14 +162,15 @@ export async function resetToDefault() {
     if (!session || !session.user?.uuid) {
         return { error: 'Unauthorized' };
     }
+    const user_uuid = session.user.uuid;
 
-    await prisma.category.deleteMany({ where: { user_uuid: session.user.uuid } });
+    await prisma.category.deleteMany({ where: { user_uuid: user_uuid } });
 
     for (const category of defaultCategoriesMap) {
         const createdCategory = await prisma.category.create({
             data: {
                 name: category.name,
-                user_uuid: session.user.uuid,
+                user_uuid: user_uuid,
             },
         });
 
@@ -178,7 +179,7 @@ export async function resetToDefault() {
                 data: category.subcategories.map((subcategoryName) => ({
                     name: subcategoryName,
                     categoryId: createdCategory.id,
-                    user_uuid: session.user.uuid,
+                    user_uuid: user_uuid,
                 })),
             });
         }
