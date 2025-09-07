@@ -8,23 +8,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TransactionType {
-  UPI
-  CARD
-  CASH
-  NETBANKING
-  OTHER
-}
-
 model Transaction {
   uuid           String          @id
-  id             Int             @default(autoincrement()) @unique
+  id             Int             @unique @default(autoincrement())
   user_uuid      String
   amount         Decimal
   type           TransactionType @default(UPI)
   recipient      String
-  input_mode     String
-  timestamp      DateTime
   recipient_name String?
   reference      String?
   account        String?
@@ -32,31 +22,32 @@ model Transaction {
   location       String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
-
-  User           User            @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
   categoryId     Int?
-  Category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subcategoryId  Int?
-  Subcategory    Subcategory?    @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  timestamp      DateTime        @db.Timestamptz(6)
+  raw_message    String?
+  input_mode     InputType
+  Category       Category?       @relation(fields: [categoryId], references: [id])
+  Subcategory    Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  User           User            @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
 
   @@map("transaction")
 }
 
 model User {
   uuid         String        @id
-  id           Int           @default(autoincrement()) @unique
+  id           Int           @unique @default(autoincrement())
   subscription Int           @default(0)
   email        String        @unique
   name         String
-  provider     String
   image        String?
-  lt_token     String?
+  provider     String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-
-  Transaction  Transaction[]
+  lt_token     String?
   Category     Category[]
   Subcategory  Subcategory[]
+  Transaction  Transaction[]
 
   @@map("user")
 }
@@ -67,7 +58,6 @@ model Category {
   user_uuid   String
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-
   User        User          @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
   Subcategory Subcategory[]
   Transaction Transaction[]
@@ -83,11 +73,23 @@ model Subcategory {
   user_uuid   String
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-
   Category    Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   User        User          @relation(fields: [user_uuid], references: [uuid])
   Transaction Transaction[]
 
   @@unique([name, categoryId])
   @@map("subcategory")
+}
+
+enum TransactionType {
+  UPI
+  CARD
+  CASH
+  NETBANKING
+  OTHER
+}
+
+enum InputType {
+  AUTO
+  MANUAL
 }

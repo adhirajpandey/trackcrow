@@ -25,16 +25,9 @@ export async function getUserTransactions(
     return [];
   }
 
-  function formatISTISO(d: Date): string {
-    const pad = (n: number, w: number = 2) => String(n).padStart(w, "0");
-    const yyyy = d.getUTCFullYear();
-    const mm = pad(d.getUTCMonth() + 1);
-    const dd = pad(d.getUTCDate());
-    const HH = pad(d.getUTCHours());
-    const MM = pad(d.getUTCMinutes());
-    const SS = pad(d.getUTCSeconds());
-    const mmm = pad(d.getUTCMilliseconds(), 3);
-    return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}.${mmm}+05:30`;
+  // Always serialize dates as UTC ISO strings; UI formats to Asia/Kolkata.
+  function toUTCISOString(d: Date): string {
+    return d.toISOString();
   }
 
   const serialized = txns.map((t) => {
@@ -43,7 +36,7 @@ export async function getUserTransactions(
     const createdAtISO = t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt);
     const updatedAtISO = t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt);
     const timestampISO = t.timestamp instanceof Date
-      ? formatISTISO(t.timestamp)
+      ? toUTCISOString(t.timestamp)
       : String(t.timestamp);
 
     const base = {

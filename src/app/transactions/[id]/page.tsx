@@ -6,7 +6,7 @@ import { ViewTransactionForm, type ViewTransactionDefaults } from "./view-transa
 export default async function ViewTransactionPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -20,7 +20,8 @@ export default async function ViewTransactionPage({
     );
   }
 
-  const idNum = Number(params.id);
+  const { id } = await params;
+  const idNum = Number(id);
   if (!Number.isFinite(idNum)) {
     return (
       <div className="container mx-auto p-6 lg:pl-8 space-y-6">
@@ -65,7 +66,8 @@ export default async function ViewTransactionPage({
     type: String(txn.type) as ViewTransactionDefaults["type"],
     remarks: txn.remarks ?? "",
     same_as_recipient: (txn.recipient_name ?? "") === (txn.recipient ?? ""),
-    timestamp: txn.timestamp.toISOString().slice(0, 16),
+    // Pass Date; component renders in Asia/Kolkata and converts back to UTC
+    timestamp: txn.timestamp,
   };
 
   return (

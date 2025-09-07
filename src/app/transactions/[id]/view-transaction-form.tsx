@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { time } from "console";
+//
 
 type CategoryWithSubs = {
   id: number;
@@ -38,12 +38,22 @@ const formSchema = z.object({
   recipient: z.string().min(1),
   recipient_name: z.string().optional(),
   // Category can be missing for uncategorized transactions
-  categoryId: z.coerce.number().int().positive().optional(),
-  subcategoryId: z.coerce.number().int().positive().optional(),
+  categoryId: z
+    .preprocess(
+      (v) => (v === "" || v === undefined ? undefined : v),
+      z.coerce.number().int().positive()
+    )
+    .optional(),
+  subcategoryId: z
+    .preprocess(
+      (v) => (v === "" || v === undefined ? undefined : v),
+      z.coerce.number().int().positive()
+    )
+    .optional(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   remarks: z.string().optional(),
   same_as_recipient: z.boolean().default(true),
-  timestamp: z.string()
+  timestamp: z.coerce.date(),
 });
 
 export type ViewTransactionDefaults = z.infer<typeof formSchema>;
@@ -204,16 +214,40 @@ export function ViewTransactionForm({
                   <FormItem>
                     <FormLabel>Timestamp</FormLabel>
                     <FormControl>
-                      <Input
-                        type="datetime-local"
-                        value={field.value ?? ""}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          field.onChange(v === "" ? undefined : v);
-                        }}
-                        disabled={!isEditing}
-                        readOnly={!isEditing}
-                      />
+                      {(() => {
+                        const val = field.value as Date | undefined;
+                        let istInput = "";
+                        if (val) {
+                          const parts = new Intl.DateTimeFormat("en-GB", {
+                            timeZone: "Asia/Kolkata",
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          }).formatToParts(val);
+                          const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+                          const yyyy = get("year");
+                          const mm = get("month");
+                          const dd = get("day");
+                          const HH = get("hour");
+                          const MM = get("minute");
+                          istInput = yyyy && mm && dd && HH && MM ? `${yyyy}-${mm}-${dd}T${HH}:${MM}` : "";
+                        }
+                        return (
+                          <Input
+                            type="datetime-local"
+                            value={istInput}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v ? new Date(`${v}:00.000+05:30`) : undefined);
+                            }}
+                            disabled={!isEditing}
+                            readOnly={!isEditing}
+                          />
+                        );
+                      })()}
                     </FormControl>
                     <FormMessage />
                   </FormItem>
