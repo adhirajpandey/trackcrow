@@ -41,7 +41,7 @@ export function DashboardClient({
   const monthKeysDescending = useMemo(() => {
     const set = new Set<MonthKey>();
     for (const t of transactions) {
-      const d = toDate(t.timestamp as any);
+      const d = toDate(t.timestamp as string | Date);
       set.add(toMonthKey(d));
     }
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
@@ -69,7 +69,7 @@ export function DashboardClient({
 
   const filtered = useMemo(() => {
     if (selected === "all") return transactions;
-    return transactions.filter((t) => toMonthKey(toDate(t.timestamp as any)) === selected);
+    return transactions.filter((t) => toMonthKey(toDate(t.timestamp as string | Date)) === selected);
   }, [transactions, selected]);
 
   const selectedLabel =

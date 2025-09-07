@@ -8,7 +8,7 @@ export async function getUserTransactions(
   uuid: string,
   populateCategories: boolean = false,
 ): Promise<Transaction[]> {
-  let txns: any[] = [];
+  let txns: (Transaction & { Category?: { id: number; name: string } | null; Subcategory?: { id: number; name: string } | null; })[] = [];
   try {
     txns = await prisma.transaction.findMany({
       where: { user_uuid: uuid },
@@ -55,11 +55,11 @@ export async function getUserTransactions(
       createdAt: createdAtISO,
       updatedAt: updatedAtISO,
       timestamp: timestampISO,
-    } as any;
+    } as Transaction;
 
     if (populateCategories) {
-      base.category = (t as any).Category?.name ?? null;
-      base.subcategory = (t as any).Subcategory?.name ?? null;
+      base.category = t.Category?.name ?? null;
+      base.subcategory = t.Subcategory?.name ?? null;
     }
 
     return base;

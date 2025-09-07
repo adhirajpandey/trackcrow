@@ -19,11 +19,7 @@ function parseAuthHeader(headerValue: string | null): string | null {
   return m ? m[1] : null;
 }
 
-function getCurrentUTCTimestamp(): string {
-  const now = new Date();
-  console.log("Current UTC Timestamp:", now.toISOString());
-  return now.toISOString();
-}
+
 
 export async function POST(req: Request) {
   try {

@@ -63,8 +63,16 @@ export async function updateTransaction(formData: FormData) {
         ? null
         : remarks ?? null;
 
-    // Build update payload allowing null to clear fields, and undefined to leave untouched
-    const updateData: any = {
+    const updateData: {
+      amount: number;
+      recipient: string;
+      recipient_name: string | null;
+      type: "UPI" | "CARD" | "CASH" | "NETBANKING" | "OTHER";
+      remarks: string | null;
+      timestamp?: Date;
+      categoryId?: number | null;
+      subcategoryId?: number | null;
+    } = {
       amount,
       recipient,
       recipient_name: recipientNameForDb,

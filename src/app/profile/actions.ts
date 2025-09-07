@@ -15,10 +15,7 @@ export type RevokeTokenActionState = {
   error?: string | null;
 };
 
-export async function getOrCreateTokenAction(
-  _prevState: TokenActionState,
-  _formData: FormData
-): Promise<TokenActionState> {
+export async function getOrCreateTokenAction(): Promise<TokenActionState> {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.uuid) {
     return { error: 'Unauthorized' };
@@ -37,15 +34,12 @@ export async function getOrCreateTokenAction(
     const token = randomBytes(16).toString('hex');
     await prisma.user.update({ where: { uuid: session.user.uuid }, data: { lt_token: token } });
     return { token };
-  } catch (e) {
+  } catch {
     return { error: 'Failed to get token' };
   }
 }
 
-export async function revokeTokenAction(
-  _prevState: RevokeTokenActionState,
-  _formData: FormData
-): Promise<RevokeTokenActionState> {
+export async function revokeTokenAction(): Promise<RevokeTokenActionState> {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.uuid) {
     return { error: 'Unauthorized' };
@@ -58,7 +52,7 @@ export async function revokeTokenAction(
       select: { uuid: true },
     });
     return { success: true };
-  } catch (e) {
+  } catch {
     return { error: 'Failed to revoke token' };
   }
 }

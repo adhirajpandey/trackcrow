@@ -82,7 +82,7 @@ export function ViewTransactionForm({
     const fd = new FormData();
     fd.append("id", String(transactionId));
     // Always include recipient_name and remarks so they can be cleared
-    const entries: [string, any][] = [
+    const entries: [string, string | number | Date | null | undefined][] = [
       ["amount", values.amount],
       ["recipient", values.recipient],
       ["recipient_name", values.recipient_name ?? ""],
@@ -102,8 +102,8 @@ export function ViewTransactionForm({
     }
     const { updateTransaction } = await import("./actions");
     const res = await updateTransaction(fd);
-    if ((res as any).error) {
-      toast.error((res as any).error);
+    if ((res as { error: string }).error) {
+      toast.error((res as { error: string }).error);
       return;
     }
     toast.success("Saved");

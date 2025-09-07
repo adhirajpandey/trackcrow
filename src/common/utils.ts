@@ -90,7 +90,7 @@ export function getDailySpendingForCurrentMonth(transactions: Transaction[]) {
 
   let lastTxnDay = 0;
   for (const txn of transactions) {
-    const date = toDate((txn as any).timestamp as any);
+    const date = toDate(txn.timestamp as string | Date);
     if (date.getFullYear() === year && date.getMonth() === month) {
       const day = date.getDate();
       dailyTotals[day] += Math.abs(txn.amount);

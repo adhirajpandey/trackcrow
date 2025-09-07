@@ -54,9 +54,9 @@ export default async function ViewTransactionPage({
   }
 
   const amount =
-    typeof (txn as any).amount?.toNumber === "function"
-      ? (txn as any).amount.toNumber()
-      : Number((txn as any).amount);
+    typeof (txn as { amount: { toNumber: () => number } }).amount?.toNumber === "function"
+      ? (txn as { amount: { toNumber: () => number } }).amount.toNumber()
+      : Number((txn as { amount: number }).amount);
   const defaults: ViewTransactionDefaults = {
     amount,
     recipient: txn.recipient,

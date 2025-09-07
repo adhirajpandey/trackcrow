@@ -73,7 +73,7 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
                         {numberToINR(Math.abs(txn.amount))}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {formatDateTime(txn.timestamp as any)}
+                        {formatDateTime(txn.timestamp as string | Date)}
                       </div>
                     </div>
                     </Link>

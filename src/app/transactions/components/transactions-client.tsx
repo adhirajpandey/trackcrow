@@ -44,7 +44,7 @@ export function TransactionsClient({
   const monthKeysDescending = useMemo(() => {
     const set = new Set<MonthKey>();
     for (const t of transactions) {
-      const d = toDate(t.timestamp as any);
+      const d = toDate(t.timestamp as string | Date);
       set.add(toMonthKey(d));
     }
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
@@ -95,7 +95,7 @@ export function TransactionsClient({
     const base =
       selected === "all"
         ? transactions
-        : transactions.filter((t) => toMonthKey(toDate(t.timestamp as any)) === selected);
+        : transactions.filter((t) => toMonthKey(toDate(t.timestamp as string | Date)) === selected);
 
     const q = (query || "").trim().toLowerCase();
     if (!q) return base;
@@ -139,10 +139,10 @@ export function TransactionsClient({
     () => [
       {
         header: "Date",
-        accessorFn: (row) => row.timestamp as any,
+        accessorFn: (row) => row.timestamp as string | Date,
         cell: ({ row }) => {
           const t = row.original as Transaction;
-          const ts = t.timestamp as any;
+          const ts = t.timestamp as string | Date;
           return (
             <div className="text-sm text-muted-foreground">{formatDateTime(ts)}</div>
           );
