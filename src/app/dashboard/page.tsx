@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { DashboardClient } from "@/app/dashboard/components/dashboard-client";
 import type { Transaction } from "@/common/schemas";
 import { getUserTransactions } from "@/common/server";
