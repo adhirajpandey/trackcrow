@@ -5,7 +5,7 @@ import type { Transaction } from "@/common/schemas";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export function TrackedTransactions({ txns }: { txns: Transaction[] }) {
+export function TrackedTransactions({ txns, selectedTimeframe }: { txns: Transaction[], selectedTimeframe: string }) {
   if (!txns || !txns.length) {
     return (
       <Card className="h-full flex flex-col">
@@ -13,7 +13,7 @@ export function TrackedTransactions({ txns }: { txns: Transaction[] }) {
           <CardTitle className="text-base font-semibold">
             Tracked Transactions
           </CardTitle>
-          <Link href="/transactions">
+          <Link href={`/transactions?month=${selectedTimeframe}`}>
             <Button variant="link" className="px-0" size="sm">
               View All
             </Button>
@@ -31,7 +31,7 @@ export function TrackedTransactions({ txns }: { txns: Transaction[] }) {
         <CardTitle className="text-base font-semibold">
           Tracked Transactions
         </CardTitle>
-        <Link href="/transactions">
+        <Link href={`/transactions?month=${selectedTimeframe}`}>
           <Button variant="link" className="px-0" size="sm">
             View All
           </Button>

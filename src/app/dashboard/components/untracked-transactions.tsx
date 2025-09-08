@@ -5,7 +5,7 @@ import type { Transaction } from "@/common/schemas";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export function UntrackedTransactions({ txns }: { txns: Transaction[] }) {
+export function UntrackedTransactions({ txns, selectedTimeframe }: { txns: Transaction[], selectedTimeframe: string }) {
   if (!txns || !txns.length) {
     return (
       <Card className="h-full flex flex-col">
@@ -26,7 +26,7 @@ export function UntrackedTransactions({ txns }: { txns: Transaction[] }) {
         <CardTitle className="text-base font-semibold">
           Untracked Transactions
         </CardTitle>
-        <Link href="/transactions?category=Uncategorized">
+        <Link href={`/transactions?category=Uncategorized&month=${selectedTimeframe}`}>
           <Button variant="link" className="px-0" size="sm">
             View All
           </Button>

@@ -9,7 +9,9 @@ import { Plus, ArrowUpDown, MoreHorizontal, MapPin, Eye, Edit, Trash } from "luc
 import {
   numberToINR,
   formatDateTime,
-  defaultCategoriesMap,
+  formatMonthYear,
+  toDate,
+  getUserCategories,
 } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
@@ -32,7 +34,23 @@ type TransactionsResponse = {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+  firstTxnDate: string | null;
+  lastTxnDate: string | null;
 };
+
+type MonthKey = string; // e.g., "2025-09"
+
+function toMonthKey(date: Date): MonthKey {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+function monthLabelFromKey(key: MonthKey): string {
+  const [y, m] = key.split("-").map((v) => parseInt(v, 10));
+  const d = new Date(y, m - 1, 1);
+  return formatMonthYear(d);
+}
 
 export function TransactionsClient() {
   const searchParams = useSearchParams();
@@ -46,6 +64,49 @@ export function TransactionsClient() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "timestamp", desc: true },
   ]);
+
+  const [userCategories, setUserCategories] = useState<
+    { name: string; subcategories: string[] }[]
+  >([]);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  const [selectedTimeframe, setSelectedTimeframe] = useState<MonthKey | "all">("all");
+  const [monthKeysDescending, setMonthKeysDescending] = useState<MonthKey[]>([]);
+
+  // Initialize selectedTimeframe from query param
+  useEffect(() => {
+    const q = searchParams?.get("month");
+    if (!q) return;
+    if (q === "all") {
+      setSelectedTimeframe("all");
+    } else if (/^\d{4}-\d{2}$/.test(q)) {
+      setSelectedTimeframe(q as MonthKey);
+    }
+  }, [searchParams]);
+
+  // Push selectedTimeframe to query param on change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    params.set("month", selectedTimeframe === "all" ? "all" : selectedTimeframe);
+    router.replace(`?${params.toString()}`);
+  }, [selectedTimeframe, router, searchParams]);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const categories = await getUserCategories();
+        setUserCategories(categories);
+      } catch (e: any) {
+        setCategoriesError(e?.message || "Failed to load categories");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -95,7 +156,7 @@ export function TransactionsClient() {
     router.replace(`?${params.toString()}`);
   }, [page, query, selectedCategories, sorting, router, searchParams]);
 
-  // Fetch from API whenever page/size/query/categories change
+  // Fetch from API whenever page/size/query/categories/timeframe change
   useEffect(() => {
     let active = true;
     async function run() {
@@ -110,15 +171,40 @@ export function TransactionsClient() {
           sorting.length > 0
             ? `&sortBy=${sorting[0].id}&sortOrder=${sorting[0].desc ? "desc" : "asc"}`
             : "";
+
+        let dateParams = "";
+        if (selectedTimeframe !== "all") {
+          const [year, month] = selectedTimeframe.split("-").map(Number);
+          const startDate = new Date(year, month - 1, 1);
+          const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+          dateParams = `&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+        }
+
         const res = await fetch(
-          `/api/transactions?page=${page}&size=${pageSize}${q ? `&q=${q}` : ""}${cats ? `&${cats}` : ""}${sortParams}`
+          `/api/transactions?page=${page}&size=${pageSize}${q ? `&q=${q}` : ""}${cats ? `&${cats}` : ""}${sortParams}${dateParams}`
         );
         if (!res.ok) {
           const text = await res.text();
           throw new Error(text || `Request failed with ${res.status}`);
         }
         const json = (await res.json()) as TransactionsResponse;
-        if (active) setData(json);
+        if (active) {
+          setData(json);
+          // Populate monthKeysDescending based on firstTxnDate and lastTxnDate
+          if (json.firstTxnDate && json.lastTxnDate) {
+            const start = toDate(json.firstTxnDate);
+            const end = toDate(json.lastTxnDate);
+            const months: MonthKey[] = [];
+            let current = new Date(start.getFullYear(), start.getMonth(), 1);
+            while (current <= end) {
+              months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
+              current.setMonth(current.getMonth() + 1);
+            }
+            setMonthKeysDescending(months);
+          } else {
+            setMonthKeysDescending([]);
+          }
+        }
       } catch (e: any) {
         if (active) setError(e?.message || "Failed to load transactions");
       } finally {
@@ -129,7 +215,7 @@ export function TransactionsClient() {
     return () => {
       active = false;
     };
-  }, [page, pageSize, query, selectedCategories, sorting]);
+  }, [page, pageSize, query, selectedCategories, sorting, selectedTimeframe]);
 
   const rows = useMemo(() => data?.transactions ?? [], [data]);
   const totalCount = data?.total ?? 0;
@@ -137,9 +223,9 @@ export function TransactionsClient() {
   const startIndex = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endIndex = totalCount === 0 ? 0 : (page - 1) * pageSize + rows.length;
 
-  // Category dropdown options: union of defaults and categories present in current rows
+  // Category dropdown options: union of user categories and categories present in current rows
   const availableCategories = useMemo(() => {
-    const defaults = defaultCategoriesMap.map((c) => c.name);
+    const userCatNames = userCategories.map((c) => c.name);
     const fromRows = Array.from(
       new Set(
         (rows.map((r) => r.category).filter(Boolean) as string[]).concat([
@@ -147,8 +233,8 @@ export function TransactionsClient() {
         ])
       )
     );
-    return Array.from(new Set([...defaults, ...fromRows]));
-  }, [rows]);
+    return Array.from(new Set([...userCatNames, ...fromRows]));
+  }, [rows, userCategories]);
 
   const toggleCategory = (name: string) => {
     setPage(1);
@@ -245,6 +331,15 @@ export function TransactionsClient() {
         },
       },
       {
+        header: "Remarks",
+        accessorKey: "remarks",
+        cell: ({ row }) => (
+          <div className="text-sm text-muted-foreground truncate">
+            {(row.original as Transaction).remarks ?? "-"}
+          </div>
+        ),
+      },
+      {
         header: "Type",
         accessorFn: (row) => (row as any).type ?? "",
         cell: ({ row }) => (
@@ -269,7 +364,7 @@ export function TransactionsClient() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 cursor-pointer"
                     // keeping this is fine, but the wrapper above already handles it
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -284,20 +379,28 @@ export function TransactionsClient() {
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+                  {transaction.location && (
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      // Radix fires onSelect for menu items; prevent + stop here as well
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open(
+                          `https://www.google.com/maps/search/${encodeURIComponent(
+                            transaction.location
+                          )}`,
+                          "_blank"
+                        );
+                      }}
+                    >
+                      <MapPin className="h-4 w-4 mr-2" /> View Location
+                    </DropdownMenuItem>
+                  )}
 
                   <DropdownMenuItem
-                    // Radix fires onSelect for menu items; prevent + stop here as well
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log("View Location for transaction", transaction.id);
-                    }}
-                  >
-                    <MapPin className="h-4 w-4 mr-2" /> View Location
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
+                    className="cursor-pointer"
                     asChild
                     onSelect={(e) => {
                       e.preventDefault();
@@ -313,6 +416,7 @@ export function TransactionsClient() {
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
+                    className="cursor-pointer"
                     asChild
                     onSelect={(e) => {
                       e.preventDefault();
@@ -330,6 +434,7 @@ export function TransactionsClient() {
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
+                    className="cursor-pointer text-red-500"
                     onSelect={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -380,6 +485,29 @@ export function TransactionsClient() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="shrink-0 font-bold w-[140px] md:w-auto justify-center"
+                    >
+                      {selectedTimeframe === "all" ? "All time" : monthLabelFromKey(selectedTimeframe)}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => setSelectedTimeframe("all")}>
+                      All time
+                    </DropdownMenuItem>
+                    {monthKeysDescending.map((key) => (
+                      <DropdownMenuItem className="cursor-pointer" key={key} onClick={() => setSelectedTimeframe(key)}>
+                        {monthLabelFromKey(key)}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="whitespace-nowrap"
                     >
                       {selectedCategories.length > 0
@@ -390,15 +518,26 @@ export function TransactionsClient() {
                   <DropdownMenuContent align="start">
                     <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {availableCategories.map((name) => (
-                      <DropdownMenuCheckboxItem
-                        key={name}
-                        checked={selectedCategories.includes(name)}
-                        onCheckedChange={() => toggleCategory(name)}
-                      >
-                        {name}
-                      </DropdownMenuCheckboxItem>
-                    ))}
+                    {categoriesLoading ? (
+                      <div className="p-2">
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    ) : categoriesError ? (
+                      <div className="p-2 text-red-500 text-sm">
+                        {categoriesError}
+                      </div>
+                    ) : (
+                      availableCategories.map((name) => (
+                        <DropdownMenuCheckboxItem
+                          className="cursor-pointer"
+                          key={name}
+                          checked={selectedCategories.includes(name)}
+                          onCheckedChange={() => toggleCategory(name)}
+                        >
+                          {name}
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <input

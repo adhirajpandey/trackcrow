@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Transaction } from "@/common/schemas";
-import { formatMonthYear, toDate } from "@/common/utils";
+import { formatMonthYear, toDate, getUserCategories } from "@/common/utils";
 import { Summary } from "./summary";
 import { CategoricalSpends } from "./categorical-spends";
 import { TrackedTransactions } from "./tracked-transactions";
@@ -49,6 +49,28 @@ export function DashboardClient({
   }, [transactions]);
 
   const [selected, setSelected] = useState<MonthKey | "all">("all");
+
+  const [userCategories, setUserCategories] = useState<
+    { name: string; subcategories: string[] }[]
+  >([]);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+      try {
+        const categories = await getUserCategories();
+        setUserCategories(categories);
+      } catch (e: any) {
+        setCategoriesError(e?.message || "Failed to load categories");
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   // Initialize from query param
   useEffect(() => {
@@ -130,7 +152,7 @@ export function DashboardClient({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <div>
-          <Summary transactions={filtered} />
+          <Summary transactions={filtered} selectedTimeframe={selected} userCategories={userCategories} categoriesLoading={categoriesLoading} categoriesError={categoriesError} />
         </div>
         <div>
           <CategoricalSpends
@@ -159,10 +181,11 @@ export function DashboardClient({
                 }))
                 .sort((a, b) => b.total - a.total);
             })()}
+            selectedTimeframe={selected}
           />
         </div>
         <div>
-          <UntrackedTransactions txns={untrackedTransactions.slice(0, 5)} />
+          <UntrackedTransactions txns={untrackedTransactions.slice(0, 5)} selectedTimeframe={selected} />
         </div>
         <div>
           <MonthlySpendingChart
@@ -171,7 +194,7 @@ export function DashboardClient({
           />
         </div>
         <div className="lg:col-span-2">
-          <TrackedTransactions txns={categorizedTransactions.slice(0, 10)} />
+          <TrackedTransactions txns={categorizedTransactions.slice(0, 10)} selectedTimeframe={selected} />
         </div>
       </div>
     </div>

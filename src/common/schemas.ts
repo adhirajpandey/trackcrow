@@ -49,8 +49,20 @@ export const transactionReadSchema = z.object({
   recipient: z.string(),
   amount: z.number().positive(),
   type: z.string(),
+  location: z.string().nullable(),
   recipient_name: z.string().nullable(),
   category: z.string().nullable(),
   subcategory: z.string().nullable(),
   remarks: z.string().nullable(),
+});
+
+const categorySchema = z.object({
+  name: z.string(),
+  subcategories: z.array(z.string()),
+});
+
+export const userReadSchema = z.object({
+  uuid: z.string(),
+  id: z.number(),
+  categories: z.array(categorySchema),
 });

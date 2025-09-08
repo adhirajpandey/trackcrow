@@ -3,8 +3,22 @@ import { Progress } from "@/components/ui/progress";
 import { numberToINR } from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export function Summary({ transactions }: { transactions: Transaction[] }) {
+export function Summary({
+  transactions,
+  selectedTimeframe,
+  userCategories,
+  categoriesLoading,
+  categoriesError,
+}: {
+  transactions: Transaction[];
+  selectedTimeframe: string;
+  userCategories: { name: string; subcategories: string[] }[];
+  categoriesLoading: boolean;
+  categoriesError: string | null;
+}) {
+  const router = useRouter();
   if (!transactions || transactions.length === 0) {
     return (
       <Card className="h-full flex flex-col">
@@ -74,7 +88,16 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
 
         <div className="mt-5 px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+            <div
+              className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4 cursor-pointer hover:bg-accent/40 transition-colors"
+              onClick={() => {
+                if (trackedAmount > 0) {
+                  const allCategoryNames = userCategories.map(cat => cat.name);
+                  const categoryQuery = allCategoryNames.length > 0 ? `&category=${allCategoryNames.join("&category=")}` : "";
+                  router.push(`/transactions?month=${selectedTimeframe}${categoryQuery}`);
+                }
+              }}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -102,7 +125,7 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
 
             {untrackedAmount > 0 ? (
               <Link
-                href="/transactions?category=Uncategorized&sortBy=amount&sortOrder=desc"
+                href={`/transactions?category=Uncategorized&sortBy=amount&sortOrder=desc&month=${selectedTimeframe}`}
                 className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4 hover:bg-accent/40 transition-colors block"
               >
                 <div className="flex items-start justify-between gap-3">

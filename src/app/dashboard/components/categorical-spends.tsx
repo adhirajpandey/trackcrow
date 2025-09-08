@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { numberToINR } from "@/common/utils";
+import { useRouter } from "next/navigation";
 
 export interface CategoricalSpend {
   category: string;
@@ -22,9 +23,12 @@ function getCategoryColor(i: number) {
 
 export function CategoricalSpends({
   categoricalSpends,
+  selectedTimeframe,
 }: {
   categoricalSpends: CategoricalSpend[];
+  selectedTimeframe: string;
 }) {
+  const router = useRouter();
   if (categoricalSpends.length === 0) {
     return (
       <Card className="h-full flex flex-col">
@@ -138,7 +142,12 @@ export function CategoricalSpends({
                 {segments.map((seg) => (
                   <li
                     key={seg.category}
-                    className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors min-w-0"
+                    className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors min-w-0 cursor-pointer"
+                    onClick={() =>
+                      router.push(
+                        `/transactions?category=${seg.category}&month=${selectedTimeframe}`
+                      )
+                    }
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
