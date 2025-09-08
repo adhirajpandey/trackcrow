@@ -53,23 +53,16 @@ export function DashboardClient({
   const [userCategories, setUserCategories] = useState<
     { name: string; subcategories: string[] }[]
   >([]);
-  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchCategories() {
-      setCategoriesLoading(true);
-      setCategoriesError(null);
+    (async () => {
       try {
         const categories = await getUserCategories();
         setUserCategories(categories);
-      } catch (e: any) {
-        setCategoriesError(e?.message || "Failed to load categories");
-      } finally {
-        setCategoriesLoading(false);
+      } catch {
+        // ignore fetch errors for now
       }
-    }
-    fetchCategories();
+    })();
   }, []);
 
   // Initialize from query param
@@ -152,7 +145,11 @@ export function DashboardClient({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <div>
-          <Summary transactions={filtered} selectedTimeframe={selected} userCategories={userCategories} categoriesLoading={categoriesLoading} categoriesError={categoriesError} />
+          <Summary
+            transactions={filtered}
+            selectedTimeframe={selected}
+            userCategories={userCategories}
+          />
         </div>
         <div>
           <CategoricalSpends

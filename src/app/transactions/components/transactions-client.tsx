@@ -195,7 +195,7 @@ export function TransactionsClient() {
             const start = toDate(json.firstTxnDate);
             const end = toDate(json.lastTxnDate);
             const months: MonthKey[] = [];
-            let current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const current = new Date(start.getFullYear(), start.getMonth(), 1);
             while (current <= end) {
               months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
               current.setMonth(current.getMonth() + 1);
@@ -389,7 +389,7 @@ export function TransactionsClient() {
                         e.stopPropagation();
                         window.open(
                           `https://www.google.com/maps/search/${encodeURIComponent(
-                            transaction.location
+                            transaction.location || ''
                           )}`,
                           "_blank"
                         );

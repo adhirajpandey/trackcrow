@@ -9,14 +9,10 @@ export function Summary({
   transactions,
   selectedTimeframe,
   userCategories,
-  categoriesLoading,
-  categoriesError,
 }: {
   transactions: Transaction[];
   selectedTimeframe: string;
   userCategories: { name: string; subcategories: string[] }[];
-  categoriesLoading: boolean;
-  categoriesError: string | null;
 }) {
   const router = useRouter();
   if (!transactions || transactions.length === 0) {

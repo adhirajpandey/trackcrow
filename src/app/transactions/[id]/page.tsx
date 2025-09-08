@@ -28,17 +28,14 @@ interface PrismaTransactionResult {
   subcategoryId: number | null;
 }
 
-interface ViewTransactionPageProps {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
-
 export default async function ViewTransactionPage({
   params,
   searchParams,
-}: ViewTransactionPageProps) {
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>; 
+}) {
+  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.uuid) {
@@ -50,8 +47,6 @@ export default async function ViewTransactionPage({
       </div>
     );
   }
-
-  const { id } = resolvedParams;
 
   const idNum = Number(id);
   if (!Number.isFinite(idNum)) {
