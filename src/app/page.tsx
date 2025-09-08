@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { LandingActionButton } from "@/components/ui/landing-action-button";
 import { Card, CardContent } from "@/components/ui/card";
-import Link from "next/link";
 import Image from "next/image";
 
 export default function LandingPage() {
