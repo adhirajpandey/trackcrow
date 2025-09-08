@@ -1,7 +1,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { ViewTransactionForm, type ViewTransactionDefaults } from "./view-transaction-form";
+import {
+  ViewTransactionForm,
+  type ViewTransactionDefaults,
+} from "./view-transaction-form";
 import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
 import { TransactionType, InputType } from "../../../generated/prisma"; // Import enums
 
@@ -25,11 +28,17 @@ interface PrismaTransactionResult {
   subcategoryId: number | null;
 }
 
+interface ViewTransactionPageProps {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 export default async function ViewTransactionPage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+  searchParams,
+}: ViewTransactionPageProps) {
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.uuid) {
@@ -42,7 +51,8 @@ export default async function ViewTransactionPage({
     );
   }
 
-  const { id } = await params;
+  const { id } = resolvedParams;
+
   const idNum = Number(id);
   if (!Number.isFinite(idNum)) {
     return (
@@ -94,7 +104,9 @@ export default async function ViewTransactionPage({
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div className="space-y-2 flex-1 min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Transaction</h1>
-          <p className="text-muted-foreground leading-snug">View or edit this transaction.</p>
+          <p className="text-muted-foreground leading-snug">
+            View or edit this transaction.
+          </p>
         </div>
       </div>
       <div className="py-2 md:py-4">
@@ -102,6 +114,7 @@ export default async function ViewTransactionPage({
           categories={categories}
           defaults={defaults}
           transactionId={txn.id}
+          searchParams={resolvedSearchParams}
         />
       </div>
     </div>

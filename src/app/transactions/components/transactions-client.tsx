@@ -5,146 +5,229 @@ import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, ArrowUpDown, MoreHorizontal, MapPin, Eye, Edit, Trash } from "lucide-react";
+import {
+  numberToINR,
+  formatDateTime,
+  defaultCategoriesMap,
+} from "@/common/utils";
+import DataTable from "@/components/ui/data-table";
+import { ColumnDef, SortingState } from "@tanstack/react-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { numberToINR, formatDateTime, formatMonthYear, toDate } from "@/common/utils";
-import DataTable from "@/components/ui/data-table";
-import type { ColumnDef } from "@tanstack/react-table";
 
-type MonthKey = string; // e.g., "2025-09"
-
-function toMonthKey(date: Date): MonthKey {
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  return `${y}-${String(m).padStart(2, "0")}`;
-}
-
-// Use only `timestamp` everywhere
-
-function monthLabelFromKey(key: MonthKey): string {
-  const [y, m] = key.split("-").map((v) => parseInt(v, 10));
-  const d = new Date(y, m - 1, 1);
-  return formatMonthYear(d);
-}
-export function TransactionsClient({
-  transactions,
-}: {
+type TransactionsResponse = {
   transactions: Transaction[];
-}) {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+export function TransactionsClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const monthKeysDescending = useMemo(() => {
-    const set = new Set<MonthKey>();
-    for (const t of transactions) {
-      const d = toDate(t.timestamp as string | Date);
-      set.add(toMonthKey(d));
-    }
-    return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
-  }, [transactions]);
-
-  const [selected, setSelected] = useState<MonthKey | "all">("all");
-  const ITEMS_PER_PAGE = 20;
+  const DEFAULT_PAGE_SIZE = 20;
   const [page, setPage] = useState<number>(1);
+  const [pageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [query, setQuery] = useState<string>("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "timestamp", desc: true },
+  ]);
 
+  const [data, setData] = useState<TransactionsResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize state from URL
   useEffect(() => {
-    const q = searchParams?.get("month");
-    if (!q) return;
-    if (q === "all") {
-      setSelected("all");
-    } else if (/^\d{4}-\d{2}$/.test(q)) {
-      setSelected(q as MonthKey);
-    }
-    // initialize page from query param as well
     const p = parseInt(searchParams?.get("page") || "1", 10);
     setPage(Number.isNaN(p) || p < 1 ? 1 : p);
-    // initialize search query from URL
     const qq = searchParams?.get("q") || "";
     setQuery(qq);
-  }, [searchParams, router]);
+    const fromRepeat = searchParams?.getAll("category") ?? [];
+    const fromCsv = (searchParams?.get("categories") || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const categories = Array.from(new Set([...fromRepeat, ...fromCsv]));
+    setSelectedCategories(categories);
 
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    params.set("month", selected === "all" ? "all" : selected);
-    params.set("page", String(page));
-    router.replace(`?${params.toString()}`);
-  }, [selected, page, router, searchParams]);
-
-  // Keep URL in sync when query changes
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    if (query && query.length > 0) {
-      params.set("q", query);
+    const sortBy = searchParams?.get("sortBy");
+    const sortOrder = searchParams?.get("sortOrder");
+    if (sortBy) {
+      setSorting([{ id: sortBy, desc: sortOrder === "desc" }]);
     } else {
-      params.delete("q");
+      setSorting([]);
     }
-    params.set("month", selected === "all" ? "all" : selected);
+
+    // we intentionally ignore size for now to keep UI simple
+  }, [searchParams]);
+
+  // Keep URL in sync with page and query
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
     params.set("page", String(page));
+    if (query && query.length > 0) params.set("q", query);
+    else params.delete("q");
+    // replace category params with current selection
+    params.delete("category");
+    params.delete("categories");
+    for (const c of selectedCategories) params.append("category", c);
+
+    if (sorting.length > 0) {
+      params.set("sortBy", sorting[0].id);
+      params.set("sortOrder", sorting[0].desc ? "desc" : "asc");
+    }
+
     router.replace(`?${params.toString()}`);
-  }, [query, selected, page, router, searchParams]);
+  }, [page, query, selectedCategories, sorting, router, searchParams]);
 
-  const filtered = useMemo(() => {
-    const base =
-      selected === "all"
-        ? transactions
-        : transactions.filter((t) => toMonthKey(toDate(t.timestamp as string | Date)) === selected);
+  // Fetch from API whenever page/size/query/categories change
+  useEffect(() => {
+    let active = true;
+    async function run() {
+      setLoading(true);
+      setError(null);
+      try {
+        const q = encodeURIComponent(query || "");
+        const cats = selectedCategories
+          .map((c) => `category=${encodeURIComponent(c)}`)
+          .join("&");
+        const sortParams =
+          sorting.length > 0
+            ? `&sortBy=${sorting[0].id}&sortOrder=${sorting[0].desc ? "desc" : "asc"}`
+            : "";
+        const res = await fetch(
+          `/api/transactions?page=${page}&size=${pageSize}${q ? `&q=${q}` : ""}${cats ? `&${cats}` : ""}${sortParams}`
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Request failed with ${res.status}`);
+        }
+        const json = (await res.json()) as TransactionsResponse;
+        if (active) setData(json);
+      } catch (e: any) {
+        if (active) setError(e?.message || "Failed to load transactions");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      active = false;
+    };
+  }, [page, pageSize, query, selectedCategories, sorting]);
 
-    const q = (query || "").trim().toLowerCase();
-    if (!q) return base;
+  const rows = useMemo(() => data?.transactions ?? [], [data]);
+  const totalCount = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
+  const startIndex = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endIndex = totalCount === 0 ? 0 : (page - 1) * pageSize + rows.length;
 
-    // digits-only string for amount matching
-    const qDigits = q.replace(/[^0-9.-]/g, "");
+  // Category dropdown options: union of defaults and categories present in current rows
+  const availableCategories = useMemo(() => {
+    const defaults = defaultCategoriesMap.map((c) => c.name);
+    const fromRows = Array.from(
+      new Set(
+        (rows.map((r) => r.category).filter(Boolean) as string[]).concat([
+          "Uncategorized",
+        ])
+      )
+    );
+    return Array.from(new Set([...defaults, ...fromRows]));
+  }, [rows]);
 
-    return base.filter((t) => {
-      // check amount (both raw and formatted)
-      const amt = Math.abs(t.amount ?? 0);
-      const amtMatch =
-        qDigits.length > 0 &&
-        (String(amt).includes(qDigits) ||
-          numberToINR(amt).toLowerCase().includes(q));
-
-      // check recipient/remarks/category fields
-      const r = (t.recipient || "").toLowerCase();
-      const rn = (t.recipient_name || "").toLowerCase();
-      const rem = (t.remarks || "").toLowerCase();
-      const cat = (t.category || "").toLowerCase();
-      const sub = (t.subcategory || "").toLowerCase();
-
-      const textMatch =
-        r.includes(q) ||
-        rn.includes(q) ||
-        rem.includes(q) ||
-        cat.includes(q) ||
-        sub.includes(q);
-
-      return amtMatch || textMatch;
-    });
-  }, [transactions, selected, query]);
-
-  const totalCount = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
-  const start = (page - 1) * ITEMS_PER_PAGE;
-  const end = Math.min(start + ITEMS_PER_PAGE, filtered.length);
-  const paginated = filtered.slice(start, end);
+  const toggleCategory = (name: string) => {
+    setPage(1);
+    setSelectedCategories((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
+  };
 
   const columns: ColumnDef<Transaction>[] = useMemo(
     () => [
       {
-        header: "Date",
-        accessorFn: (row) => row.timestamp as string | Date,
+        accessorKey: "timestamp",
+        header: ({ column }) => {
+          const toggle = (e: React.SyntheticEvent) => {
+            e.preventDefault();
+            column.toggleSorting(column.getIsSorted() === "asc");
+          };
+          return (
+            <div className="flex items-center">
+              <span className="select-none cursor-default">Date</span>
+              <button
+                type="button"
+                data-sort-toggle
+                className="ml-2 p-1 rounded-md hover:bg-muted"
+                onClick={toggle}
+                aria-label="Toggle date sorting"
+                aria-pressed={!!column.getIsSorted()}
+              >
+                <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          );
+        },
         cell: ({ row }) => {
           const t = row.original as Transaction;
           const ts = t.timestamp as string | Date;
+          return <div>{formatDateTime(ts)}</div>;
+        },
+      },
+      {
+        accessorKey: "amount",
+        header: ({ column }) => {
+          const toggle = (e: React.SyntheticEvent) => {
+            e.preventDefault();
+            column.toggleSorting(column.getIsSorted() === "asc");
+          };
           return (
-            <div className="text-sm text-muted-foreground">{formatDateTime(ts)}</div>
+            <div className="flex items-center">
+              <span className="select-none cursor-default">Amount</span>
+              <button
+                type="button"
+                data-sort-toggle
+                className="ml-2 p-1 rounded-md hover:bg-muted"
+                onClick={toggle}
+                aria-label="Toggle amount sorting"
+                aria-pressed={!!column.getIsSorted()}
+              >
+                <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          );
+        },
+        cell: ({ row }) => (
+          <div>
+            {numberToINR(Math.abs((row.original as Transaction).amount))}
+          </div>
+        ),
+      },
+      {
+        header: "Category",
+        accessorFn: (row) =>
+          `${row.category ?? "Uncategorized"}${row.subcategory ? ` · ${row.subcategory}` : ""}`,
+        cell: ({ row }) => {
+          const t = row.original as Transaction;
+          return (
+            <div className="text-sm text-muted-foreground truncate">
+              {t.category || "Uncategorized"}
+              {t.subcategory ? ` · ${t.subcategory}` : ""}
+            </div>
           );
         },
       },
@@ -163,48 +246,115 @@ export function TransactionsClient({
       },
       {
         header: "Type",
-        accessorFn: () => "UPI",
-        cell: () => (
-          <div className="text-sm text-muted-foreground">UPI</div>
-        ),
-      },
-      {
-        header: "Amount",
-        accessorFn: (row) => row.amount,
+        accessorFn: (row) => (row as any).type ?? "",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold text-sm">
-              {numberToINR(Math.abs((row.original as Transaction).amount))}
-            </div>
+          <div className="text-sm text-muted-foreground">
+            {(row.original as any).type ?? ""}
           </div>
         ),
       },
       {
-        header: "Category",
-        accessorFn: (row) => `${row.category ?? "Uncategorized"}${row.subcategory ? ` · ${row.subcategory}` : ""}`,
+        id: "actions",
         cell: ({ row }) => {
-          const t = row.original as Transaction;
+          const transaction = row.original;
+
           return (
-            <div className="text-sm text-muted-foreground truncate">
-              {t.category || "Uncategorized"}
-              {t.subcategory ? ` · ${t.subcategory}` : ""}
+            // Block all events in this cell from bubbling to the row
+            <div
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    // keeping this is fine, but the wrapper above already handles it
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  align="end"
+                  // extra safety: block inside the portal too
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+                  <DropdownMenuItem
+                    // Radix fires onSelect for menu items; prevent + stop here as well
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("View Location for transaction", transaction.id);
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" /> View Location
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    asChild
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <Link
+                      href={`/transactions/${transaction.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Eye className="h-4 w-4 mr-2" /> View Transaction
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    asChild
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <Link
+                      href={`/transactions/${transaction.id}?edit=true`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Edit className="h-4 w-4 mr-2" /> Edit Transaction
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Delete transaction", transaction.id);
+                    }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" /> Delete Transaction
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           );
         },
       },
     ],
-    [
-      /* stable */
-    ],
+    []
   );
 
   return (
-    <div className="space-y-6">
+    <div>
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div className="space-y-2 flex-1 min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
           <p className="text-muted-foreground leading-snug">
-            All transactions — search or filter to focus on a specific period.
+            Filter, Sort and play around your all transactions at one place
           </p>
         </div>
 
@@ -214,78 +364,97 @@ export function TransactionsClient({
               <Plus className="h-4 w-4 mr-2" /> Add Transaction
             </Button>
           </Link>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0 font-bold w-[140px] md:w-auto justify-center"
-              >
-                {selected === "all" ? "All time" : monthLabelFromKey(selected)}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSelected("all")}>
-                All time
-              </DropdownMenuItem>
-              {monthKeysDescending.map((key) => (
-                <DropdownMenuItem key={key} onClick={() => setSelected(key)}>
-                  {monthLabelFromKey(key)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        <Card>
-          <CardHeader className="px-2 pt-4 sm:px-4">
+      <div className="grid grid-cols-1 lg:grid-cols-1">
+        <Card className="mt-8">
+          <CardHeader className="px-2 pt-2 sm:px-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-base font-semibold">
                 Transactions
               </CardTitle>
-              <div className="flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              <div className="flex w-full flex-row items-center gap-2 sm:gap-3 sm:justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-nowrap"
+                    >
+                      {selectedCategories.length > 0
+                        ? `${selectedCategories.length} selected`
+                        : "All categories"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {availableCategories.map((name) => (
+                      <DropdownMenuCheckboxItem
+                        key={name}
+                        checked={selectedCategories.includes(name)}
+                        onCheckedChange={() => toggleCategory(name)}
+                      >
+                        {name}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <input
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search"
+                  onChange={(e) => {
+                    setPage(1);
+                    setQuery(e.target.value);
+                  }}
+                  placeholder="Search recipient, remarks, amount"
                   className="w-full sm:w-60 min-w-0 rounded-md border px-3 py-2 text-sm bg-background text-foreground"
                 />
               </div>
             </div>
           </CardHeader>
-          <CardContent className="divide-y divide-border px-2 pb-4 sm:px-4 max-h-[60vh] overflow-auto no-scrollbar">
-            <div className="py-2">
-              <DataTable
-                columns={columns}
-                data={paginated}
-                onRowClick={(row) => {
-                  const t = row as Transaction;
-                  if (t && typeof t.id === "number") {
-                    router.push(`/transactions/${t.id}`);
-                  }
-                }}
-              />
-            </div>
+          <CardContent className="divide-y divide-border px-2 pb-2 sm:px-4">
+            {loading ? (
+              <div className="space-y-2 py-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : error ? (
+              <div className="text-sm text-red-500 py-4">{error}</div>
+            ) : (
+              <div className="py-2">
+                <DataTable
+                  columns={columns}
+                  data={rows}
+                  sorting={sorting}
+                  onSortingChange={setSorting}
+                  manualSorting
+                  headerClassName="font-semibold"
+                  onRowClick={(row) => {
+                    const t = row as Transaction;
+                    if (t && typeof t.id === "number") {
+                      router.push(`/transactions/${t.id}`);
+                    }
+                  }}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground px-2 sm:px-4">
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground px-2 sm:px-4">
           <div>
-            Showing {" "}
-            <span className="font-medium text-foreground">{start + 1}</span> - {" "}
-            <span className="font-medium text-foreground">{end}</span> of {" "}
+            Showing{" "}
+            <span className="font-medium text-foreground">{startIndex}</span> -{" "}
+            <span className="font-medium text-foreground">{endIndex}</span> of{" "}
             <span className="font-medium text-foreground">{totalCount}</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              disabled={page <= 1}
+              disabled={page <= 1 || loading}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               className="px-3"
             >
@@ -296,7 +465,7 @@ export function TransactionsClient({
             <Button
               variant="ghost"
               size="sm"
-              disabled={page >= totalPages}
+              disabled={page >= totalPages || loading}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               className="px-3"
             >

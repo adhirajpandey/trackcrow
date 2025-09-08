@@ -42,3 +42,15 @@ export const transactionStats = z.object({
 
 export type TransactionStats = z.infer<typeof transactionStats>;
 
+export const transactionReadSchema = z.object({
+  user_uuid: z.string(),
+  id: z.number(),
+  timestamp: z.date(),
+  recipient: z.string(),
+  amount: z.number().positive(),
+  type: z.string(),
+  recipient_name: z.string().nullable(),
+  category: z.string().nullable(),
+  subcategory: z.string().nullable(),
+  remarks: z.string().nullable(),
+});

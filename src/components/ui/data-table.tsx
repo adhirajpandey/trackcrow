@@ -4,6 +4,8 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  SortingState,
+  OnChangeFn,
   useReactTable,
 } from "@tanstack/react-table";
 
@@ -17,19 +19,28 @@ interface DataTableProps<T> {
   data: T[];
   onRowClick?: (row: T) => void;
   rowClassName?: string | ((row: T) => string);
+  headerClassName?: string;
+  sorting?: SortingState;
+  onSortingChange?: OnChangeFn<SortingState>;
+  manualSorting?: boolean; // when true, only updates state; caller handles fetching
 }
 
-export function DataTable<T>({ columns, data, onRowClick, rowClassName }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, onRowClick, rowClassName, headerClassName, sorting, onSortingChange, manualSorting = false }: DataTableProps<T>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    manualSorting,
+    onSortingChange,
+    state: {
+      sorting: sorting ?? [],
+    },
   });
 
   return (
     <div className="w-full overflow-auto">
       <table className="w-full table-auto">
-        <thead className="text-muted-foreground text-sm">
+        <thead className={`text-muted-foreground text-sm ${headerClassName || ''}`}>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
               {hg.headers.map((header) => {
@@ -38,15 +49,10 @@ export function DataTable<T>({ columns, data, onRowClick, rowClassName }: DataTa
                   | undefined;
                 const thClass =
                   meta?.thClassName ??
-                  "text-left py-2 px-4 font-medium text-sm";
+                  "text-left py-2 px-4 font-medium text-sm border-b";
                 return (
                   <th key={header.id} className={thClass}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 );
               })}

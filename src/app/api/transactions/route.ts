@@ -1,94 +1,160 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { parseTransactionMessage } from "@/common/utils";
+import { z } from "zod";
+import { transactionReadSchema } from "@/common/schemas";
 
-const requestSchema = z.object({
-  data: z.object({
-    message: z.string().min(1, "message is required"),
-  }),
-  metadata: z.object({
-    location: z.string().nullable().optional(),
-  }),
-});
-
-
-function parseAuthHeader(headerValue: string | null): string | null {
-  if (!headerValue) return null;
-  const m = headerValue.match(/^Token\s+(\S+)$/i);
-  return m ? m[1] : null;
-}
-
-
-
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
-    const token = parseAuthHeader(req.headers.get("authorization"));
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const session = await getServerSession(authOptions);
+    if (!session)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = await prisma.user.findFirst({ where: { lt_token: token } });
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    // Pagination params: page (1-based) and size
+    const { searchParams } = new URL(req.url);
+    const pageParam = searchParams.get("page");
+    const sizeParam = searchParams.get("size");
+    const qParam = searchParams.get("q");
+    const sortBy = searchParams.get("sortBy");
+    const sortOrder = searchParams.get("sortOrder");
+    // Category filters: ?category=A&category=B or ?categories=A,B
+    const categoryParams = searchParams.getAll("category");
+    const categoriesCsv = searchParams.get("categories");
+    const categoriesFromCsv = categoriesCsv
+      ? categoriesCsv
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    const categoryFilters = Array.from(new Set([...categoryParams, ...categoriesFromCsv]));
 
-    let json: unknown;
-    try {
-      json = await req.json();
-    } catch {
-      return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
-    }
+    // Parse and clamp pagination: page >= 1; size in [1, 100]; defaults 1 and 20.
+    const pageNum = Number(pageParam);
+    const page = Number.isFinite(pageNum)
+      ? Math.max(1, Math.floor(pageNum))
+      : 1;
+    const sizeNum = Number(sizeParam);
+    const pageSize = Number.isFinite(sizeNum)
+      ? Math.max(1, Math.min(100, Math.floor(sizeNum)))
+      : 20;
 
-    const parsed = requestSchema.safeParse(json);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { message: "Invalid payload", issues: parsed.error.issues },
-        { status: 400 },
+    // Compute offset for pagination
+    const skip = (page - 1) * pageSize;
+
+    // Optional search across recipient, recipient_name, remarks, amount
+    const q = (qParam ?? "").trim();
+    const orFilters: any[] = [];
+    if (q.length > 0) {
+      orFilters.push(
+        { recipient: { contains: q, mode: "insensitive" } },
+        { recipient_name: { contains: q, mode: "insensitive" } },
+        { remarks: { contains: q, mode: "insensitive" } },
       );
+      const qDigits = q.replace(/[^0-9.-]/g, "");
+      const qNum = Number(qDigits);
+      if (Number.isFinite(qNum)) {
+        orFilters.push({ amount: qNum });
+      }
     }
 
-    const { data, metadata } = parsed.data;
-    const details = parseTransactionMessage(data.message);
+    // Category filter as AND clause (matches any selected category, including 'Uncategorized')
+    const andFilters: any[] = [];
+    if (categoryFilters.length > 0) {
+      const includeUncategorized = categoryFilters.some((c) => c.toLowerCase() === "uncategorized");
+      const named = categoryFilters.filter((c) => c && c.toLowerCase() !== "uncategorized");
+      const ors: any[] = [];
+      if (named.length > 0) ors.push({ Category: { name: { in: named } } });
+      if (includeUncategorized) ors.push({ categoryId: null });
+      if (ors.length > 0) andFilters.push({ OR: ors });
+    }
 
-    if (!details.amount || !details.recipient_id) {
-      return NextResponse.json(
-        {
-          message: "Unable to extract required fields from message",
-          missing: {
-            amount: !details.amount,
-            recipient_id: !details.recipient_id,
-          },
+    const where: any = {
+      user_uuid: session.user.uuid,
+      ...(orFilters.length > 0 ? { OR: orFilters } : {}),
+      ...(andFilters.length > 0 ? { AND: andFilters } : {}),
+    };
+
+    const total = await prisma.transaction.count({ where });
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+
+    // If requested page is out of range, return empty result with metadata
+    let transactions: Array<any> = [];
+
+    if (total > 0 && page <= totalPages) {
+      const orderBy: any = {};
+      if (sortBy === "timestamp") {
+        orderBy.timestamp = sortOrder === "asc" ? "asc" : "desc";
+      } else if (sortBy === "amount") {
+        orderBy.amount = sortOrder === "asc" ? "asc" : "desc";
+      } else {
+        orderBy.timestamp = "desc";
+      }
+
+      transactions = await prisma.transaction.findMany({
+        where,
+        orderBy,
+        // Select only fields used by the API response
+        select: {
+          user_uuid: true,
+          id: true,
+          timestamp: true,
+          recipient: true,
+          amount: true,
+          type: true,
+          recipient_name: true,
+          remarks: true,
+          Category: { select: { name: true } },
+          Subcategory: { select: { name: true } },
         },
-        { status: 422 },
+        skip,
+        take: pageSize,
+      });
+    }
+
+    const flat = transactions.map((t) => ({
+      user_uuid: t.user_uuid,
+      id: t.id,
+      timestamp: t.timestamp,
+      recipient: t.recipient,
+      amount: Number(t.amount),
+      type: t.type,
+      recipient_name: t.recipient_name ?? null,
+      category: t.Category?.name ?? null,
+      subcategory: t.Subcategory?.name ?? null,
+      remarks: t.remarks ?? null,
+    }));
+
+    const parsed = z.array(transactionReadSchema).safeParse(flat);
+
+    if (!parsed.success) {
+      console.error("Transaction read validation error", parsed.error);
+      return NextResponse.json(
+        { message: "Internal Server Error" },
+        { status: 500 }
       );
     }
 
-    const created = await prisma.transaction.create({
-      data: {
-        uuid: crypto.randomUUID(),
-        user_uuid: user.uuid,
-        amount: details.amount,
-        type: "UPI",
-        recipient: details.recipient_id,
-        input_mode: "AUTO",
-        // Persist current timestamp in UTC
-        timestamp: new Date().toISOString(),
-        reference: details.reference_number,
-        account: "KOTAK", // TODO: extract from message or metadata
-        raw_message: data.message,
-        location: metadata.location,
-      },
-      select: { uuid: true, id: true },
-    });
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
 
-    return NextResponse.json({
-      message: "Transaction created",
-      id: created.id,
-      uuid: created.uuid,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        transactions: parsed.data,
+        page,
+        pageSize,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
+      },
+      { status: 200 }
+    );
   } catch (e) {
-    console.error("/api/transactions POST error", e);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    console.error("/api/transactions GET error", e);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
