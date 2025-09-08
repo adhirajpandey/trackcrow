@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { numberToINR } from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
+import Link from "next/link";
 
 export function Summary({ transactions }: { transactions: Transaction[] }) {
   if (!transactions || transactions.length === 0) {
@@ -25,7 +26,7 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
       }
       return acc;
     },
-    {} as Record<string, number>,
+    {} as Record<string, number>
   );
   const topCatKeys = Object.keys(topCat);
   const topCatName = topCatKeys.length
@@ -33,7 +34,7 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
     : "Uncategorized";
 
   const trackedCount = transactions.filter(
-    (t) => t.category && t.category.trim() !== "",
+    (t) => t.category && t.category.trim() !== ""
   ).length;
   const untrackedCount = transactions.length - trackedCount;
   const trackedPct = Math.round((trackedCount / transactions.length) * 100);
@@ -99,35 +100,65 @@ export function Summary({ transactions }: { transactions: Transaction[] }) {
               </div>
             </div>
 
-            <div className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Untracked
+            {untrackedAmount > 0 ? (
+              <Link
+                href="/transactions?category=Uncategorized&sortBy=amount&sortOrder=desc"
+                className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4 hover:bg-accent/40 transition-colors block"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Untracked
+                    </div>
+                    <div className="mt-1 text-lg font-semibold">
+                      {numberToINR(untrackedAmount)}
+                    </div>
                   </div>
-                  <div className="mt-1 text-lg font-semibold">
-                    {numberToINR(untrackedAmount)}
+                  <div className="text-sm text-muted-foreground">
+                    {untrackedCount} txns
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {untrackedCount} txns
+                <div className="mt-2">
+                  <Progress
+                    value={untrackedPct}
+                    className="h-2"
+                    color="bg-red-500"
+                  />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  No category assigned
+                </div>
+              </Link>
+            ) : (
+              <div className="rounded-xl border bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Untracked
+                    </div>
+                    <div className="mt-1 text-lg font-semibold">
+                      {numberToINR(untrackedAmount)}
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {untrackedCount} txns
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <Progress
+                    value={untrackedPct}
+                    className="h-2"
+                    color="bg-red-500"
+                  />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  No category assigned
                 </div>
               </div>
-              <div className="mt-2">
-                <Progress
-                  value={untrackedPct}
-                  className="h-2"
-                  color="bg-red-500"
-                />
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                No category assigned
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
-

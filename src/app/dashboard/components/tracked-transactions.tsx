@@ -3,15 +3,21 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { numberToINR, formatDateTime, toDate } from "@/common/utils";
 import type { Transaction } from "@/common/schemas";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-export function RecentTransactions({ txns }: { txns: Transaction[] }) {
+export function TrackedTransactions({ txns }: { txns: Transaction[] }) {
   if (!txns || !txns.length) {
     return (
       <Card className="h-full flex flex-col">
-        <CardHeader className="px-2 pt-4 sm:px-4">
+        <CardHeader className="px-2 pt-4 sm:px-4 flex flex-row items-center justify-between">
           <CardTitle className="text-base font-semibold">
-            Recent Transactions
+            Tracked Transactions
           </CardTitle>
+          <Link href="/transactions">
+            <Button variant="link" className="px-0" size="sm">
+              View All
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent className="h-80 px-2 pb-4 sm:px-4 flex items-center justify-center">
           <div className="text-sm text-muted-foreground">No data available</div>
@@ -21,10 +27,15 @@ export function RecentTransactions({ txns }: { txns: Transaction[] }) {
   }
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="px-2 pt-4 sm:px-4">
+      <CardHeader className="px-2 pt-4 sm:px-4 flex flex-row items-center justify-between">
         <CardTitle className="text-base font-semibold">
-          Recent Transactions
+          Tracked Transactions
         </CardTitle>
+        <Link href="/transactions">
+          <Button variant="link" className="px-0" size="sm">
+            View All
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent className="divide-y divide-border px-2 pb-4 sm:px-4">
         <ul className="divide-y divide-border">

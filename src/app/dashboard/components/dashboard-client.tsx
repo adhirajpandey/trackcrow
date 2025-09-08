@@ -5,7 +5,8 @@ import type { Transaction } from "@/common/schemas";
 import { formatMonthYear, toDate } from "@/common/utils";
 import { Summary } from "./summary";
 import { CategoricalSpends } from "./categorical-spends";
-import { RecentTransactions } from "./recent-transactions";
+import { TrackedTransactions } from "./tracked-transactions";
+import { UntrackedTransactions } from "./untracked-transactions";
 import { MonthlySpendingChart } from "./monthly-spending-chart";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +72,14 @@ export function DashboardClient({
     if (selected === "all") return transactions;
     return transactions.filter((t) => toMonthKey(toDate(t.timestamp as string | Date)) === selected);
   }, [transactions, selected]);
+
+  const categorizedTransactions = useMemo(() => {
+    return filtered.filter(txn => txn.category);
+  }, [filtered]);
+
+  const untrackedTransactions = useMemo(() => {
+    return filtered.filter(txn => !txn.category);
+  }, [filtered]);
 
   const selectedLabel =
     selected === "all" ? "All time" : monthLabelFromKey(selected);
@@ -153,13 +162,16 @@ export function DashboardClient({
           />
         </div>
         <div>
-          <RecentTransactions txns={filtered.slice(0, 5)} />
+          <UntrackedTransactions txns={untrackedTransactions.slice(0, 5)} />
         </div>
         <div>
           <MonthlySpendingChart
             transactions={filtered}
             selectedMonth={selectedMonth}
           />
+        </div>
+        <div className="lg:col-span-2">
+          <TrackedTransactions txns={categorizedTransactions.slice(0, 10)} />
         </div>
       </div>
     </div>
