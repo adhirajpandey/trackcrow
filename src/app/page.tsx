@@ -148,14 +148,7 @@ export default function LandingPage() {
                 TrackCrow. Start your journey to financial freedom today.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/api/auth/signin/google">
-                  <Button
-                    size="lg"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    Start Free Today
-                  </Button>
-                </Link>
+                <LandingActionButton />
                 <Button
                   variant="outline"
                   size="lg"
