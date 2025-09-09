@@ -1,12 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { numberToINR } from "@/common/utils";
-import { useRouter } from "next/navigation";
 
-export interface CategoricalSpend {
-  category: string;
-  total: number;
-  count: number;
+interface CategoricalSpendsProps {
+  spends: { category: string; totalSpend: number; count: number }[];
 }
 
 function getCategoryColor(i: number) {
@@ -22,14 +19,9 @@ function getCategoryColor(i: number) {
 }
 
 export function CategoricalSpends({
-  categoricalSpends,
-  selectedTimeframe,
-}: {
-  categoricalSpends: CategoricalSpend[];
-  selectedTimeframe: string;
-}) {
-  const router = useRouter();
-  if (categoricalSpends.length === 0) {
+  spends,
+}: CategoricalSpendsProps) {
+  if (spends.length === 0) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="px-2 pt-4 sm:px-4">
@@ -44,14 +36,14 @@ export function CategoricalSpends({
     );
   }
 
-  const total = categoricalSpends.reduce((s, c) => s + c.total, 0);
+  const total = spends.reduce((s, c) => s + c.totalSpend, 0);
 
   // Prepare segments with percent and color
-  const segments = categoricalSpends.map((s, i) => {
+  const segments = spends.map((s, i) => {
     const color = getCategoryColor(i);
     return {
       ...s,
-      percent: total > 0 ? (s.total / total) * 100 : 0,
+      percent: total > 0 ? (s.totalSpend / total) * 100 : 0,
       colorHex: color.hex,
       colorClass: color.bgClass,
     };
@@ -143,11 +135,6 @@ export function CategoricalSpends({
                   <li
                     key={seg.category}
                     className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors min-w-0 cursor-pointer"
-                    onClick={() =>
-                      router.push(
-                        `/transactions?category=${seg.category}&month=${selectedTimeframe}`
-                      )
-                    }
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
@@ -168,7 +155,7 @@ export function CategoricalSpends({
                     <div className="w-28 sm:w-40 flex-shrink-0">
                       <div className="flex items-center justify-end gap-3 mb-1">
                         <div className="text-sm font-semibold">
-                          {numberToINR(seg.total)}
+                          {numberToINR(seg.totalSpend)}
                         </div>
                       </div>
                       <Progress value={seg.percent} color={seg.colorClass} />

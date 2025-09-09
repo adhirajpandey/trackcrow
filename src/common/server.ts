@@ -9,11 +9,22 @@ import { userReadSchema, type Transaction } from "@/common/schemas";
 export async function getUserTransactions(
   userUuid: string,
   includeCategoryAndSubcategory: boolean = false,
+  startDate?: Date,
+  endDate?: Date,
 ): Promise<Transaction[]> {
+  const whereClause: any = {
+    user_uuid: userUuid,
+  };
+
+  if (startDate && endDate) {
+    whereClause.timestamp = {
+      gte: startDate,
+      lt: endDate,
+    };
+  }
+
   const transactions = await prisma.transaction.findMany({
-    where: {
-      user_uuid: userUuid,
-    },
+    where: whereClause,
     orderBy: {
       timestamp: "desc",
     },

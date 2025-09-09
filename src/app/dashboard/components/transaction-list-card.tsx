@@ -23,13 +23,6 @@ export function TransactionListCard({
       <Card className="h-full flex flex-col">
         <CardHeader className="px-2 pt-4 sm:px-4">
           <CardTitle className="text-base font-semibold">{title}</CardTitle>
-          {viewAllHref && (
-            <Link href={viewAllHref}>
-              <Button variant="link" className="px-0" size="sm">
-                View All
-              </Button>
-            </Link>
-          )}
         </CardHeader>
         <CardContent className="h-80 px-2 pb-4 sm:px-4 flex items-center justify-center">
           <div className="text-sm text-muted-foreground">{emptyMessage}</div>

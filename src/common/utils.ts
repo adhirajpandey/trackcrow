@@ -29,16 +29,6 @@ export function formatDate(input: number | string | Date): string {
   }).format(d);
 }
 
-export function formatTime(input: number | string | Date): string {
-  const d = toDate(input);
-  return new Intl.DateTimeFormat(LOCALE, {
-    timeZone: TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(d);
-}
-
 export function formatDateTime(input: number | string | Date): string {
   const d = toDate(input);
   return new Intl.DateTimeFormat(LOCALE, {
@@ -164,6 +154,73 @@ export function parseTransactionMessage(message: string) {
     recipient_id: recipientMatch ? recipientMatch[1] : null,
     reference_number: refMatch ? refMatch[1] : null,
   };
+}
+
+export function parseMonthParam(monthParam: string) {
+  let startDate: Date | undefined;
+  let endDate: Date | undefined;
+  let selectedMonth: { year: number; month: number } | null = null;
+
+  if (monthParam !== 'all') {
+    const [year, month] = monthParam.split('-').map(Number);
+    if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 1); // First day of next month
+      selectedMonth = { year, month: month - 1 };
+    }
+  }
+  return { startDate, endDate, selectedMonth };
+}
+
+export function getCurrentMonthYYYYMM(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
+  return `${year}-${month}`;
+}
+
+export interface CategoricalSpend {
+  category: string;
+  totalSpend: number;
+  count: number;
+}
+
+export function getCategoricalSpends(transactions: Transaction[]): CategoricalSpend[] {
+  const categoryMap = new Map<
+    string,
+    { total: number; count: number }
+  >();
+  transactions.forEach((transaction) => {
+    const category = transaction.category?.trim();
+    if (!category) return;
+    const current = categoryMap.get(category) || {
+      total: 0,
+      count: 0,
+    };
+    categoryMap.set(category, {
+      total: current.total + transaction.amount,
+      count: current.count + 1,
+    });
+  });
+  return Array.from(categoryMap.entries())
+    .map(([category, data]) => ({
+      category,
+      totalSpend: data.total,
+      count: data.count,
+    }))
+    .sort((a, b) => b.totalSpend - a.totalSpend);
+}
+
+export function toMonthKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+export function monthLabelFromKey(key: string): string {
+  const [y, m] = key.split("-").map((v) => parseInt(v, 10));
+  const d = new Date(y, m - 1, 1);
+  return formatMonthYear(d);
 }
 
 
