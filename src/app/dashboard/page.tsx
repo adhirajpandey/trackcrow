@@ -97,7 +97,7 @@ export default async function DashboardPage({
             />
           </div>
           <div>
-            <CategoricalSpends spends={categoricalSpends} />
+            <CategoricalSpends spends={categoricalSpends} selectedTimeframe={month || getCurrentMonthYYYYMM()} />
           </div>
           <div>
             <UntrackedTransactions

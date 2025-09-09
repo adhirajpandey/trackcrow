@@ -464,57 +464,7 @@ export function TransactionsClient({
               <CardTitle className="text-base font-semibold">
                 Transactions
               </CardTitle>
-              <div className="flex w-full flex-row items-center gap-2 sm:gap-3 sm:justify-end">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0 font-bold w-[140px] md:w-auto justify-center"
-                    >
-                      {selectedTimeframe === "all" ? "All time" : monthLabelFromKey(selectedTimeframe)}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => setSelectedTimeframe("all")}>
-                      All time
-                    </DropdownMenuItem>
-                    {monthKeysDescending.map((key) => (
-                      <DropdownMenuItem className="cursor-pointer" key={key} onClick={() => setSelectedTimeframe(key)}>
-                        {monthLabelFromKey(key)}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="whitespace-nowrap"
-                    >
-                      {selectedCategories.length > 0
-                        ? `${selectedCategories.length} selected`
-                        : "All categories"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {availableCategories.map((name) => (
-                        <DropdownMenuCheckboxItem
-                          className="cursor-pointer"
-                          key={name}
-                          checked={selectedCategories.includes(name)}
-                          onCheckedChange={() => toggleCategory(name)}
-                        >
-                          {name}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <div className="flex w-full flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:justify-end">
                 <input
                   value={query}
                   onChange={(e) => {
@@ -522,8 +472,60 @@ export function TransactionsClient({
                     setQuery(e.target.value);
                   }}
                   placeholder="Search recipient, remarks, amount"
-                  className="w-full sm:w-60 min-w-0 rounded-md border px-3 py-2 text-sm bg-background text-foreground"
+                  className="w-full rounded-md border px-3 py-2 text-sm bg-background text-foreground mb-2 sm:mb-0 sm:w-60 min-w-0"
                 />
+                <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 font-bold justify-center whitespace-nowrap"
+                      >
+                        {selectedTimeframe === "all" ? "All time" : monthLabelFromKey(selectedTimeframe)}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="mx-2 max-w-xs">
+                      <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => setSelectedTimeframe("all")}>
+                        All time
+                      </DropdownMenuItem>
+                      {monthKeysDescending.map((key) => (
+                        <DropdownMenuItem className="cursor-pointer" key={key} onClick={() => setSelectedTimeframe(key)}>
+                          {monthLabelFromKey(key)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 font-bold justify-center whitespace-nowrap"
+                      >
+                        {selectedCategories.length > 0
+                          ? `${selectedCategories.length} selected`
+                          : "All categories"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="mx-2 max-w-xs">
+                      <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {availableCategories.map((name) => (
+                          <DropdownMenuCheckboxItem
+                            className="cursor-pointer"
+                            key={name}
+                            checked={selectedCategories.includes(name)}
+                            onCheckedChange={() => toggleCategory(name)}
+                          >
+                            {name}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardHeader>

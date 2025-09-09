@@ -161,12 +161,22 @@ export function parseMonthParam(monthParam: string) {
   let endDate: Date | undefined;
   let selectedMonth: { year: number; month: number } | null = null;
 
-  if (monthParam !== 'all') {
+  if (monthParam === 'all') {
+    // No date range, fetch all
+  } else {
     const [year, month] = monthParam.split('-').map(Number);
     if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
       startDate = new Date(year, month - 1, 1);
       endDate = new Date(year, month, 1); // First day of next month
       selectedMonth = { year, month: month - 1 };
+    } else {
+      // Default to current month if param is invalid or empty
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      startDate = new Date(currentYear, currentMonth, 1);
+      endDate = new Date(currentYear, currentMonth + 1, 1); // First day of next month
+      selectedMonth = { year: currentYear, month: currentMonth };
     }
   }
   return { startDate, endDate, selectedMonth };

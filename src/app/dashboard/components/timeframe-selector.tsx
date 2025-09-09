@@ -53,7 +53,7 @@ export function TimeframeSelector({
           {selectedLabel}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="mx-2 max-w-xs">
         <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => handleSelect("all")}>

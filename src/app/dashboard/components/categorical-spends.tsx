@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { numberToINR } from "@/common/utils";
+import Link from "next/link";
 
 interface CategoricalSpendsProps {
   spends: { category: string; totalSpend: number; count: number }[];
+  selectedTimeframe: string;
 }
 
 function getCategoryColor(i: number) {
@@ -20,6 +22,7 @@ function getCategoryColor(i: number) {
 
 export function CategoricalSpends({
   spends,
+  selectedTimeframe,
 }: CategoricalSpendsProps) {
   if (spends.length === 0) {
     return (
@@ -132,35 +135,41 @@ export function CategoricalSpends({
             <div className="w-full min-w-0">
               <ul className="divide-y divide-border">
                 {segments.map((seg) => (
-                  <li
+                  <Link
                     key={seg.category}
-                    className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors min-w-0 cursor-pointer"
+                    href={`/transactions?category=${encodeURIComponent(seg.category)}&month=${encodeURIComponent(selectedTimeframe)}&sortBy=amount&sortOrder=desc`}
+                    className="block"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ background: seg.colorHex }}
-                        aria-hidden
-                      />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {seg.category}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {seg.count} txn{seg.count !== 1 ? "s" : ""}
+                    <li
+                      key={seg.category}
+                      className="flex items-center gap-3 px-4 py-3 sm:px-6 hover:bg-accent/40 transition-colors min-w-0 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ background: seg.colorHex }}
+                          aria-hidden
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {seg.category}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {seg.count} txn{seg.count !== 1 ? "s" : ""}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="w-28 sm:w-40 flex-shrink-0">
-                      <div className="flex items-center justify-end gap-3 mb-1">
-                        <div className="text-sm font-semibold">
-                          {numberToINR(seg.totalSpend)}
+                      <div className="w-28 sm:w-40 flex-shrink-0">
+                        <div className="flex items-center justify-end gap-3 mb-1">
+                          <div className="text-sm font-semibold">
+                            {numberToINR(seg.totalSpend)}
+                          </div>
                         </div>
+                        <Progress value={seg.percent} color={seg.colorClass} />
                       </div>
-                      <Progress value={seg.percent} color={seg.colorClass} />
-                    </div>
-                  </li>
+                    </li>
+                  </Link>
                 ))}
               </ul>
             </div>

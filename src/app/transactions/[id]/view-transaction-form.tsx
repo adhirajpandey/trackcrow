@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -90,6 +90,41 @@ export function ViewTransactionForm({
   const selectedCatId = form.watch("categoryId");
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subs = selectedCat?.Subcategory ?? [];
+
+  const recipientValue = form.watch("recipient");
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!recipientValue || !transactionId) return;
+
+      try {
+        const res = await fetch(`/api/transactions/${transactionId}/suggest`);
+        if (res.ok) {
+          const { suggestedCategory, suggestedSubCategory } = await res.json();
+
+          if (suggestedCategory && !form.getValues("categoryId")) {
+            const category = categories.find(c => c.name === suggestedCategory);
+            if (category) {
+              form.setValue("categoryId", category.id, { shouldValidate: true, shouldDirty: true });
+            }
+          }
+
+          if (suggestedSubCategory && !form.getValues("subcategoryId")) {
+            const subcategory = selectedCat?.Subcategory.find(s => s.name === suggestedSubCategory);
+            if (subcategory) {
+              form.setValue("subcategoryId", subcategory.id, { shouldValidate: true, shouldDirty: true });
+            }
+          }
+        } else {
+          console.error("Failed to fetch suggestions:", res.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+      }
+    };
+
+    fetchSuggestions();
+  }, [recipientValue, transactionId, categories, form, selectedCat]);
 
   async function onSubmit(values: ViewTransactionFormValues) {
     const fd = new FormData();
