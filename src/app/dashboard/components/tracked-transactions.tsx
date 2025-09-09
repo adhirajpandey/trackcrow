@@ -12,7 +12,6 @@ export function TrackedTransactions({
     <TransactionListCard
       title="Tracked Transactions"
       txns={txns}
-      selectedTimeframe={selectedTimeframe}
       viewAllHref={`/transactions?month=${selectedTimeframe}`}
       emptyMessage="No data available"
     />

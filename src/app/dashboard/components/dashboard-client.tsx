@@ -64,10 +64,6 @@ export function DashboardClient({
 
   // Push to query param on change
   useEffect(() => {
-    if (!router.isReady) {
-      return; // Wait for the router to be ready
-    }
-
     const currentMonthParam = searchParams?.get("month");
     const newMonthParam = selected === "all" ? "all" : selected;
 

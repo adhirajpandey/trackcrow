@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 interface TransactionListCardProps {
   title: string;
   txns: Transaction[];
-  selectedTimeframe: string;
   viewAllHref: string;
   emptyMessage: string;
 }
@@ -16,7 +15,6 @@ interface TransactionListCardProps {
 export function TransactionListCard({
   title,
   txns,
-  selectedTimeframe,
   viewAllHref,
   emptyMessage,
 }: TransactionListCardProps) {

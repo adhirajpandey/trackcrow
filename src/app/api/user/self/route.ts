@@ -8,7 +8,7 @@ import { userReadSchema } from "@/common/schemas";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session || !session.user?.uuid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

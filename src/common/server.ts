@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import { userReadSchema, type Transaction } from "@/common/schemas";
-import { toDate } from "./utils";
 
 /**
  * Fetches all transactions for a user, ordered by latest first, and serializes
@@ -28,8 +27,10 @@ export async function getUserTransactions(
     ...txn,
     amount: txn.amount.toNumber(), // Convert Decimal to number
     timestamp: txn.timestamp.toISOString(), // Convert Date to ISO string
+    createdAt: txn.createdAt.toISOString(),
+    updatedAt: txn.updatedAt.toISOString(),
     category: txn.Category?.name || null,
-    subcategory: txn.subcategory?.name || null,
+    subcategory: txn.Subcategory?.name || null,
   }));
 }
 

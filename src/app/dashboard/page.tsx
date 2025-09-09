@@ -23,6 +23,7 @@ export default async function DashboardPage() {
     // Populate category and subcategory names for dashboard summaries
     transactions = await getUserTransactions(session.user.uuid, true);
     const userDetails = await getUserDetails(session.user.uuid);
+
     if (userDetails) {
       userCategories = userDetails.categories;
     }
@@ -39,7 +40,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="container mx-auto p-6 lg:pl-8">
-      <DashboardClient transactions={transactions} userCategories={userCategories} />
+      <DashboardClient
+        transactions={transactions}
+        userCategories={userCategories}
+      />
     </div>
   );
 }

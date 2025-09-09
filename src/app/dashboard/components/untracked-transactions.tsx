@@ -12,7 +12,6 @@ export function UntrackedTransactions({
     <TransactionListCard
       title="Untracked Transactions"
       txns={txns}
-      selectedTimeframe={selectedTimeframe}
       viewAllHref={`/transactions?category=Uncategorized&month=${selectedTimeframe}`}
       emptyMessage="No data available"
     />

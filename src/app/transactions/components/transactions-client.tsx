@@ -503,7 +503,7 @@ export function TransactionsClient({
                   <DropdownMenuContent align="start">
                     <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    availableCategories.map((name) => (
+                    {availableCategories.map((name) => (
                         <DropdownMenuCheckboxItem
                           className="cursor-pointer"
                           key={name}
@@ -512,7 +512,7 @@ export function TransactionsClient({
                         >
                           {name}
                         </DropdownMenuCheckboxItem>
-                      ))
+                      ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <input
