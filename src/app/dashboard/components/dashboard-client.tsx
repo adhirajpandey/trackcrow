@@ -50,24 +50,34 @@ export function DashboardClient({
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
   }, [transactions]);
 
-  const [selected, setSelected] = useState<MonthKey | "all">(toMonthKey(new Date()));
-
-  // Initialize from query param
-  useEffect(() => {
+  const [selected, setSelected] = useState<MonthKey | "all">(() => {
     const q = searchParams?.get("month");
-    if (!q) return;
     if (q === "all") {
-      setSelected("all");
-    } else if (/^\d{4}-\d{2}$/.test(q)) {
-      setSelected(q as MonthKey);
+      return "all";
+    } else if (q && /^\d{4}-\d{2}$/.test(q)) {
+      return q as MonthKey;
     }
-  }, [searchParams]);
+    return toMonthKey(new Date()); // Default to current month if no valid param
+  });
+
+  
 
   // Push to query param on change
   useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    params.set("month", selected === "all" ? "all" : selected);
-    router.replace(`?${params.toString()}`);
+    if (!router.isReady) {
+      return; // Wait for the router to be ready
+    }
+
+    const currentMonthParam = searchParams?.get("month");
+    const newMonthParam = selected === "all" ? "all" : selected;
+
+    // Only update if the month param in the URL is different from the selected state
+    if (currentMonthParam !== newMonthParam) {
+      console.log("Calling router.replace for month param change");
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      params.set("month", newMonthParam);
+      router.replace(`?${params.toString()}`);
+    }
   }, [selected, router, searchParams]);
 
   const filtered = useMemo(() => {
