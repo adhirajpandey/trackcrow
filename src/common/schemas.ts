@@ -65,4 +65,6 @@ export const userReadSchema = z.object({
   uuid: z.string(),
   id: z.number(),
   categories: z.array(categorySchema),
+  createdAt: z.string(),
+  firstTransactionDate: z.string().nullable(),
 });

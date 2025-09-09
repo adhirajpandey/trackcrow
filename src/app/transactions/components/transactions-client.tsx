@@ -11,7 +11,6 @@ import {
   formatDateTime,
   formatMonthYear,
   toDate,
-  getUserCategories,
 } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
@@ -34,8 +33,6 @@ type TransactionsResponse = {
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
-  firstTxnDate: string | null;
-  lastTxnDate: string | null;
 };
 
 type MonthKey = string; // e.g., "2025-09"
@@ -93,19 +90,38 @@ export function TransactionsClient() {
   }, [selectedTimeframe, router, searchParams]);
 
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchInitialData() {
       setCategoriesLoading(true);
       setCategoriesError(null);
       try {
-        const categories = await getUserCategories();
-        setUserCategories(categories);
+        const res = await fetch("/api/user/self");
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Request failed with ${res.status}`);
+        }
+        const json = await res.json();
+        setUserCategories(json.categories);
+
+        if (json.firstTransactionDate) {
+          const start = toDate(json.firstTransactionDate);
+          const end = new Date();
+          const months: MonthKey[] = [];
+          const current = new Date(start.getFullYear(), start.getMonth(), 1);
+          while (current <= end) {
+            months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
+            current.setMonth(current.getMonth() + 1);
+          }
+          setMonthKeysDescending(months);
+        } else {
+          setMonthKeysDescending([]);
+        }
       } catch (e: any) {
         setCategoriesError(e?.message || "Failed to load categories");
       } finally {
         setCategoriesLoading(false);
       }
     }
-    fetchCategories();
+    fetchInitialData();
   }, []);
 
   const [data, setData] = useState<TransactionsResponse | null>(null);
@@ -190,20 +206,6 @@ export function TransactionsClient() {
         const json = (await res.json()) as TransactionsResponse;
         if (active) {
           setData(json);
-          // Populate monthKeysDescending based on firstTxnDate and lastTxnDate
-          if (json.firstTxnDate && json.lastTxnDate) {
-            const start = toDate(json.firstTxnDate);
-            const end = toDate(json.lastTxnDate);
-            const months: MonthKey[] = [];
-            const current = new Date(start.getFullYear(), start.getMonth(), 1);
-            while (current <= end) {
-              months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
-              current.setMonth(current.getMonth() + 1);
-            }
-            setMonthKeysDescending(months);
-          } else {
-            setMonthKeysDescending([]);
-          }
         }
       } catch (e: any) {
         if (active) setError(e?.message || "Failed to load transactions");

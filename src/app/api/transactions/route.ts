@@ -91,21 +91,6 @@ export async function GET(req: Request) {
       where.timestamp = { ...where.timestamp, lte: new Date(endDateParam) };
     }
 
-    const firstTxn = await prisma.transaction.findFirst({
-      where: { user_uuid: session.user.uuid },
-      orderBy: { timestamp: "asc" },
-      select: { timestamp: true },
-    });
-
-    const lastTxn = await prisma.transaction.findFirst({
-      where: { user_uuid: session.user.uuid },
-      orderBy: { timestamp: "desc" },
-      select: { timestamp: true },
-    });
-
-    const firstTxnDate = firstTxn?.timestamp || null;
-    const lastTxnDate = lastTxn?.timestamp || null;
-
     const total = await prisma.transaction.count({ where });
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
 
@@ -180,8 +165,6 @@ export async function GET(req: Request) {
         totalPages,
         hasNext,
         hasPrev,
-        firstTxnDate,
-        lastTxnDate,
       },
       { status: 200 }
     );

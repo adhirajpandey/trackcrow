@@ -80,13 +80,6 @@ export function formatCurrentMonthDayLabel(day: number): string {
 import type { Transaction } from "@/common/schemas";
 import { userReadSchema } from "@/common/schemas";
 
-export async function getUserCategories() {
-  const response = await fetch("/api/user/self");
-  const data = await response.json();
-  const parsedData = userReadSchema.parse(data);
-  return parsedData.categories;
-}
-
 /**
  * Groups transactions into daily totals for the current month.
  * Returns compact data until the latest transaction day, or the full month if no transactions.

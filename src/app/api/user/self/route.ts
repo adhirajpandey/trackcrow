@@ -12,23 +12,35 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await prisma.user.findUnique({
+    const dbUserPromise = prisma.user.findUnique({
       where: { uuid: session.user.uuid },
       select: {
         uuid: true,
         id: true,
+        createdAt: true,
         Category: {
           select: {
             name: true,
             Subcategory: {
               select: { name: true },
-              orderBy: { name: "asc" }, // optional
+              orderBy: { name: "asc" },
             },
           },
-          orderBy: { name: "asc" }, // optional
+          orderBy: { name: "asc" },
         },
       },
     });
+
+    const firstTxnPromise = prisma.transaction.findFirst({
+      where: { user_uuid: session.user.uuid },
+      orderBy: { timestamp: "asc" },
+      select: { timestamp: true },
+    });
+
+    const [dbUser, firstTxn] = await Promise.all([
+      dbUserPromise,
+      firstTxnPromise,
+    ]);
 
     if (!dbUser) {
       throw new Error("User not found");
@@ -37,6 +49,8 @@ export async function GET() {
     const payload = {
       uuid: dbUser.uuid,
       id: dbUser.id,
+      createdAt: dbUser.createdAt.toISOString(),
+      firstTransactionDate: firstTxn?.timestamp.toISOString() ?? null,
       categories: dbUser.Category.map((c) => ({
         name: c.name,
         subcategories: c.Subcategory.map((s) => s.name),
