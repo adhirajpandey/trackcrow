@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { Transaction } from "@/common/schemas";
-import { formatMonthYear, toDate, getUserCategories } from "@/common/utils";
+import { formatMonthYear, toDate } from "@/common/utils";
 import { Summary } from "./summary";
 import { CategoricalSpends } from "./categorical-spends";
 import { TrackedTransactions } from "./tracked-transactions";
@@ -34,8 +34,10 @@ function monthLabelFromKey(key: MonthKey): string {
 
 export function DashboardClient({
   transactions,
+  userCategories,
 }: {
   transactions: Transaction[];
+  userCategories: { name: string; subcategories: string[] }[];
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -48,22 +50,7 @@ export function DashboardClient({
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
   }, [transactions]);
 
-  const [selected, setSelected] = useState<MonthKey | "all">("all");
-
-  const [userCategories, setUserCategories] = useState<
-    { name: string; subcategories: string[] }[]
-  >([]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const categories = await getUserCategories();
-        setUserCategories(categories);
-      } catch {
-        // ignore fetch errors for now
-      }
-    })();
-  }, []);
+  const [selected, setSelected] = useState<MonthKey | "all">(toMonthKey(new Date()));
 
   // Initialize from query param
   useEffect(() => {

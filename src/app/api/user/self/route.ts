@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { getUserDetails } from "@/common/server";
 import { z } from "zod";
 import { userReadSchema } from "@/common/schemas";
 
@@ -12,36 +12,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { uuid: session.user.uuid },
-      select: {
-        uuid: true,
-        id: true,
-        Category: {
-          select: {
-            name: true,
-            Subcategory: {
-              select: { name: true },
-              orderBy: { name: "asc" }, // optional
-            },
-          },
-          orderBy: { name: "asc" }, // optional
-        },
-      },
-    });
+    const userDetails = await getUserDetails(session.user.uuid);
 
-    if (!dbUser) {
+    if (!userDetails) {
       throw new Error("User not found");
     }
 
-    const payload = {
-      uuid: dbUser.uuid,
-      id: dbUser.id,
-      categories: dbUser.Category.map((c) => ({
-        name: c.name,
-        subcategories: c.Subcategory.map((s) => s.name),
-      })),
-    };
+    const payload = userDetails;
 
     return NextResponse.json(userReadSchema.parse(payload), { status: 200 });
   } catch (error) {

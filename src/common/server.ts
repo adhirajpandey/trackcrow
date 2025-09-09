@@ -1,97 +1,69 @@
-import { transactionReadArray, type Transaction } from "@/common/schemas";
 import prisma from "@/lib/prisma";
-import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
-import { TransactionType, InputType } from "../generated/prisma"; // Import enums
-
-interface PrismaTransaction {
-  uuid: string;
-  id: number;
-  type: TransactionType; // Use enum
-  user_uuid: string;
-  timestamp: Date;
-  amount: Decimal;
-  recipient: string;
-  input_mode: InputType; // Use enum
-  recipient_name: string | null;
-  reference: string | null;
-  account: string | null;
-  remarks: string | null;
-  location: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  categoryId: number | null;
-  subcategoryId: number | null;
-  Category?: { id: number; name: string } | null;
-  Subcategory?: { id: number; name: string } | null;
-}
+import { userReadSchema, type Transaction } from "@/common/schemas";
+import { toDate } from "./utils";
 
 /**
- * Server-only: Fetch all transactions for a user and serialize Prisma types.
+ * Fetches all transactions for a user, ordered by latest first, and serializes
+ * Prisma-specific types (Decimal, Date) into plain JSON-compatible values.
+ * The `timestamp` field is provided as an ISO string for consistency across UI.
  */
 export async function getUserTransactions(
-  uuid: string,
-  populateCategories: boolean = false,
+  userUuid: string,
+  includeCategoryAndSubcategory: boolean = false,
 ): Promise<Transaction[]> {
-  let txns: (PrismaTransaction & { Category?: { id: number; name: string } | null; Subcategory?: { id: number; name: string } | null; })[] = [];
-  try {
-    txns = await prisma.transaction.findMany({
-      where: { user_uuid: uuid },
-      orderBy: { timestamp: "desc" },
-      include: populateCategories
-        ? {
-            Category: { select: { id: true, name: true } },
-            Subcategory: { select: { id: true, name: true } },
-          }
-        : undefined,
-    });
-  } catch (e) {
-    console.error("getUserTransactions prisma error:", e);
-    return [];
-  }
-
-  // Always serialize dates as UTC ISO strings; UI formats to Asia/Kolkata.
-  function toUTCISOString(d: Date): string {
-    return d.toISOString();
-  }
-
-  const serialized = txns.map((t) => {
-    const amount = t.amount.toNumber(); // Direct call, as t.amount is Decimal
-    const createdAtISO = toUTCISOString(t.createdAt);
-    const updatedAtISO = toUTCISOString(t.updatedAt);
-    const timestampISO = toUTCISOString(t.timestamp);
-
-    const base = {
-      uuid: t.uuid,
-      id: t.id,
-      user_uuid: t.user_uuid,
-      type: String(t.type), // Convert enum to string
-      amount,
-      recipient: t.recipient,
-      input_mode: String(t.input_mode), // Convert enum to string
-      recipient_name: t.recipient_name ?? null,
-      reference: t.reference ?? null,
-      account: t.account ?? null,
-      remarks: t.remarks ?? null,
-      location: t.location ?? null,
-      createdAt: createdAtISO,
-      updatedAt: updatedAtISO,
-      timestamp: timestampISO,
-    } as Transaction; // Cast to Transaction, which expects string dates and number amount
-
-    if (populateCategories) {
-      base.category = t.Category?.name ?? null;
-      base.subcategory = t.Subcategory?.name ?? null;
-    }
-
-    return base;
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      user_uuid: userUuid,
+    },
+    orderBy: {
+      timestamp: "desc",
+    },
+    include: {
+      Category: includeCategoryAndSubcategory,
+      Subcategory: includeCategoryAndSubcategory,
+    },
   });
 
-  // Validate and coerce to the expected shape
-  const parsed = transactionReadArray.safeParse(serialized);
-  if (parsed.success) return parsed.data;
+  return transactions.map((txn) => ({
+    ...txn,
+    amount: txn.amount.toNumber(), // Convert Decimal to number
+    timestamp: txn.timestamp.toISOString(), // Convert Date to ISO string
+    category: txn.Category?.name || null,
+    subcategory: txn.subcategory?.name || null,
+  }));
+}
 
-  console.error("getUserTransactions validation error:", parsed.error.flatten());
-  // Be tolerant: return serialized data best-effort to avoid hard-failing pages
-  // Consumers defensively handle missing fields.
-  return serialized as unknown as Transaction[];
+export async function getUserDetails(userUuid: string) {
+  const dbUser = await prisma.user.findUnique({
+    where: { uuid: userUuid },
+    select: {
+      uuid: true,
+      id: true,
+      Category: {
+        select: {
+          name: true,
+          Subcategory: {
+            select: { name: true },
+            orderBy: { name: "asc" },
+          },
+        },
+        orderBy: { name: "asc" },
+      },
+    },
+  });
+
+  if (!dbUser) {
+    return null;
+  }
+
+  const payload = {
+    uuid: dbUser.uuid,
+    id: dbUser.id,
+    categories: dbUser.Category.map((c) => ({
+      name: c.name,
+      subcategories: c.Subcategory.map((s) => s.name),
+    })),
+  };
+
+  return userReadSchema.parse(payload);
 }

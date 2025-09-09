@@ -11,7 +11,6 @@ import {
   formatDateTime,
   formatMonthYear,
   toDate,
-  getUserCategories,
 } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
@@ -52,7 +51,11 @@ function monthLabelFromKey(key: MonthKey): string {
   return formatMonthYear(d);
 }
 
-export function TransactionsClient() {
+export function TransactionsClient({
+  userCategories,
+}: {
+  userCategories: { name: string; subcategories: string[] }[];
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -65,11 +68,7 @@ export function TransactionsClient() {
     { id: "timestamp", desc: true },
   ]);
 
-  const [userCategories, setUserCategories] = useState<
-    { name: string; subcategories: string[] }[]
-  >([]);
-  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  
 
   const [selectedTimeframe, setSelectedTimeframe] = useState<MonthKey | "all">("all");
   const [monthKeysDescending, setMonthKeysDescending] = useState<MonthKey[]>([]);
@@ -92,21 +91,7 @@ export function TransactionsClient() {
     router.replace(`?${params.toString()}`);
   }, [selectedTimeframe, router, searchParams]);
 
-  useEffect(() => {
-    async function fetchCategories() {
-      setCategoriesLoading(true);
-      setCategoriesError(null);
-      try {
-        const categories = await getUserCategories();
-        setUserCategories(categories);
-      } catch (e: any) {
-        setCategoriesError(e?.message || "Failed to load categories");
-      } finally {
-        setCategoriesLoading(false);
-      }
-    }
-    fetchCategories();
-  }, []);
+  
 
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -518,16 +503,7 @@ export function TransactionsClient() {
                   <DropdownMenuContent align="start">
                     <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {categoriesLoading ? (
-                      <div className="p-2">
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    ) : categoriesError ? (
-                      <div className="p-2 text-red-500 text-sm">
-                        {categoriesError}
-                      </div>
-                    ) : (
-                      availableCategories.map((name) => (
+                    availableCategories.map((name) => (
                         <DropdownMenuCheckboxItem
                           className="cursor-pointer"
                           key={name}
@@ -537,7 +513,6 @@ export function TransactionsClient() {
                           {name}
                         </DropdownMenuCheckboxItem>
                       ))
-                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <input
