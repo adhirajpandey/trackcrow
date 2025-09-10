@@ -90,11 +90,9 @@ export function ViewTransactionForm({
 
   const selectedCatId = form.watch("categoryId");
   const selectedCat = categories.find((c) => c.id === selectedCatId);
-  const subs = selectedCat?.Subcategory ?? [];
+  const subs = React.useMemo(() => selectedCat?.Subcategory ?? [], [selectedCat]);
 
-  const recipientValue = form.watch("recipient");
-
-  const makeToastMessage = (
+  const makeToastMessage = React.useCallback((
     suggestedCategoryName: string | null,
     suggestedSubCategoryName: string | null,
     categoryFound: CategoryWithSubs | undefined,
@@ -125,7 +123,7 @@ export function ViewTransactionForm({
       toastMessage += "No subcategory suggested.";
     }
     return toastMessage;
-  };
+  }, [subs]);
 
   useEffect(() => {
     if (pendingSuggestion) {

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { getUserTransactions } from "@/common/server";
+import { type Transaction } from "@/common/schemas";
 import { getUserDetails } from "@/common/server";
 import { DashboardTimeframeSelector } from "@/app/dashboard/components/timeframe-selector";
 import { Summary } from "@/app/dashboard/components/summary";
