@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ErrorMessage } from "@/components/error-message";
 
 type TransactionsResponse = {
   transactions: Transaction[];
@@ -173,9 +174,7 @@ export function TransactionsClient({
               months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
               current.setMonth(current.getMonth() + 1);
             }
-            // setMonthKeysDescending(months); // Removed
-          } else {
-            // setMonthKeysDescending([]); // Removed
+            } else {
           }
         }
       } catch (e: any) {
@@ -508,7 +507,7 @@ export function TransactionsClient({
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : error ? (
-              <div className="text-sm text-red-500 py-4">{error}</div>
+              <ErrorMessage message={error} />
             ) : (
               <div className="py-2">
                 <DataTable

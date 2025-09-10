@@ -22,17 +22,14 @@ import { DeleteSubcategoryForm } from "./components/delete-subcategory-form";
 import { EditCategoryDialog } from "./components/edit-category-dialog";
 import { EditSubcategoryDialog } from "./components/edit-subcategory-dialog";
 import { ResetAllDialog } from "./components/reset-all-dialog";
+import { ErrorMessage } from "@/components/error-message";
 
 export default async function PreferencesPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user?.uuid) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Please sign in to view this page</p>
-        </div>
-      </div>
+      <ErrorMessage message="Please sign in to view this page" />
     );
   }
 

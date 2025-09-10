@@ -2,16 +2,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TransactionsClient } from "@/app/transactions/components/transactions-client";
 import { getUserDetails } from "@/common/server";
+import { ErrorMessage } from "@/components/error-message";
 
 export default async function TransactionsPage() {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.uuid) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Please sign in to view this page</p>
-        </div>
-      </div>
+      <ErrorMessage message="Please sign in to view this page" />
     );
   }
 
@@ -24,11 +21,7 @@ export default async function TransactionsPage() {
   } catch (error) {
     console.error("Error fetching user categories for transactions page:", error);
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Failed to load user categories.</p>
-        </div>
-      </div>
+      <ErrorMessage message="Failed to load user categories." />
     );
   }
 

@@ -7,16 +7,7 @@ import {
 } from "./view-transaction-form";
 import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
 import { TransactionType } from "../../../generated/prisma"; // Import enums
-
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <div className="container mx-auto p-6 lg:pl-8 space-y-6">
-      <div className="text-center text-red-500 p-4">
-        <p>{message}</p>
-      </div>
-    </div>
-  );
-}
+import { ErrorMessage } from "@/components/error-message";
 
 interface PrismaTransactionResult {
   uuid: string;

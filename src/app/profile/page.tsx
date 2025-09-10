@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import Image from "next/image";
 import { AccountUtilities } from "./components/account-utilities";
 import prisma from "@/lib/prisma";
+import { ErrorMessage } from "@/components/error-message";
 
 
 
@@ -13,11 +14,7 @@ export default async function UserPage() {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.uuid) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Please sign in to view this page</p>
-        </div>
-      </div>
+      <ErrorMessage message="Please sign in to view this page" />
     );
   }
 
