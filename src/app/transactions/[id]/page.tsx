@@ -6,7 +6,17 @@ import {
   type ViewTransactionDefaults,
 } from "./view-transaction-form";
 import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
-import { TransactionType, InputType } from "../../../generated/prisma"; // Import enums
+import { TransactionType } from "../../../generated/prisma"; // Import enums
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <div className="container mx-auto p-6 lg:pl-8 space-y-6">
+      <div className="text-center text-red-500 p-4">
+        <p>{message}</p>
+      </div>
+    </div>
+  );
+}
 
 interface PrismaTransactionResult {
   uuid: string;
@@ -16,7 +26,6 @@ interface PrismaTransactionResult {
   timestamp: Date;
   amount: Decimal;
   recipient: string;
-  input_mode: InputType;
   recipient_name: string | null;
   reference: string | null;
   account: string | null;
@@ -40,22 +49,14 @@ export default async function ViewTransactionPage({
 
   if (!session || !session.user?.uuid) {
     return (
-      <div className="container mx-auto p-6 lg:pl-8 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Please sign in to view this transaction</p>
-        </div>
-      </div>
+      <ErrorMessage message="Please sign in to view this transaction" />
     );
   }
 
   const idNum = Number(id);
   if (!Number.isFinite(idNum)) {
     return (
-      <div className="container mx-auto p-6 lg:pl-8 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Invalid transaction id</p>
-        </div>
-      </div>
+      <ErrorMessage message="Invalid transaction id" />
     );
   }
 
@@ -72,11 +73,7 @@ export default async function ViewTransactionPage({
 
   if (!txn) {
     return (
-      <div className="container mx-auto p-6 lg:pl-8 space-y-6">
-        <div className="text-center text-red-500 p-4">
-          <p>Transaction not found</p>
-        </div>
-      </div>
+      <ErrorMessage message="Transaction not found" />
     );
   }
 

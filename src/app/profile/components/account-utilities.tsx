@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -62,7 +62,7 @@ export function AccountUtilities({ hasTokenInitially = false }: { hasTokenInitia
 
   return (
     <div className="space-y-3">
-      <Toaster />
+      
       <div className="flex items-center gap-2 pb-4">
         <form action={formAction}>
           <Button type="submit" disabled={isPending}>

@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-//
+import { TransactionType } from "../../../generated/prisma";
 import { useRouter } from "next/navigation";
 
 type CategoryWithSubs = {
@@ -41,7 +41,7 @@ const formSchema = z.object({
   // Category can be missing for uncategorized transactions
   categoryId: z.number().int().positive().optional(),
   subcategoryId: z.number().int().positive().optional(),
-  type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
+  type: z.nativeEnum(TransactionType).default(TransactionType.UPI),
   remarks: z.string().optional(),
   same_as_recipient: z.boolean().default(true),
   timestamp: z.date(),
@@ -55,7 +55,7 @@ export type ViewTransactionFormValues = {
   recipient_name?: string;
   categoryId?: number;
   subcategoryId?: number;
-  type: "UPI" | "CARD" | "CASH" | "NETBANKING" | "OTHER";
+  type: TransactionType;
   remarks?: string;
   same_as_recipient: boolean;
   timestamp: Date;
@@ -77,6 +77,7 @@ export function ViewTransactionForm({
     searchParams.edit === "true" ||
       (Array.isArray(searchParams.edit) && searchParams.edit.includes("true"))
   );
+  const [pendingSuggestion, setPendingSuggestion] = React.useState<{ suggestedCategoryName: string | null; suggestedSubCategoryName: string | null; categoryFound: CategoryWithSubs | undefined } | null>(null);
   const form = useForm<
     ViewTransactionFormValues,
     any,
@@ -93,38 +94,100 @@ export function ViewTransactionForm({
 
   const recipientValue = form.watch("recipient");
 
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (!recipientValue || !transactionId) return;
+  const makeToastMessage = (
+    suggestedCategoryName: string | null,
+    suggestedSubCategoryName: string | null,
+    categoryFound: CategoryWithSubs | undefined,
+    subs: CategoryWithSubs['Subcategory']
+  ): string => {
+    let toastMessage = "";
 
-      try {
-        const res = await fetch(`/api/transactions/${transactionId}/suggest`);
-        if (res.ok) {
-          const { suggestedCategory, suggestedSubCategory } = await res.json();
+    if (suggestedCategoryName) {
+      toastMessage += `Category: ${suggestedCategoryName}`;
+    } else {
+      toastMessage += "No category suggested.";
+    }
 
-          if (suggestedCategory && !form.getValues("categoryId")) {
-            const category = categories.find(c => c.name === suggestedCategory);
-            if (category) {
-              form.setValue("categoryId", category.id, { shouldValidate: true, shouldDirty: true });
-            }
-          }
-
-          if (suggestedSubCategory && !form.getValues("subcategoryId")) {
-            const subcategory = selectedCat?.Subcategory.find(s => s.name === suggestedSubCategory);
-            if (subcategory) {
-              form.setValue("subcategoryId", subcategory.id, { shouldValidate: true, shouldDirty: true });
-            }
-          }
-        } else {
-          console.error("Failed to fetch suggestions:", res.statusText);
-        }
-      } catch (error) {
-        console.error("Error fetching suggestions:", error);
+    if (suggestedSubCategoryName && categoryFound) {
+      const subcategory = subs.find(s => s.name === suggestedSubCategoryName);
+      if (subcategory) {
+        if (toastMessage) toastMessage += ", ";
+        toastMessage += `Subcategory: ${suggestedSubCategoryName}`;
+      } else {
+        if (toastMessage) toastMessage += ", ";
+        toastMessage += `Subcategory \"${suggestedSubCategoryName}\" not found.`;
       }
-    };
+    } else if (suggestedSubCategoryName && !categoryFound) {
+      if (toastMessage) toastMessage += ", ";
+      toastMessage += "Cannot suggest subcategory without a valid category.";
+    } else {
+      if (toastMessage) toastMessage += ", ";
+      toastMessage += "No subcategory suggested.";
+    }
+    return toastMessage;
+  };
 
-    fetchSuggestions();
-  }, [recipientValue, transactionId, categories, form, selectedCat]);
+  useEffect(() => {
+    if (pendingSuggestion) {
+      const { suggestedCategoryName, suggestedSubCategoryName, categoryFound } = pendingSuggestion;
+
+      // Set subcategory if applicable
+      if (suggestedSubCategoryName && categoryFound) {
+        const subcategory = categoryFound.Subcategory.find(s => s.name === suggestedSubCategoryName);
+        if (subcategory) {
+          form.setValue("subcategoryId", subcategory.id, { shouldValidate: true, shouldDirty: true });
+        }
+      }
+
+      const toastMessage = makeToastMessage(suggestedCategoryName, suggestedSubCategoryName, categoryFound, subs);
+      if (toastMessage) {
+        toast.success(toastMessage);
+      }
+
+      setPendingSuggestion(null); // Clear the pending suggestion
+    }
+  }, [pendingSuggestion, categories, form, subs, makeToastMessage]);
+
+  async function handleGetSuggestion() {
+    if (!transactionId) return;
+
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}/suggest`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const { suggestedCategory, suggestedSubCategory } = await response.json();
+
+      let categoryFound: CategoryWithSubs | undefined;
+      let finalSuggestedCategoryName: string | null = null;
+
+      if (suggestedCategory) {
+        const category = categories.find(c => c.name === suggestedCategory);
+        if (category) {
+          form.setValue("categoryId", category.id, { shouldValidate: true, shouldDirty: true });
+          categoryFound = category;
+          finalSuggestedCategoryName = suggestedCategory;
+        } else {
+          // Category not found in user's categories
+          finalSuggestedCategoryName = null; // Explicitly set to null if not found
+        }
+      } else {
+        // No category suggested
+        form.setValue("categoryId", undefined, { shouldValidate: true, shouldDirty: true });
+        finalSuggestedCategoryName = null;
+      }
+
+      setPendingSuggestion({
+        suggestedCategoryName: finalSuggestedCategoryName,
+        suggestedSubCategoryName: suggestedSubCategory,
+        categoryFound: categoryFound
+      });
+
+    } catch (error: any) {
+      console.error("Error fetching suggestions:", error);
+      toast.error(`Failed to get suggestions: ${error.response?.statusText || error.message || "Unknown error"}`);
+    }
+  }
 
   async function onSubmit(values: ViewTransactionFormValues) {
     const fd = new FormData();
@@ -156,11 +219,12 @@ export function ViewTransactionForm({
     }
     toast.success("Saved");
     setIsEditing(false);
+    const newSearchParams = new URLSearchParams(window.location.search);
+    newSearchParams.delete("edit");
+    router.replace(`${window.location.pathname}?${newSearchParams.toString()}`);
   }
 
   return (
-    <>
-      <Toaster />
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -346,13 +410,28 @@ export function ViewTransactionForm({
                   name="categoryId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Category</FormLabel>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGetSuggestion}
+                          disabled={!isEditing}
+                        >
+                          Get Suggestion
+                        </Button>
+                      </div>
                       <FormControl>
                         <Select
-                          value={String(field.value ?? "")}
+                          value={field.value === undefined || field.value === null ? "" : String(field.value)}
                           onValueChange={(val) => {
-                            const num = Number(val);
-                            field.onChange(num);
+                            if (val === "") {
+                              field.onChange(undefined);
+                            } else {
+                              const num = Number(val);
+                              field.onChange(num);
+                            }
                             form.setValue("subcategoryId", undefined, {
                               shouldValidate: true,
                               shouldDirty: true,
@@ -385,8 +464,14 @@ export function ViewTransactionForm({
                       <FormLabel>Subcategory</FormLabel>
                       <FormControl>
                         <Select
-                          value={String(field.value ?? "")}
-                          onValueChange={(val) => field.onChange(Number(val))}
+                          value={field.value === undefined || field.value === null ? "" : String(field.value)}
+                          onValueChange={(val) => {
+                            if (val === "") {
+                              field.onChange(undefined);
+                            } else {
+                              field.onChange(Number(val));
+                            }
+                          }}
                           disabled={
                             !isEditing || !selectedCatId || subs.length === 0
                           }
@@ -432,15 +517,7 @@ export function ViewTransactionForm({
                             <SelectValue placeholder="Select a type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(
-                              [
-                                "UPI",
-                                "CARD",
-                                "CASH",
-                                "NETBANKING",
-                                "OTHER",
-                              ] as const
-                            ).map((t) => (
+                            {Object.values(TransactionType).map((t) => (
                               <SelectItem key={t} value={t}>
                                 {t}
                               </SelectItem>
@@ -477,6 +554,6 @@ export function ViewTransactionForm({
           </Form>
         </CardContent>
       </Card>
-    </>
-  );
-}
+    );
+};
+    

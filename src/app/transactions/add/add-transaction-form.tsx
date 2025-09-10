@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -87,7 +87,7 @@ export function AddTransactionForm({
 
   return (
     <>
-      <Toaster />
+      
       <Card>
         <CardHeader>
           <CardTitle>Transaction Details</CardTitle>
