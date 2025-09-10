@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
@@ -9,12 +9,12 @@ import { Plus, ArrowUpDown, MoreHorizontal, MapPin, Eye, Edit, Trash } from "luc
 import {
   numberToINR,
   formatDateTime,
-  formatMonthYear,
   toDate,
 } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TimeframeSelector } from "@/app/transactions/components/timeframe-selector";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -45,11 +45,7 @@ function toMonthKey(date: Date): MonthKey {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-function monthLabelFromKey(key: MonthKey): string {
-  const [y, m] = key.split("-").map((v) => parseInt(v, 10));
-  const d = new Date(y, m - 1, 1);
-  return formatMonthYear(d);
-}
+
 
 export function TransactionsClient({
   userCategories,
@@ -58,38 +54,45 @@ export function TransactionsClient({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  const DEFAULT_PAGE_SIZE = 20;
-  const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-  const [query, setQuery] = useState<string>("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "timestamp", desc: true },
-  ]);
+  const isInitialRenderRef = useRef(true);
 
   
 
-  const [selectedTimeframe, setSelectedTimeframe] = useState<MonthKey | "all">("all");
-  const [monthKeysDescending, setMonthKeysDescending] = useState<MonthKey[]>([]);
+  const DEFAULT_PAGE_SIZE = 20;
+  const pageParam = searchParams?.get("page");
+  const initialPage = Number.isFinite(Number(pageParam)) ? Math.max(1, Math.floor(Number(pageParam))) : 1;
+  const [page, setPage] = useState<number>(initialPage);
+  const [pageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const initialQuery = searchParams?.get("q") || "";
+  const [query, setQuery] = useState<string>(initialQuery);
+  const initialCategories = Array.from(new Set([
+    ...(searchParams?.getAll("category") ?? []),
+    ...((searchParams?.get("categories") || "").split(",").map(s => s.trim()).filter(Boolean))
+  ]));
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories);
+  const initialSortBy = searchParams?.get("sortBy");
+  const initialSortOrder = searchParams?.get("sortOrder");
+  const initialSorting: SortingState = initialSortBy ? [{ id: initialSortBy, desc: initialSortOrder === "desc" }] : [{ id: "timestamp", desc: true }];
+  const [sorting, setSorting] = useState<SortingState>(initialSorting);
 
-  // Initialize selectedTimeframe from query param
-  useEffect(() => {
-    const q = searchParams?.get("month");
-    if (!q) return;
-    if (q === "all") {
-      setSelectedTimeframe("all");
-    } else if (/^\d{4}-\d{2}$/.test(q)) {
-      setSelectedTimeframe(q as MonthKey);
-    }
-  }, [searchParams]);
+  const [debouncedQuery, setDebouncedQuery] = useState<string>(initialQuery);
 
-  // Push selectedTimeframe to query param on change
+  // Debounce query
   useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    params.set("month", selectedTimeframe === "all" ? "all" : selectedTimeframe);
-    router.replace(`?${params.toString()}`);
-  }, [selectedTimeframe, router, searchParams]);
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 500); // 500ms debounce
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [query]);
+
+  
+
+  const initialMonthParam = searchParams?.get("month") ?? "all";
+  const initialTimeframe = (initialMonthParam === "all" || /^\d{4}-\d{2}$/.test(initialMonthParam)) ? (initialMonthParam as MonthKey | "all") : "all";
+  const [selectedTimeframe, setSelectedTimeframe] = useState<MonthKey | "all">(initialTimeframe);
 
   
 
@@ -97,34 +100,12 @@ export function TransactionsClient({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize state from URL
-  useEffect(() => {
-    const p = parseInt(searchParams?.get("page") || "1", 10);
-    setPage(Number.isNaN(p) || p < 1 ? 1 : p);
-    const qq = searchParams?.get("q") || "";
-    setQuery(qq);
-    const fromRepeat = searchParams?.getAll("category") ?? [];
-    const fromCsv = (searchParams?.get("categories") || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const categories = Array.from(new Set([...fromRepeat, ...fromCsv]));
-    setSelectedCategories(categories);
-
-    const sortBy = searchParams?.get("sortBy");
-    const sortOrder = searchParams?.get("sortOrder");
-    if (sortBy) {
-      setSorting([{ id: sortBy, desc: sortOrder === "desc" }]);
-    } else {
-      setSorting([]);
-    }
-
-    // we intentionally ignore size for now to keep UI simple
-  }, [searchParams]);
-
   // Keep URL in sync with page and query
   useEffect(() => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    if (isInitialRenderRef.current) {
+      return;
+    }
+    const params = new URLSearchParams();
     params.set("page", String(page));
     if (query && query.length > 0) params.set("q", query);
     else params.delete("q");
@@ -138,8 +119,15 @@ export function TransactionsClient({
       params.set("sortOrder", sorting[0].desc ? "desc" : "asc");
     }
 
-    router.replace(`?${params.toString()}`);
-  }, [page, query, selectedCategories, sorting, router, searchParams]);
+    params.set("month", selectedTimeframe === "all" ? "all" : selectedTimeframe);
+
+    const newUrl = `?${params.toString()}`;
+    const currentUrl = window.location.search;
+
+    if (newUrl !== currentUrl) {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [page, query, selectedCategories, sorting, selectedTimeframe, router]);
 
   // Fetch from API whenever page/size/query/categories/timeframe change
   useEffect(() => {
@@ -148,7 +136,7 @@ export function TransactionsClient({
       setLoading(true);
       setError(null);
       try {
-        const q = encodeURIComponent(query || "");
+        const q = encodeURIComponent(debouncedQuery || "");
         const cats = selectedCategories
           .map((c) => `category=${encodeURIComponent(c)}`)
           .join("&");
@@ -185,9 +173,9 @@ export function TransactionsClient({
               months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
               current.setMonth(current.getMonth() + 1);
             }
-            setMonthKeysDescending(months);
+            // setMonthKeysDescending(months); // Removed
           } else {
-            setMonthKeysDescending([]);
+            // setMonthKeysDescending([]); // Removed
           }
         }
       } catch (e: any) {
@@ -200,7 +188,7 @@ export function TransactionsClient({
     return () => {
       active = false;
     };
-  }, [page, pageSize, query, selectedCategories, sorting, selectedTimeframe]);
+  }, [page, pageSize, query, selectedCategories, sorting, selectedTimeframe, debouncedQuery]);
 
   const rows = useMemo(() => data?.transactions ?? [], [data]);
   const totalCount = data?.total ?? 0;
@@ -475,29 +463,12 @@ export function TransactionsClient({
                   className="w-full rounded-md border px-3 py-2 text-sm bg-background text-foreground mb-2 sm:mb-0 sm:w-60 min-w-0"
                 />
                 <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 font-bold justify-center whitespace-nowrap"
-                      >
-                        {selectedTimeframe === "all" ? "All time" : monthLabelFromKey(selectedTimeframe)}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="mx-2 max-w-xs">
-                      <DropdownMenuLabel>Timeframe</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="cursor-pointer" onClick={() => setSelectedTimeframe("all")}>
-                        All time
-                      </DropdownMenuItem>
-                      {monthKeysDescending.map((key) => (
-                        <DropdownMenuItem className="cursor-pointer" key={key} onClick={() => setSelectedTimeframe(key)}>
-                          {monthLabelFromKey(key)}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <TimeframeSelector
+                    initialMonthParam={selectedTimeframe}
+                    onSelectTimeframe={(month) => {
+                      setSelectedTimeframe(month);
+                    }}
+                  />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button

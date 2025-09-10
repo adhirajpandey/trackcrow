@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getUserTransactions } from "@/common/server";
 import type { Transaction } from "@/common/schemas";
 import { getUserDetails } from "@/common/server";
-import { TimeframeSelector } from "@/app/dashboard/components/timeframe-selector";
+import { DashboardTimeframeSelector } from "@/app/dashboard/components/timeframe-selector";
 import { Summary } from "@/app/dashboard/components/summary";
 import { CategoricalSpends } from "@/app/dashboard/components/categorical-spends";
 import { UntrackedTransactions } from "@/app/dashboard/components/untracked-transactions";
@@ -82,7 +82,7 @@ export default async function DashboardPage({
           </div>
 
           <div className="flex gap-2 self-start md:self-auto">
-            <TimeframeSelector
+            <DashboardTimeframeSelector
               initialMonthParam={month || getCurrentMonthYYYYMM()}
             />
           </div>
