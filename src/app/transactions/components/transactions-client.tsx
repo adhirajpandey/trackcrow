@@ -5,12 +5,16 @@ import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowUpDown, MoreHorizontal, MapPin, Eye, Edit, Trash } from "lucide-react";
 import {
-  numberToINR,
-  formatDateTime,
-  toDate,
-} from "@/common/utils";
+  Plus,
+  ArrowUpDown,
+  MoreHorizontal,
+  MapPin,
+  Eye,
+  Edit,
+  Trash,
+} from "lucide-react";
+import { numberToINR, formatDateTime, toDate } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,8 +50,6 @@ function toMonthKey(date: Date): MonthKey {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-
-
 export function TransactionsClient({
   userCategories,
 }: {
@@ -57,23 +59,31 @@ export function TransactionsClient({
   const router = useRouter();
   const isInitialRenderRef = useRef(true);
 
-  
-
   const DEFAULT_PAGE_SIZE = 20;
   const pageParam = searchParams?.get("page");
-  const initialPage = Number.isFinite(Number(pageParam)) ? Math.max(1, Math.floor(Number(pageParam))) : 1;
+  const initialPage = Number.isFinite(Number(pageParam))
+    ? Math.max(1, Math.floor(Number(pageParam)))
+    : 1;
   const [page, setPage] = useState<number>(initialPage);
   const [pageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const initialQuery = searchParams?.get("q") || "";
   const [query, setQuery] = useState<string>(initialQuery);
-  const initialCategories = Array.from(new Set([
-    ...(searchParams?.getAll("category") ?? []),
-    ...((searchParams?.get("categories") || "").split(",").map(s => s.trim()).filter(Boolean))
-  ]));
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories);
+  const initialCategories = Array.from(
+    new Set([
+      ...(searchParams?.getAll("category") ?? []),
+      ...(searchParams?.get("categories") || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ])
+  );
+  const [selectedCategories, setSelectedCategories] =
+    useState<string[]>(initialCategories);
   const initialSortBy = searchParams?.get("sortBy");
   const initialSortOrder = searchParams?.get("sortOrder");
-  const initialSorting: SortingState = initialSortBy ? [{ id: initialSortBy, desc: initialSortOrder === "desc" }] : [{ id: "timestamp", desc: true }];
+  const initialSorting: SortingState = initialSortBy
+    ? [{ id: initialSortBy, desc: initialSortOrder === "desc" }]
+    : [{ id: "timestamp", desc: true }];
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
 
   const [debouncedQuery, setDebouncedQuery] = useState<string>(initialQuery);
@@ -89,13 +99,14 @@ export function TransactionsClient({
     };
   }, [query]);
 
-  
-
   const initialMonthParam = searchParams?.get("month") ?? "all";
-  const initialTimeframe = (initialMonthParam === "all" || /^\d{4}-\d{2}$/.test(initialMonthParam)) ? (initialMonthParam as MonthKey | "all") : "all";
-  const [selectedTimeframe, setSelectedTimeframe] = useState<MonthKey | "all">(initialTimeframe);
-
-  
+  const initialTimeframe =
+    initialMonthParam === "all" || /^\d{4}-\d{2}$/.test(initialMonthParam)
+      ? (initialMonthParam as MonthKey | "all")
+      : "all";
+  const [selectedTimeframe, setSelectedTimeframe] = useState<MonthKey | "all">(
+    initialTimeframe
+  );
 
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -120,7 +131,10 @@ export function TransactionsClient({
       params.set("sortOrder", sorting[0].desc ? "desc" : "asc");
     }
 
-    params.set("month", selectedTimeframe === "all" ? "all" : selectedTimeframe);
+    params.set(
+      "month",
+      selectedTimeframe === "all" ? "all" : selectedTimeframe
+    );
 
     const newUrl = `?${params.toString()}`;
     const currentUrl = window.location.search;
@@ -174,7 +188,7 @@ export function TransactionsClient({
               months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
               current.setMonth(current.getMonth() + 1);
             }
-            } else {
+          } else {
           }
         }
       } catch (e: any) {
@@ -187,7 +201,15 @@ export function TransactionsClient({
     return () => {
       active = false;
     };
-  }, [page, pageSize, query, selectedCategories, sorting, selectedTimeframe, debouncedQuery]);
+  }, [
+    page,
+    pageSize,
+    query,
+    selectedCategories,
+    sorting,
+    selectedTimeframe,
+    debouncedQuery,
+  ]);
 
   const rows = useMemo(() => data?.transactions ?? [], [data]);
   const totalCount = data?.total ?? 0;
@@ -328,6 +350,7 @@ export function TransactionsClient({
           return (
             // Block all events in this cell from bubbling to the row
             <div
+              className="relative z-20"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
@@ -351,7 +374,6 @@ export function TransactionsClient({
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
-
                   {transaction.location && (
                     <DropdownMenuItem
                       className="cursor-pointer"
@@ -361,7 +383,7 @@ export function TransactionsClient({
                         e.stopPropagation();
                         window.open(
                           `https://www.google.com/maps/search/${encodeURIComponent(
-                            transaction.location || ''
+                            transaction.location || ""
                           )}`,
                           "_blank"
                         );
@@ -480,19 +502,22 @@ export function TransactionsClient({
                           : "All categories"}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="mx-2 max-w-xs">
+                    <DropdownMenuContent
+                      align="start"
+                      className="mx-2 max-w-xs"
+                    >
                       <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {availableCategories.map((name) => (
-                          <DropdownMenuCheckboxItem
-                            className="cursor-pointer"
-                            key={name}
-                            checked={selectedCategories.includes(name)}
-                            onCheckedChange={() => toggleCategory(name)}
-                          >
-                            {name}
-                          </DropdownMenuCheckboxItem>
-                        ))}
+                        <DropdownMenuCheckboxItem
+                          className="cursor-pointer"
+                          key={name}
+                          checked={selectedCategories.includes(name)}
+                          onCheckedChange={() => toggleCategory(name)}
+                        >
+                          {name}
+                        </DropdownMenuCheckboxItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -517,12 +542,7 @@ export function TransactionsClient({
                   onSortingChange={setSorting}
                   manualSorting
                   headerClassName="font-semibold"
-                  onRowClick={(row) => {
-                    const t = row as Transaction;
-                    if (t && typeof t.id === "number") {
-                      router.push(`/transactions/${t.id}`);
-                    }
-                  }}
+                  rowHref={(row) => `/transactions/${(row as Transaction).id}`}
                 />
               </div>
             )}
