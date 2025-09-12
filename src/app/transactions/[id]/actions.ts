@@ -105,3 +105,38 @@ export async function updateTransaction(formData: FormData) {
 
   return { message: "Transaction updated successfully" } as const;
 }
+
+export async function deleteTransaction(transactionId: number) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.uuid) {
+    return { error: "Unauthorized" };
+  }
+
+  try {
+    // Check if transaction exists and belongs to user
+    const existing = await prisma.transaction.findFirst({ 
+      where: { 
+        id: transactionId, 
+        user_uuid: session.user.uuid 
+      } 
+    });
+    
+    if (!existing) {
+      return { error: "Transaction not found" };
+    }
+
+    // Delete the transaction
+    await prisma.transaction.delete({
+      where: { id: transactionId }
+    });
+
+    // Revalidate relevant paths
+    revalidatePath("/transactions");
+    revalidatePath(`/transactions/${transactionId}`);
+
+    return { message: "Transaction deleted successfully" };
+  } catch (error) {
+    console.error("Failed to delete transaction", error);
+    return { error: "Failed to delete transaction" };
+  }
+}

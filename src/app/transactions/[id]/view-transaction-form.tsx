@@ -123,7 +123,7 @@ export function ViewTransactionForm({
       toastMessage += "No subcategory suggested.";
     }
     return toastMessage;
-  }, [subs]);
+  }, []);
 
   useEffect(() => {
     if (pendingSuggestion) {

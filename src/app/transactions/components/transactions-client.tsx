@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
@@ -12,7 +12,6 @@ import {
   MapPin,
   Eye,
   Edit,
-  Trash,
 } from "lucide-react";
 import { numberToINR, formatDateTime, toDate } from "@/common/utils";
 import DataTable from "@/components/ui/data-table";
@@ -29,6 +28,104 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ErrorMessage } from "@/components/error-message";
+import { DeleteTransactionDialog } from "./delete-transaction-dialog";
+
+// Separate component for actions cell to properly use hooks
+function ActionsCell({ 
+  transaction, 
+  onRefresh 
+}: { 
+  transaction: Transaction; 
+  onRefresh: () => void; 
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  return (
+    <div
+      className="relative z-20"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          align="end"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {transaction.location && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(
+                  `https://www.google.com/maps/search/${encodeURIComponent(
+                    transaction.location || ""
+                  )}`,
+                  "_blank"
+                );
+              }}
+            >
+              <MapPin className="h-4 w-4 mr-2" /> View Location
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            asChild
+            onSelect={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <Link
+              href={`/transactions/${transaction.id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Eye className="h-4 w-4 mr-2" /> View Transaction
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            asChild
+            onSelect={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <Link
+              href={`/transactions/${transaction.id}?edit=true`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Edit className="h-4 w-4 mr-2" /> Edit Transaction
+            </Link>
+          </DropdownMenuItem>
+
+          <DeleteTransactionDialog 
+            transactionId={transaction.id}
+            onSuccess={onRefresh}
+            onClose={() => setDropdownOpen(false)}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
 
 type TransactionsResponse = {
   transactions: Transaction[];
@@ -111,10 +208,12 @@ export function TransactionsClient({
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   // Keep URL in sync with page and query
   useEffect(() => {
     if (isInitialRenderRef.current) {
+      isInitialRenderRef.current = false;
       return;
     }
     const params = new URLSearchParams();
@@ -178,6 +277,12 @@ export function TransactionsClient({
         const json = (await res.json()) as TransactionsResponse;
         if (active) {
           setData(json);
+          
+          // If current page is beyond available pages, reset to last available page
+          if (json.totalPages > 0 && page > json.totalPages) {
+            setPage(json.totalPages);
+          }
+          
           // Populate monthKeysDescending based on firstTxnDate and lastTxnDate
           if (json.firstTxnDate && json.lastTxnDate) {
             const start = toDate(json.firstTxnDate);
@@ -188,7 +293,6 @@ export function TransactionsClient({
               months.unshift(toMonthKey(current)); // Add to the beginning to keep it descending
               current.setMonth(current.getMonth() + 1);
             }
-          } else {
           }
         }
       } catch (e: any) {
@@ -209,6 +313,7 @@ export function TransactionsClient({
     sorting,
     selectedTimeframe,
     debouncedQuery,
+    refreshTrigger,
   ]);
 
   const rows = useMemo(() => data?.transactions ?? [], [data]);
@@ -236,6 +341,10 @@ export function TransactionsClient({
       prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
     );
   };
+
+  const refreshTransactions = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   const columns: ColumnDef<Transaction>[] = useMemo(
     () => [
@@ -344,104 +453,12 @@ export function TransactionsClient({
       },
       {
         id: "actions",
-        cell: ({ row }) => {
-          const transaction = row.original;
-
-          return (
-            // Block all events in this cell from bubbling to the row
-            <div
-              className="relative z-20"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            >
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-8 w-8 p-0 cursor-pointer"
-                    // keeping this is fine, but the wrapper above already handles it
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="sr-only">Open menu</span>
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="end"
-                  // extra safety: block inside the portal too
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {transaction.location && (
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      // Radix fires onSelect for menu items; prevent + stop here as well
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(
-                          `https://www.google.com/maps/search/${encodeURIComponent(
-                            transaction.location || ""
-                          )}`,
-                          "_blank"
-                        );
-                      }}
-                    >
-                      <MapPin className="h-4 w-4 mr-2" /> View Location
-                    </DropdownMenuItem>
-                  )}
-
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    asChild
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Link
-                      href={`/transactions/${transaction.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Eye className="h-4 w-4 mr-2" /> View Transaction
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    asChild
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Link
-                      href={`/transactions/${transaction.id}?edit=true`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Edit className="h-4 w-4 mr-2" /> Edit Transaction
-                    </Link>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    className="cursor-pointer text-red-500"
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log("Delete transaction", transaction.id);
-                    }}
-                  >
-                    <Trash className="h-4 w-4 mr-2" /> Delete Transaction
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <ActionsCell 
+            transaction={row.original} 
+            onRefresh={refreshTransactions}
+          />
+        ),
       },
     ],
     []
