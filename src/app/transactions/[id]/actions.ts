@@ -125,6 +125,10 @@ export async function deleteTransaction(transactionId: number) {
       where: { id: transactionId }
     });
 
+    // Revalidate the transactions page to update the UI
+    revalidatePath("/transactions");
+    revalidatePath(`/transactions/${transactionId}`);
+
     return { message: "Transaction deleted successfully" };
   } catch (error) {
     console.error("Failed to delete transaction", error);
