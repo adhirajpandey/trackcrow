@@ -20,10 +20,10 @@ import { deleteTransaction } from '../[id]/actions';
 interface DeleteTransactionDialogProps {
   /** The ID of the transaction to delete */
   transactionId: number;
-  /** Callback function called after successful deletion */
-  onSuccess?: () => void;
   /** Callback function called when dialog closes (used to collapse dropdown) */
   onClose?: () => void;
+  /** Callback function called when transaction is successfully deleted */
+  onTransactionDeleted?: (transactionId: number) => void;
 }
 
 /**
@@ -32,8 +32,8 @@ interface DeleteTransactionDialogProps {
  */
 export function DeleteTransactionDialog({ 
   transactionId, 
-  onSuccess,
-  onClose
+  onClose,
+  onTransactionDeleted
 }: DeleteTransactionDialogProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,13 +50,16 @@ export function DeleteTransactionDialog({
         setError(result.error);
         toast.error(result.error);
       } else {
-        // Success - close dialog, show toast, and trigger refresh
+        // Success - close dialog and show toast
         setOpen(false);
         setError(null);
         toast.success('Transaction deleted successfully');
-        onSuccess?.(); // Call the success callback to refresh the table
+        
+        // Call the callback to remove the row from the table
+        onTransactionDeleted?.(transactionId);
       }
-    } catch {
+    } catch (error) {
+      console.error('Unexpected error during deletion:', error);
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);
       toast.error(errorMessage);

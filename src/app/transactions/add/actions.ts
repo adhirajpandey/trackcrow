@@ -2,9 +2,8 @@
 
 import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { validateSession } from "@/common/server";
 
 const addTransactionSchema = z.object({
   amount: z.coerce.number().positive(),
@@ -18,10 +17,11 @@ const addTransactionSchema = z.object({
 });
 
 export async function addTransaction(formData: FormData) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.uuid) {
-    return { error: "Unauthorized" };
+  const sessionResult = await validateSession();
+  if (!sessionResult.success) {
+    return { error: sessionResult.error };
   }
+  const { userUuid } = sessionResult;
 
   // Normalize optional fields: convert null to undefined so optional() is respected
   const getOpt = (v: FormDataEntryValue | null) => (v === null ? undefined : v);
@@ -47,7 +47,7 @@ export async function addTransaction(formData: FormData) {
   try {
     await prisma.transaction.create({
       data: {
-        user_uuid: session.user.uuid,
+        user_uuid: userUuid,
         amount,
         recipient,
         recipient_name,

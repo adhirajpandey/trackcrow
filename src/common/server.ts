@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import { userReadSchema, type Transaction } from "@/common/schemas";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 /**
  * Fetches all transactions for a user, ordered by latest first, and serializes
@@ -78,4 +80,43 @@ export async function getUserDetails(userUuid: string) {
   };
 
   return userReadSchema.parse(payload);
+}
+
+/**
+ * Validates user session and returns user UUID if valid
+ * @returns Object with success status and user UUID or error message
+ */
+export async function validateSession(): Promise<
+  | { success: true; userUuid: string }
+  | { success: false; error: string }
+> {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.uuid) {
+    return { success: false, error: "Unauthorized" };
+  }
+  return { success: true, userUuid: session.user.uuid };
+}
+
+/**
+ * Validates that a transaction exists and belongs to the user
+ * @param transactionId - The ID of the transaction to validate
+ * @param userUuid - The UUID of the user
+ * @returns Object with success status and transaction data or error message
+ */
+export async function validateTransactionOwnership(
+  transactionId: number,
+  userUuid: string
+): Promise<
+  | { success: true; transaction: any }
+  | { success: false; error: string }
+> {
+  const transaction = await prisma.transaction.findFirst({
+    where: { id: transactionId, user_uuid: userUuid }
+  });
+  
+  if (!transaction) {
+    return { success: false, error: "Transaction not found" };
+  }
+  
+  return { success: true, transaction };
 }

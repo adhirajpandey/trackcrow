@@ -2,9 +2,8 @@
 
 import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { validateSession, validateTransactionOwnership } from "@/common/server";
 
 const updateTransactionSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -24,10 +23,11 @@ const updateTransactionSchema = z.object({
 });
 
 export async function updateTransaction(formData: FormData) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.uuid) {
-    return { error: "Unauthorized" };
+  const sessionResult = await validateSession();
+  if (!sessionResult.success) {
+    return { error: sessionResult.error };
   }
+  const { userUuid } = sessionResult;
 
   const parsed = updateTransactionSchema.safeParse({
     id: formData.get("id"),
@@ -49,9 +49,9 @@ export async function updateTransaction(formData: FormData) {
   const { id, amount, recipient, recipient_name, categoryId, subcategoryId, type, remarks, timestamp } = parsed.data;
 
   try {
-    const existing = await prisma.transaction.findFirst({ where: { id, user_uuid: session.user.uuid } });
-    if (!existing) {
-      return { error: "Transaction not found" } as const;
+    const transactionResult = await validateTransactionOwnership(id, userUuid);
+    if (!transactionResult.success) {
+      return { error: transactionResult.error } as const;
     }
 
     const recipientNameForDb =
@@ -107,32 +107,23 @@ export async function updateTransaction(formData: FormData) {
 }
 
 export async function deleteTransaction(transactionId: number) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.uuid) {
-    return { error: "Unauthorized" };
+  const sessionResult = await validateSession();
+  if (!sessionResult.success) {
+    return { error: sessionResult.error };
   }
+  const { userUuid } = sessionResult;
 
   try {
     // Check if transaction exists and belongs to user
-    const existing = await prisma.transaction.findFirst({ 
-      where: { 
-        id: transactionId, 
-        user_uuid: session.user.uuid 
-      } 
-    });
-    
-    if (!existing) {
-      return { error: "Transaction not found" };
+    const transactionResult = await validateTransactionOwnership(transactionId, userUuid);
+    if (!transactionResult.success) {
+      return { error: transactionResult.error };
     }
 
     // Delete the transaction
     await prisma.transaction.delete({
       where: { id: transactionId }
     });
-
-    // Revalidate relevant paths
-    revalidatePath("/transactions");
-    revalidatePath(`/transactions/${transactionId}`);
 
     return { message: "Transaction deleted successfully" };
   } catch (error) {

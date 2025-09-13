@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
@@ -32,11 +32,11 @@ import { DeleteTransactionDialog } from "./delete-transaction-dialog";
 
 // Separate component for actions cell to properly use hooks
 function ActionsCell({ 
-  transaction, 
-  onRefresh 
+  transaction,
+  onTransactionDeleted
 }: { 
-  transaction: Transaction; 
-  onRefresh: () => void; 
+  transaction: Transaction;
+  onTransactionDeleted?: (transactionId: number) => void;
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -118,8 +118,8 @@ function ActionsCell({
 
           <DeleteTransactionDialog 
             transactionId={transaction.id}
-            onSuccess={onRefresh}
             onClose={() => setDropdownOpen(false)}
+            onTransactionDeleted={onTransactionDeleted}
           />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -208,7 +208,26 @@ export function TransactionsClient({
   const [data, setData] = useState<TransactionsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+
+  // Function to remove a transaction from the current data
+  const removeTransaction = (transactionId: number) => {
+    setData(prevData => {
+      if (!prevData) return prevData;
+      
+      const updatedTransactions = prevData.transactions.filter(t => t.id !== transactionId);
+      const newTotal = prevData.total - 1;
+      const newTotalPages = Math.ceil(newTotal / pageSize);
+      
+      return {
+        ...prevData,
+        transactions: updatedTransactions,
+        total: newTotal,
+        totalPages: newTotalPages,
+        hasNext: page < newTotalPages,
+        hasPrev: page > 1
+      };
+    });
+  };
 
   // Keep URL in sync with page and query
   useEffect(() => {
@@ -313,7 +332,6 @@ export function TransactionsClient({
     sorting,
     selectedTimeframe,
     debouncedQuery,
-    refreshTrigger,
   ]);
 
   const rows = useMemo(() => data?.transactions ?? [], [data]);
@@ -342,9 +360,6 @@ export function TransactionsClient({
     );
   };
 
-  const refreshTransactions = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
 
   const columns: ColumnDef<Transaction>[] = useMemo(
     () => [
@@ -455,13 +470,13 @@ export function TransactionsClient({
         id: "actions",
         cell: ({ row }) => (
           <ActionsCell 
-            transaction={row.original} 
-            onRefresh={refreshTransactions}
+            transaction={row.original}
+            onTransactionDeleted={removeTransaction}
           />
         ),
       },
     ],
-    []
+    [removeTransaction]
   );
 
   return (
