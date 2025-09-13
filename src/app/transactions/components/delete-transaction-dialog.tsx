@@ -57,6 +57,9 @@ export function DeleteTransactionDialog({
         
         // Call the callback to remove the row from the table
         onTransactionDeleted?.(transactionId);
+        
+        // Ensure dropdown is closed
+        onClose?.();
       }
     } catch (error) {
       console.error('Unexpected error during deletion:', error);
@@ -71,9 +74,14 @@ export function DeleteTransactionDialog({
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      // Dialog is closing, trigger the onClose callback
+      // Dialog is closing, trigger the onClose callback to close dropdown
       onClose?.();
     }
+  };
+
+  const handleCancel = () => {
+    setOpen(false);
+    onClose?.();
   };
 
   return (
@@ -100,7 +108,7 @@ export function DeleteTransactionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting} onClick={handleCancel}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
             Continue
           </AlertDialogAction>

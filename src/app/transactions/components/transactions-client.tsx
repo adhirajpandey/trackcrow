@@ -40,6 +40,10 @@ function ActionsCell({
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  const handleDropdownClose = () => {
+    setDropdownOpen(false);
+  };
+
   return (
     <div
       className="relative z-20"
@@ -118,7 +122,7 @@ function ActionsCell({
 
           <DeleteTransactionDialog 
             transactionId={transaction.id}
-            onClose={() => setDropdownOpen(false)}
+            onClose={handleDropdownClose}
             onTransactionDeleted={onTransactionDeleted}
           />
         </DropdownMenuContent>
