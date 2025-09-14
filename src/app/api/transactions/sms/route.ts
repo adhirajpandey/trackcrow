@@ -27,11 +27,13 @@ export async function POST(req: Request) {
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    console.log(token)
 
     const user = await prisma.user.findFirst({ where: { lt_token: token } });
     if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    console.log(user)
 
     let json: unknown;
     try {
@@ -39,6 +41,8 @@ export async function POST(req: Request) {
     } catch {
       return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
     }
+    console.log(json)
+
 
     const parsed = requestSchema.safeParse(json);
     if (!parsed.success) {
@@ -47,10 +51,11 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+    console.log(parsed.data)
 
     const { data, metadata } = parsed.data;
     const details = parseTransactionMessage(data.message);
-
+    console.log(details)
     if (!details.amount || !details.recipient_id) {
       return NextResponse.json(
         {
