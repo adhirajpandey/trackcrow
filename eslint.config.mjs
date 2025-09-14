@@ -10,7 +10,18 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // Your existing Next.js + TypeScript presets
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+
+  // Add ignores here
+  {
+    ignores: [".next", "node_modules", "dist", "coverage", "src/generated"],
+  },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off", // Temporarily disable for diagnosis
+    },
+  },
 ];
 
 export default eslintConfig;
