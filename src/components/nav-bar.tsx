@@ -37,7 +37,7 @@ export function NavBar({
               <ChevronRight
                 className={cn(
                   "h-5 w-5 transition-transform",
-                  isMobileOpen && "rotate-180",
+                  isMobileOpen && "rotate-180"
                 )}
               />
             </button>
@@ -46,17 +46,19 @@ export function NavBar({
             href="/"
             className={cn(
               "flex items-center hover:opacity-80 transition-opacity duration-200",
-              showSidebarToggle && "lg:block hidden",
+              showSidebarToggle && "lg:block hidden"
             )}
           >
-            <Image
-              src="/trackcrow.png"
-              alt="Trackcrow Logo"
-              width={100}
-              height={100}
-              className="cursor-pointer"
-              priority
-            />
+            <div className="flex items-center space-x-3 mb-1">
+              <Image
+                src="/trackcrow.jpg"
+                alt="Trackcrow Logo"
+                width={45}
+                height={45}
+                className="h-8 w-auto rounded-md"
+              />
+              <span className="text-xl font-bold">TrackCrow</span>
+            </div>
           </Link>
         </div>
 

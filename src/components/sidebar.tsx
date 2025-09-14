@@ -53,7 +53,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             pathname === item.href
               ? "bg-secondary text-secondary-foreground"
               : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground",
-            isCollapsed && !isMobileOpen && "justify-center px-2",
+            isCollapsed && !isMobileOpen && "justify-center px-2"
           )}
           onClick={() => {
             if (isMobileOpen) onMobileClose();
@@ -89,18 +89,28 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             isMobileOpen ? "w-64" : isCollapsed ? "w-[72px]" : "w-64",
             isMobileOpen
               ? "translate-x-0"
-              : "-translate-x-full lg:translate-x-0",
+              : "-translate-x-full lg:translate-x-0"
           )}
         >
           <div className="border-b border-border">
             <div
               className={cn(
                 "flex h-16 items-center gap-2 px-4",
-                isCollapsed && !isMobileOpen && "justify-center px-2",
+                isCollapsed && !isMobileOpen && "justify-center px-2"
               )}
             >
               {(!isCollapsed || isMobileOpen) && (
-                <Link href="/" className="flex items-center font-semibold">
+                <Link
+                  href="/"
+                  className="flex items-center font-semibold space-x-3"
+                >
+                  <Image
+                    src="/trackcrow.jpg"
+                    alt="Trackcrow Logo"
+                    width={32}
+                    height={32}
+                    className="h-8 w-auto rounded-md"
+                  />
                   <span className="text-lg">TrackCrow</span>
                 </Link>
               )}
@@ -109,7 +119,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                 size="sm"
                 className={cn(
                   "ml-auto h-8 w-8",
-                  isCollapsed && !isMobileOpen && "ml-0",
+                  isCollapsed && !isMobileOpen && "ml-0"
                 )}
                 onClick={(e) => {
                   // Prevent any outer click handlers from running
@@ -125,7 +135,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                 <ChevronLeft
                   className={cn(
                     "h-4 w-4 transition-transform",
-                    isCollapsed && !isMobileOpen && "rotate-180",
+                    isCollapsed && !isMobileOpen && "rotate-180"
                   )}
                 />
                 <span className="sr-only">
@@ -146,7 +156,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               <div
                 className={cn(
                   "flex items-center",
-                  isCollapsed && !isMobileOpen ? "justify-center" : "gap-2",
+                  isCollapsed && !isMobileOpen ? "justify-center" : "gap-2"
                 )}
               >
                 {(!isCollapsed || isMobileOpen) && (
@@ -195,7 +205,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                   }}
                   className={cn(
                     "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    "text-red-500 hover:bg-secondary hover:text-red-500",
+                    "text-red-500 hover:bg-secondary hover:text-red-500"
                   )}
                 >
                   <LogOut className="h-4 w-4 mr-3" />
