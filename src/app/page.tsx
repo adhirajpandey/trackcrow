@@ -167,11 +167,11 @@ export default function LandingPage() {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-3 mb-4">
                 <Image
-                  src="/trackcrow.png"
+                  src="/trackcrow.jpg"
                   alt="Trackcrow Logo"
                   width={32}
                   height={32}
-                  className="h-8 w-auto"
+                  className="h-8 w-auto rounded-md"
                 />
                 <span className="text-xl font-bold">TrackCrow</span>
               </div>
