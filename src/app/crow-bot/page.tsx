@@ -61,7 +61,7 @@ export default function CrowBotPage() {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {messages.length > 0 && (
-        <header className="flex justify-center p-4">
+        <header className="sticky top-0 z-10 bg-background flex justify-center p-2 border-border">
           <h2 className="text-gray-400 text-sm font-medium">
             Conversation with the Crow Bot
           </h2>
