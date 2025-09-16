@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { parseTransactionMessage } from "@/common/utils";
+import { parseTransactionMessage } from "@/common/sms-parser";
 
 const requestSchema = z.object({
   data: z.object({
@@ -41,7 +41,6 @@ export async function POST(req: Request) {
     } catch {
       return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
     }
-    console.log(json)
 
 
     const parsed = requestSchema.safeParse(json);
@@ -51,19 +50,22 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    console.log(parsed.data)
 
     const { data, metadata } = parsed.data;
     const details = parseTransactionMessage(data.message);
-    console.log(details)
-    if (!details.amount || !details.recipient_id) {
+    console.log("Parsed details:", details);
+    console.log("Original message:", data.message);
+    
+    if (!details || !details.amount || !details.recipient) {
       return NextResponse.json(
         {
           message: "Unable to extract required fields from message",
           missing: {
-            amount: !details.amount,
-            recipient_id: !details.recipient_id,
+            amount: !details?.amount,
+            recipient: !details?.recipient,
           },
+          parsedDetails: details,
+          originalMessage: data.message,
         },
         { status: 422 },
       );
@@ -74,13 +76,13 @@ export async function POST(req: Request) {
         uuid: crypto.randomUUID(),
         user_uuid: user.uuid,
         amount: details.amount,
-        type: "UPI",
-        recipient: details.recipient_id,
+        type: details.type,
+        recipient: details.recipient,
         input_mode: "AUTO",
         // Persist current timestamp in UTC
         timestamp: new Date().toISOString(),
-        reference: details.reference_number,
-        account: "KOTAK", // TODO: extract from message or metadata
+        reference: details.reference,
+        account: details.account,
         raw_message: data.message,
         location: metadata.location,
       },

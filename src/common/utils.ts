@@ -125,37 +125,6 @@ export const defaultCategoriesMap = [
  */
 // Note: server-only data helpers live in src/common/server.ts to avoid bundling prisma in client code
 
-
-export type ParsedTransactionDetails = {
-  amount: number | null;
-  recipient: string | null;
-  recipient_name?: string | null;
-  type?: "UPI" | "CARD" | "CASH" | "NETBANKING" | "OTHER";
-  reference?: string | null;
-  account?: string | null;
-};
-
-// Heuristic parser for common banking message formats
-// Extracts amount, recipient/merchant, optional recipient name, and type
-// currently works only for KOTAK bank UPI messages
-export function parseTransactionMessage(message: string) {
-  // Regex patterns
-  const amountRegex = /Sent\s+Rs\.?([\d,.]+)/i;
-  const recipientRegex = /to\s+([^\s]+@[^\s]+)\s+/i;
-  const refRegex = /UPI Ref\s+(\d+)/i;
-
-  // Extract matches
-  const amountMatch = message.match(amountRegex);
-  const recipientMatch = message.match(recipientRegex);
-  const refMatch = message.match(refRegex);
-
-  return {
-    amount: amountMatch ? amountMatch[1] : null,
-    recipient_id: recipientMatch ? recipientMatch[1] : null,
-    reference_number: refMatch ? refMatch[1] : null,
-  };
-}
-
 export function parseMonthParam(monthParam: string) {
   let startDate: Date | undefined;
   let endDate: Date | undefined;
@@ -232,5 +201,4 @@ export function monthLabelFromKey(key: string): string {
   const d = new Date(y, m - 1, 1);
   return formatMonthYear(d);
 }
-
 
