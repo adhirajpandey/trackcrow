@@ -47,10 +47,26 @@ const smsParsers: SmsParser[] = [
       };
     },
   },
-  // HDFC UPI: "Sent Rs.60.00 From HDFC Bank A/C x0355 To Khurshid Alam On 04/05/25 Ref 284353400834 Not You? Call 18002586161/SMS BLOCK UPI to 7308080808"
+  // HDFC UPI: Format with line breaks
+  {
+    name: 'HDFC_UPI_FORMATTED',
+    test: (message) => message.includes('HDFC Bank') && message.includes('From') && message.includes('To') && message.includes('\n'),
+    regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s*\nFrom\s+HDFC\s+Bank\s+A\/C\s+[^\n]+\nTo\s+(?<recipient>[^\n]+)\nOn\s+\d{2}\/\d{2}\/\d{2}\nRef\s+(?<reference>\d+)/i,
+    mapper: (match) => {
+      const groups = match.groups ?? {};
+      return {
+        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
+        recipient: groups.recipient?.trim() ?? null,
+        reference: groups.reference ?? null,
+        type: 'UPI',
+        account: 'HDFC',
+      };
+    },
+  },
+  // HDFC UPI: Single-line format (original)
   {
     name: 'HDFC_UPI',
-    test: (message) => message.includes('HDFC Bank') && message.includes('From') && message.includes('To'),
+    test: (message) => message.includes('HDFC Bank') && message.includes('From') && message.includes('To') && !message.includes('\n'),
     regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s+From\s+HDFC\s+Bank\s+A\/C\s+\w+\s+To\s+(?<recipient>[^O]+?)\s+On\s+\d{2}\/\d{2}\/\d{2}\s+Ref\s+(?<reference>\d+)/i,
     mapper: (match) => {
       const groups = match.groups ?? {};
@@ -75,7 +91,14 @@ export function parseTransactionMessage(message: string): ParsedTransactionDetai
       const match = message.match(parser.regex);
       if (match && match.groups) {
         try {
-          return parser.mapper(match);
+          const result = parser.mapper(match);
+          console.log(`Successfully parsed message with parser "${parser.name}":`, {
+            amount: result.amount,
+            recipient: result.recipient,
+            type: result.type,
+            account: result.account
+          });
+          return result;
         } catch (error) {
           console.error(`Error mapping with parser "${parser.name}":`, error);
           // Continue to the next parser
@@ -84,5 +107,6 @@ export function parseTransactionMessage(message: string): ParsedTransactionDetai
     }
   }
   
+  console.log("No parser matched the message:", message);
   return null;
 }
