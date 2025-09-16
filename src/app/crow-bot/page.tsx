@@ -2,17 +2,45 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { useChat } from "@ai-sdk/react";
+import { TextStreamChatTransport } from "ai";
+
+function TypingText({ text }: { text: string }) {
+  const [displayed, setDisplayed] = useState("");
+  const prevTextRef = useRef("");
+
+  useEffect(() => {
+    if (text.length <= prevTextRef.current.length) return;
+
+    let i = prevTextRef.current.length;
+
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        setDisplayed((prev) => prev + text.charAt(i));
+        i++;
+      } else {
+        clearInterval(interval);
+        prevTextRef.current = text;
+      }
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return <span className="whitespace-pre-wrap">{displayed}</span>;
+}
 
 export default function CrowBotPage() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<
-    { sender: "user" | "bot"; text: string }[]
-  >([]);
   const [activeMenu, setActiveMenu] = useState<
     "transaction" | "analytics" | null
   >(null);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  const { messages, sendMessage, status, setMessages } = useChat({
+    transport: new TextStreamChatTransport({ api: "/api/chat" }),
+  });
 
   const suggestions =
     activeMenu === "transaction"
@@ -41,16 +69,7 @@ export default function CrowBotPage() {
 
   const handleSend = () => {
     if (!input.trim()) return;
-
-    setMessages((prev) => [...prev, { sender: "user", text: input }]);
-
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "bot", text: "Got it! Processing your request..." },
-      ]);
-    }, 1000);
-
+    sendMessage({ text: input });
     setInput("");
   };
 
@@ -187,19 +206,33 @@ export default function CrowBotPage() {
           </div>
         ) : (
           <>
-            {messages.map((msg, i) => (
-              <div key={i} className="w-full max-w-2xl mx-auto flex">
-                {msg.sender === "bot" ? (
+            {messages.map((msg) => (
+              <div key={msg.id} className="w-full max-w-2xl mx-auto flex">
+                {msg.role === "assistant" ? (
                   <div className="mr-auto text-foreground text-sm">
-                    {msg.text}
+                    <TypingText
+                      text={msg.parts
+                        .filter((p) => p.type === "text")
+                        .map((p) => p.text)
+                        .join("")}
+                    />
                   </div>
                 ) : (
                   <div className="ml-auto bg-muted text-white px-4 py-2 rounded-lg text-sm max-w-xs break-words">
-                    {msg.text}
+                    {msg.parts
+                      .filter((p) => p.type === "text")
+                      .map((p, i) => (
+                        <span key={`${msg.id}-${i}`}>{p.text}</span>
+                      ))}
                   </div>
                 )}
               </div>
             ))}
+            {status === "submitted" && (
+              <div className="w-full max-w-2xl mx-auto text-sm text-zinc-500 italic">
+                Thinking...
+              </div>
+            )}
             <div ref={chatEndRef} />
           </>
         )}
