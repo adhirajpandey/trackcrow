@@ -4,12 +4,19 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { transactionReadSchema } from "@/common/schemas";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: Request) {
+  let session: any = null;
+  
   try {
-    const session = await getServerSession(authOptions);
-    if (!session)
+    logger.info("GET /api/transactions - Starting transaction fetch");
+    
+    session = await getServerSession(authOptions);
+    if (!session) {
+      logger.info("GET /api/transactions - Unauthorized request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // Pagination params: page (1-based) and size
     const { searchParams } = new URL(req.url);
@@ -108,6 +115,19 @@ export async function GET(req: Request) {
 
     const total = await prisma.transaction.count({ where });
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+    
+    logger.debug("GET /api/transactions - Query parameters", {
+      userUuid: session.user.uuid,
+      page,
+      pageSize,
+      total,
+      totalPages,
+      searchQuery: q,
+      categoryFilters,
+      sortBy,
+      sortOrder,
+      dateRange: { startDateParam, endDateParam }
+    });
 
     // If requested page is out of range, return empty result with metadata
     let transactions: Array<any> = [];
@@ -161,7 +181,10 @@ export async function GET(req: Request) {
     const parsed = z.array(transactionReadSchema).safeParse(flat);
 
     if (!parsed.success) {
-      console.error("Transaction read validation error", parsed.error);
+      logger.error("GET /api/transactions - Transaction read validation error", undefined, {
+        userUuid: session.user.uuid,
+        validationErrors: parsed.error.issues
+      });
       return NextResponse.json(
         { message: "Internal Server Error" },
         { status: 500 }
@@ -170,6 +193,14 @@ export async function GET(req: Request) {
 
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
+
+    logger.info("GET /api/transactions - Successfully fetched transactions", {
+      userUuid: session.user.uuid,
+      returnedCount: parsed.data.length,
+      total,
+      page,
+      pageSize
+    });
 
     return NextResponse.json(
       {
@@ -186,7 +217,9 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (e) {
-    console.error("/api/transactions GET error", e);
+    logger.error("GET /api/transactions - Unexpected error", e as Error, {
+      userUuid: session?.user?.uuid
+    });
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

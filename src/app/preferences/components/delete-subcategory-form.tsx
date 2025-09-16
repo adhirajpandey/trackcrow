@@ -36,8 +36,7 @@ export function DeleteSubcategoryForm({ subcategoryId }: { subcategoryId: number
         setOpen(false);
         toast.success('Subcategory deleted successfully');
       }
-    } catch (error) {
-      console.error('Unexpected error during deletion:', error);
+    } catch {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);
       toast.error(errorMessage);

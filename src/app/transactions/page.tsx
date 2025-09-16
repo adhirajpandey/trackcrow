@@ -18,8 +18,7 @@ export default async function TransactionsPage() {
     if (userDetails) {
       userCategories = userDetails.categories;
     }
-  } catch (error) {
-    console.error("Error fetching user categories for transactions page:", error);
+  } catch {
     return (
       <ErrorMessage message="Failed to load user categories." />
     );

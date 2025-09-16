@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { defaultCategoriesMap } from "@/common/utils";
+import { logger } from "@/lib/logger";
 
 // Extend the Session and User types to include custom properties
 declare module "next-auth" {
@@ -18,7 +19,10 @@ declare module "next-auth" {
 }
 
 async function createDefaultCategoriesAndSubcategories(user_uuid: string) {
-  
+  logger.debug("Creating default categories and subcategories", {
+    userUuid: user_uuid,
+    categoryCount: defaultCategoriesMap.length
+  });
 
   for (const cat of defaultCategoriesMap) {
     const category = await prisma.category.create({
@@ -36,6 +40,11 @@ async function createDefaultCategoriesAndSubcategories(user_uuid: string) {
       })),
     });
   }
+
+  logger.info("Default categories and subcategories created successfully", {
+    userUuid: user_uuid,
+    categoryCount: defaultCategoriesMap.length
+  });
 }
 
 export const authOptions: NextAuthOptions = {
@@ -53,8 +62,16 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn(params) {
       if (!params.user.email) {
+        logger.info("Sign in attempt without email");
         return false;
       }
+      
+      logger.info("Sign in attempt", {
+        email: params.user.email,
+        name: params.user.name,
+        provider: params.account?.provider
+      });
+      
       try {
         const existingUser = await prisma.user.findUnique({
           where: {
@@ -62,8 +79,13 @@ export const authOptions: NextAuthOptions = {
           },
         });
         if (existingUser) {
+          logger.info("Existing user signed in", {
+            userUuid: existingUser.uuid,
+            email: existingUser.email
+          });
           return true;
         }
+        
         const user = await prisma.user.create({
           data: {
             email: params.user.email,
@@ -75,11 +97,19 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
+        logger.info("New user created", {
+          userUuid: user.uuid,
+          email: user.email,
+          name: user.name
+        });
+
         await createDefaultCategoriesAndSubcategories(user.uuid);
 
         return true;
       } catch (error) {
-        console.error("Error creating user:", error);
+        logger.error("Sign in error", error as Error, {
+          email: params.user.email
+        });
         return false;
       }
     },

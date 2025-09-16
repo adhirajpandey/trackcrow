@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { userReadSchema, type Transaction } from "@/common/schemas";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 /**
  * Fetches all transactions for a user, ordered by latest first, and serializes
@@ -14,6 +15,12 @@ export async function getUserTransactions(
   startDate?: Date,
   endDate?: Date,
 ): Promise<Transaction[]> {
+  logger.debug("getUserTransactions - Fetching user transactions", {
+    userUuid,
+    includeCategoryAndSubcategory,
+    dateRange: startDate && endDate ? { startDate: startDate.toISOString(), endDate: endDate.toISOString() } : null
+  });
+
   const whereClause: any = {
     user_uuid: userUuid,
   };
@@ -25,61 +32,87 @@ export async function getUserTransactions(
     };
   }
 
-  const transactions = await prisma.transaction.findMany({
-    where: whereClause,
-    orderBy: {
-      timestamp: "desc",
-    },
-    include: {
-      Category: includeCategoryAndSubcategory,
-      Subcategory: includeCategoryAndSubcategory,
-    },
-  });
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: whereClause,
+      orderBy: {
+        timestamp: "desc",
+      },
+      include: {
+        Category: includeCategoryAndSubcategory,
+        Subcategory: includeCategoryAndSubcategory,
+      },
+    });
 
-  return transactions.map((txn) => ({
-    ...txn,
-    amount: txn.amount.toNumber(), // Convert Decimal to number
-    timestamp: txn.timestamp.toISOString(), // Convert Date to ISO string
-    createdAt: txn.createdAt.toISOString(),
-    updatedAt: txn.updatedAt.toISOString(),
-    category: txn.Category?.name || null,
-    subcategory: txn.Subcategory?.name || null,
-  }));
+    logger.debug("getUserTransactions - Transactions fetched successfully", {
+      userUuid,
+      transactionCount: transactions.length
+    });
+
+    return transactions.map((txn) => ({
+      ...txn,
+      amount: txn.amount.toNumber(), // Convert Decimal to number
+      timestamp: txn.timestamp.toISOString(), // Convert Date to ISO string
+      createdAt: txn.createdAt.toISOString(),
+      updatedAt: txn.updatedAt.toISOString(),
+      category: txn.Category?.name || null,
+      subcategory: txn.Subcategory?.name || null,
+    }));
+  } catch (error) {
+    logger.error("getUserTransactions - Database error", error as Error, {
+      userUuid,
+      includeCategoryAndSubcategory
+    });
+    throw error;
+  }
 }
 
 export async function getUserDetails(userUuid: string) {
-  const dbUser = await prisma.user.findUnique({
-    where: { uuid: userUuid },
-    select: {
-      uuid: true,
-      id: true,
-      Category: {
-        select: {
-          name: true,
-          Subcategory: {
-            select: { name: true },
-            orderBy: { name: "asc" },
+  logger.debug("getUserDetails - Fetching user details", { userUuid });
+
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { uuid: userUuid },
+      select: {
+        uuid: true,
+        id: true,
+        Category: {
+          select: {
+            name: true,
+            Subcategory: {
+              select: { name: true },
+              orderBy: { name: "asc" },
+            },
           },
+          orderBy: { name: "asc" },
         },
-        orderBy: { name: "asc" },
       },
-    },
-  });
+    });
 
-  if (!dbUser) {
-    return null;
+    if (!dbUser) {
+      logger.debug("getUserDetails - User not found", { userUuid });
+      return null;
+    }
+
+    const payload = {
+      uuid: dbUser.uuid,
+      id: dbUser.id,
+      categories: dbUser.Category.map((c) => ({
+        name: c.name,
+        subcategories: c.Subcategory.map((s) => s.name),
+      })),
+    };
+
+    logger.debug("getUserDetails - User details fetched successfully", {
+      userUuid,
+      categoryCount: dbUser.Category.length
+    });
+
+    return userReadSchema.parse(payload);
+  } catch (error) {
+    logger.error("getUserDetails - Database error", error as Error, { userUuid });
+    throw error;
   }
-
-  const payload = {
-    uuid: dbUser.uuid,
-    id: dbUser.id,
-    categories: dbUser.Category.map((c) => ({
-      name: c.name,
-      subcategories: c.Subcategory.map((s) => s.name),
-    })),
-  };
-
-  return userReadSchema.parse(payload);
 }
 
 /**
@@ -110,13 +143,35 @@ export async function validateTransactionOwnership(
   | { success: true; transaction: any }
   | { success: false; error: string }
 > {
-  const transaction = await prisma.transaction.findFirst({
-    where: { id: transactionId, user_uuid: userUuid }
+  logger.debug("validateTransactionOwnership - Validating transaction ownership", {
+    transactionId,
+    userUuid
   });
-  
-  if (!transaction) {
-    return { success: false, error: "Transaction not found" };
+
+  try {
+    const transaction = await prisma.transaction.findFirst({
+      where: { id: transactionId, user_uuid: userUuid }
+    });
+    
+    if (!transaction) {
+      logger.debug("validateTransactionOwnership - Transaction not found or not owned by user", {
+        transactionId,
+        userUuid
+      });
+      return { success: false, error: "Transaction not found" };
+    }
+    
+    logger.debug("validateTransactionOwnership - Transaction ownership validated", {
+      transactionId,
+      userUuid
+    });
+    
+    return { success: true, transaction };
+  } catch (error) {
+    logger.error("validateTransactionOwnership - Database error", error as Error, {
+      transactionId,
+      userUuid
+    });
+    return { success: false, error: "Database error" };
   }
-  
-  return { success: true, transaction };
 }

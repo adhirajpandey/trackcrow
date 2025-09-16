@@ -2,21 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
   context: any
 ) {
   try {
+    logger.info("GET /api/transactions/[id]/suggest - Starting suggestion request");
+    
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.uuid) {
+      logger.info("GET /api/transactions/[id]/suggest - Unauthorized request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const transactionId = Number(context.params.id);
     if (isNaN(transactionId)) {
+      logger.error("GET /api/transactions/[id]/suggest - Invalid transaction ID", undefined, {
+        userUuid: session.user.uuid,
+        transactionId: context.params.id
+      });
       return NextResponse.json({ error: "Invalid transaction ID" }, { status: 400 });
     }
+
+    logger.debug("GET /api/transactions/[id]/suggest - Processing suggestion request", {
+      userUuid: session.user.uuid,
+      transactionId
+    });
 
     // Fetch the current transaction to get its recipient
     const currentTransaction = await prisma.transaction.findUnique({
@@ -30,6 +43,10 @@ export async function GET(
     });
 
     if (!currentTransaction) {
+      logger.error("GET /api/transactions/[id]/suggest - Transaction not found", undefined, {
+        userUuid: session.user.uuid,
+        transactionId
+      });
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
@@ -97,9 +114,20 @@ export async function GET(
       }
     }
 
+    logger.info("GET /api/transactions/[id]/suggest - Suggestions generated successfully", {
+      userUuid: session.user.uuid,
+      transactionId,
+      recipient: currentTransaction.recipient,
+      similarTransactionsCount: similarTransactions.length,
+      suggestedCategory,
+      suggestedSubCategory
+    });
+
     return NextResponse.json({ suggestedCategory, suggestedSubCategory });
   } catch (error) {
-    console.error("Error in /api/transactions/[id]/suggest:", error);
+    logger.error("GET /api/transactions/[id]/suggest - Unexpected error", error as Error, {
+      transactionId: context?.params?.id
+    });
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

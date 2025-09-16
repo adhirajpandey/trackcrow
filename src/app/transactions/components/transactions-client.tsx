@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Transaction } from "@/common/schemas";
@@ -214,7 +214,7 @@ export function TransactionsClient({
   const [error, setError] = useState<string | null>(null);
 
   // Function to remove a transaction from the current data
-  const removeTransaction = (transactionId: number) => {
+  const removeTransaction = useCallback((transactionId: number) => {
     setData(prevData => {
       if (!prevData) return prevData;
       
@@ -231,7 +231,7 @@ export function TransactionsClient({
         hasPrev: page > 1
       };
     });
-  };
+  }, [pageSize, page]);
 
   // Keep URL in sync with page and query
   useEffect(() => {

@@ -36,8 +36,7 @@ export function DeleteCategoryForm({ categoryId }: { categoryId: number }) {
         setOpen(false);
         toast.success('Category deleted successfully');
       }
-    } catch (error) {
-      console.error('Unexpected error during deletion:', error);
+    } catch {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);
       toast.error(errorMessage);

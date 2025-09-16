@@ -4,6 +4,7 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { validateSession, validateTransactionOwnership } from "@/common/server";
+import { logger } from "@/lib/logger";
 
 const updateTransactionSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -23,8 +24,13 @@ const updateTransactionSchema = z.object({
 });
 
 export async function updateTransaction(formData: FormData) {
+  logger.info("updateTransaction - Starting transaction update");
+  
   const sessionResult = await validateSession();
   if (!sessionResult.success) {
+    logger.info("updateTransaction - Session validation failed", {
+      error: sessionResult.error
+    });
     return { error: sessionResult.error };
   }
   const { userUuid } = sessionResult;
@@ -42,11 +48,24 @@ export async function updateTransaction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    console.error("Failed to parse update transaction form data", parsed.error);
+    logger.error("updateTransaction - Validation failed", undefined, {
+      userUuid,
+      validationErrors: parsed.error.issues
+    });
     return { error: "Invalid fields", issues: parsed.error.issues } as const;
   }
 
   const { id, amount, recipient, recipient_name, categoryId, subcategoryId, type, remarks, timestamp } = parsed.data;
+
+  logger.debug("updateTransaction - Validated update data", {
+    userUuid,
+    transactionId: id,
+    amount,
+    recipient,
+    categoryId,
+    subcategoryId,
+    type
+  });
 
   try {
     const transactionResult = await validateTransactionOwnership(id, userUuid);
@@ -95,8 +114,19 @@ export async function updateTransaction(formData: FormData) {
     }
 
     await prisma.transaction.update({ where: { id }, data: updateData });
+
+    logger.info("updateTransaction - Transaction updated successfully", {
+      userUuid,
+      transactionId: id,
+      amount,
+      recipient,
+      type
+    });
   } catch (error) {
-    console.error("Failed to update transaction", error);
+    logger.error("updateTransaction - Failed to update transaction", error as Error, {
+      userUuid,
+      transactionId: id
+    });
     return { error: "Failed to update transaction" } as const;
   }
 
@@ -107,8 +137,16 @@ export async function updateTransaction(formData: FormData) {
 }
 
 export async function deleteTransaction(transactionId: number) {
+  logger.info("deleteTransaction - Starting transaction deletion", {
+    transactionId
+  });
+  
   const sessionResult = await validateSession();
   if (!sessionResult.success) {
+    logger.info("deleteTransaction - Session validation failed", {
+      error: sessionResult.error,
+      transactionId
+    });
     return { error: sessionResult.error };
   }
   const { userUuid } = sessionResult;
@@ -125,13 +163,21 @@ export async function deleteTransaction(transactionId: number) {
       where: { id: transactionId }
     });
 
+    logger.info("deleteTransaction - Transaction deleted successfully", {
+      userUuid,
+      transactionId
+    });
+
     // Revalidate the transactions page to update the UI
     revalidatePath("/transactions");
     revalidatePath(`/transactions/${transactionId}`);
 
     return { message: "Transaction deleted successfully" };
   } catch (error) {
-    console.error("Failed to delete transaction", error);
+    logger.error("deleteTransaction - Failed to delete transaction", error as Error, {
+      userUuid,
+      transactionId
+    });
     return { error: "Failed to delete transaction" };
   }
 }
