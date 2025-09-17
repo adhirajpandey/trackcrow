@@ -4,31 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport } from "ai";
-
-function TypingText({ text }: { text: string }) {
-  const [displayed, setDisplayed] = useState("");
-  const prevTextRef = useRef("");
-
-  useEffect(() => {
-    if (text.length <= prevTextRef.current.length) return;
-
-    let i = prevTextRef.current.length;
-
-    const interval = setInterval(() => {
-      if (i < text.length) {
-        setDisplayed((prev) => prev + text.charAt(i));
-        i++;
-      } else {
-        clearInterval(interval);
-        prevTextRef.current = text;
-      }
-    }, 30);
-
-    return () => clearInterval(interval);
-  }, [text]);
-
-  return <span className="whitespace-pre-wrap">{displayed}</span>;
-}
+import { TypingText } from "@/app/crow-bot/components/typing-text";
+import { Thinking } from "@/app/crow-bot/components/thinking";
 
 export default function CrowBotPage() {
   const [input, setInput] = useState("");
@@ -215,6 +192,7 @@ export default function CrowBotPage() {
                         .filter((p) => p.type === "text")
                         .map((p) => p.text)
                         .join("")}
+                      scrollRef={chatEndRef}
                     />
                   </div>
                 ) : (
@@ -230,7 +208,7 @@ export default function CrowBotPage() {
             ))}
             {status === "submitted" && (
               <div className="w-full max-w-2xl mx-auto text-sm text-zinc-500 italic">
-                Thinking...
+                <Thinking />
               </div>
             )}
             <div ref={chatEndRef} />
