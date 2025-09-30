@@ -1,23 +1,19 @@
 "use client";
 
+import { useChat } from "@ai-sdk/react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { useChat } from "@ai-sdk/react";
-import { TextStreamChatTransport } from "ai";
-import { TypingText } from "@/app/crow-bot/components/typing-text";
+import { ExpenseCard } from "@/app/crow-bot/components/expense-card";
 import { Thinking } from "@/app/crow-bot/components/thinking";
 
 export default function CrowBotPage() {
   const [input, setInput] = useState("");
+  const { messages, sendMessage, status } = useChat();
   const [activeMenu, setActiveMenu] = useState<
     "transaction" | "analytics" | null
   >(null);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
-
-  const { messages, sendMessage, status, setMessages } = useChat({
-    transport: new TextStreamChatTransport({ api: "/api/chat" }),
-  });
 
   const suggestions =
     activeMenu === "transaction"
@@ -36,7 +32,6 @@ export default function CrowBotPage() {
 
   const handleReset = () => {
     setInput("");
-    setMessages([]);
     setActiveMenu(null);
   };
 
@@ -44,7 +39,7 @@ export default function CrowBotPage() {
     setActiveMenu(activeMenu === menu ? null : menu);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
     sendMessage({ text: input });
     setInput("");
@@ -183,29 +178,51 @@ export default function CrowBotPage() {
           </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <div key={msg.id} className="w-full max-w-2xl mx-auto flex">
-                {msg.role === "assistant" ? (
-                  <div className="mr-auto text-foreground text-sm">
-                    <TypingText
-                      text={msg.parts
-                        .filter((p) => p.type === "text")
-                        .map((p) => p.text)
-                        .join("")}
-                      scrollRef={chatEndRef}
-                    />
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className="w-full max-w-2xl mx-auto flex mb-2"
+              >
+                {message.role === "assistant" ? (
+                  <div className="mr-auto text-foreground text-sm space-y-2">
+                    {Array.isArray(message.parts) &&
+                      message.parts.map((part: any, index: number) => {
+                        if (part.type === "text") {
+                          return (
+                            <p key={index} className="text-sm">
+                              {part.text}
+                            </p>
+                          );
+                        }
+
+                        if (part.type === "tool-logExpense") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Your transaction has been successfully added:
+                              </p>
+                              <ExpenseCard {...part.output} />
+                            </div>
+                          );
+                        }
+
+                        return null;
+                      })}
                   </div>
                 ) : (
                   <div className="ml-auto bg-muted text-white px-4 py-2 rounded-lg text-sm max-w-xs break-words">
-                    {msg.parts
-                      .filter((p) => p.type === "text")
-                      .map((p, i) => (
-                        <span key={`${msg.id}-${i}`}>{p.text}</span>
-                      ))}
+                    {Array.isArray(message.parts) &&
+                      message.parts.map((part: any, index: number) => {
+                        if (part.type === "text") {
+                          return <p key={index}>{part.text}</p>;
+                        }
+                        return null;
+                      })}
                   </div>
                 )}
               </div>
             ))}
+
             {status === "submitted" && (
               <div className="w-full max-w-2xl mx-auto text-sm text-zinc-500 italic">
                 <Thinking />
@@ -232,7 +249,6 @@ export default function CrowBotPage() {
                 }
               }}
             />
-
             <div className="flex justify-end gap-3">
               <button
                 onClick={handleReset}

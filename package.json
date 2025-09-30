@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^2.0.14",
+    "@ai-sdk/react": "^2.0.44",
+    "@ai-sdk/rsc": "^1.0.57",
     "@hookform/resolvers": "^5.2.1",
     "@prisma/client": "^6.15.0",
     "@prisma/extension-accelerate": "^2.0.2",
@@ -27,6 +30,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
+    "ai": "^5.0.57",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "d3-scale": "^4.0.2",
