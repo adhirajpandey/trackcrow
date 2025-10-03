@@ -1,21 +1,21 @@
 type ExpenseProps = {
   amount: number;
   category: string;
+  subcategory?: string;
   date: string;
   description?: string;
   recipient?: string;
   type?: string;
-  subcategory?: string;
 };
 
 export const ExpenseCard = ({
   amount,
   category,
+  subcategory,
   date,
   description,
   recipient = "N/A",
   type = "N/A",
-  subcategory = "N/A",
 }: ExpenseProps) => {
   return (
     <div className="w-full max-w-2xl mx-auto rounded-xl border border-border px-8 py-6 shadow-md flex flex-col space-y-6">

@@ -8,7 +8,7 @@ import { Thinking } from "@/app/crow-bot/components/thinking";
 
 export default function CrowBotPage() {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status, setMessages } = useChat();
   const [activeMenu, setActiveMenu] = useState<
     "transaction" | "analytics" | null
   >(null);
@@ -33,6 +33,7 @@ export default function CrowBotPage() {
   const handleReset = () => {
     setInput("");
     setActiveMenu(null);
+    setMessages([]);
   };
 
   const toggleMenu = (menu: "transaction" | "analytics") => {

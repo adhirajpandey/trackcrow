@@ -4,170 +4,177 @@ import {
   generateText,
   convertToModelMessages,
   UIMessage,
-  stepCountIs,
-  createUIMessageStreamResponse,
-  UIMessageChunk,
 } from "ai";
 import { tools } from "@/app/crow-bot/tools";
+import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { z } from "zod";
 
-const schema: Record<string, string[]> = {
-  log_expense: ["amount", "category", "subcategory", "date", "description"],
-  show_expenses: [],
-  show_summary: ["time_range"],
-  set_budget: ["category", "amount", "time_range"],
-};
+/* -------------------- Schemas -------------------- */
+const UnifiedSchema = z.object({
+  relevance: z.number().min(1).max(5),
+  intent: z.enum([
+    "log_expense",
+    "show_transactions",
+    "calculate_total_spent",
+    "spending_trend",
+    "last_month_summary",
+    "set_budget",
+    "other",
+  ]),
+  structured_data: z.object({
+    amount: z.number().nullable(),
+    category: z.string().nullable(),
+    subcategory: z.string().nullable(),
+    date: z.string().nullable(),
+    description: z.string().nullable(),
+  }),
+  missing_fields: z.array(z.string()),
+});
 
-export async function POST(request: Request) {
-  const { messages }: { messages: UIMessage[] } = await request.json();
-  const coreMessages = convertToModelMessages(messages);
-
-  const relevancePrompt = [
-    {
-      role: "system" as const,
-      content: `
-You are a classifier.
-Decide if the user query is relevant to an expense tracker app.
-
-Relevant if:
-- It mentions money, amounts, costs, spending, purchases, bills, budgets, savings.
-- It describes transactions (e.g., "I spent 200", "Dinner cost 3000").
-- It asks for expense summaries or budgets.
-
-Irrelevant if it's just casual text without any financial context.
-
-Respond ONLY with a number from 1 (not relevant) to 5 (highly relevant).
-      `,
-    },
-    ...coreMessages,
-  ];
-
-  const relevanceRes = await generateText({
-    model: google("gemini-2.5-flash"),
-    messages: relevancePrompt,
-  });
-
-  const score = parseInt(relevanceRes.text.trim(), 10);
-
-  if (isNaN(score) || score < 4) {
-    const stream = new ReadableStream<UIMessageChunk>({
-      start(controller) {
-        const id = crypto.randomUUID();
-
-        controller.enqueue({
-          type: "text-start",
-          id,
-        });
-
-        controller.enqueue({
-          type: "text-delta",
-          id,
-          delta:
-            "This query is not related to expense tracking. I can only help with expenses, transactions, budgets, and summaries.",
-        });
-
-        controller.enqueue({
-          type: "text-end",
-          id,
-        });
-
-        controller.close();
-      },
-    });
-
-    return createUIMessageStreamResponse({ stream });
+/* -------------------- Helpers -------------------- */
+async function getSessionUser() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uuid) {
+    throw new Error("Unauthorized");
   }
+  return session.user.uuid;
+}
 
-  const intentPrompt = {
+async function getCategories(userUuid: string) {
+  const categories = await prisma.category.findMany({
+    where: { user_uuid: userUuid },
+    include: { Subcategory: true },
+    orderBy: { name: "asc" },
+  });
+  return categories.map((c) => ({
+    name: c.name,
+    subcategories: c.Subcategory.map((s) => s.name),
+  }));
+}
+
+function buildClassifierPrompt(categoriesContext: any[]) {
+  return {
     role: "system" as const,
     content: `
-You are an expense tracking assistant.
-Identify the intent of the user query from these options:
-- "log_expense" → adding a new expense
-- "show_expenses" → listing or filtering expenses
-- "show_summary" → daily/weekly/monthly summary
-- "set_budget" → creating, updating, or controlling spending
-- "other" → only if clearly unrelated to expense tracking
+You are a classifier + expense intent extractor.
 
-Respond in JSON ONLY:
+1. Relevance classification:
+Relevant if it’s about money, costs, budgets, savings, purchases, transactions.
+Irrelevant otherwise.
+
+2. If relevant, extract intent + fields.
+
+Categories and subcategories:
+${JSON.stringify(categoriesContext, null, 2)}
+
+Rules:
+- intent ∈ [log_expense, show_expenses, show_summary, set_budget, other]
+- Extract amount, category, subcategory, date, description.
+- Match category/subcategory strictly from list above. Default to first subcategory if ambiguous.
+- Description ≤ 5 words.
+- Respond ONLY with JSON:
 {
-  "intent": "<one of the options>",
-  "structured_data": { ... },
+  "relevance": <1-5>,
+  "intent": "...",
+  "structured_data": {
+    "amount": <number|null>,
+    "category": "<string|null>",
+    "subcategory": "<string|null>",
+    "date": "<ISO|null>",
+    "description": "<string|null>"
+  },
   "missing_fields": [ ... ]
 }
+- If irrelevant → return {"relevance":1}
+- If critical fields missing → missing_fields must list them.
+- Do not explain anything.
     `,
   };
+}
 
-  const intentRes = await generateText({
-    model: google("gemini-2.5-flash-lite"),
-    messages: [intentPrompt, ...coreMessages],
-  });
+function parseUnifiedResponse(text: string) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  return UnifiedSchema.parse(JSON.parse(match[0]));
+}
 
-  let parsed;
+function validateCategoryData(structured: any, categories: any[]) {
+  const category = categories.find(
+    (c) => c.name.toLowerCase() === (structured.category || "").toLowerCase()
+  );
+  if (!category) return null;
+
+  let subcategory = category.subcategories.find(
+    (s: string) =>
+      s.toLowerCase() === (structured.subcategory || "").toLowerCase()
+  );
+  if (!subcategory && category.subcategories.length > 0) {
+    subcategory = category.subcategories[0];
+  }
+
+  return {
+    ...structured,
+    category: category.name,
+    subcategory: subcategory || null,
+  };
+}
+
+/* -------------------- Route Handler -------------------- */
+export async function POST(request: Request) {
   try {
-    parsed = JSON.parse(intentRes.text.trim());
-  } catch {
-    const match = intentRes.text.match(/\{[\s\S]*\}/);
-    parsed = match ? JSON.parse(match[0]) : null;
-  }
-  if (!parsed) {
-    return new Response("Failed to parse intent JSON", { status: 500 });
-  }
+    const { messages }: { messages: UIMessage[] } = await request.json();
+    const coreMessages = convertToModelMessages(messages);
 
-  const { intent, structured_data = {} } = parsed;
-  if (intent === "other") {
-    return new Response(
-      "I understood your query, but it's not directly related to expense tracking.",
-      { status: 200 }
-    );
-  }
+    // Step 1: Auth
+    const userUuid = await getSessionUser();
 
-  const required = schema[intent] || [];
-  const missing_fields = required.filter((f) => !structured_data[f]);
+    // Step 2: Categories
+    const categoriesContext = await getCategories(userUuid);
 
-  if (missing_fields.length > 0) {
-    const stream = new ReadableStream<UIMessageChunk>({
-      start(controller) {
-        const id = crypto.randomUUID();
-
-        controller.enqueue({
-          type: "text-start",
-          id,
-        });
-
-        controller.enqueue({
-          type: "text-delta",
-          id,
-          delta: `I need more details before proceeding. Please provide: ${missing_fields.join(", ")}.`,
-        });
-
-        controller.enqueue({
-          type: "text-end",
-          id,
-        });
-
-        controller.close();
-      },
+    // Step 3: First LLM call (classification + structuring)
+    const classifierPrompt = buildClassifierPrompt(categoriesContext);
+    const unifiedRes = await generateText({
+      model: google("gemini-2.5-flash"),
+      messages: [classifierPrompt, ...coreMessages],
     });
 
-    return createUIMessageStreamResponse({
-      stream,
-      headers: {
-        "X-Pending-Intent": JSON.stringify({
-          intent,
-          structured_data,
-          missing_fields,
-        }),
-      },
+    const parsed = parseUnifiedResponse(unifiedRes.text);
+    if (!parsed) return new Response("Aborted", { status: 204 });
+
+    const { relevance, intent, structured_data, missing_fields } = parsed;
+
+    if (relevance < 4 || intent === "other" || missing_fields.length > 0) {
+      return new Response("Aborted", { status: 204 });
+    }
+
+    // Step 4: Validate category/subcategory
+    const validated = validateCategoryData(structured_data, categoriesContext);
+    if (!validated) return new Response("Aborted", { status: 204 });
+
+    // Step 5: Second LLM call (tool execution)
+    const result = streamText({
+      model: google("gemini-2.5-flash"),
+      system:
+        "You are a structured expense tracking assistant. Respond with tool calls only.",
+      messages: [
+        ...coreMessages,
+        {
+          role: "assistant",
+          content: `Use this validated structured data for processing, do not infer again:
+${JSON.stringify(validated, null, 2)}`,
+        },
+      ],
+      tools,
     });
+
+    return result.toUIMessageStreamResponse();
+  } catch (err: any) {
+    if (err.message === "Unauthorized") {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    console.error("POST /crow-bot error:", err);
+    return new Response("Internal Server Error", { status: 500 });
   }
-
-  const result = streamText({
-    model: google("gemini-2.5-flash-lite"),
-    system: "You are a friendly expense tracking assistant!",
-    messages: coreMessages,
-    stopWhen: stepCountIs(1),
-    tools,
-  });
-
-  return result.toUIMessageStreamResponse();
 }
