@@ -4,6 +4,8 @@ import {
   generateText,
   convertToModelMessages,
   UIMessage,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
 } from "ai";
 import { tools } from "@/app/crow-bot/tools";
 import prisma from "@/lib/prisma";
@@ -12,15 +14,15 @@ import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 
 /* -------------------- Schemas -------------------- */
-const UnifiedSchema = z.object({
+const ToolSchema = z.object({
   relevance: z.number().min(1).max(5),
   intent: z.enum([
-    "log_expense",
-    "show_transactions",
-    "calculate_total_spent",
-    "spending_trend",
-    "last_month_summary",
-    "set_budget",
+    "logExpense",
+    "showTransactions",
+    "calculateTotalSpent",
+    "spendingTrend",
+    "lastMonthSummary",
+    "setBudget",
     "other",
   ]),
   structured_data: z.object({
@@ -29,6 +31,7 @@ const UnifiedSchema = z.object({
     subcategory: z.string().nullable(),
     date: z.string().nullable(),
     description: z.string().nullable(),
+    month: z.string().nullable(),
   }),
   missing_fields: z.array(z.string()),
 });
@@ -70,7 +73,7 @@ Categories and subcategories:
 ${JSON.stringify(categoriesContext, null, 2)}
 
 Rules:
-- intent ∈ [log_expense, show_expenses, show_summary, set_budget, other]
+- intent ∈ [logExpense, showTransactions, calculateTotalSpent, spendingTrend, lastMonthSummary, setBudget, other]
 - Extract amount, category, subcategory, date, description.
 - Match category/subcategory strictly from list above. Default to first subcategory if ambiguous.
 - Description ≤ 5 words.
@@ -84,10 +87,11 @@ Rules:
     "subcategory": "<string|null>",
     "date": "<ISO|null>",
     "description": "<string|null>"
+    "month": "<string|null>"
   },
   "missing_fields": [ ... ]
 }
-- If irrelevant → return {"relevance":1}
+- If irrelevant, set "relevance": 1, "intent": "other", "structured_data" fields all null, and "missing_fields": [].
 - If critical fields missing → missing_fields must list them.
 - Do not explain anything.
     `,
@@ -97,7 +101,15 @@ Rules:
 function parseUnifiedResponse(text: string) {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
-  return UnifiedSchema.parse(JSON.parse(match[0]));
+  try {
+    return ToolSchema.parse(JSON.parse(match[0]));
+  } catch (err) {
+    console.error("❌ Failed to parse unified response:", {
+      raw: text,
+      error: err instanceof Error ? err.message : err,
+    });
+    return null;
+  }
 }
 
 function validateCategoryData(structured: any, categories: any[]) {
@@ -127,6 +139,10 @@ export async function POST(request: Request) {
     const { messages }: { messages: UIMessage[] } = await request.json();
     const coreMessages = convertToModelMessages(messages);
 
+    const lastMessage = messages[messages.length - 1];
+    const metadata = lastMessage.metadata as { intent?: string; url?: string };
+    const promptIntent = metadata?.intent || "other";
+
     // Step 1: Auth
     const userUuid = await getSessionUser();
 
@@ -140,18 +156,87 @@ export async function POST(request: Request) {
       messages: [classifierPrompt, ...coreMessages],
     });
 
+    console.log("Unified response:", unifiedRes.text);
+
     const parsed = parseUnifiedResponse(unifiedRes.text);
     if (!parsed) return new Response("Aborted", { status: 204 });
 
     const { relevance, intent, structured_data, missing_fields } = parsed;
 
-    if (relevance < 4 || intent === "other" || missing_fields.length > 0) {
+    if (relevance <= 2 && promptIntent) {
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+
+            writer.write({ type: "start", messageId: id });
+
+            writer.write({ type: "text-start", id });
+
+            writer.write({
+              type: "text-delta",
+              delta: `This doesn’t look like an expense or financial request. Try asking about ${promptIntent}.`,
+              id,
+            });
+
+            writer.write({ type: "text-end", id });
+
+            writer.write({ type: "finish" });
+          },
+        }),
+      });
+    }
+
+    let allowedTools: Record<string, any> = {};
+
+    if (promptIntent === "transaction") {
+      allowedTools = {
+        logExpense: tools.logExpense,
+        showTransactions: tools.showTransactions,
+        calculateTotalSpent: tools.calculateTotalSpent,
+      };
+    } else if (promptIntent === "analytics") {
+      allowedTools = {
+        spendingTrend: tools.spendingTrend,
+        lastMonthSummary: tools.lastMonthSummary,
+        setBudget: tools.setBudget,
+      };
+    }
+
+    // Safety: ensure we actually have a tool for this intent
+    if (!allowedTools[intent]) {
       return new Response("Aborted", { status: 204 });
     }
 
-    // Step 4: Validate category/subcategory
-    const validated = validateCategoryData(structured_data, categoriesContext);
-    if (!validated) return new Response("Aborted", { status: 204 });
+    // Only require category validation if the intent needs it
+    const needsCategory = [
+      "logExpense",
+      "showTransactions",
+      "calculateTotalSpent",
+    ].includes(intent);
+
+    const validated = needsCategory
+      ? validateCategoryData(structured_data, categoriesContext)
+      : structured_data;
+
+    // If missing fields, ask user for them
+    if (
+      (needsCategory && !validated) ||
+      (missing_fields && missing_fields.length > 0)
+    ) {
+      const askFields =
+        missing_fields && missing_fields.length > 0
+          ? `Please provide the following information to proceed: ${missing_fields.join(", ")}.`
+          : "Some required information is missing. Please clarify.";
+
+      return new Response(
+        JSON.stringify({
+          role: "assistant",
+          parts: [{ type: "text", text: askFields }],
+        }),
+        { status: 200 }
+      );
+    }
 
     // Step 5: Second LLM call (tool execution)
     const result = streamText({
@@ -166,7 +251,7 @@ export async function POST(request: Request) {
 ${JSON.stringify(validated, null, 2)}`,
         },
       ],
-      tools,
+      tools: allowedTools,
     });
 
     return result.toUIMessageStreamResponse();
