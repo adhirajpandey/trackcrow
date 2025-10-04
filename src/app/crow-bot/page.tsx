@@ -10,8 +10,8 @@ import { MonthSummaryCard } from "@/app/crow-bot/components/month-summary-card";
 import { BudgetCard } from "@/app/crow-bot/components/budget-card";
 import { TotalSpendsCard } from "@/app/crow-bot/components/total-spends-card";
 import { Thinking } from "@/app/crow-bot/components/thinking";
+import { TypingText } from "@/app/crow-bot/components/typing-text";
 
-// Reusable toggle component
 function MenuToggle({
   activeMenu,
   toggleMenu,
@@ -168,42 +168,6 @@ export default function CrowBotPage() {
                   toggleMenu={toggleMenu}
                   setIntentPrompt={setIntentPrompt}
                 />
-                {/* <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setIntentPrompt("");
-                      toggleMenu("transaction");
-                    }}
-                    className={`rounded-lg border border-border px-3 py-1 text-sm ${
-                      activeMenu === "transaction"
-                        ? "text-white"
-                        : "bg-background hover:bg-accent"
-                    }`}
-                    style={{
-                      backgroundColor:
-                        activeMenu === "transaction" ? "#75378d" : undefined,
-                    }}
-                  >
-                    Transaction
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIntentPrompt("");
-                      toggleMenu("analytics");
-                    }}
-                    className={`rounded-lg border border-border px-3 py-1 text-sm ${
-                      activeMenu === "analytics"
-                        ? "text-white"
-                        : "bg-background hover:bg-accent"
-                    }`}
-                    style={{
-                      backgroundColor:
-                        activeMenu === "analytics" ? "#75378d" : undefined,
-                    }}
-                  >
-                    Analytics
-                  </button>
-                </div> */}
                 <div className="flex gap-3">
                   <button
                     onClick={handleReset}
@@ -260,110 +224,107 @@ export default function CrowBotPage() {
           </div>
         ) : (
           <>
-            {messages.map(
-              (message) => (
-                console.log(message),
-                (
-                  <div
-                    key={message.id}
-                    className="w-full max-w-2xl mx-auto flex mb-2"
-                  >
-                    {message.role === "assistant" ? (
-                      <div className="mr-auto text-foreground text-sm space-y-2">
-                        {Array.isArray(message.parts) &&
-                          message.parts.map((part: any, index: number) => {
-                            if (part.type === "text") {
-                              return (
-                                <p key={index} className="text-sm">
-                                  {part.text}
-                                </p>
-                              );
-                            }
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className="w-full max-w-2xl mx-auto flex mb-2"
+              >
+                {message.role === "assistant" ? (
+                  <div className="mr-auto text-foreground text-sm space-y-2">
+                    {Array.isArray(message.parts) &&
+                      message.parts.map((part: any, index: number) => {
+                        if (part.type === "text") {
+                          return (
+                            <p key={index} className="text-sm">
+                              <TypingText
+                                text={part.text}
+                                scrollRef={chatEndRef}
+                              />
+                            </p>
+                          );
+                        }
 
-                            if (part.type === "tool-logExpense") {
-                              return (
-                                <div key={index} className="my-4 space-y-2">
-                                  <p className="text-sm text-green-400 font-medium">
-                                    ✅ Your transaction has been successfully
-                                    added:
-                                  </p>
-                                  <ExpenseCard {...part.output} />
-                                </div>
-                              );
-                            }
-                            if (part.type === "tool-setBudget") {
-                              return (
-                                <div key={index} className="my-4 space-y-2">
-                                  <p className="text-sm text-green-400 font-medium">
-                                    ✅ Your Budget has been successfully set:
-                                  </p>
-                                  <BudgetCard {...part.output} />
-                                </div>
-                              );
-                            }
+                        if (part.type === "tool-logExpense") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Your transaction has been successfully added:
+                              </p>
+                              <ExpenseCard {...part.output} />
+                            </div>
+                          );
+                        }
+                        if (part.type === "tool-setBudget") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Your Budget has been successfully set:
+                              </p>
+                              <BudgetCard {...part.output} />
+                            </div>
+                          );
+                        }
 
-                            if (part.type === "tool-showTransactions") {
-                              return (
-                                <div key={index} className="my-4 space-y-2">
-                                  <p className="text-sm text-green-400 font-medium">
-                                    ✅ Here are your recent transactions:
-                                  </p>
-                                  <ShowTransactionsCard {...part.output} />
-                                </div>
-                              );
-                            }
+                        if (part.type === "tool-showTransactions") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Here are your recent transactions:
+                              </p>
+                              <ShowTransactionsCard {...part.output} />
+                            </div>
+                          );
+                        }
 
-                            if (part.type === "tool-totalSpends") {
-                              return (
-                                <div key={index} className="my-4 space-y-2">
-                                  <p className="text-sm text-green-400 font-medium">
-                                    ✅ Here is the total spend information:
-                                  </p>
-                                  <TotalSpendsCard {...part.output} />
-                                </div>
-                              );
-                            }
+                        if (part.type === "tool-totalSpends") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Here is the total spend information:
+                              </p>
+                              <TotalSpendsCard {...part.output} />
+                            </div>
+                          );
+                        }
 
-                            if (part.type === "tool-lastMonthSummary") {
-                              return (
-                                <div key={index} className="my-4 space-y-2">
-                                  <p className="text-sm text-green-400 font-medium">
-                                    ✅ Here is your month summary:
-                                  </p>
-                                  <MonthSummaryCard {...part.output} />
-                                </div>
-                              );
-                            }
+                        if (part.type === "tool-lastMonthSummary") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Here is your month summary:
+                              </p>
+                              <MonthSummaryCard {...part.output} />
+                            </div>
+                          );
+                        }
 
-                            if (part.type === "tool-spendingTrend") {
-                              return (
-                                <div key={index} className="my-4 space-y-2">
-                                  <p className="text-sm text-green-400 font-medium">
-                                    ✅ Here is your spending trend:
-                                  </p>
-                                  <SpendingTrendCard {...part.output} />
-                                </div>
-                              );
-                            }
+                        if (part.type === "tool-spendingTrend") {
+                          return (
+                            <div key={index} className="my-4 space-y-2">
+                              <p className="text-sm text-green-400 font-medium">
+                                ✅ Here is your spending trend:
+                              </p>
+                              <SpendingTrendCard {...part.output} />
+                            </div>
+                          );
+                        }
 
-                            return null;
-                          })}
-                      </div>
-                    ) : (
-                      <div className="ml-auto bg-muted text-white px-4 py-2 rounded-lg text-sm max-w-xs break-words">
-                        {Array.isArray(message.parts) &&
-                          message.parts.map((part: any, index: number) => {
-                            if (part.type === "text") {
-                              return <p key={index}>{part.text}</p>;
-                            }
-                            return null;
-                          })}
-                      </div>
-                    )}
+                        return null;
+                      })}
                   </div>
-                )
-              )
-            )}
+                ) : (
+                  <div className="ml-auto bg-muted text-white px-4 py-2 rounded-lg text-sm max-w-xs break-words">
+                    {Array.isArray(message.parts) &&
+                      message.parts.map((part: any, index: number) => {
+                        if (part.type === "text") {
+                          return <p key={index}>{part.text}</p>;
+                        }
+                        return null;
+                      })}
+                  </div>
+                )}
+              </div>
+            ))}
 
             {status === "submitted" && (
               <div className="w-full max-w-2xl mx-auto text-sm text-zinc-500 italic">

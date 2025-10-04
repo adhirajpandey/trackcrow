@@ -143,23 +143,40 @@ export async function POST(request: Request) {
     const metadata = lastMessage.metadata as { intent?: string; url?: string };
     const promptIntent = metadata?.intent || "other";
 
-    // Step 1: Auth
     const userUuid = await getSessionUser();
 
-    // Step 2: Categories
     const categoriesContext = await getCategories(userUuid);
 
-    // Step 3: First LLM call (classification + structuring)
     const classifierPrompt = buildClassifierPrompt(categoriesContext);
     const unifiedRes = await generateText({
       model: google("gemini-2.5-flash"),
       messages: [classifierPrompt, ...coreMessages],
     });
 
-    console.log("Unified response:", unifiedRes.text);
-
     const parsed = parseUnifiedResponse(unifiedRes.text);
-    if (!parsed) return new Response("Aborted", { status: 204 });
+    if (!parsed) {
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+
+            writer.write({ type: "start", messageId: id });
+
+            writer.write({ type: "text-start", id });
+
+            writer.write({
+              type: "text-delta",
+              delta: `Oops, I couldn't understand your request. Could you please rephrase?`,
+              id,
+            });
+
+            writer.write({ type: "text-end", id });
+
+            writer.write({ type: "finish" });
+          },
+        }),
+      });
+    }
 
     const { relevance, intent, structured_data, missing_fields } = parsed;
 
@@ -203,12 +220,30 @@ export async function POST(request: Request) {
       };
     }
 
-    // Safety: ensure we actually have a tool for this intent
     if (!allowedTools[intent]) {
-      return new Response("Aborted", { status: 204 });
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+
+            writer.write({ type: "start", messageId: id });
+
+            writer.write({ type: "text-start", id });
+
+            writer.write({
+              type: "text-delta",
+              delta: `Oops, I cannot perform this operation. Try asking about ${promptIntent}.`,
+              id,
+            });
+
+            writer.write({ type: "text-end", id });
+
+            writer.write({ type: "finish" });
+          },
+        }),
+      });
     }
 
-    // Only require category validation if the intent needs it
     const needsCategory = [
       "logExpense",
       "showTransactions",
@@ -219,26 +254,49 @@ export async function POST(request: Request) {
       ? validateCategoryData(structured_data, categoriesContext)
       : structured_data;
 
-    // If missing fields, ask user for them
     if (
       (needsCategory && !validated) ||
       (missing_fields && missing_fields.length > 0)
     ) {
-      const askFields =
-        missing_fields && missing_fields.length > 0
-          ? `Please provide the following information to proceed: ${missing_fields.join(", ")}.`
-          : "Some required information is missing. Please clarify.";
+      let askFields = "";
 
-      return new Response(
-        JSON.stringify({
-          role: "assistant",
-          parts: [{ type: "text", text: askFields }],
+      if (needsCategory && !validated) {
+        const categoryExamples = categoriesContext
+          .slice(0, 3)
+          .map((c) => {
+            const sub = c.subcategories?.slice(0, 2)?.join(", ") || "";
+            return sub ? `${c.name}` : c.name;
+          })
+          .join(", ");
+
+        askFields = `Please specify a valid category and subcategory from your saved list, such as ${categoryExamples}.`;
+      } else if (missing_fields && missing_fields.length > 0) {
+        askFields = `Please provide the following information to proceed: ${missing_fields.join(", ")}.`;
+      } else {
+        askFields = `Some required information is missing. Please clarify your request.`;
+      }
+
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+
+            writer.write({ type: "start", messageId: id });
+            writer.write({ type: "text-start", id });
+
+            writer.write({
+              type: "text-delta",
+              delta: askFields,
+              id,
+            });
+
+            writer.write({ type: "text-end", id });
+            writer.write({ type: "finish" });
+          },
         }),
-        { status: 200 }
-      );
+      });
     }
 
-    // Step 5: Second LLM call (tool execution)
     const result = streamText({
       model: google("gemini-2.5-flash"),
       system:
