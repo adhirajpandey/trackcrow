@@ -66,3 +66,25 @@ export const userReadSchema = z.object({
   id: z.number(),
   categories: z.array(categorySchema),
 });
+
+export const toolSchema = z.object({
+  relevance: z.number().min(1).max(5),
+  intent: z.enum([
+    "logExpense",
+    "showTransactions",
+    "calculateTotalSpent",
+    "spendingTrend",
+    "lastMonthSummary",
+    "setBudget",
+    "other",
+  ]),
+  structured_data: z.object({
+    amount: z.number().nullable(),
+    category: z.string().nullable(),
+    subcategory: z.string().nullable(),
+    date: z.string().nullable(),
+    description: z.string().nullable(),
+    month: z.string().nullable(),
+  }),
+  missing_fields: z.array(z.string()),
+});

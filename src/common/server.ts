@@ -13,12 +13,15 @@ export async function getUserTransactions(
   userUuid: string,
   includeCategoryAndSubcategory: boolean = false,
   startDate?: Date,
-  endDate?: Date,
+  endDate?: Date
 ): Promise<Transaction[]> {
   logger.debug("getUserTransactions - Fetching user transactions", {
     userUuid,
     includeCategoryAndSubcategory,
-    dateRange: startDate && endDate ? { startDate: startDate.toISOString(), endDate: endDate.toISOString() } : null
+    dateRange:
+      startDate && endDate
+        ? { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
+        : null,
   });
 
   const whereClause: any = {
@@ -46,7 +49,7 @@ export async function getUserTransactions(
 
     logger.debug("getUserTransactions - Transactions fetched successfully", {
       userUuid,
-      transactionCount: transactions.length
+      transactionCount: transactions.length,
     });
 
     return transactions.map((txn) => ({
@@ -61,7 +64,7 @@ export async function getUserTransactions(
   } catch (error) {
     logger.error("getUserTransactions - Database error", error as Error, {
       userUuid,
-      includeCategoryAndSubcategory
+      includeCategoryAndSubcategory,
     });
     throw error;
   }
@@ -105,12 +108,14 @@ export async function getUserDetails(userUuid: string) {
 
     logger.debug("getUserDetails - User details fetched successfully", {
       userUuid,
-      categoryCount: dbUser.Category.length
+      categoryCount: dbUser.Category.length,
     });
 
     return userReadSchema.parse(payload);
   } catch (error) {
-    logger.error("getUserDetails - Database error", error as Error, { userUuid });
+    logger.error("getUserDetails - Database error", error as Error, {
+      userUuid,
+    });
     throw error;
   }
 }
@@ -120,8 +125,7 @@ export async function getUserDetails(userUuid: string) {
  * @returns Object with success status and user UUID or error message
  */
 export async function validateSession(): Promise<
-  | { success: true; userUuid: string }
-  | { success: false; error: string }
+  { success: true; userUuid: string } | { success: false; error: string }
 > {
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.uuid) {
@@ -140,38 +144,33 @@ export async function validateTransactionOwnership(
   transactionId: number,
   userUuid: string
 ): Promise<
-  | { success: true; transaction: any }
-  | { success: false; error: string }
+  { success: true; transaction: any } | { success: false; error: string }
 > {
-  logger.debug("validateTransactionOwnership - Validating transaction ownership", {
-    transactionId,
-    userUuid
+  const transaction = await prisma.transaction.findFirst({
+    where: { id: transactionId, user_uuid: userUuid },
   });
 
-  try {
-    const transaction = await prisma.transaction.findFirst({
-      where: { id: transactionId, user_uuid: userUuid }
-    });
-    
-    if (!transaction) {
-      logger.debug("validateTransactionOwnership - Transaction not found or not owned by user", {
-        transactionId,
-        userUuid
-      });
-      return { success: false, error: "Transaction not found" };
-    }
-    
-    logger.debug("validateTransactionOwnership - Transaction ownership validated", {
-      transactionId,
-      userUuid
-    });
-    
-    return { success: true, transaction };
-  } catch (error) {
-    logger.error("validateTransactionOwnership - Database error", error as Error, {
-      transactionId,
-      userUuid
-    });
-    return { success: false, error: "Database error" };
+  if (!transaction) {
+    return { success: false, error: "Transaction not found" };
   }
+
+  return { success: true, transaction };
+}
+
+export async function getSessionUser() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uuid) throw new Error("Unauthorized");
+  return session.user.uuid;
+}
+
+export async function getUserCategories(userUuid: string) {
+  const categories = await prisma.category.findMany({
+    where: { user_uuid: userUuid },
+    include: { Subcategory: true },
+    orderBy: { name: "asc" },
+  });
+  return categories.map((c) => ({
+    name: c.name,
+    subcategories: c.Subcategory.map((s) => s.name),
+  }));
 }

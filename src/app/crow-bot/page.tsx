@@ -11,6 +11,7 @@ import { BudgetCard } from "@/app/crow-bot/components/budget-card";
 import { TotalSpendsCard } from "@/app/crow-bot/components/total-spends-card";
 import { Thinking } from "@/app/crow-bot/components/thinking";
 import { TypingText } from "@/app/crow-bot/components/typing-text";
+import { MissingFieldsForm } from "@/app/crow-bot/components/missing-fields-form";
 
 function MenuToggle({
   activeMenu,
@@ -59,6 +60,28 @@ function MenuToggle({
   );
 }
 
+export function tryParseJSON(text: string) {
+  if (!text) return null;
+
+  const cleaned = text.trim();
+
+  if (!cleaned.startsWith("{") || !cleaned.includes("}")) return null;
+
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+
+  try {
+    return JSON.parse(match[0]);
+  } catch (err) {
+    return null;
+  }
+}
+
+function shouldHideUserMessage(message: any) {
+  if (message.role !== "user") return false;
+  return message.metadata?.hidden === true;
+}
+
 export default function CrowBotPage() {
   const [input, setInput] = useState("");
   const { messages, sendMessage, status, setMessages } = useChat();
@@ -91,25 +114,27 @@ export default function CrowBotPage() {
   };
 
   const toggleMenu = (menu: "transaction" | "analytics") => {
-    setActiveMenu(activeMenu === menu ? null : menu);
+    setActiveMenu((prev) => (prev === menu ? null : menu));
   };
 
   const handleSend = async () => {
-    if (!activeMenu) {
+    const currentIntent = activeMenu;
+    const userText = input.trim();
+    if (!currentIntent) {
       setIntentPrompt(
         "Please select Transaction or Analytics before starting."
       );
       return;
     }
-    if (!input.trim()) return;
+    if (!userText) return;
+
     setIntentPrompt("");
-    sendMessage({
-      text: input,
-      metadata: {
-        intent: activeMenu,
-      },
-    });
     setInput("");
+
+    await sendMessage({
+      text: userText,
+      metadata: { intent: currentIntent },
+    });
   };
 
   useEffect(() => {
@@ -224,107 +249,142 @@ export default function CrowBotPage() {
           </div>
         ) : (
           <>
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className="w-full max-w-2xl mx-auto flex mb-2"
-              >
-                {message.role === "assistant" ? (
-                  <div className="mr-auto text-foreground text-sm space-y-2">
-                    {Array.isArray(message.parts) &&
-                      message.parts.map((part: any, index: number) => {
-                        if (part.type === "text") {
-                          return (
-                            <p key={index} className="text-sm">
+            {messages
+              .filter((m) => !shouldHideUserMessage(m))
+              .map((message) => (
+                <div
+                  key={message.id}
+                  className="w-full max-w-2xl mx-auto flex mb-2"
+                >
+                  {message.role === "assistant" ? (
+                    <div className="mr-auto text-foreground text-sm space-y-2">
+                      {Array.isArray(message.parts) &&
+                        message.parts.map((part: any, index: number) => {
+                          if (part.type === "text") {
+                            const parsed = tryParseJSON(part.text);
+
+                            if (parsed && parsed.type === "missing_fields") {
+                              return (
+                                <MissingFieldsForm
+                                  key={index}
+                                  fields={parsed.fields}
+                                  resumeState={parsed.resumeState}
+                                  onSubmit={async (data) => {
+                                    try {
+                                      await sendMessage({
+                                        text: JSON.stringify({
+                                          ...data,
+                                          __resume: true,
+                                          resumeState: parsed.resumeState,
+                                        }),
+                                        metadata: {
+                                          resumeIntent: true,
+                                          resumeState: parsed.resumeState,
+                                          hidden: true,
+                                          intent: activeMenu,
+                                        },
+                                      });
+                                    } catch (err) {
+                                      console.error(
+                                        "Error resuming chat:",
+                                        err
+                                      );
+                                    }
+                                  }}
+                                />
+                              );
+                            }
+
+                            return (
                               <TypingText
+                                key={index}
                                 text={part.text}
                                 scrollRef={chatEndRef}
                               />
-                            </p>
-                          );
-                        }
+                            );
+                          }
 
-                        if (part.type === "tool-logExpense") {
-                          return (
-                            <div key={index} className="my-4 space-y-2">
-                              <p className="text-sm text-green-400 font-medium">
-                                ✅ Your transaction has been successfully added:
-                              </p>
-                              <ExpenseCard {...part.output} />
-                            </div>
-                          );
-                        }
-                        if (part.type === "tool-setBudget") {
-                          return (
-                            <div key={index} className="my-4 space-y-2">
-                              <p className="text-sm text-green-400 font-medium">
-                                ✅ Your Budget has been successfully set:
-                              </p>
-                              <BudgetCard {...part.output} />
-                            </div>
-                          );
-                        }
+                          if (part.type === "tool-logExpense") {
+                            return (
+                              <div key={index} className="my-4 space-y-2">
+                                <p className="text-sm text-green-400 font-medium">
+                                  ✅ Your transaction has been successfully
+                                  added:
+                                </p>
+                                <ExpenseCard {...part.output} />
+                              </div>
+                            );
+                          }
+                          if (part.type === "tool-setBudget") {
+                            return (
+                              <div key={index} className="my-4 space-y-2">
+                                <p className="text-sm text-green-400 font-medium">
+                                  ✅ Your Budget has been successfully set:
+                                </p>
+                                <BudgetCard {...part.output} />
+                              </div>
+                            );
+                          }
 
-                        if (part.type === "tool-showTransactions") {
-                          return (
-                            <div key={index} className="my-4 space-y-2">
-                              <p className="text-sm text-green-400 font-medium">
-                                ✅ Here are your recent transactions:
-                              </p>
-                              <ShowTransactionsCard {...part.output} />
-                            </div>
-                          );
-                        }
+                          if (part.type === "tool-showTransactions") {
+                            return (
+                              <div key={index} className="my-4 space-y-2">
+                                <p className="text-sm text-green-400 font-medium">
+                                  ✅ Here are your recent transactions:
+                                </p>
+                                <ShowTransactionsCard {...part.output} />
+                              </div>
+                            );
+                          }
 
-                        if (part.type === "tool-totalSpends") {
-                          return (
-                            <div key={index} className="my-4 space-y-2">
-                              <p className="text-sm text-green-400 font-medium">
-                                ✅ Here is the total spend information:
-                              </p>
-                              <TotalSpendsCard {...part.output} />
-                            </div>
-                          );
-                        }
+                          if (part.type === "tool-totalSpends") {
+                            return (
+                              <div key={index} className="my-4 space-y-2">
+                                <p className="text-sm text-green-400 font-medium">
+                                  ✅ Here is the total spend information:
+                                </p>
+                                <TotalSpendsCard {...part.output} />
+                              </div>
+                            );
+                          }
 
-                        if (part.type === "tool-lastMonthSummary") {
-                          return (
-                            <div key={index} className="my-4 space-y-2">
-                              <p className="text-sm text-green-400 font-medium">
-                                ✅ Here is your month summary:
-                              </p>
-                              <MonthSummaryCard {...part.output} />
-                            </div>
-                          );
-                        }
+                          if (part.type === "tool-lastMonthSummary") {
+                            return (
+                              <div key={index} className="my-4 space-y-2">
+                                <p className="text-sm text-green-400 font-medium">
+                                  ✅ Here is your month summary:
+                                </p>
+                                <MonthSummaryCard {...part.output} />
+                              </div>
+                            );
+                          }
 
-                        if (part.type === "tool-spendingTrend") {
-                          return (
-                            <div key={index} className="my-4 space-y-2">
-                              <p className="text-sm text-green-400 font-medium">
-                                ✅ Here is your spending trend:
-                              </p>
-                              <SpendingTrendCard {...part.output} />
-                            </div>
-                          );
-                        }
-
-                        return null;
-                      })}
-                  </div>
-                ) : (
-                  <div className="ml-auto bg-muted text-white px-4 py-2 rounded-lg text-sm max-w-xs break-words">
-                    {Array.isArray(message.parts) &&
-                      message.parts.map((part: any, index: number) => {
-                        if (part.type === "text") {
-                          return <p key={index}>{part.text}</p>;
-                        }
-                        return null;
-                      })}
-                  </div>
-                )}
-              </div>
-            ))}
+                          if (part.type === "tool-spendingTrend") {
+                            return (
+                              <div key={index} className="my-4 space-y-2">
+                                <p className="text-sm text-green-400 font-medium">
+                                  ✅ Here is your spending trend:
+                                </p>
+                                <SpendingTrendCard {...part.output} />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })}
+                    </div>
+                  ) : (
+                    <div className="ml-auto bg-muted text-white px-4 py-2 rounded-lg text-sm max-w-xs break-words">
+                      {Array.isArray(message.parts) &&
+                        message.parts.map((part: any, index: number) => {
+                          if (part.type === "text") {
+                            return <p key={index}>{part.text}</p>;
+                          }
+                          return null;
+                        })}
+                    </div>
+                  )}
+                </div>
+              ))}
 
             {status === "submitted" && (
               <div className="w-full max-w-2xl mx-auto text-sm text-zinc-500 italic">
