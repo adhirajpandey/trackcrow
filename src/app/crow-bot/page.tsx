@@ -269,6 +269,7 @@ export default function CrowBotPage() {
                                   key={index}
                                   fields={parsed.fields}
                                   resumeState={parsed.resumeState}
+                                  categories={parsed.categories || []}
                                   onSubmit={async (data) => {
                                     try {
                                       await sendMessage({
@@ -337,7 +338,7 @@ export default function CrowBotPage() {
                             );
                           }
 
-                          if (part.type === "tool-totalSpends") {
+                          if (part.type === "tool-calculateTotalSpent") {
                             return (
                               <div key={index} className="my-4 space-y-2">
                                 <p className="text-sm text-green-400 font-medium">

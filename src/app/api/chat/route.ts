@@ -1,7 +1,6 @@
 import {
   UIMessage,
   convertToModelMessages,
-  streamText,
   generateObject,
   createUIMessageStreamResponse,
   createUIMessageStream,
@@ -24,7 +23,6 @@ interface StructuredData {
 export async function POST(request: Request) {
   try {
     const { messages }: { messages: UIMessage[] } = await request.json();
-
     const coreMessages = convertToModelMessages(messages);
 
     const lastMessage = messages[messages.length - 1];
@@ -52,14 +50,6 @@ export async function POST(request: Request) {
     const userUuid = await getSessionUser();
     const categoriesContext = await getUserCategories(userUuid);
 
-    const filteredMessages = coreMessages.filter(
-      (m) =>
-        !(
-          m.role === "assistant" &&
-          JSON.stringify(m).includes('"missing_fields"')
-        )
-    );
-
     if (isResume && !lastHadToolOutput) {
       const resumeText =
         lastMessage.parts?.find(
@@ -79,49 +69,52 @@ export async function POST(request: Request) {
       };
 
       const intent = resumeState.intent;
+      const selectedTool = tools[intent];
+      const toolCallId = crypto.randomUUID();
 
-      let allowedTools: Record<string, any> = {};
-      if (intent === "transaction") {
-        allowedTools = {
-          logExpense: tools.logExpense,
-          showTransactions: tools.showTransactions,
-          calculateTotalSpent: tools.calculateTotalSpent,
-        };
-      } else if (intent === "analytics") {
-        allowedTools = {
-          spendingTrend: tools.spendingTrend,
-          lastMonthSummary: tools.lastMonthSummary,
-          setBudget: tools.setBudget,
-        };
-      }
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            writer.write({ type: "start" });
+            writer.write({ type: "start-step" });
+            writer.write({
+              type: "tool-input-start",
+              toolCallId,
+              toolName: intent,
+            });
+            writer.write({
+              type: "tool-input-available",
+              toolCallId,
+              toolName: intent,
+              input: mergedData,
+            });
 
-      const result = streamText({
-        model: google("gemini-2.5-flash"),
-        system:
-          "You are a structured expense tracking assistant. Resume processing using provided merged data. Continue tool calls naturally based on structured data.",
-        messages: [
-          ...filteredMessages,
-          {
-            role: "assistant",
-            content: `Continue from previous context using these merged details:\n${JSON.stringify(
-              mergedData,
-              null,
-              2
-            )}`,
+            try {
+              const output = await selectedTool.execute(mergedData);
+              writer.write({
+                type: "tool-output-available",
+                toolCallId,
+                output,
+              });
+            } catch (err: any) {
+              writer.write({
+                type: "text-delta",
+                id: toolCallId,
+                delta: `Tool "${intent}" failed: ${err.message}`,
+              });
+            }
+
+            writer.write({ type: "finish-step" });
+            writer.write({ type: "finish" });
           },
-        ],
-        tools: allowedTools,
+        }),
       });
-
-      return result.toUIMessageStreamResponse();
     }
 
     const classifierPrompt = buildClassifierPrompt(categoriesContext);
-
     const contextSwitch = {
       role: "system" as const,
-      content: `The user is now in ${promptIntent.toUpperCase()} mode. 
-      Ignore any previous mode context.`,
+      content: `The user is now in ${promptIntent.toUpperCase()} mode. Ignore previous context.`,
     };
 
     const structuredResObj = await generateObject({
@@ -152,14 +145,65 @@ export async function POST(request: Request) {
     }
 
     const { relevance, intent, structured_data } = structuredRes;
+    let aiReportedMissingFields = [...(structuredRes.missing_fields || [])];
 
-    let aiReportedMissingFields = [...structuredRes.missing_fields];
+    if (relevance <= 2) {
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+            writer.write({ type: "start", messageId: id });
+            writer.write({ type: "text-start", id });
+            writer.write({
+              type: "text-delta",
+              delta: `This doesn’t look like a valid expense or analytics request.`,
+              id,
+            });
+            writer.write({ type: "text-end", id });
+            writer.write({ type: "finish" });
+          },
+        }),
+      });
+    }
+
+    const allowedIntentsByContext: Record<string, string[]> = {
+      transaction: ["logExpense", "showTransactions", "calculateTotalSpent"],
+      analytics: ["spendingTrend", "lastMonthSummary", "setBudget"],
+    };
+
+    const detectedIntentGroup =
+      Object.entries(allowedIntentsByContext).find(([_, intents]) =>
+        intents.includes(intent)
+      )?.[0] || "other";
+
+    const allowedIntents = allowedIntentsByContext[promptIntent] || [];
+
+    if (!allowedIntents.includes(intent)) {
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+            writer.write({ type: "start", messageId: id });
+            writer.write({ type: "text-start", id });
+            writer.write({
+              type: "text-delta",
+              delta: `You're in "${promptIntent}" mode, but tried to perform an action from "${detectedIntentGroup}". Please switch modes.`,
+              id,
+            });
+            writer.write({ type: "text-end", id });
+            writer.write({ type: "finish" });
+          },
+        }),
+      });
+    }
 
     const requiredFieldsByIntent: Record<string, string[]> = {
       setBudget: ["amount", "category"],
-      logExpense: ["amount", "category"],
+      logExpense: ["amount", "category", "subcategory", "date", "description"],
       calculateTotalSpent: ["category"],
       spendingTrend: ["category"],
+      showTransactions: [],
+      lastMonthSummary: [],
     };
 
     const requiredFieldsForIntent = requiredFieldsByIntent[intent] || [];
@@ -167,7 +211,10 @@ export async function POST(request: Request) {
     const missingFieldsForIntent = requiredFieldsForIntent.filter(
       (fieldName) => {
         const key = fieldName as keyof StructuredData;
-        return !structured_data[key] || structured_data[key] === "null";
+        const val = structured_data?.[key];
+        return (
+          val === null || val === undefined || val === "" || val === "null"
+        );
       }
     );
 
@@ -175,67 +222,16 @@ export async function POST(request: Request) {
       aiReportedMissingFields = missingFieldsForIntent;
     }
 
-    if (relevance <= 2 && promptIntent) {
-      return createUIMessageStreamResponse({
-        stream: createUIMessageStream({
-          execute: async ({ writer }) => {
-            const id = crypto.randomUUID();
-            writer.write({ type: "start", messageId: id });
-            writer.write({ type: "text-start", id });
-            writer.write({
-              type: "text-delta",
-              delta: `This doesn’t look like an expense or financial request. Try asking about ${promptIntent}.`,
-              id,
-            });
-            writer.write({ type: "text-end", id });
-            writer.write({ type: "finish" });
-          },
-        }),
-      });
-    }
-
-    let allowedTools: Record<string, any> = {};
-    if (promptIntent === "transaction") {
-      allowedTools = {
-        logExpense: tools.logExpense,
-        showTransactions: tools.showTransactions,
-        calculateTotalSpent: tools.calculateTotalSpent,
-      };
-    } else if (promptIntent === "analytics") {
-      allowedTools = {
-        spendingTrend: tools.spendingTrend,
-        lastMonthSummary: tools.lastMonthSummary,
-        setBudget: tools.setBudget,
-      };
-    }
-
-    if (!allowedTools[intent]) {
-      return createUIMessageStreamResponse({
-        stream: createUIMessageStream({
-          execute: async ({ writer }) => {
-            const id = crypto.randomUUID();
-            writer.write({ type: "start", messageId: id });
-            writer.write({ type: "text-start", id });
-            writer.write({
-              type: "text-delta",
-              delta: `Oops, I cannot perform this operation. Try asking about ${promptIntent}.`,
-              id,
-            });
-            writer.write({ type: "text-end", id });
-            writer.write({ type: "finish" });
-          },
-        }),
-      });
-    }
-
     if (aiReportedMissingFields.length > 0) {
       const fieldsToAsk = aiReportedMissingFields;
+
       return createUIMessageStreamResponse({
         stream: createUIMessageStream({
           execute: async ({ writer }) => {
             const id = crypto.randomUUID();
             writer.write({ type: "start", messageId: id });
             writer.write({ type: "text-start", id });
+
             writer.write({
               type: "text-delta",
               id,
@@ -247,11 +243,33 @@ export async function POST(request: Request) {
                   type: f === "amount" ? "number" : "text",
                   required: true,
                 })),
+                categories: categoriesContext,
                 resumeState: {
-                  intent: promptIntent,
+                  intent,
                   context: { partialData: structured_data },
                 },
               }),
+            });
+
+            writer.write({ type: "text-end", id });
+            writer.write({ type: "finish" });
+          },
+        }),
+      });
+    }
+
+    const selectedTool = tools[intent];
+    if (!selectedTool?.execute) {
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            const id = crypto.randomUUID();
+            writer.write({ type: "start", messageId: id });
+            writer.write({ type: "text-start", id });
+            writer.write({
+              type: "text-delta",
+              delta: `No tool found for "${intent}".`,
+              id,
             });
             writer.write({ type: "text-end", id });
             writer.write({ type: "finish" });
@@ -260,30 +278,45 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = streamText({
-      model: google("gemini-2.5-flash"),
-      system: `
-        You are a structured expense tracking assistant.
-        You must NOT send any text, explanations, or messages to the user.
-        You are allowed to invoke tools ONLY.
-        If no tool can be called, remain silent.
-      `,
-      messages: [
-        ...coreMessages,
-        {
-          role: "assistant",
-          content: `Process the following structured data silently:\n${JSON.stringify(
-            structured_data,
-            null,
-            2
-          )}`,
-        },
-      ],
-      tools: allowedTools,
-      maxOutputTokens: 1,
-    });
+    const toolCallId = crypto.randomUUID();
 
-    return result.toUIMessageStreamResponse();
+    return createUIMessageStreamResponse({
+      stream: createUIMessageStream({
+        execute: async ({ writer }) => {
+          writer.write({ type: "start" });
+          writer.write({ type: "start-step" });
+          writer.write({
+            type: "tool-input-start",
+            toolCallId,
+            toolName: intent,
+          });
+          writer.write({
+            type: "tool-input-available",
+            toolCallId,
+            toolName: intent,
+            input: structured_data,
+          });
+
+          try {
+            const output = await selectedTool.execute(structured_data);
+            writer.write({
+              type: "tool-output-available",
+              toolCallId,
+              output,
+            });
+          } catch (err: any) {
+            writer.write({
+              type: "text-delta",
+              id: toolCallId,
+              delta: `Tool "${intent}" failed: ${err.message}`,
+            });
+          }
+
+          writer.write({ type: "finish-step" });
+          writer.write({ type: "finish" });
+        },
+      }),
+    });
   } catch (err: any) {
     if (err.message === "Unauthorized") {
       return new Response("Unauthorized", { status: 401 });
