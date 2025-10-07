@@ -11,15 +11,6 @@ import { google } from "@ai-sdk/google";
 import { tools } from "@/app/crow-bot/tools";
 import { toolSchema } from "@/common/schemas";
 
-interface StructuredData {
-  amount: number | null;
-  category: string | null;
-  subcategory: string | null;
-  date: string | null;
-  description: string | null;
-  month: string | null;
-}
-
 export async function POST(request: Request) {
   try {
     const { messages }: { messages: UIMessage[] } = await request.json();
@@ -55,7 +46,6 @@ export async function POST(request: Request) {
         lastMessage.parts?.find(
           (p): p is { type: "text"; text: string } => p.type === "text"
         )?.text || "{}";
-
       const parsedUserInput = JSON.parse(resumeText || "{}");
 
       const resumeState =
@@ -90,7 +80,9 @@ export async function POST(request: Request) {
             });
 
             try {
-              const output = await selectedTool.execute(mergedData);
+              const output = await selectedTool.execute({
+                structured_data: mergedData,
+              });
               writer.write({
                 type: "tool-output-available",
                 toolCallId,
@@ -124,6 +116,7 @@ export async function POST(request: Request) {
     });
 
     const structuredRes = structuredResObj.object;
+    console.log("Structured Response:", structuredRes);
 
     if (!structuredRes) {
       return createUIMessageStreamResponse({
@@ -148,6 +141,17 @@ export async function POST(request: Request) {
     let aiReportedMissingFields = [...(structuredRes.missing_fields || [])];
 
     if (relevance <= 2) {
+      const fallbackMessages = [
+        "Hmm, that doesn’t seem like an expense or analytics request.",
+        "I couldn’t recognize this as a expense-related message.",
+        "This doesn’t look like a valid expense or spending query.",
+        "I’m not sure this relates to your transactions or analytics.",
+        "That doesn’t appear to be an expense or analytics command.",
+      ];
+
+      const randomMessage =
+        fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+
       return createUIMessageStreamResponse({
         stream: createUIMessageStream({
           execute: async ({ writer }) => {
@@ -156,7 +160,7 @@ export async function POST(request: Request) {
             writer.write({ type: "text-start", id });
             writer.write({
               type: "text-delta",
-              delta: `This doesn’t look like a valid expense or analytics request.`,
+              delta: randomMessage,
               id,
             });
             writer.write({ type: "text-end", id });
@@ -198,40 +202,41 @@ export async function POST(request: Request) {
     }
 
     const requiredFieldsByIntent: Record<string, string[]> = {
+      logExpense: [
+        "amount",
+        "recipient",
+        "category",
+        "subcategory",
+        "timestamp",
+      ],
       setBudget: ["amount", "category"],
-      logExpense: ["amount", "category", "subcategory", "date", "description"],
       calculateTotalSpent: ["category"],
       spendingTrend: ["category"],
       showTransactions: [],
       lastMonthSummary: [],
     };
 
-    const requiredFieldsForIntent = requiredFieldsByIntent[intent] || [];
-
-    const missingFieldsForIntent = requiredFieldsForIntent.filter(
-      (fieldName) => {
-        const key = fieldName as keyof StructuredData;
-        const val = structured_data?.[key];
-        return (
-          val === null || val === undefined || val === "" || val === "null"
-        );
+    const missingFieldsForIntent = requiredFieldsByIntent[intent]?.filter(
+      (f) => {
+        const val = (structured_data as any)?.[f];
+        return !val || val === "null" || val === "";
       }
     );
 
-    if (missingFieldsForIntent.length && !aiReportedMissingFields.length) {
-      aiReportedMissingFields = missingFieldsForIntent;
+    if (missingFieldsForIntent?.length) {
+      aiReportedMissingFields = Array.from(
+        new Set([...aiReportedMissingFields, ...missingFieldsForIntent])
+      );
     }
 
     if (aiReportedMissingFields.length > 0) {
       const fieldsToAsk = aiReportedMissingFields;
-
       return createUIMessageStreamResponse({
         stream: createUIMessageStream({
           execute: async ({ writer }) => {
             const id = crypto.randomUUID();
             writer.write({ type: "start", messageId: id });
             writer.write({ type: "text-start", id });
-
             writer.write({
               type: "text-delta",
               id,
@@ -240,7 +245,12 @@ export async function POST(request: Request) {
                 fields: fieldsToAsk.map((f) => ({
                   name: f,
                   label: f[0].toUpperCase() + f.slice(1),
-                  type: f === "amount" ? "number" : "text",
+                  type:
+                    f === "amount"
+                      ? "number"
+                      : f === "timestamp"
+                        ? "datetime-local"
+                        : "text",
                   required: true,
                 })),
                 categories: categoriesContext,
@@ -250,7 +260,6 @@ export async function POST(request: Request) {
                 },
               }),
             });
-
             writer.write({ type: "text-end", id });
             writer.write({ type: "finish" });
           },
@@ -259,25 +268,6 @@ export async function POST(request: Request) {
     }
 
     const selectedTool = tools[intent];
-    if (!selectedTool?.execute) {
-      return createUIMessageStreamResponse({
-        stream: createUIMessageStream({
-          execute: async ({ writer }) => {
-            const id = crypto.randomUUID();
-            writer.write({ type: "start", messageId: id });
-            writer.write({ type: "text-start", id });
-            writer.write({
-              type: "text-delta",
-              delta: `No tool found for "${intent}".`,
-              id,
-            });
-            writer.write({ type: "text-end", id });
-            writer.write({ type: "finish" });
-          },
-        }),
-      });
-    }
-
     const toolCallId = crypto.randomUUID();
 
     return createUIMessageStreamResponse({
