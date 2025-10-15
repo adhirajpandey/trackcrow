@@ -1,15 +1,17 @@
 import { logExpenseTool } from "./log-expense-tool";
 import { showTransactionsTool } from "./show-transactions-tool";
 import { calculateTotalSpentTool } from "./calculate-total-spent-tool";
-import { spendingTrendTool } from "./spending-trend-tool";
-import { lastMonthSummaryTool } from "./last-month-summary-tool";
+import { lastMonthVsThisMonthTool } from "./last-month-vs-this-month-tool";
 import { setBudgetTool } from "./set-budget-tool";
+import { biggestExpenseCategoryTool } from "./biggest-expense-tool";
+import { spendingTrendByCategoryTool } from "./spending-trend-by-category-tool";
 
 export const tools = {
   logExpense: logExpenseTool,
   showTransactions: showTransactionsTool,
   calculateTotalSpent: calculateTotalSpentTool,
-  spendingTrend: spendingTrendTool,
-  lastMonthSummary: lastMonthSummaryTool,
+  lastMonthVsThisMonth: lastMonthVsThisMonthTool,
   setBudget: setBudgetTool,
+  biggestExpenseCategory: biggestExpenseCategoryTool,
+  spendingTrendByCategory: spendingTrendByCategoryTool,
 };

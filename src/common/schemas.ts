@@ -87,7 +87,8 @@ export const toolSchema = z.object({
     type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).nullable(),
     remarks: z.string().nullable(),
     timestamp: z.string().nullable(),
-    month: z.string().nullable(),
+    startDate: z.string().nullable(),
+    endDate: z.string().nullable(),
   }),
   missing_fields: z.array(z.string()),
 });

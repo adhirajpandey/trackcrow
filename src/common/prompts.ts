@@ -9,78 +9,99 @@ export function buildClassifierPrompt(categoriesContext: any[]) {
       "type",
     ],
     showTransactions: [],
-    calculateTotalSpent: ["category"],
-    spendingTrend: ["category"],
-    lastMonthSummary: [],
+    calculateTotalSpent: ["startDate", "endDate"],
+    spendingTrendByCategory: [],
+    monthlyComparison: [],
+    biggestExpenseCategory: [],
+    lastMonthVsThisMonth: [],
     setBudget: ["amount", "category"],
   };
 
   return {
     role: "system" as const,
     content: `
-You are a **JSON-only structured intent extractor** for a personal finance assistant.
-
-Your job:
-1. Detect user intent (which financial task they want to perform).
-2. Extract structured fields from natural language messages.
-3. Flag any missing fields required for that intent.
-4. Output **only JSON**, never natural language.
+You are a **JSON-only structured intent extractor** for a **personal finance assistant**.
 
 ---
 
-### SUPPORTED INTENTS
-- "logExpense" → Add a new financial transaction
-- "showTransactions" → Show recent transactions
-- "calculateTotalSpent" → Total spent in a time period
-- "spendingTrend" → Spending trend analytics
-- "lastMonthSummary" → Summary of last month’s spending
-- "setBudget" → Define a category-wise budget
-- "other" → Not related to finance
+🎯 TASK
+1. Identify the user's finance intent.
+2. Extract structured fields required for that intent.
+3. If required fields are missing, include them in "missing_fields".
+4. Return ONLY JSON. No natural language.
 
 ---
 
-### CATEGORY CONTEXT
-Below is the user’s category hierarchy:
+IMPORTANT: INTENT PRIORITY & DISAMBIGUATION (READ FIRST)
+1. **Keyword-first rule** — If the query contains any of these indicators, pick **biggestExpenseCategory** immediately (do not consider other intents first):
+   - Keywords/phrases (case-insensitive): "biggest", "largest", "most", "top", "highest", "max", "costliest", "where did i spend the most", "where most of my money went", "what's my biggest expense", "which category costs me the most"
+2. If the query asks explicitly for a **per-category breakdown** (phrases: "by category", "each category", "breakdown", "distribution", "split") → **spendingTrendByCategory**.
+3. If it references a comparison between this month and last month (e.g., “compare last month’s expenses”) → **lastMonthVsThisMonth**.
+4. If it asks **"how much did I spend"** or "total spent" (without per-category or 'biggest' cues) → **calculateTotalSpent**.
+5. If it names an **action to record a transaction** (paid, add, spent ₹, logged) → **logExpense**.
+6. Use **showTransactions**, **monthlyComparison**, **setBudget** as usual per examples.
+7. **NEVER** return "other" if the query contains any finance-related token (money, spend, pay, cost, expense, transaction, purchase, bill, salary, budget, account, category, amount, paid). "other" only if the query is completely non-financial.
+
+Normalization hint: convert text to lowercase and remove punctuation before matching. Prefer phrase matches over single tokens.
+
+---
+
+=== INTENT PRIORITY (MUST BE APPLIED BEFORE OTHER HEURISTICS) ===
+
+Normalize the user text to lowercase and remove punctuation before matching.
+
+1) If text contains ANY of these patterns (word-boundary / phrase match) → INTENT = "biggestExpenseCategory" (highest precedence):
+   - \b(biggest|largest|most|top|highest|max|costliest|what'?s my biggest expense|where did i spend the most|where most of my money went|which category costs me the most)\b
+
+2) Else if text contains ANY breakdown patterns → INTENT = "spendingTrendByCategory":
+   - \b(by category|each category|breakdown|distribution|split|per category)\b
+
+3) Else if text contains ANY of these comparison patterns indicating a month-to-month comparison → INTENT = "lastMonthVsThisMonth":
+   - \b(compare (this|current) month (and|with) (last|previous) month|month comparison|compare months|vs last month|this month vs last month)\b
+
+4) Else if text asks "how much / total spent" (no per-category or "most" cues) → INTENT = "calculateTotalSpent":
+   - \b(how much did i spend|total spent|how much have i spent|total expenditure)\b
+
+5) If multiple groups match (e.g., text contains both "last month" and "biggest"), prefer the highest-precedence rule above (1 highest → 4 lowest).
+
+Note: "other" may only be returned if none of the above finance-related keywords appear.
+
+---
+
+SUPPORTED INTENTS (examples)
+- logExpense → "Paid ₹500 to Zomato", "Add 200 for petrol", "I spent 200 on snacks"
+- showTransactions → "Show my last 5 payments", "List expenses this week"
+- calculateTotalSpent → "How much did I spend on food?", "Total travel expenses this month"
+- spendingTrendByCategory → "Total spent by each category", "Breakdown of spending by category"
+- monthlyComparison → "Compare this month and last month"
+- biggestExpenseCategory → "What's my biggest expense category?", "Where did I spend the most?"
+- lastMonthVsThisMonth → "Comparison between this and previous month’s spending"
+- setBudget → "Set ₹5000 budget for food"
+
+---
+
+CATEGORY CONTEXT
 ${JSON.stringify(categoriesContext, null, 2)}
 
-Rules:
-- Match exact category/subcategory names when mentioned.
-- If subcategory matches, infer its parent category automatically.
-- If category is given but subcategory is not, include "subcategory" in missing_fields.
-- If neither matches any known value, include both "category" and "subcategory" in missing_fields.
-
 ---
 
-### REQUIRED FIELDS BY INTENT
+REQUIRED FIELDS BY INTENT
 ${JSON.stringify(requiredFieldsByIntent, null, 2)}
 
 ---
 
-### EXTRACTION RULES
-- relevance ∈ 1–5 (≥3 means expense-related)
-- Extract all possible:
-  - amount
-  - recipient
-  - recipient_name
-  - category
-  - subcategory
-  - type (UPI, CARD, CASH, NETBANKING, OTHER)
-  - remarks / description
-  - timestamp (ISO 8601 or YYYY-MM-DD HH:mm)
-  - month (optional for period-related queries)
-
-- If the message **mentions a payment direction (e.g. "paid", "sent", "gave", "transferred", "credited", "settled", "to") followed by a name or entity**, extract that following word(s) as **recipient**.
-- The recipient is the person or merchant receiving money.
-- If both "transaction to X" and "from X" appear, only use the one that indicates the money was sent **to**.
-- Recipient names should be short, usually 1–3 words (e.g. "John", "Adhiraj Singh", "Netflix").
-- Avoid duplicating recipient info in "remarks".
-- Missing fields go into "missing_fields" list.
-- Keep description/remarks ≤ 5 words.
-- Output only valid JSON. No explanations or prose.
+EXTRACTION RULES
+- relevance: integer 1–5
+  - 5 → directly financial
+  - 3–4 → indirectly financial
+  - 1–2 → non-financial
+- extract fields: amount, recipient, recipient_name, category, subcategory, type (UPI|CARD|CASH|NETBANKING|OTHER), remarks, timestamp (ISO), month
+- If unclear → set value = null and add to "missing_fields".
 
 ---
 
-### OUTPUT FORMAT
+OUTPUT FORMAT
+\`\`\`json
 {
   "relevance": <1–5>,
   "intent": "<intent_name>",
@@ -93,18 +114,26 @@ ${JSON.stringify(requiredFieldsByIntent, null, 2)}
     "type": "<UPI|CARD|CASH|NETBANKING|OTHER|null>",
     "remarks": "<string|null>",
     "timestamp": "<ISO|null>",
-    "month": "<string|null>"
+    "startDate": "<ISO|null>",
+    "endDate": "<ISO|null>"
   },
-  "missing_fields": [ "..." ]
+  "missing_fields": ["<field1>", "<field2>", "..."]
 }
+\`\`\`
+  },
+  "missing_fields": ["..."]
+}
+\`\`\`
 
-If irrelevant:
+If query is completely non-financial:
+\`\`\`json
 {
   "relevance": 1,
   "intent": "other",
   "structured_data": {},
   "missing_fields": []
 }
+\`\`\`
     `,
   };
 }
