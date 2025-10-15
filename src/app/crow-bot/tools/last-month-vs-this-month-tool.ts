@@ -3,10 +3,14 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { validateSession } from "@/common/server";
 
+/* ----------------------------- ZOD SCHEMAS ----------------------------- */
+
 export const lastMonthVsThisMonthSchema = z.object({}).passthrough();
 export type LastMonthVsThisMonthInput = z.infer<
   typeof lastMonthVsThisMonthSchema
 >;
+
+/* ----------------------------- HELPERS ----------------------------- */
 
 function getMonthRange(offset = 0) {
   const now = new Date();
@@ -25,6 +29,8 @@ function toNumber(v: any) {
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 }
+
+/* ----------------------------- TOOL EXECUTION ----------------------------- */
 
 export async function runlastMonthVsThisMonth(_: any) {
   const session = await validateSession();
@@ -92,6 +98,8 @@ export async function runlastMonthVsThisMonth(_: any) {
     trend,
   };
 }
+
+/* ---------------------- Tool Definition ---------------------- */
 
 export const lastMonthVsThisMonthTool = createTool({
   name: "lastMonthVsThisMonth",

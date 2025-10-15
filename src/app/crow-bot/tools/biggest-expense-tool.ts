@@ -47,8 +47,6 @@ export async function runBiggestExpenseCategory(input: any) {
     return { error: "Unauthorized. Please log in first." };
   }
 
-  console.log("this is how input looks like", input);
-
   const { userUuid } = sessionResult;
   const { startDate, endDate } = input.structured_data;
 
