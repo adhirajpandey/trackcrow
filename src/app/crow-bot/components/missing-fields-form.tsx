@@ -11,24 +11,60 @@ export function MissingFieldsForm({
     const hasCategory = fields.some((f) => f.name === "category");
     const hasSubcategory = fields.some((f) => f.name === "subcategory");
 
-    if (hasCategory && !hasSubcategory) {
-      return [
-        ...fields,
-        {
-          name: "subcategory",
-          label: "Subcategory",
-          type: "text",
-          required: true,
-        },
-      ];
+    const onlyCategory =
+      hasCategory && fields.length === 1 && fields[0].name === "category";
+
+    const resultFields = [...fields];
+    if (hasCategory && !hasSubcategory && !onlyCategory) {
+      resultFields.push({
+        name: "subcategory",
+        label: "Subcategory",
+        type: "text",
+        required: true,
+      });
     }
-    return fields;
+
+    const hasStart = resultFields.some((f) => f.name === "startDate");
+    const hasEnd = resultFields.some((f) => f.name === "endDate");
+
+    if (hasStart && !hasEnd) {
+      resultFields.push({
+        name: "endDate",
+        label: "End Date",
+        type: "date",
+        required: true,
+      });
+    } else if (!hasStart && hasEnd) {
+      resultFields.push({
+        name: "startDate",
+        label: "Start Date",
+        type: "date",
+        required: true,
+      });
+    }
+
+    return resultFields;
   }, [fields]);
 
-  const [formData, setFormData] = useState(
-    Object.fromEntries(normalizedFields.map((f) => [f.name, ""]))
-  );
+  const defaultValues = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16); // YYYY-MM-DDTHH:mm
 
+    return Object.fromEntries(
+      normalizedFields.map((f) => {
+        if (f.name === "type") return [f.name, "UPI"];
+        if (f.name === "timestamp") return [f.name, localISO];
+        if (f.name === "startDate" || f.name === "endDate")
+          return [f.name, today];
+        return [f.name, ""];
+      })
+    );
+  }, [normalizedFields]);
+
+  const [formData, setFormData] = useState(defaultValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
 
@@ -69,6 +105,16 @@ export function MissingFieldsForm({
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
+  useEffect(() => {
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+
+    if (formData.startDate && formData.endDate && end < start) {
+      setFormData((prev) => ({ ...prev, endDate: "" }));
+      alert("End date cannot be earlier than start date.");
+    }
+  }, [formData.startDate, formData.endDate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -76,7 +122,11 @@ export function MissingFieldsForm({
   };
 
   const getInputType = (f) =>
-    f.name.toLowerCase().includes("date") ? "date" : f.type;
+    f.name === "startDate" || f.name === "endDate"
+      ? "date"
+      : f.name.toLowerCase().includes("date")
+        ? "date"
+        : f.type;
 
   return (
     <div
@@ -110,7 +160,6 @@ export function MissingFieldsForm({
             accentColor: "#75378d",
           };
 
-          // 🟣 CATEGORY FIELD
           if (field.name === "category") {
             return (
               <div key="category" className="flex flex-col space-y-1">
@@ -135,11 +184,13 @@ export function MissingFieldsForm({
             );
           }
 
-          // 🟣 SUBCATEGORY FIELD
           if (field.name === "subcategory") {
             const subcats =
-              categories.find((c) => c.name === selectedCategory)
-                ?.subcategories || [];
+              categories.find(
+                (c) =>
+                  c.name.toLowerCase() ===
+                  (selectedCategory || "").toLowerCase()
+              )?.subcategories || [];
             if (!selectedCategory) return null;
 
             return (
@@ -175,12 +226,7 @@ export function MissingFieldsForm({
                     <button
                       key={mode}
                       type="button"
-                      onClick={() =>
-                        setFormData((p) => ({
-                          ...p,
-                          type: mode,
-                        }))
-                      }
+                      onClick={() => setFormData((p) => ({ ...p, type: mode }))}
                       className={`px-4 py-2 rounded-md text-sm border transition-all duration-200 ${
                         formData.type === mode
                           ? "border-[#75378d] text-[#75378d]"
@@ -202,13 +248,22 @@ export function MissingFieldsForm({
                 name={field.name}
                 type={type}
                 required={field.required}
+                min={
+                  field.name === "endDate"
+                    ? formData.startDate || undefined
+                    : undefined
+                }
+                max={
+                  field.name === "startDate"
+                    ? formData.endDate || undefined
+                    : undefined
+                }
                 value={
                   isDate
                     ? (() => {
                         const val = formData[field.name];
                         if (!val) return "";
-                        const [dd, mm, yyyy] = val.split("-");
-                        return yyyy && mm && dd ? `${yyyy}-${mm}-${dd}` : "";
+                        return val.length > 10 ? val.slice(0, 16) : val;
                       })()
                     : formData[field.name]
                 }
