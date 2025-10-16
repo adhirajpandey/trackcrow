@@ -95,16 +95,14 @@ export default function CrowBotClient() {
 
   const suggestions =
     activeMenu === "transaction"
-      ? [
-          "Add a new expense transaction",
-          "Show me my last 5 transactions",
-          "Calculate total spent on food this week",
-        ]
+      ? ["Add a new expense transaction"]
       : activeMenu === "analytics"
         ? [
             "Show spending trend by category",
             "Compare last month vs this month expenses",
             "What’s my biggest expense category?",
+            "Show me my last 5 transactions",
+            "Calculate total spent on food this week",
           ]
         : [];
 
@@ -331,9 +329,6 @@ export default function CrowBotClient() {
                           if (part.type === "tool-showTransactions") {
                             return (
                               <div key={index} className="my-4 space-y-2">
-                                <p className="text-sm text-green-400 font-medium">
-                                  ✅ Here are your recent transactions:
-                                </p>
                                 <ShowTransactionsCard {...part.output} />
                               </div>
                             );

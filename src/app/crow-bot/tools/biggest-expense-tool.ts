@@ -48,7 +48,7 @@ export async function runBiggestExpenseCategory(input: any) {
   }
 
   const { userUuid } = sessionResult;
-  const { startDate, endDate } = input.structured_data;
+  const { startDate, endDate } = input;
 
   const { start, end } = getDateRange(startDate, endDate);
 

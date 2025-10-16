@@ -94,9 +94,6 @@ export default function TransactionsReportPage() {
   const searchParams = useSearchParams();
   const dataParam = searchParams.get("data");
 
-  console.log(dataParam);
-
-  // ✅ IDs now come directly from backend
   const transactions: Transaction[] = dataParam
     ? JSON.parse(decodeURIComponent(dataParam)).map((t: any) => ({
         ...t,
@@ -107,7 +104,6 @@ export default function TransactionsReportPage() {
 
   const [sorting, setSorting] = useState<any>([]);
 
-  // --- 🧮 Insights ---
   const totalAmount = useMemo(
     () => transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
     [transactions]
@@ -136,7 +132,6 @@ export default function TransactionsReportPage() {
     return new Date(sorted[0].date).toLocaleDateString("en-GB");
   }, [transactions]);
 
-  // --- 💾 Table Columns ---
   const columns: ColumnDef<Transaction>[] = useMemo(
     () => [
       {
@@ -197,7 +192,6 @@ export default function TransactionsReportPage() {
     []
   );
 
-  // --- 🧱 UI ---
   return (
     <div className="max-w-5xl mx-auto p-6 text-gray-200 space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -211,7 +205,6 @@ export default function TransactionsReportPage() {
         </div>
       </div>
 
-      {/* --- 📊 Insight Cards --- */}
       {transactions.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-border">
@@ -254,7 +247,6 @@ export default function TransactionsReportPage() {
         </div>
       )}
 
-      {/* --- 🧾 Transactions Table --- */}
       <Card className="mt-4">
         <CardHeader className="px-2 pt-2 sm:px-4">
           <CardTitle className="text-base font-semibold">

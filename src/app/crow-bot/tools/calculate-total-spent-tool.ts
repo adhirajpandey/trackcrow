@@ -8,6 +8,7 @@ import { validateSession } from "@/common/server";
 export const calculateTotalSpentSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  category: z.string().optional(),
 });
 export type CalculateTotalSpentInput = z.infer<
   typeof calculateTotalSpentSchema
@@ -47,6 +48,10 @@ export async function runCalculateTotalSpent(input: CalculateTotalSpentInput) {
       : extractDateRangeFields(input);
 
   const { startDate, endDate } = structured;
+  const category =
+    "structured_data" in input
+      ? input.structured_data?.category || null
+      : input.category || null;
 
   const sessionResult = await validateSession();
   if (!sessionResult.success) {
@@ -59,15 +64,22 @@ export async function runCalculateTotalSpent(input: CalculateTotalSpentInput) {
     `📊 Fetching total spend for user ${userUuid} from ${startDate} → ${endDate}`
   );
 
-  // ✅ Query all transactions within the date range
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      user_uuid: userUuid,
-      timestamp: {
-        gte: new Date(`${startDate}T00:00:00Z`),
-        lte: new Date(`${endDate}T23:59:59Z`),
-      },
+  const whereClause: any = {
+    user_uuid: userUuid,
+    timestamp: {
+      gte: new Date(`${startDate}T00:00:00Z`),
+      lte: new Date(`${endDate}T23:59:59Z`),
     },
+  };
+
+  if (category) {
+    whereClause.Category = {
+      name: { equals: category, mode: "insensitive" },
+    };
+  }
+
+  const transactions = await prisma.transaction.findMany({
+    where: whereClause,
     select: { amount: true },
   });
 
