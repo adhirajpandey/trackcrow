@@ -27,13 +27,12 @@ export async function runShowTransactions(input: ShowTransactionsInput) {
     },
   });
 
-  console.log("Fetched transactions:", transactions);
-
   if (!transactions.length) {
     return { message: "No recent transactions found." };
   }
 
   const formatted = transactions.map((tx) => ({
+    id: tx.id,
     amount: tx.amount,
     category: tx.Category?.name || "Uncategorized",
     subcategory: tx.Subcategory?.name || null,
