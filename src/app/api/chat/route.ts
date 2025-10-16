@@ -10,6 +10,10 @@ import { buildClassifierPrompt } from "@/common/prompts";
 import { google } from "@ai-sdk/google";
 import { tools } from "@/app/crow-bot/tools";
 import { toolSchema } from "@/common/schemas";
+import {
+  getCrowBotHelp,
+  getTrackCrowHelp,
+} from "@/app/crow-bot/help-responses";
 
 /* ------------------------- Utility Functions -------------------------- */
 
@@ -235,6 +239,22 @@ export async function POST(request: Request) {
 
     /* ------------------------- Parse Input -------------------------- */
     const rawUserText = getRawTextFromUIMessage(lastUserMessage);
+
+    /* -------------------- Help Intent Detection -------------------- */
+    const helpRegex =
+      /\b(what\s+is\s+trackcrow|what\s+can\s+trackcrow\s+do|trackcrow\s+help)\b/i;
+    const crowBotHelpRegex =
+      /\b(who\s+are\s+you|what\s+can\s+you\s+do|what\s+can\s+crowbot\s+do|tell\s+me\s+about\s+crowbot|crowbot\s+help|help|how\s+(do|can)\s+i\s+use|explain|guide|how\s+does\s+this\s+work|commands|features|capabilities)\b/i;
+
+    if (helpRegex.test(rawUserText)) {
+      return streamTextResponse(getTrackCrowHelp());
+    }
+
+    if (crowBotHelpRegex.test(rawUserText)) {
+      return streamTextResponse(getCrowBotHelp());
+    }
+
+    /* ------------------------- Intent Detection ------------------------- */
     const rule = deterministicIntentFromText(rawUserText);
     let structuredResObj: any;
 
