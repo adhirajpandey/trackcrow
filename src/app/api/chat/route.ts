@@ -13,7 +13,8 @@ import { toolSchema } from "@/common/schemas";
 import {
   getCrowBotHelp,
   getTrackCrowHelp,
-} from "@/app/crow-bot/help-responses";
+} from "@/app/crow-bot/utils/help-responses";
+import { parseTimeframeFromText } from "@/app/crow-bot/utils/timeframe-parser";
 
 /* ------------------------- Utility Functions -------------------------- */
 
@@ -31,15 +32,25 @@ function getRawTextFromUIMessage(msg?: UIMessage) {
 function deterministicIntentFromText(text: string) {
   const t = text?.toLowerCase().replace(/[^\w\s']/g, " ") || "";
   const patterns = {
+    // “What is my biggest expense” type questions
     biggest:
       /\b(biggest|largest|most|top|highest|max|costliest|where did i spend the most|where most of my money went|what'?s my biggest expense|which category costs me the most)\b/,
+
+    // Spending by category / trend breakdown
     breakdown:
-      /\b(by category|each category|breakdown|distribution|split|per category|trend|trends|spending pattern|spending patterns|expense pattern|expense patterns|spending habit|spending habits|expense trend|expense trends|spending analysis|expense analysis|spending behavior|spending overview)\b/,
+      /\b(by category|each category|breakdown|distribution|split|per category|trend|trends|spending pattern|spending patterns|expense pattern|expense patterns|spending habit|spending habits|spending analysis|expense analysis|overview)\b/,
+
+    // Month comparison
     lastMonth:
       /\b(last month|previous month|month summary|last month's|previous month's)\b/,
+
+    // ✅ total spent / expenditure queries
     totalSpent:
-      /\b(how much did i spend|total spent|how much have i spent|total expenditure)\b/,
-    logExpense: /\b(paid|add|spent|logged|log expense|i paid|i spent)\b/,
+      /\b(how much did i spend|total spent|total amount spent|how much have i spent|total expenditure|total expenses?)\b/,
+
+    // ⚙️ record/log transactions — require *explicit action*
+    logExpense:
+      /\b(i\s+(spent|paid|bought)|add(ed)?\s+(an?\s+)?expense|log(ged)?\s+(an?\s+)?expense|record(ing)?\s+(an?\s+)?payment)\b/,
   };
 
   for (const [intent, regex] of Object.entries(patterns)) {
@@ -304,9 +315,11 @@ export async function POST(request: Request) {
       );
 
     const allowedByContext = {
-      transaction: ["logExpense", "showTransactions", "calculateTotalSpent"],
+      transaction: ["logExpense"],
       analytics: [
         "spendingTrendByCategory",
+        "showTransactions",
+        "calculateTotalSpent",
         "monthlyComparison",
         "biggestExpenseCategory",
         "setBudget",
@@ -375,6 +388,39 @@ export async function POST(request: Request) {
         resumeState: { intent, context: { partialData: structured_data } },
       });
     }
+
+    if (
+      [
+        "calculateTotalSpent",
+        "spendingTrendByCategory",
+        "biggestExpenseCategory",
+      ].includes(intent)
+    ) {
+      const inferred = parseTimeframeFromText(rawUserText);
+
+      if (inferred?.startDate && inferred?.endDate) {
+        structured_data.startDate = inferred.startDate;
+        structured_data.endDate = inferred.endDate;
+        structured_data._timeframeInferred = true;
+      } else {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1)
+          .toISOString()
+          .split("T")[0];
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          .toISOString()
+          .split("T")[0];
+        structured_data.startDate = start;
+        structured_data.endDate = end;
+        structured_data._timeframeInferred = false;
+      }
+
+      aiMissingFields = aiMissingFields.filter(
+        (f) => f !== "startDate" && f !== "endDate"
+      );
+    }
+
+    console.log(structured_data);
 
     const selectedTool = tools[intent];
     if (!selectedTool)
