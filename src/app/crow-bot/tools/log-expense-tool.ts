@@ -137,6 +137,8 @@ export async function runLogExpense(input: any) {
 
   const { categoryId, subcategoryId } = validatedFields.data;
 
+  if (!timestamp) throw new Error("Timestamp is required");
+
   try {
     await prisma.transaction.create({
       data: {

@@ -19,7 +19,7 @@ export const ExpenseCard = ({
   type = "",
   timestamp,
   remarks,
-  message,
+  // message,
 }: ExpenseProps) => {
   const formattedDate = new Date(timestamp).toLocaleString("en-GB", {
     day: "2-digit",

@@ -37,7 +37,7 @@ export function TypingText({
         intervalRef.current = null;
       }
     };
-  }, [text]);
+  }, [text, scrollRef]);
 
   return <span className="whitespace-pre-wrap">{displayed}</span>;
 }

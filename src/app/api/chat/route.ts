@@ -16,6 +16,25 @@ import {
 } from "@/app/crow-bot/utils/help-responses";
 import { parseTimeframeFromText } from "@/app/crow-bot/utils/timeframe-parser";
 
+/* ------------------------- Type Definitions -------------------------- */
+
+type ResumeState = {
+  intent?: keyof typeof tools;
+  context?: {
+    partialData?: Record<string, any>;
+  };
+};
+
+type MessageWithMetadata = UIMessage & {
+  metadata?: {
+    intent?: string;
+    resumeIntent?: boolean;
+    resumeState?: ResumeState;
+  };
+};
+
+type ToolName = keyof typeof tools;
+
 /* ------------------------- Utility Functions -------------------------- */
 
 function getRawTextFromUIMessage(msg?: UIMessage) {
@@ -210,12 +229,13 @@ export async function POST(request: Request) {
     );
 
     const promptIntent =
-      lastMessage?.metadata?.intent ||
-      lastUserMessage?.metadata?.intent ||
+      (lastMessage?.metadata as { intent?: string })?.intent ||
+      (lastUserMessage?.metadata as { intent?: string })?.intent ||
       "other";
 
     const isResume =
-      lastMessage?.metadata?.resumeIntent === true ||
+      (lastMessage?.metadata as { resumeIntent?: boolean })?.resumeIntent ===
+        true ||
       lastMessage?.parts?.some((p: any) => p.text?.includes('"__resume":true'));
 
     const userUuid = await getSessionUser();
@@ -223,22 +243,41 @@ export async function POST(request: Request) {
 
     /* ------------------------ Resume Handling ------------------------ */
     if (isResume && !lastHadToolOutput) {
-      const resumeText =
-        lastMessage.parts?.find((p: any) => p.type === "text")?.text || "{}";
-      const parsed = JSON.parse(resumeText || "{}");
-      const resumeState =
-        lastMessage.metadata?.resumeState || parsed.resumeState || {};
+      const lastMessage = (messages.at(-1) ?? {}) as MessageWithMetadata;
+
+      const textPart = lastMessage.parts?.find(
+        (p): p is { type: "text"; text: string } => p.type === "text"
+      );
+      const resumeText = textPart?.text ?? "{}";
+
+      let parsed: Record<string, any> = {};
+      try {
+        parsed = JSON.parse(resumeText);
+      } catch {
+        parsed = {};
+      }
+
+      const resumeState: ResumeState =
+        lastMessage.metadata?.resumeState ||
+        (parsed.resumeState as ResumeState) ||
+        {};
+
       const mergedData = {
         ...(resumeState.context?.partialData || {}),
         ...parsed,
       };
+
       const intent = resumeState.intent;
-      const selectedTool = tools[intent];
+      const selectedTool = intent ? tools[intent] : undefined;
 
       if (!selectedTool)
         return streamTextResponse(
           `Sorry — I don't have a tool for intent "${intent}".`
         );
+
+      if (!intent) {
+        return streamTextResponse("Error: Missing intent for tool execution.");
+      }
 
       return streamToolResponse({
         toolName: intent,
@@ -314,7 +353,7 @@ export async function POST(request: Request) {
         ][Math.floor(Math.random() * 4)]
       );
 
-    const allowedByContext = {
+    const allowedByContext: Record<string, string[]> = {
       transaction: ["logExpense"],
       analytics: [
         "spendingTrendByCategory",
@@ -420,9 +459,11 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(structured_data);
+    const selectedTool =
+      intent && (intent as ToolName) in tools
+        ? tools[intent as ToolName]
+        : undefined;
 
-    const selectedTool = tools[intent];
     if (!selectedTool)
       return streamTextResponse(
         `Sorry — I don't have a tool for intent "${intent}".`

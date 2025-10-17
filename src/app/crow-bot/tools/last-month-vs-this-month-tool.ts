@@ -32,7 +32,7 @@ function toNumber(v: any) {
 
 /* ----------------------------- TOOL EXECUTION ----------------------------- */
 
-export async function runlastMonthVsThisMonth(_: any) {
+export async function runlastMonthVsThisMonth() {
   const session = await validateSession();
   if (!session.success) {
     return { error: "Unauthorized. Please log in first." };

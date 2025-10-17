@@ -49,9 +49,9 @@ export async function runCalculateTotalSpent(input: CalculateTotalSpentInput) {
 
   const { startDate, endDate } = structured;
   const category =
-    "structured_data" in input
-      ? input.structured_data?.category || null
-      : input.category || null;
+    "structured_data" in (input as any)
+      ? (input as any).structured_data?.category || null
+      : (input as any).category || null;
 
   const sessionResult = await validateSession();
   if (!sessionResult.success) {

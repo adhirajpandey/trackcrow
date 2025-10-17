@@ -94,13 +94,20 @@ export default function TransactionsReportPage() {
   const searchParams = useSearchParams();
   const dataParam = searchParams.get("data");
 
-  const transactions: Transaction[] = dataParam
-    ? JSON.parse(decodeURIComponent(dataParam)).map((t: any) => ({
+  const transactions: Transaction[] = useMemo(() => {
+    if (!dataParam) return [];
+    try {
+      const parsed = JSON.parse(decodeURIComponent(dataParam));
+      return parsed.map((t: any) => ({
         ...t,
         amount:
           typeof t.amount === "string" ? parseFloat(t.amount) || 0 : t.amount,
-      }))
-    : [];
+      }));
+    } catch (err) {
+      console.error("Invalid dataParam JSON:", err);
+      return [];
+    }
+  }, [dataParam]);
 
   const [sorting, setSorting] = useState<any>([]);
 

@@ -74,6 +74,7 @@ export function tryParseJSON(text: string) {
   try {
     return JSON.parse(match[0]);
   } catch (err) {
+    console.error("Error in crowbot-client:", err);
     return null;
   }
 }
@@ -269,7 +270,7 @@ export default function CrowBotClient() {
                                   fields={parsed.fields}
                                   resumeState={parsed.resumeState}
                                   categories={parsed.categories || []}
-                                  onSubmit={async (data) => {
+                                  onSubmit={async (data: any) => {
                                     try {
                                       await sendMessage({
                                         text: JSON.stringify({

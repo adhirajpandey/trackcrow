@@ -1,12 +1,40 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, ChangeEvent, FormEvent } from "react";
+
+type Field = {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+};
+
+type Category = {
+  name: string;
+  subcategories?: string[];
+};
+
+type ResumeState = {
+  context?: {
+    partialData?: {
+      category?: string;
+      subcategory?: string;
+    };
+  };
+};
+
+type MissingFieldsFormProps = {
+  fields: Field[];
+  resumeState?: ResumeState;
+  onSubmit: (data: Record<string, any>) => Promise<void> | void;
+  categories?: Category[];
+};
 
 export function MissingFieldsForm({
   fields,
   resumeState,
   onSubmit,
   categories = [],
-}) {
+}: MissingFieldsFormProps) {
   const normalizedFields = useMemo(() => {
     const hasCategory = fields.some((f) => f.name === "category");
     const hasSubcategory = fields.some((f) => f.name === "subcategory");
@@ -64,9 +92,10 @@ export function MissingFieldsForm({
     );
   }, [normalizedFields]);
 
-  const [formData, setFormData] = useState(defaultValues);
+  const [formData, setFormData] =
+    useState<Record<string, string>>(defaultValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   useEffect(() => {
     const prefilledCategory = resumeState?.context?.partialData?.category;
@@ -83,7 +112,9 @@ export function MissingFieldsForm({
     }
   }, [resumeState]);
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type } = e.target;
 
     if (name === "category") {
@@ -115,13 +146,13 @@ export function MissingFieldsForm({
     }
   }, [formData.startDate, formData.endDate]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     await onSubmit({ ...formData, __resume: true, resumeState });
   };
 
-  const getInputType = (f) =>
+  const getInputType = (f: Field): string =>
     f.name === "startDate" || f.name === "endDate"
       ? "date"
       : f.name.toLowerCase().includes("date")
@@ -153,7 +184,7 @@ export function MissingFieldsForm({
 
           const sharedInputClass =
             "bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-[#75378d]";
-          const sharedSelectStyle = {
+          const sharedSelectStyle: React.CSSProperties = {
             textIndent: "-1px",
             paddingRight: "1.9rem",
             colorScheme: "dark",
@@ -265,7 +296,7 @@ export function MissingFieldsForm({
                         if (!val) return "";
                         return val.length > 10 ? val.slice(0, 16) : val;
                       })()
-                    : formData[field.name]
+                    : formData[field.name] || ""
                 }
                 onChange={handleChange}
                 disabled={isSubmitting}

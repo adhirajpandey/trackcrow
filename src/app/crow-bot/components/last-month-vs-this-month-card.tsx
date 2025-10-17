@@ -29,14 +29,13 @@ export const MonthlyComparisonChart: React.FC<MonthlyComparisonChartProps> = ({
     }
   }, [output]);
 
-  const trendData = parsed.trendData || [];
-  const message = parsed.message || "";
-  const currentMonthTotal = parsed.currentMonth || 0;
-  const lastMonthTotal = parsed.lastMonth || 0;
-  const percentChange = parsed.percentChange || 0;
-  const trend = parsed.trend || "neutral";
+  const trendData = useMemo(() => parsed.trendData || [], [parsed]);
+  const message = useMemo(() => parsed.message || "", [parsed]);
+  const currentMonthTotal = useMemo(() => parsed.currentMonth || 0, [parsed]);
+  const lastMonthTotal = useMemo(() => parsed.lastMonth || 0, [parsed]);
+  const percentChange = useMemo(() => parsed.percentChange || 0, [parsed]);
+  const trend = useMemo(() => parsed.trend || "neutral", [parsed]);
 
-  // ✅ Fix: Robust date parsing
   const groupedData = useMemo(() => {
     if (!Array.isArray(trendData) || trendData.length === 0) return [];
 
