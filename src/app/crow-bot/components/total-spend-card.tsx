@@ -1,4 +1,4 @@
-import { Wallet2, Calendar, ArrowUpRight } from "lucide-react";
+import { Wallet2, Calendar } from "lucide-react";
 
 type TotalSpendCardProps = {
   message: string;
@@ -39,15 +39,6 @@ export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
         })}`
       : "All Time";
 
-  const getColor = (amount: number) => {
-    if (amount === 0) return "text-gray-500";
-    if (amount < 5000) return "text-emerald-400";
-    if (amount < 20000) return "text-amber-400";
-    return "text-red-400";
-  };
-
-  const spendColor = getColor(totalSpent);
-
   return (
     <div className="relative w-full max-w-5xl mx-auto rounded-2xl border border-border bg-background/60 p-8 shadow-lg hover:shadow-xl transition-all duration-200">
       {/* Header */}
@@ -70,7 +61,9 @@ export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
           {remarks && (
             <p className="text-sm text-gray-400 mt-1">
               Filter:{" "}
-              <span className="text-white font-medium">"{remarks}"</span>
+              <span className="text-white font-medium">
+                &quot;{remarks}&quot;
+              </span>
             </p>
           )}
         </div>

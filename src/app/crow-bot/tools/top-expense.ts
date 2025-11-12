@@ -92,12 +92,6 @@ export async function runTopExpense(input: any) {
       endDate: end?.toISOString() ?? null,
     };
 
-    let rangeText = "of all time";
-    if (start && end)
-      rangeText = `between ${start.toDateString()} and ${end.toDateString()}`;
-    else if (start) rangeText = `since ${start.toDateString()}`;
-    else if (end) rangeText = `till ${end.toDateString()}`;
-
     let message = "";
 
     switch (mode) {

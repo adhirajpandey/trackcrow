@@ -425,7 +425,6 @@ export async function POST(request: Request) {
     };
 
     const requiredFields = intentMeta.required || [];
-    const optionalFields = intentMeta.optional || [];
 
     const missingRequired = requiredFields.filter(
       (f: any) => !structured_data?.[f] && structured_data?.[f] !== 0
