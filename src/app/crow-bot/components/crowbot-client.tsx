@@ -98,11 +98,11 @@ export default function CrowBotClient() {
       ? ["Add a new expense transaction"]
       : activeMenu === "analytics"
         ? [
-            "Show spending trend by category",
-            "Compare last month vs this month expenses",
-            "What’s my biggest expense category?",
-            "Show me my last 5 transactions",
-            "Calculate total spent on food this week",
+            "Show my expense summary for this month",
+            "Compare groceries vs transport expenses in October",
+            "What’s my biggest expense this week?",
+            "Total amount spent on food last month",
+            "Show all transactions with 'Starbucks' in remarks",
           ]
         : [];
 

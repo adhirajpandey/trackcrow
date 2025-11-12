@@ -100,7 +100,20 @@ async function inferMissingDateRange({
 }) {
   const hasStart = !!structured_data?.startDate;
   const hasEnd = !!structured_data?.endDate;
-  if (hasStart && hasEnd) return structured_data;
+  if (hasStart && hasEnd) {
+    const start = new Date(structured_data.startDate);
+    const end = new Date(structured_data.endDate);
+    if (start > end) {
+      console.warn(
+        `[⚠️ Invalid Range] Swapping startDate and endDate for intent "${intent}".`
+      );
+      [structured_data.startDate, structured_data.endDate] = [
+        structured_data.endDate,
+        structured_data.startDate,
+      ];
+    }
+    return structured_data;
+  }
 
   const missingField = hasStart ? "endDate" : "startDate";
   const knownField = hasStart ? "startDate" : "endDate";
@@ -110,11 +123,13 @@ async function inferMissingDateRange({
 You are a strict JSON generator.
 Given the user's query and the known ${knownField} = "${knownValue}",
 infer the missing ${missingField} so that the range represents a full logical period.
-Follow these rules:
+
+Follow these rules carefully:
 - Always use ISO 8601 UTC format.
 - Never pick a future date.
+- The endDate must always come **after** the startDate.
 - For expressions like "this week", "last month", "past 7 days", "today", etc.,
-  ensure the range covers the full span of that duration.
+  ensure the range covers the full logical duration (start → end).
 - Return JSON only in this format:
   { "${missingField}": "YYYY-MM-DDTHH:mm:ss.sssZ" }
 
@@ -141,6 +156,23 @@ User query: "${rawText}"
       console.log(
         `[🧩 Auto-Inferred] ${missingField} = ${inferred} for intent "${intent}"`
       );
+    }
+
+    const start = structured_data.startDate
+      ? new Date(structured_data.startDate)
+      : undefined;
+    const end = structured_data.endDate
+      ? new Date(structured_data.endDate)
+      : undefined;
+
+    if (start && end && start > end) {
+      console.warn(
+        `[⚠️ Auto-Correction] Swapping invalid date order for "${intent}".`
+      );
+      [structured_data.startDate, structured_data.endDate] = [
+        structured_data.endDate,
+        structured_data.startDate,
+      ];
     }
   } catch (err) {
     console.warn(`Failed to infer ${missingField}:`, err);
