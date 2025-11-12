@@ -1,3 +1,5 @@
+import { ArrowUpRight } from "lucide-react";
+
 type ExpenseProps = {
   amount: number;
   recipient: string;
@@ -8,6 +10,7 @@ type ExpenseProps = {
   timestamp: string;
   remarks?: string;
   message?: string;
+  transactionId?: number;
 };
 
 export const ExpenseCard = ({
@@ -19,7 +22,7 @@ export const ExpenseCard = ({
   type = "",
   timestamp,
   remarks,
-  // message,
+  transactionId,
 }: ExpenseProps) => {
   const formattedDate = new Date(timestamp).toLocaleString("en-GB", {
     day: "2-digit",
@@ -30,11 +33,24 @@ export const ExpenseCard = ({
     timeZone: "Asia/Kolkata",
   });
 
+  const transactionUrl = `/transactions/${transactionId ?? recipient}`;
+
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-xl border border-border px-8 py-6 shadow-md flex flex-col space-y-6">
-      <h2 className="text-base font-medium text-gray-300 border-b border-border pb-3">
-        Transaction Details
-      </h2>
+    <div className="relative w-full max-w-2xl mx-auto rounded-xl border border-border px-8 py-6 shadow-md flex flex-col space-y-6">
+      <div className="flex items-center justify-between border-b border-border pb-3">
+        <h2 className="text-base font-medium text-gray-300">
+          Transaction Details
+        </h2>
+        <a
+          href={transactionUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 hover:text-white transition-colors"
+          title="Open transaction details in new tab"
+        >
+          <ArrowUpRight className="w-5 h-5" />
+        </a>
+      </div>
 
       <div className="grid grid-cols-2 gap-6 text-sm">
         <div>
@@ -67,7 +83,7 @@ export const ExpenseCard = ({
         <div>
           <p className="text-gray-400">Subcategory</p>
           <p className="text-lg font-semibold text-white">
-            {subcategory ?? "—"}
+            {subcategory && subcategory.trim() !== "" ? subcategory : "—"}
           </p>
         </div>
 

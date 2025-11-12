@@ -67,28 +67,133 @@ export const userReadSchema = z.object({
   categories: z.array(categorySchema),
 });
 
-export const toolSchema = z.object({
-  relevance: z.number().min(1).max(5),
-  intent: z.enum([
-    "logExpense",
-    "showTransactions",
-    "calculateTotalSpent",
-    "spendingTrend",
-    "lastMonthSummary",
-    "setBudget",
-    "other",
-  ]),
-  structured_data: z.object({
+const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+export const baseFields = {
+  amount: z.number().nullable().optional(),
+  recipient: z.string().nullable().optional(),
+  recipient_name: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  subcategory: z.string().nullable().optional(),
+  type: z
+    .enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"])
+    .nullable()
+    .optional(),
+  remarks: z.string().nullable().optional(),
+  timestamp: z
+    .string()
+    .regex(iso8601Regex, "Timestamp must be in ISO 8601 format")
+    .nullable()
+    .optional(),
+  startDate: z
+    .string()
+    .regex(iso8601Regex, "startDate must be in ISO 8601 format")
+    .nullable()
+    .optional(),
+  endDate: z
+    .string()
+    .regex(iso8601Regex, "endDate must be in ISO 8601 format")
+    .nullable()
+    .optional(),
+};
+
+// ⚙️ Common reusable shape builder
+function makeStructuredDataShape(fields: Record<string, z.ZodTypeAny>) {
+  return z.object(fields).partial();
+}
+
+const recordExpenseSchema = z.object({
+  intent: z.literal("recordExpense"),
+  relevance: z.number().min(0).max(5),
+  structured_data: makeStructuredDataShape({
     amount: z.number().nullable(),
-    recipient: z.string().nullable(),
-    recipient_name: z.string().nullable(),
     category: z.string().nullable(),
-    subcategory: z.string().nullable(),
-    type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).nullable(),
-    remarks: z.string().nullable(),
     timestamp: z.string().nullable(),
-    startDate: z.string().nullable(),
-    endDate: z.string().nullable(),
+    recipient: baseFields.recipient,
+    subcategory: baseFields.subcategory,
+    type: baseFields.type,
+    remarks: baseFields.remarks,
   }),
   missing_fields: z.array(z.string()),
 });
+
+const expenseComparisonSchema = z.object({
+  intent: z.literal("expenseComparison"),
+  relevance: z.number().min(0).max(5),
+  structured_data: makeStructuredDataShape({
+    category: z.array(z.string()).optional(),
+    remarks: baseFields.remarks,
+    startDate: baseFields.startDate,
+    endDate: baseFields.endDate,
+  }),
+  missing_fields: z.array(z.string()),
+});
+
+const transactionSearchSchema = z.object({
+  intent: z.literal("transactionSearch"),
+  relevance: z.number().min(0).max(5),
+  structured_data: makeStructuredDataShape({
+    recipient: baseFields.recipient,
+    category: baseFields.category,
+    keyword: z.string().nullable().optional(),
+    startDate: baseFields.startDate,
+    endDate: baseFields.endDate,
+  }),
+  missing_fields: z.array(z.string()),
+});
+
+const topExpenseSchema = z.object({
+  intent: z.literal("topExpense"),
+  relevance: z.number().min(0).max(5),
+  structured_data: makeStructuredDataShape({
+    category: baseFields.category,
+    startDate: baseFields.startDate,
+    endDate: baseFields.endDate,
+  }),
+  missing_fields: z.array(z.string()),
+});
+
+const dashboardSummarySchema = z.object({
+  intent: z.literal("dashboardSummary"),
+  relevance: z.number().min(0).max(5),
+  structured_data: makeStructuredDataShape({
+    startDate: baseFields.startDate,
+    endDate: baseFields.endDate,
+  }),
+  missing_fields: z.array(z.string()),
+});
+
+const totalSpendSchema = z.object({
+  intent: z.literal("totalSpend"),
+  relevance: z.number().min(0).max(5),
+  structured_data: makeStructuredDataShape({
+    category: baseFields.category,
+    remarks: baseFields.remarks,
+    startDate: baseFields.startDate,
+    endDate: baseFields.endDate,
+  }),
+  missing_fields: z.array(z.string()),
+});
+
+const otherSchema = z.object({
+  intent: z.literal("other"),
+  relevance: z.number().min(0).max(0),
+  structured_data: z.object({}).optional(),
+  missing_fields: z.array(z.string()).default([]),
+});
+
+// ------------------------
+// Combined schema
+// ------------------------
+
+export const toolSchema = z.discriminatedUnion("intent", [
+  otherSchema,
+  recordExpenseSchema,
+  expenseComparisonSchema,
+  transactionSearchSchema,
+  topExpenseSchema,
+  dashboardSummarySchema,
+  totalSpendSchema,
+]);
+
+export type ToolOutput = z.infer<typeof toolSchema>;

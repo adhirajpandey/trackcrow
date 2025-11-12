@@ -16,14 +16,14 @@ const addTransactionSchema = z.object({
   timestamp: z.coerce.date(),
 });
 
-export const logExpenseSchema = z.object({}).passthrough();
+export const recordExpenseSchema = z.object({}).passthrough();
 
 /* ----------------------------- HELPERS ----------------------------- */
 
 function extractTransactionFields(structured_data: any) {
   if (!structured_data || typeof structured_data !== "object") {
     console.warn(
-      "⚠️ Invalid structured_data passed to logExpenseTool:",
+      "⚠️ Invalid structured_data passed to recordExpenseTool:",
       structured_data
     );
     return {};
@@ -71,7 +71,7 @@ function extractTransactionFields(structured_data: any) {
 
 /* ----------------------------- TOOL EXECUTION ----------------------------- */
 
-export async function runLogExpense(input: any) {
+export async function runRecordExpense(input: any) {
   const structured =
     "structured_data" in input
       ? extractTransactionFields(input.structured_data)
@@ -140,7 +140,7 @@ export async function runLogExpense(input: any) {
   if (!timestamp) throw new Error("Timestamp is required");
 
   try {
-    await prisma.transaction.create({
+    const transaction = await prisma.transaction.create({
       data: {
         user_uuid: userUuid,
         amount,
@@ -154,19 +154,31 @@ export async function runLogExpense(input: any) {
         input_mode: "MANUAL",
         uuid: crypto.randomUUID(),
       },
+      select: {
+        id: true,
+        uuid: true,
+        amount: true,
+        recipient: true,
+        categoryId: true,
+        subcategoryId: true,
+        type: true,
+        remarks: true,
+        timestamp: true,
+      },
     });
 
     return {
       message: `✅ Transaction logged: ${recipient} — ₹${amount} (${category}${
         subcategory ? " / " + subcategory : ""
       })`,
-      amount,
-      recipient,
+      transactionId: transaction.id,
+      amount: transaction.amount,
+      recipient: transaction.recipient,
       category,
       subcategory,
-      type,
-      remarks,
-      timestamp,
+      type: transaction.type,
+      remarks: transaction.remarks,
+      timestamp: transaction.timestamp,
     };
   } catch (error: any) {
     console.error("Failed to create transaction", error);
@@ -176,10 +188,10 @@ export async function runLogExpense(input: any) {
 
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 
-export const logExpenseTool = createTool({
-  name: "logExpense",
+export const recordExpenseTool = createTool({
+  name: "recordExpense",
   description:
-    "Log a new financial transaction into the database and return a summary card.",
-  inputSchema: logExpenseSchema,
-  execute: runLogExpense,
+    "Records a new financial transaction into the database and return a summary card.",
+  inputSchema: recordExpenseSchema,
+  execute: runRecordExpense,
 });

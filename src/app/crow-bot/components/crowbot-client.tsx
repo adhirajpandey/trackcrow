@@ -4,15 +4,14 @@ import { useChat } from "@ai-sdk/react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ExpenseCard } from "@/app/crow-bot/components/expense-card";
-import { ShowTransactionsCard } from "@/app/crow-bot/components/show-transactions-card";
-import { MonthlyComparisonChart } from "./last-month-vs-this-month-card";
-import { BudgetCard } from "@/app/crow-bot/components/budget-card";
-import { TotalSpendsCard } from "@/app/crow-bot/components/total-spends-card";
-import { SpendingTrendChartByCategory } from "./spending-trend-chart-by-category";
-import { BiggestExpenseCategory } from "./biggest-expense-category-card";
 import { Thinking } from "@/app/crow-bot/components/thinking";
 import { TypingText } from "@/app/crow-bot/components/typing-text";
 import { MissingFieldsForm } from "@/app/crow-bot/components/missing-fields-form";
+import { DashboardSummaryLink } from "@/app/crow-bot/components/dashboard-summary-card";
+import { TransactionSearchCard } from "./transaction-search-card";
+import { ExpenseComparisonCard } from "./expense-comparision-card";
+import { TopExpenseCard } from "./top-expense-card";
+import { TotalSpendCard } from "./total-spend-card";
 
 function MenuToggle({
   activeMenu,
@@ -305,7 +304,8 @@ export default function CrowBotClient() {
                             );
                           }
 
-                          if (part.type === "tool-logExpense") {
+                          if (part.type === "tool-recordExpense") {
+                            console.log("Rendering ExpenseCard with:", part);
                             return (
                               <div key={index} className="my-4 space-y-2">
                                 <p className="text-sm text-green-400 font-medium">
@@ -316,71 +316,41 @@ export default function CrowBotClient() {
                               </div>
                             );
                           }
-                          if (part.type === "tool-setBudget") {
+                          if (part.type === "tool-dashboardSummary") {
                             return (
                               <div key={index} className="my-4 space-y-2">
-                                <p className="text-sm text-green-400 font-medium">
-                                  ✅ Your Budget has been successfully set:
-                                </p>
-                                <BudgetCard {...part.output} />
+                                <DashboardSummaryLink />
                               </div>
                             );
                           }
 
-                          if (part.type === "tool-showTransactions") {
+                          if (part.type === "tool-transactionSearch") {
                             return (
                               <div key={index} className="my-4 space-y-2">
-                                <ShowTransactionsCard {...part.output} />
+                                <TransactionSearchCard {...part.output} />
                               </div>
                             );
                           }
 
-                          if (part.type === "tool-calculateTotalSpent") {
+                          if (part.type === "tool-expenseComparison") {
                             return (
                               <div key={index} className="my-4 space-y-2">
-                                <p className="text-sm text-green-400 font-medium">
-                                  ✅ Here is the total spend information:
-                                </p>
-                                <TotalSpendsCard {...part.output} />
+                                <ExpenseComparisonCard {...part.output} />
                               </div>
                             );
                           }
 
-                          if (part.type === "tool-lastMonthVsThisMonth") {
+                          if (part.type === "tool-topExpense") {
                             return (
                               <div key={index} className="my-4 space-y-2">
-                                <p className="text-sm text-green-400 font-medium">
-                                  ✅ Here is your last month vs this month
-                                  comparision summary:
-                                </p>
-                                <MonthlyComparisonChart output={part.output} />
+                                <TopExpenseCard {...part.output} />
                               </div>
                             );
                           }
-
-                          if (part.type === "tool-biggestExpenseCategory") {
-                            return (
-                              <div
-                                key={index}
-                                className="my-4 space-y-2 max-w-[300px] w-full"
-                              >
-                                <p className="text-sm text-green-400 font-medium">
-                                  ✅ Here is your biggest expense category:
-                                </p>
-                                <BiggestExpenseCategory result={part.output} />
-                              </div>
-                            );
-                          }
-                          if (part.type === "tool-spendingTrendByCategory") {
+                          if (part.type === "tool-totalSpend") {
                             return (
                               <div key={index} className="my-4 space-y-2">
-                                <p className="text-sm text-green-400 font-medium">
-                                  ✅ Here’s your detailed total spending by
-                                  category:
-                                </p>
-                                <SpendingTrendChartByCategory
-                                  {...part.output}
-                                />
+                                <TotalSpendCard {...part.output} />
                               </div>
                             );
                           }

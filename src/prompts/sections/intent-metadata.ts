@@ -54,12 +54,11 @@ export function getIntentMetadata() {
 
     topExpense: {
       description:
-        "Used when the user wants to identify their biggest or top spending categories.",
+        "Used when the user wants to identify their biggest or top spending.",
       examples: [
-        "What are my biggest expenses in June?",
-        "Top expense categories this month",
-        "Show me top spending areas between October 1 and October 31",
-        "Top 3 expense categories for the last 30 days",
+        "What is my biggest expense in June?",
+        "Top expense this month",
+        "Show me top spending between October 1 and October 31",
       ],
       required: [],
       optional: ["category", "startDate", "endDate"],
