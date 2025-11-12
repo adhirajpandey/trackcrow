@@ -295,9 +295,10 @@ export async function POST(request: Request) {
 
     /* -------------------- Help Intent Detection -------------------- */
     const helpRegex =
-      /\b(what\s+is\s+trackcrow|what\s+can\s+trackcrow\s+do|trackcrow\s+help)\b/i;
+      /\b(what(\s+is|'?s)?\s*(track\s*crow|trackcrow)|tell\s+(me\s+)?(about|more\s+about)\s*(track\s*crow|trackcrow)|how\s+(does|do)\s*(track\s*crow|trackcrow)\s+(work|function)|track\s*crow\s+(guide|manual|overview|info|help|support)|explain\s*(track\s*crow|trackcrow)|track\s*crow\s+(commands?|features?|capabilities?|abilities?|options?|modes?)|show\s+(me\s+)?(how\s+track\s*crow|trackcrow)\s+(works?|helps?)|track\s*crow\s*(intro|introduction|tutorial|details?|usage)|^track\s*crow!?$)\b/i;
+
     const crowBotHelpRegex =
-      /\b(who\s+are\s+you|what\s+can\s+you\s+do|what\s+can\s+crowbot\s+do|tell\s+me\s+about\s+crowbot|crowbot\s+help|help|how\s+(do|can)\s+i\s+use|explain|guide|how\s+does\s+this\s+work|commands|features|capabilities)\b/i;
+      /\b((who|what)\s+(are|is)\s*(you|crow\s*bot|crowbot)|what\s+can\s+(you|crow\s*bot|crowbot)\s+do|tell\s+(me\s+)?(about|more\s+about)\s*(you|crow\s*bot|crowbot)|how\s+(do|can)\s+i\s+(use|talk\s+to|interact\s+with|work\s+with)\s*(you|crow\s*bot|crowbot)|how\s+does\s*(it|crow\s*bot|crowbot)\s+(work|function)|show\s+(me\s+)?(commands?|features?|capabilities?|abilities?|options?|skills?|tasks?)|list\s+(commands?|features?|capabilities?)|help(\s+(me|menu|options|please|crow\s*bot|crowbot))?|crow\s*bot\s+(guide|manual|overview|intro|tutorial|support|help|info|commands?|abilities?|capabilities?)|^crow\s*bot!?$|^crowbot!?$)/i;
 
     if (helpRegex.test(rawUserText)) {
       return streamTextResponse(getTrackCrowHelp());
