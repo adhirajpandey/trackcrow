@@ -19,7 +19,6 @@ export async function runTopExpense(input: any) {
   const start = startDate ? new Date(startDate) : undefined;
   const end = endDate ? new Date(endDate) : undefined;
 
-  // ✅ Auth check
   const sessionResult = await validateSession();
   if (!sessionResult.success)
     return { error: sessionResult.error || "User not authenticated." };
@@ -27,7 +26,6 @@ export async function runTopExpense(input: any) {
   const { userUuid } = sessionResult;
 
   try {
-    /* ------------------ STEP 1: DETERMINE MODE ------------------ */
     const mode =
       category && start && end
         ? "category+time"
@@ -37,7 +35,6 @@ export async function runTopExpense(input: any) {
             ? "time-only"
             : "all";
 
-    /* ------------------ STEP 2: BUILD FILTER ------------------ */
     const whereClause: any = { user_uuid: userUuid };
 
     if (start && end) whereClause.timestamp = { gte: start, lte: end };
@@ -63,7 +60,6 @@ export async function runTopExpense(input: any) {
       whereClause.categoryId = categoryRecord.id;
     }
 
-    /* ------------------ STEP 3: FIND BIGGEST TRANSACTION ------------------ */
     const [topTransaction] = await prisma.transaction.findMany({
       where: whereClause,
       orderBy: { amount: "desc" },
@@ -85,7 +81,6 @@ export async function runTopExpense(input: any) {
       };
     }
 
-    /* ------------------ STEP 4: BUILD RESULT ------------------ */
     const result = {
       id: topTransaction.id,
       category:
@@ -93,12 +88,10 @@ export async function runTopExpense(input: any) {
       subcategory: topTransaction.Subcategory?.name ?? null,
       amount: Number(topTransaction.amount),
       note: topTransaction.remarks ?? null,
-      timestamp: topTransaction.timestamp.toISOString(),
       startDate: start?.toISOString() ?? null,
       endDate: end?.toISOString() ?? null,
     };
 
-    /* ------------------ STEP 5: FRIENDLY MESSAGE ------------------ */
     let rangeText = "of all time";
     if (start && end)
       rangeText = `between ${start.toDateString()} and ${end.toDateString()}`;

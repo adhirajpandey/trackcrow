@@ -29,14 +29,15 @@ export function getIntentMetadata() {
 
     expenseComparison: {
       description:
-        "Used when the user wants to compare expenses between two categories or remarks.",
+        "Used when the user wants to compare expenses between two categories, subcategories, or remarks.",
       examples: [
         "Compare food vs shopping expenses this month",
         "Compare groceries and travel from September 1 to September 30",
         "Compare Amazon vs Flipkart spending in October",
+        "Compare rent vs electricity bills last month",
       ],
-      required: ["category"],
-      optional: ["remarks", "startDate", "endDate"],
+      required: ["comparisonKeyword1", "comparisonKeyword2"],
+      optional: ["startDate", "endDate"],
     },
 
     transactionSearch: {

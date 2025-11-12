@@ -97,7 +97,6 @@ export const baseFields = {
     .optional(),
 };
 
-// ⚙️ Common reusable shape builder
 function makeStructuredDataShape(fields: Record<string, z.ZodTypeAny>) {
   return z.object(fields).partial();
 }
@@ -121,12 +120,16 @@ const expenseComparisonSchema = z.object({
   intent: z.literal("expenseComparison"),
   relevance: z.number().min(0).max(5),
   structured_data: makeStructuredDataShape({
-    category: z.array(z.string()).optional(),
-    remarks: baseFields.remarks,
+    comparisonKeyword1: z
+      .string()
+      .min(1, "First comparison keyword is required"),
+    comparisonKeyword2: z
+      .string()
+      .min(1, "Second comparison keyword is required"),
     startDate: baseFields.startDate,
     endDate: baseFields.endDate,
   }),
-  missing_fields: z.array(z.string()),
+  missing_fields: z.array(z.string()).default([]),
 });
 
 const transactionSearchSchema = z.object({

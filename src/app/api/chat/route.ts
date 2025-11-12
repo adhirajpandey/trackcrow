@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   UIMessage,
   convertToModelMessages,
@@ -6,7 +7,7 @@ import {
   createUIMessageStream,
 } from "ai";
 import { getSessionUser, getUserCategories } from "@/common/server";
-import { buildClassifierPrompt } from "@/common/prompts";
+import { buildClassifierPrompt } from "@/prompts";
 import { google } from "@ai-sdk/google";
 import { tools } from "@/app/crow-bot/tools";
 import { toolSchema } from "@/common/schemas";
@@ -14,7 +15,7 @@ import {
   getCrowBotHelp,
   getTrackCrowHelp,
 } from "@/app/crow-bot/utils/help-responses";
-import { parseTimeframeFromText } from "@/app/crow-bot/utils/timeframe-parser";
+import { getIntentMetadata } from "@/prompts/sections/intent-metadata";
 
 /* ------------------------- Type Definitions -------------------------- */
 
@@ -48,103 +49,104 @@ function getRawTextFromUIMessage(msg?: UIMessage) {
   );
 }
 
-function deterministicIntentFromText(text: string) {
-  const t = text?.toLowerCase().replace(/[^\w\s']/g, " ") || "";
-  const patterns = {
-    // “What is my biggest expense” type questions
-    biggest:
-      /\b(biggest|largest|most|top|highest|max|costliest|where did i spend the most|where most of my money went|what'?s my biggest expense|which category costs me the most)\b/,
+async function extractFieldsForIntent(
+  rawText: string,
+  coreMessages: any[],
+  classifierPrompt: any
+) {
+  const systemPrompt = `
+You are a strict JSON generator. 
+Return ONLY valid JSON matching the provided schema exactly. 
+No text, no markdown, no commentary. 
+If unsure, output an empty JSON matching the schema shape.
+Each date must be a valid ISO 8601 UTC string (YYYY-MM-DDTHH:mm:ss.sssZ).
 
-    // Spending by category / trend breakdown
-    breakdown:
-      /\b(by category|each category|breakdown|distribution|split|per category|trend|trends|spending pattern|spending patterns|expense pattern|expense patterns|spending habit|spending habits|spending analysis|expense analysis|overview)\b/,
-
-    // Month comparison
-    lastMonth:
-      /\b(last month|previous month|month summary|last month's|previous month's)\b/,
-
-    // ✅ total spent / expenditure queries
-    totalSpent:
-      /\b(how much did i spend|total spent|total amount spent|how much have i spent|total expenditure|total expenses?)\b/,
-
-    // ⚙️ record/log transactions — require *explicit action*
-    logExpense:
-      /\b(i\s+(spent|paid|bought)|add(ed)?\s+(an?\s+)?expense|log(ged)?\s+(an?\s+)?expense|record(ing)?\s+(an?\s+)?payment)\b/,
-  };
-
-  for (const [intent, regex] of Object.entries(patterns)) {
-    if (regex.test(t)) {
-      const map: Record<string, string> = {
-        biggest: "biggestExpenseCategory",
-        breakdown: "spendingTrendByCategory",
-        lastMonth: "lastMonthVsThisMonth",
-        totalSpent: "calculateTotalSpent",
-        logExpense: "logExpense",
-      };
-      return { intent: map[intent], source: "rule" };
+${classifierPrompt.content}
+`;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await generateObject({
+        model: google("gemini-2.5-flash"),
+        schema: toolSchema,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          { role: "user", content: rawText },
+          ...coreMessages,
+        ],
+      });
+    } catch (err: any) {
+      if (String(err).includes("AI_NoObjectGeneratedError") && attempt === 1) {
+        console.warn("Schema mismatch, retrying once...");
+        continue;
+      }
+      throw err;
     }
   }
-  return null;
 }
 
-function overrideIntentByKeywords(parsed: any, originalText: string) {
-  const t = originalText?.toLowerCase().replace(/[^\w\s']/g, " ") || "";
-  const checks = {
-    biggest:
-      /\b(biggest|largest|most|top|highest|max|costliest|where did i spend the most|where most of my money went|what'?s my biggest expense)\b/,
-    breakdown:
-      /\b(by category|each category|breakdown|distribution|split|per category)\b/,
-    lastMonth:
-      /\b(last month|previous month|month summary|last month's|previous month's)\b/,
-  };
+async function inferMissingDateRange({
+  intent,
+  structured_data,
+  rawText,
+  coreMessages,
+}: {
+  intent: string;
+  structured_data: Record<string, any>;
+  rawText: string;
+  coreMessages: any[];
+}) {
+  const hasStart = !!structured_data?.startDate;
+  const hasEnd = !!structured_data?.endDate;
+  if (hasStart && hasEnd) return structured_data;
 
-  if (checks.biggest.test(t)) {
-    return {
-      ...parsed,
-      intent: "biggestExpenseCategory",
-      relevance: Math.max(parsed.relevance || 3, 5),
-      missing_fields: (parsed.missing_fields || []).filter(
-        (f: string) => !["category", "amount"].includes(f)
-      ),
-      _override: "keyword-biggest",
-    };
+  const missingField = hasStart ? "endDate" : "startDate";
+  const knownField = hasStart ? "startDate" : "endDate";
+  const knownValue = structured_data[knownField];
+
+  const inferencePrompt = `
+You are a strict JSON generator.
+Given the user's query and the known ${knownField} = "${knownValue}",
+infer the missing ${missingField} so that the range represents a full logical period.
+Follow these rules:
+- Always use ISO 8601 UTC format.
+- Never pick a future date.
+- For expressions like "this week", "last month", "past 7 days", "today", etc.,
+  ensure the range covers the full span of that duration.
+- Return JSON only in this format:
+  { "${missingField}": "YYYY-MM-DDTHH:mm:ss.sssZ" }
+
+User query: "${rawText}"
+`;
+
+  try {
+    const result = await generateObject({
+      model: google("gemini-2.5-flash"),
+      schema: z.object({
+        [missingField]: z
+          .string()
+          .regex(
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+            "Must be a valid ISO 8601 UTC timestamp"
+          ),
+      }),
+      messages: [{ role: "system", content: inferencePrompt }, ...coreMessages],
+    });
+
+    const inferred = result?.object?.[missingField];
+    if (inferred) {
+      structured_data[missingField] = inferred;
+      console.log(
+        `[🧩 Auto-Inferred] ${missingField} = ${inferred} for intent "${intent}"`
+      );
+    }
+  } catch (err) {
+    console.warn(`Failed to infer ${missingField}:`, err);
   }
 
-  if (checks.breakdown.test(t))
-    return {
-      ...parsed,
-      intent: "spendingTrendByCategory",
-      relevance: 4,
-      _override: "keyword-breakdown",
-    };
-
-  if (checks.lastMonth.test(t) && /biggest|most|where did i/i.test(t))
-    return {
-      ...parsed,
-      intent: "biggestExpenseCategory",
-      _override: "keyword-lastmonth+biggest",
-    };
-
-  return parsed;
-}
-
-async function extractFieldsForIntent(
-  intent: string,
-  rawText: string,
-  coreMessages: any[]
-) {
-  return await generateObject({
-    model: google("gemini-2.5-flash"),
-    schema: toolSchema,
-    messages: [
-      {
-        role: "system",
-        content: `You are a JSON-only extractor. FORCE_INTENT: ${intent}. Extract fields as per schema.`,
-      },
-      { role: "user", content: rawText },
-      ...coreMessages,
-    ],
-  });
+  return structured_data;
 }
 
 /* -------------------------- Stream Utilities -------------------------- */
@@ -276,14 +278,15 @@ export async function POST(request: Request) {
         );
 
       if (!intent) {
-        return streamTextResponse("Error: Missing intent for tool execution.");
+        return streamTextResponse(
+          "Sorry, I couldn’t identify what you meant. Could you rephrase?"
+        );
       }
 
       return streamToolResponse({
         toolName: intent,
         tool: selectedTool,
         toolInput: { ...mergedData, userUuid },
-        executeArgs: { structured_data: mergedData },
       });
     }
 
@@ -304,44 +307,41 @@ export async function POST(request: Request) {
       return streamTextResponse(getCrowBotHelp());
     }
 
-    /* ------------------------- Intent Detection ------------------------- */
-    const rule = deterministicIntentFromText(rawUserText);
-    let structuredResObj: any;
+    const classifierPrompt = buildClassifierPrompt(categoriesContext);
 
-    if (rule) {
-      structuredResObj = await extractFieldsForIntent(
-        rule.intent,
-        rawUserText,
-        coreMessages
-      );
-      structuredResObj.object.intent = rule.intent;
-      structuredResObj.object._intent_source = rule.source;
-    } else {
-      const classifierPrompt = buildClassifierPrompt(categoriesContext);
-      structuredResObj = await generateObject({
-        model: google("gemini-2.5-flash"),
-        schema: toolSchema,
-        messages: [
-          classifierPrompt,
-          { role: "user", content: rawUserText },
-          ...coreMessages,
-        ],
-      });
-    }
+    const structuredResObj = await extractFieldsForIntent(
+      rawUserText,
+      coreMessages,
+      classifierPrompt
+    );
 
     const structuredRes = structuredResObj?.object;
     if (!structuredRes)
       return streamTextResponse(`Oops, I couldn't understand your request.`);
 
-    /* ---------------------- Post Processing ------------------------ */
-    const finalParsed = overrideIntentByKeywords(structuredRes, rawUserText);
-    if (finalParsed._override)
-      console.log("Intent override applied:", finalParsed._override);
-    if (finalParsed._intent_source === "rule" || finalParsed._override)
-      finalParsed.relevance = 5;
+    const { relevance, intent, structured_data } = structuredRes;
 
-    const { relevance, intent, structured_data } = finalParsed;
-    let aiMissingFields = [...(finalParsed.missing_fields || [])];
+    if (
+      [
+        "totalSpend",
+        "topExpense",
+        "dashboardSummary",
+        "expenseComparison",
+        "transactionSearch",
+      ].includes(intent)
+    ) {
+      const hasStart = !!structured_data?.startDate;
+      const hasEnd = !!structured_data?.endDate;
+
+      if ((hasStart && !hasEnd) || (!hasStart && hasEnd)) {
+        structuredRes.structured_data = await inferMissingDateRange({
+          intent,
+          structured_data,
+          rawText: rawUserText,
+          coreMessages,
+        });
+      }
+    }
 
     if (relevance <= 2)
       return streamTextResponse(
@@ -354,65 +354,54 @@ export async function POST(request: Request) {
       );
 
     const allowedByContext: Record<string, string[]> = {
-      transaction: ["logExpense"],
+      transaction: ["recordExpense"],
       analytics: [
-        "spendingTrendByCategory",
-        "showTransactions",
-        "calculateTotalSpent",
-        "monthlyComparison",
-        "biggestExpenseCategory",
-        "setBudget",
-        "lastMonthVsThisMonth",
+        "totalSpend",
+        "topExpense",
+        "expenseComparison",
+        "transactionSearch",
+        "dashboardSummary",
       ],
     };
+
+    console.log(structuredRes);
 
     const allowedIntents = allowedByContext[promptIntent] || [];
-    if (!allowedIntents.includes(intent))
-      return streamTextResponse(
-        `You're in "${promptIntent}" mode but tried "${intent}". Please switch modes.`
-      );
+    const intentMode =
+      Object.entries(allowedByContext).find(([, intents]) =>
+        intents.includes(intent)
+      )?.[0] || "unknown";
 
-    const requiredByIntent: Record<string, string[]> = {
-      logExpense: [
-        "amount",
-        "recipient",
-        "category",
-        "subcategory",
-        "timestamp",
-        "type",
-      ],
-      setBudget: ["amount", "category"],
-      calculateTotalSpent: ["startDate", "endDate"],
-      showTransactions: [],
-      lastMonthVsThisMonth: [],
-      spendingTrendByCategory: ["startDate", "endDate"],
-      monthlyComparison: [],
-      biggestExpenseCategory: ["startDate", "endDate"],
+    if (!allowedIntents.includes(intent)) {
+      const correctMode =
+        intentMode === "transaction"
+          ? "a transaction action"
+          : intentMode === "analytics"
+            ? "an analytics query"
+            : "a different type of command";
+
+      return streamTextResponse(
+        `You're in "${promptIntent}" mode but asked for ${correctMode}. Please switch to the ${intentMode} mode to continue.`
+      );
+    }
+    const allIntents = getIntentMetadata();
+    const intentMeta = (intent &&
+      allIntents[intent as keyof typeof allIntents]) || {
+      required: [],
+      optional: [],
     };
 
-    const requiredFields = requiredByIntent[intent] || [];
-    const missing = requiredFields.filter(
-      (f) => !structured_data?.[f] && structured_data?.[f] !== 0
+    const requiredFields = intentMeta.required || [];
+    const optionalFields = intentMeta.optional || [];
+
+    const missingRequired = requiredFields.filter(
+      (f: any) => !structured_data?.[f] && structured_data?.[f] !== 0
     );
-    aiMissingFields = Array.from(
-      new Set([...aiMissingFields, ...missing])
-    ).filter((f) => requiredFields.includes(f));
 
-    if (
-      [
-        "spendingTrendByCategory",
-        "lastMonthVsThisMonth",
-        "biggestExpenseCategory",
-      ].includes(intent) &&
-      (!structured_data || Object.keys(structured_data).length === 0)
-    ) {
-      aiMissingFields = [];
-    }
-
-    if (aiMissingFields.length > 0) {
+    if (missingRequired.length > 0) {
       return streamJSONResponse({
         type: "missing_fields",
-        fields: aiMissingFields.map((f) => ({
+        fields: missingRequired.map((f: any) => ({
           name: f,
           label: f[0].toUpperCase() + f.slice(1),
           type:
@@ -426,37 +415,6 @@ export async function POST(request: Request) {
         categories: categoriesContext,
         resumeState: { intent, context: { partialData: structured_data } },
       });
-    }
-
-    if (
-      [
-        "calculateTotalSpent",
-        "spendingTrendByCategory",
-        "biggestExpenseCategory",
-      ].includes(intent)
-    ) {
-      const inferred = parseTimeframeFromText(rawUserText);
-
-      if (inferred?.startDate && inferred?.endDate) {
-        structured_data.startDate = inferred.startDate;
-        structured_data.endDate = inferred.endDate;
-        structured_data._timeframeInferred = true;
-      } else {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1)
-          .toISOString()
-          .split("T")[0];
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-          .toISOString()
-          .split("T")[0];
-        structured_data.startDate = start;
-        structured_data.endDate = end;
-        structured_data._timeframeInferred = false;
-      }
-
-      aiMissingFields = aiMissingFields.filter(
-        (f) => f !== "startDate" && f !== "endDate"
-      );
     }
 
     const selectedTool =

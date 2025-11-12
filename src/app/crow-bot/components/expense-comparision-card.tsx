@@ -21,15 +21,11 @@ export const ExpenseComparisonCard = ({
 }: ExpenseComparisonProps) => {
   const dashboardUrl = "/dashboard";
 
-  // 🎨 Consistent palette with good contrast in dark mode
   const COLORS = ["#a855f7", "#f472b6", "#22d3ee", "#10b981", "#fbbf24"];
-
-  // 🧮 Safely compute total
   const total = Array.isArray(results)
     ? results.reduce((acc, r) => acc + (r?.totalSpent || 0), 0)
     : 0;
 
-  // 🧾 Handle empty or invalid data gracefully
   if (!Array.isArray(results) || results.length === 0 || total === 0) {
     return (
       <div className="relative w-full max-w-2xl mx-auto rounded-xl border border-border px-8 py-6 shadow-md bg-background/40 text-center transition-all">
@@ -83,8 +79,16 @@ export const ExpenseComparisonCard = ({
                 backgroundColor: "#1e1e1e",
                 border: "1px solid #333",
                 borderRadius: "8px",
+                color: "#fff",
+              }}
+              itemStyle={{
+                color: "#fff",
+              }}
+              labelStyle={{
+                color: "#fff",
               }}
             />
+
             <Legend />
             <Pie
               data={results}
@@ -95,7 +99,7 @@ export const ExpenseComparisonCard = ({
               outerRadius={120}
               labelLine={false}
               label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(1)}%`
+                `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`
               }
             >
               {results.map((_, index) => (
