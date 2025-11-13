@@ -12,6 +12,7 @@ import { TransactionSearchCard } from "./transaction-search-card";
 import { ExpenseComparisonCard } from "./expense-comparision-card";
 import { TopExpenseCard } from "./top-expense-card";
 import { TotalSpendCard } from "./total-spend-card";
+import { Wallet, BarChart2, RefreshCw, Send } from "lucide-react";
 
 function MenuToggle({
   activeMenu,
@@ -23,40 +24,77 @@ function MenuToggle({
   setIntentPrompt: (msg: string) => void;
 }) {
   return (
-    <div className="flex gap-3">
-      <button
-        onClick={() => {
-          setIntentPrompt("");
-          toggleMenu("transaction");
-        }}
-        className={`rounded-lg border border-border px-3 py-1 text-sm ${
-          activeMenu === "transaction"
-            ? "text-white"
-            : "bg-background hover:bg-accent"
-        }`}
-        style={{
-          backgroundColor: activeMenu === "transaction" ? "#75378d" : undefined,
-        }}
-      >
-        Transaction
-      </button>
-      <button
-        onClick={() => {
-          setIntentPrompt("");
-          toggleMenu("analytics");
-        }}
-        className={`rounded-lg border border-border px-3 py-1 text-sm ${
-          activeMenu === "analytics"
-            ? "text-white"
-            : "bg-background hover:bg-accent"
-        }`}
-        style={{
-          backgroundColor: activeMenu === "analytics" ? "#75378d" : undefined,
-        }}
-      >
-        Analytics
-      </button>
-    </div>
+    <>
+      {/* Desktop: full text buttons */}
+      <div className="hidden sm:flex gap-3">
+        <button
+          onClick={() => {
+            setIntentPrompt("");
+            toggleMenu("transaction");
+          }}
+          className={`rounded-lg border border-border px-3 py-1 text-sm min-w-0 truncate ${
+            activeMenu === "transaction"
+              ? "text-white"
+              : "bg-background hover:bg-accent"
+          }`}
+          style={{
+            backgroundColor:
+              activeMenu === "transaction" ? "#75378d" : undefined,
+          }}
+        >
+          Transaction
+        </button>
+        <button
+          onClick={() => {
+            setIntentPrompt("");
+            toggleMenu("analytics");
+          }}
+          className={`rounded-lg border border-border px-3 py-1 text-sm min-w-0 truncate ${
+            activeMenu === "analytics"
+              ? "text-white"
+              : "bg-background hover:bg-accent"
+          }`}
+          style={{
+            backgroundColor: activeMenu === "analytics" ? "#75378d" : undefined,
+          }}
+        >
+          Analytics
+        </button>
+      </div>
+
+      {/* Mobile: compact round icon buttons aligned left in the same row */}
+      <div className="flex sm:hidden gap-2 items-center">
+        <button
+          onClick={() => {
+            setIntentPrompt("");
+            toggleMenu("transaction");
+          }}
+          aria-label="Transaction"
+          className={`w-10 h-10 flex items-center justify-center rounded-full border border-border flex-shrink-0 transition ${
+            activeMenu === "transaction"
+              ? "bg-[#75378d] text-white"
+              : "bg-background"
+          }`}
+        >
+          <Wallet size={18} />
+        </button>
+
+        <button
+          onClick={() => {
+            setIntentPrompt("");
+            toggleMenu("analytics");
+          }}
+          aria-label="Analytics"
+          className={`w-10 h-10 flex items-center justify-center rounded-full border border-border flex-shrink-0 transition ${
+            activeMenu === "analytics"
+              ? "bg-[#75378d] text-white"
+              : "bg-background"
+          }`}
+        >
+          <BarChart2 size={18} />
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -150,12 +188,14 @@ export default function CrowBotClient() {
         </header>
       )}
       <main
-        className={`flex-1 overflow-y-auto p-6 space-y-4 ${
-          messages.length === 0 ? "flex items-center justify-center" : ""
+        className={`flex-1 overflow-y-auto pb-32 sm:pb-32 ${
+          messages.length === 0
+            ? "flex items-center justify-center p-4"
+            : "p-4 sm:p-6 space-y-4"
         }`}
       >
         {messages.length === 0 ? (
-          <div className="w-full max-w-2xl mx-auto">
+          <div className="w-full max-w-2xl mx-auto px-2">
             <h1 className="text-xl font-bold flex items-center gap-2 justify-center mb-4">
               <Image
                 src="/trackcrow.jpg"
@@ -192,51 +232,33 @@ export default function CrowBotClient() {
                   toggleMenu={toggleMenu}
                   setIntentPrompt={setIntentPrompt}
                 />
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-shrink-0">
                   <button
                     onClick={handleReset}
                     className="rounded-full p-2 hover:bg-accent"
                     title="Reset"
+                    aria-label="Reset"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.8}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.5 12a7.5 7.5 0 0112.65-5.303l1.85-1.85M21 12a7.5 7.5 0 01-12.65 5.303l-1.85 1.85"
-                      />
-                    </svg>
+                    <RefreshCw size={18} />
                   </button>
                   <button
                     onClick={handleSend}
                     className="rounded-full p-2 text-white hover:opacity-90"
                     style={{ backgroundColor: "#75378d" }}
                     title="Send"
+                    aria-label="Send"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                      className="w-5 h-5"
-                    >
-                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z" />
-                    </svg>
+                    <Send size={18} />
                   </button>
                 </div>
               </div>
 
               {activeMenu && (
-                <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-border bg-background shadow-lg p-3 space-y-2">
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-lg border border-border bg-background shadow-lg p-3 space-y-2 max-h-44 overflow-y-auto">
                   {suggestions.map((s, i) => (
                     <div
                       key={i}
-                      className="cursor-pointer rounded-md px-2 py-1 hover:bg-accent"
+                      className="cursor-pointer rounded-md px-2 py-1 hover:bg-accent break-words"
                       onClick={() => setInput(s)}
                     >
                       {s}
@@ -382,7 +404,7 @@ export default function CrowBotClient() {
       </main>
 
       {messages.length > 0 && (
-        <footer className="p-4">
+        <footer className="p-4" style={{ paddingTop: 12 }}>
           <div className="w-full max-w-2xl mx-auto rounded-xl border border-border bg-muted px-4 py-3 shadow-lg flex flex-col">
             {intentPrompt && (
               <div className="text-red-500 text-xs mb-2">{intentPrompt}</div>
@@ -406,41 +428,23 @@ export default function CrowBotClient() {
                 toggleMenu={toggleMenu}
                 setIntentPrompt={setIntentPrompt}
               />{" "}
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-shrink-0">
                 <button
                   onClick={handleReset}
                   className="rounded-full p-2 hover:bg-accent"
                   title="Reset"
+                  aria-label="Reset"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.8}
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4.5 12a7.5 7.5 0 0112.65-5.303l1.85-1.85M21 12a7.5 7.5 0 01-12.65 5.303l-1.85 1.85"
-                    />
-                  </svg>
+                  <RefreshCw size={18} />
                 </button>
                 <button
                   onClick={handleSend}
                   className="rounded-full p-2 text-white hover:opacity-90"
                   style={{ backgroundColor: "#75378d" }}
                   title="Send"
+                  aria-label="Send"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    className="w-5 h-5"
-                  >
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z" />
-                  </svg>
+                  <Send size={18} />
                 </button>
               </div>
             </div>
