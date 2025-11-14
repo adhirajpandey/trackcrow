@@ -28,14 +28,14 @@ export const ExpenseComparisonCard = ({
 
   if (!Array.isArray(results) || results.length === 0 || total === 0) {
     return (
-      <div className="relative w-full max-w-2xl mx-auto rounded-xl border border-border px-8 py-6 shadow-md bg-background/40 text-center transition-all">
+      <div className="relative w-full max-w-2xl mx-auto rounded-xl border border-border px-4 sm:px-8 py-4 sm:py-6 shadow-md bg-background/40 text-center transition-all">
         <div className="flex items-center justify-center gap-2 mb-2">
           <BarChart3 className="w-5 h-5 text-purple-400" />
-          <h2 className="text-base font-semibold text-gray-100">
+          <h2 className="text-sm sm:text-base font-semibold text-gray-100">
             Expense Comparison
           </h2>
         </div>
-        <p className="text-gray-400 text-sm italic">
+        <p className="text-gray-400 text-xs sm:text-sm italic">
           No data available for comparison.
         </p>
       </div>
@@ -43,10 +43,10 @@ export const ExpenseComparisonCard = ({
   }
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto rounded-xl border border-border px-8 py-6 shadow-md flex flex-col space-y-4 bg-background/40 transition-all">
+    <div className="relative w-full max-w-2xl mx-auto rounded-xl border border-border px-4 sm:px-8 py-4 sm:py-6 shadow-md flex flex-col space-y-4 bg-background/40 transition-all">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border pb-3">
-        <h2 className="text-base font-semibold text-gray-100 flex items-center gap-2">
+        <h2 className="text-sm sm:text-base font-semibold text-gray-100 flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-purple-400" />
           Expense Comparison
         </h2>
@@ -63,12 +63,18 @@ export const ExpenseComparisonCard = ({
 
       {/* Message */}
       {message && (
-        <p className="text-gray-200 text-sm leading-relaxed">{message}</p>
+        <p className="text-gray-200 text-xs sm:text-sm leading-relaxed">
+          {message}
+        </p>
       )}
 
       {/* Pie Chart */}
-      <div className="pt-2">
-        <ResponsiveContainer width="100%" height={320}>
+      <div className="pt-2 w-full">
+        <ResponsiveContainer
+          width="100%"
+          height={260}
+          className="sm:!h-[320px]"
+        >
           <PieChart>
             <Tooltip
               formatter={(value: number, name: string) => [
@@ -89,17 +95,20 @@ export const ExpenseComparisonCard = ({
               }}
             />
 
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: "12px" }} />
+
             <Pie
               data={results}
               dataKey="totalSpent"
               nameKey="label"
               cx="50%"
               cy="50%"
-              outerRadius={120}
+              outerRadius={window.innerWidth < 640 ? 90 : 120}
               labelLine={false}
               label={({ name, percent }) =>
-                `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`
+                window.innerWidth < 640
+                  ? ""
+                  : `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`
               }
             >
               {results.map((_, index) => (
@@ -115,7 +124,7 @@ export const ExpenseComparisonCard = ({
       </div>
 
       {/* Footer */}
-      <p className="text-xs text-gray-500 text-right italic">
+      <p className="text-[10px] sm:text-xs text-gray-500 text-right italic">
         Chart type: <span className="text-gray-300 font-medium">PIE</span>
       </p>
     </div>

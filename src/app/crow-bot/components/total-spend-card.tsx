@@ -1,4 +1,5 @@
-import { Wallet2, Calendar } from "lucide-react";
+import { Wallet2 } from "lucide-react";
+import { StructuredDataCard } from "./structured-data-card";
 
 type TotalSpendCardProps = {
   message: string;
@@ -14,43 +15,31 @@ type TotalSpendCardProps = {
 export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
   if (!result) {
     return (
-      <div className="relative w-full max-w-5xl mx-auto rounded-2xl border border-border bg-background/50 p-8 shadow-md text-center transition-all">
-        <h2 className="text-lg font-semibold text-gray-200 flex items-center justify-center gap-2 mb-4">
-          <Wallet2 className="w-6 h-6 text-blue-400" />
-          Total Spend
-        </h2>
-        <p className="text-gray-400 text-sm italic">{message}</p>
-      </div>
+      <StructuredDataCard
+        title="Total Spend"
+        icon={<Wallet2 className="w-6 h-6 text-blue-400" />}
+      >
+        <p className="text-gray-400 text-sm italic text-center">{message}</p>
+      </StructuredDataCard>
     );
   }
 
   const { totalSpent, category, remarks, startDate, endDate } = result;
 
-  const formattedRange =
+  const dateRange =
     startDate && endDate
-      ? `${new Date(startDate).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })} — ${new Date(endDate).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })}`
+      ? `${new Date(startDate).toLocaleDateString("en-IN")} — ${new Date(
+          endDate
+        ).toLocaleDateString("en-IN")}`
       : "All Time";
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto rounded-2xl border border-border bg-background/60 p-8 shadow-lg hover:shadow-xl transition-all duration-200">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
-        <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
-          <Wallet2 className="w-6 h-6 text-blue-400" />
-          Total Spend
-        </h2>
-      </div>
-
-      {/* Main Info - Now in a row */}
-      <div className="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <StructuredDataCard
+      title="Total Spend"
+      icon={<Wallet2 className="w-6 h-6 text-blue-400" />}
+      dateRange={dateRange}
+    >
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="flex-1">
           {category && (
             <p className="text-sm text-gray-400">
@@ -58,6 +47,7 @@ export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
               <span className="text-white font-medium">{category}</span>
             </p>
           )}
+
           {remarks && (
             <p className="text-sm text-gray-400 mt-1">
               Filter:{" "}
@@ -70,17 +60,11 @@ export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
 
         <div className="flex items-center gap-2">
           <p className="text-sm text-gray-400">Total Spent:</p>
-          <p className="text-3xl font-bold text-blue-400 tracking-tight ml-2">
+          <p className="text-2xl font-bold text-blue-400 tracking-tight ml-2">
             ₹{totalSpent.toLocaleString("en-IN")}
           </p>
         </div>
       </div>
-
-      {/* Date Range */}
-      <div className="mt-6 flex items-center justify-end gap-1 text-xs text-gray-500 italic">
-        <Calendar className="w-4 h-4" />
-        {formattedRange}
-      </div>
-    </div>
+    </StructuredDataCard>
   );
 };

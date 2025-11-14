@@ -331,8 +331,7 @@ export default function CrowBotClient() {
                             return (
                               <div key={index} className="my-4 space-y-2">
                                 <p className="text-sm text-green-400 font-medium">
-                                  ✅ Your transaction has been successfully
-                                  added:
+                                  ✅ Transaction successfully added:
                                 </p>
                                 <ExpenseCard {...part.output} />
                               </div>
@@ -404,11 +403,15 @@ export default function CrowBotClient() {
       </main>
 
       {messages.length > 0 && (
-        <footer className="p-4" style={{ paddingTop: 12 }}>
+        <footer
+          className="sticky bottom-0 p-4 bg-background z-20"
+          style={{ paddingTop: 12 }}
+        >
           <div className="w-full max-w-2xl mx-auto rounded-xl border border-border bg-muted px-4 py-3 shadow-lg flex flex-col">
             {intentPrompt && (
               <div className="text-red-500 text-xs mb-2">{intentPrompt}</div>
             )}
+
             <textarea
               rows={2}
               className="w-full resize-none bg-transparent outline-none px-1 text-sm mb-3"
@@ -422,12 +425,13 @@ export default function CrowBotClient() {
                 }
               }}
             />
+
             <div className="flex items-center justify-between gap-3">
               <MenuToggle
                 activeMenu={activeMenu}
                 toggleMenu={toggleMenu}
                 setIntentPrompt={setIntentPrompt}
-              />{" "}
+              />
               <div className="flex gap-3 flex-shrink-0">
                 <button
                   onClick={handleReset}

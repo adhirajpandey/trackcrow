@@ -160,21 +160,14 @@ export function MissingFieldsForm({
         : f.type;
 
   return (
-    <div
-      className="flex flex-col mx-auto"
-      style={{
-        width: "100%",
-        maxWidth: "600px",
-        minWidth: "360px",
-      }}
-    >
+    <div className="flex flex-col mx-auto w-full max-w-lg px-3 sm:px-0">
       <p className="text-gray-300 text-sm mb-3 text-left font-medium">
         Please provide the following details to proceed:
       </p>
 
       <form
         onSubmit={handleSubmit}
-        className={`border border-zinc-700 rounded-lg bg-zinc-900 p-5 space-y-3 w-full ${
+        className={`border border-zinc-700 rounded-lg bg-zinc-900 p-4 sm:p-5 space-y-4 w-full ${
           isSubmitting ? "opacity-60 pointer-events-none" : ""
         }`}
       >
@@ -183,7 +176,7 @@ export function MissingFieldsForm({
           const isDate = type === "date";
 
           const sharedInputClass =
-            "bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-[#75378d]";
+            "w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white focus:ring-1 focus:ring-[#75378d]";
           const sharedSelectStyle: React.CSSProperties = {
             textIndent: "-1px",
             paddingRight: "1.9rem",
@@ -193,7 +186,7 @@ export function MissingFieldsForm({
 
           if (field.name === "category") {
             return (
-              <div key="category" className="flex flex-col space-y-1">
+              <div key="category" className="flex flex-col gap-1">
                 <label className="text-xs text-gray-300">{field.label}</label>
                 <select
                   name="category"
@@ -214,7 +207,6 @@ export function MissingFieldsForm({
               </div>
             );
           }
-
           if (field.name === "subcategory") {
             const subcats =
               categories.find(
@@ -225,7 +217,7 @@ export function MissingFieldsForm({
             if (!selectedCategory) return null;
 
             return (
-              <div key="subcategory" className="flex flex-col space-y-1">
+              <div key="subcategory" className="flex flex-col gap-1">
                 <label className="text-xs text-gray-300">{field.label}</label>
                 <select
                   name="subcategory"
@@ -250,7 +242,7 @@ export function MissingFieldsForm({
           if (field.name === "type") {
             const paymentModes = ["UPI", "NETBANKING", "CARD", "CASH", "OTHER"];
             return (
-              <div key="type" className="flex flex-col space-y-2">
+              <div key="type" className="flex flex-col gap-2">
                 <label className="text-xs text-gray-300">Payment Mode</label>
                 <div className="flex flex-wrap gap-2">
                   {paymentModes.map((mode) => (
@@ -258,11 +250,12 @@ export function MissingFieldsForm({
                       key={mode}
                       type="button"
                       onClick={() => setFormData((p) => ({ ...p, type: mode }))}
-                      className={`px-4 py-2 rounded-md text-sm border transition-all duration-200 ${
-                        formData.type === mode
-                          ? "border-[#75378d] text-[#75378d]"
-                          : "border-zinc-700 text-gray-300 hover:border-[#75378d] hover:text-[#75378d]"
-                      } bg-zinc-900`}
+                      className={`px-3 py-2 rounded-md text-sm border transition-all duration-200 w-fit
+                    ${
+                      formData.type === mode
+                        ? "border-[#75378d] text-[#75378d]"
+                        : "border-zinc-700 text-gray-300 hover:border-[#75378d] hover:text-[#75378d]"
+                    } bg-zinc-900`}
                     >
                       {mode}
                     </button>
@@ -273,7 +266,7 @@ export function MissingFieldsForm({
           }
 
           return (
-            <div key={field.name} className="flex flex-col space-y-1">
+            <div key={field.name} className="flex flex-col gap-1">
               <label className="text-xs text-gray-300">{field.label}</label>
               <input
                 name={field.name}
@@ -301,7 +294,10 @@ export function MissingFieldsForm({
                 onChange={handleChange}
                 disabled={isSubmitting}
                 className={sharedInputClass}
-                style={{ colorScheme: "dark", accentColor: "#75378d" }}
+                style={{
+                  colorScheme: "dark",
+                  accentColor: "#75378d",
+                }}
                 placeholder={field.name === "type" ? "Payment Mode" : ""}
               />
             </div>
@@ -311,8 +307,7 @@ export function MissingFieldsForm({
         {!isSubmitting && (
           <button
             type="submit"
-            className="text-white text-sm px-3 py-2 rounded-md hover:opacity-90 w-full"
-            style={{ backgroundColor: "#75378d" }}
+            className="text-white text-sm px-3 py-2 rounded-md hover:opacity-90 w-full bg-[#75378d]"
           >
             Submit
           </button>
