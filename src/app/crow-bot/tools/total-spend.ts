@@ -6,6 +6,7 @@ import { tool as createTool } from "ai";
 /* ----------------------------- ZOD SCHEMA ----------------------------- */
 const totalSpendSchema = z.object({
   category: z.string().nullable().optional(),
+  subcategory: z.string().nullable().optional(),
   remarks: z.string().nullable().optional(),
   startDate: z.string().datetime().nullable().optional(),
   endDate: z.string().datetime().nullable().optional(),
@@ -15,7 +16,8 @@ const totalSpendSchema = z.object({
 export async function runTotalSpend(input: any) {
   const structured = "structured_data" in input ? input.structured_data : input;
   const parsed = totalSpendSchema.parse(structured);
-  const { category, remarks, startDate, endDate } = parsed;
+
+  const { category, subcategory, remarks, startDate, endDate } = parsed;
 
   // 🕒 Date handling
   const start = startDate ? new Date(startDate) : undefined;
@@ -29,7 +31,6 @@ export async function runTotalSpend(input: any) {
   const { userUuid } = sessionResult;
 
   try {
-    /* ------------------ STEP 1: BUILD FILTER ------------------ */
     const whereClause: any = { user_uuid: userUuid };
 
     // ⏰ Time range filters
@@ -37,30 +38,59 @@ export async function runTotalSpend(input: any) {
     else if (start) whereClause.timestamp = { gte: start };
     else if (end) whereClause.timestamp = { lte: end };
 
-    // 🗂 Category filter
+    let categoryRecord = null;
+    let subcatRecord = null;
+
     if (category?.trim()) {
-      const categoryRecord = await prisma.category.findFirst({
+      categoryRecord = await prisma.category.findFirst({
         where: {
           user_uuid: userUuid,
           name: { equals: category.trim(), mode: "insensitive" },
         },
       });
 
-      if (categoryRecord) {
-        whereClause.categoryId = categoryRecord.id;
-      } else {
+      if (!categoryRecord) {
         console.warn(
           `⚠️ Category "${category}" not found for user ${userUuid}`
         );
       }
     }
 
-    // 🏷 Remarks filter
+    if (subcategory?.trim()) {
+      subcatRecord = await prisma.subcategory.findFirst({
+        where: {
+          user_uuid: userUuid,
+          name: { equals: subcategory.trim(), mode: "insensitive" },
+          ...(categoryRecord && { categoryId: categoryRecord.id }),
+        },
+      });
+
+      if (!subcatRecord) {
+        console.warn(
+          `⚠️ Subcategory "${subcategory}" not found for user ${userUuid}`
+        );
+      }
+    }
+
+    if (subcatRecord) {
+      categoryRecord = await prisma.category.findFirst({
+        where: { id: subcatRecord.categoryId },
+      });
+    }
+
+    if (!categoryRecord && subcatRecord) {
+      categoryRecord = await prisma.category.findFirst({
+        where: { id: subcatRecord.categoryId },
+      });
+    }
+
+    if (categoryRecord) whereClause.categoryId = categoryRecord.id;
+    if (subcatRecord) whereClause.subcategoryId = subcatRecord.id;
+
     if (remarks?.trim()) {
       whereClause.remarks = { contains: remarks.trim(), mode: "insensitive" };
     }
 
-    /* ------------------ STEP 2: SUM TRANSACTIONS ------------------ */
     const total = await prisma.transaction.aggregate({
       _sum: { amount: true },
       where: whereClause,
@@ -68,7 +98,6 @@ export async function runTotalSpend(input: any) {
 
     const totalAmount = Number(total._sum.amount || 0);
 
-    /* ------------------ STEP 3: FRIENDLY MESSAGE ------------------ */
     let timeRange = "of all time";
     if (start && end)
       timeRange = `between ${start.toDateString()} and ${end.toDateString()}`;
@@ -76,8 +105,10 @@ export async function runTotalSpend(input: any) {
     else if (end) timeRange = `till ${end.toDateString()}`;
 
     const filters: string[] = [];
-    if (category) filters.push(`Category: ${category}`);
+    if (categoryRecord) filters.push(`Category: ${categoryRecord.name}`);
+    if (subcatRecord) filters.push(`Subcategory: ${subcatRecord.name}`);
     if (remarks) filters.push(`Remarks: "${remarks}"`);
+
     const filterText = filters.length ? ` (${filters.join(", ")})` : "";
 
     const message =
@@ -92,7 +123,8 @@ export async function runTotalSpend(input: any) {
       message,
       result: {
         totalSpent: totalAmount,
-        category: category ?? null,
+        category: categoryRecord?.name ?? null,
+        subcategory: subcatRecord?.name ?? null,
         remarks: remarks ?? null,
         startDate: start?.toISOString() ?? null,
         endDate: end?.toISOString() ?? null,
@@ -108,7 +140,7 @@ export async function runTotalSpend(input: any) {
 export const totalSpendTool = createTool({
   name: "totalSpend",
   description:
-    "Calculates total spending within a timeframe, optionally filtered by category or remarks.",
+    "Calculates total spending within a timeframe, optionally filtered by category, subcategory or remarks.",
   inputSchema: totalSpendSchema,
   execute: runTotalSpend,
 });

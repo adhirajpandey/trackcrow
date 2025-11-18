@@ -171,6 +171,7 @@ const totalSpendSchema = z.object({
   relevance: z.number().min(0).max(5),
   structured_data: makeStructuredDataShape({
     category: baseFields.category,
+    subcategory: baseFields.subcategory,
     remarks: baseFields.remarks,
     startDate: baseFields.startDate,
     endDate: baseFields.endDate,

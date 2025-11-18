@@ -6,6 +6,7 @@ type TotalSpendCardProps = {
   result?: {
     totalSpent: number;
     category?: string | null;
+    subcategory?: string | null;
     remarks?: string | null;
     startDate?: string | null;
     endDate?: string | null;
@@ -24,7 +25,8 @@ export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
     );
   }
 
-  const { totalSpent, category, remarks, startDate, endDate } = result;
+  const { totalSpent, category, subcategory, remarks, startDate, endDate } =
+    result;
 
   const dateRange =
     startDate && endDate
@@ -45,6 +47,15 @@ export const TotalSpendCard = ({ message, result }: TotalSpendCardProps) => {
             <p className="text-sm text-gray-400">
               Category:{" "}
               <span className="text-white font-medium">{category}</span>
+            </p>
+          )}
+
+          {subcategory && (
+            <p className="text-sm text-gray-400 mt-1">
+              Subcategory:{" "}
+              <span className="text-white font-medium">
+                &quot;{subcategory}&quot;
+              </span>
             </p>
           )}
 
