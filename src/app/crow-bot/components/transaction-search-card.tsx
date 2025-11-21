@@ -1,5 +1,4 @@
 import { ArrowUpRight, Search } from "lucide-react";
-import { useEffect } from "react";
 
 type TransactionSearchProps = {
   message?: string;
@@ -10,10 +9,6 @@ export const TransactionSearchCard = ({
   message = "Your filtered transactions are ready to view.",
   searchUrl,
 }: TransactionSearchProps) => {
-  useEffect(() => {
-    console.log("🔗 TransactionSearchCard received searchUrl:", searchUrl);
-  }, [searchUrl]);
-
   const handleRedirect = () => {
     if (searchUrl) {
       window.open(searchUrl, "_blank", "noopener,noreferrer");

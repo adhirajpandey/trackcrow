@@ -13,6 +13,7 @@ import { ExpenseComparisonCard } from "./expense-comparision-card";
 import { TopExpenseCard } from "./top-expense-card";
 import { TotalSpendCard } from "./total-spend-card";
 import { Wallet, BarChart2, RefreshCw, Send } from "lucide-react";
+import { CrowBotConfig } from "@/app/crow-bot/config/ui";
 
 function MenuToggle({
   activeMenu,
@@ -133,15 +134,9 @@ export default function CrowBotClient() {
 
   const suggestions =
     activeMenu === "transaction"
-      ? ["Add a new expense transaction"]
+      ? CrowBotConfig.suggestions.transaction
       : activeMenu === "analytics"
-        ? [
-            "Show my expense summary for this month",
-            "Compare groceries vs transport expenses in October",
-            "What’s my biggest expense this week?",
-            "Total amount spent on food last month",
-            "Show all transactions with 'Starbucks' in remarks",
-          ]
+        ? CrowBotConfig.suggestions.analytics
         : [];
 
   const handleReset = () => {
@@ -158,9 +153,7 @@ export default function CrowBotClient() {
     const currentIntent = activeMenu;
     const userText = input.trim();
     if (!currentIntent) {
-      setIntentPrompt(
-        "Please select Transaction or Analytics before starting."
-      );
+      setIntentPrompt(CrowBotConfig.prompts.selectMode);
       return;
     }
     if (!userText) return;

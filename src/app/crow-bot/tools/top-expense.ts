@@ -109,7 +109,7 @@ export async function runTopExpense(input: any) {
         break;
     }
 
-    console.log("✅ Top Expense:", { message, result });
+    // console.log("✅ Top Expense:", { message, result });
 
     return { message, result };
   } catch (error) {

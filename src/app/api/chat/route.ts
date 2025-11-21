@@ -1,34 +1,48 @@
-import { z } from "zod";
-import {
-  UIMessage,
-  convertToModelMessages,
-  generateObject,
-  createUIMessageStreamResponse,
-  createUIMessageStream,
-} from "ai";
+import { UIMessage, convertToModelMessages } from "ai";
 import { getSessionUser, getUserCategories } from "@/common/server";
-import { buildClassifierPrompt } from "@/prompts";
-import { google } from "@ai-sdk/google";
+import { buildClassifierPrompt } from "@/app/crow-bot/prompts";
 import { tools } from "@/app/crow-bot/tools";
-import { toolSchema } from "@/common/schemas";
 import {
   getCrowBotHelp,
   getTrackCrowHelp,
 } from "@/app/crow-bot/utils/help-responses";
-import { getIntentMetadata } from "@/prompts/sections/intent-metadata";
+import { getIntentMetadata } from "@/app/crow-bot/prompts/sections/intent-metadata";
 
-/* ------------------------- Type Definitions -------------------------- */
+import {
+  streamTextResponse,
+  streamToolResponse,
+  streamJSONResponse,
+} from "@/app/crow-bot/utils/stream-utilities";
 
+import {
+  getRawTextFromUIMessage,
+  extractFieldsForIntent,
+  extractMissingDateRange,
+} from "@/app/crow-bot/utils/extraction-utilities";
+
+import {
+  HELP_REGEX,
+  CROWBOT_HELP_REGEX,
+  EXPENSE_IRRELEVANT_RESPONSES,
+  ALLOWED_BY_CONTEXT,
+  SCHEMA_FAILURE_KEYWORDS,
+  ERROR_MESSAGES,
+  DATE_RANGE_INTENTS,
+  FIELD_TYPES,
+  DEFAULT_FIELD_TYPE,
+  HTTP_ERRORS,
+} from "@/app/crow-bot/config/server-config";
+
+/* ------------------------- Types -------------------------- */
 type ResumeState = {
   intent?: keyof typeof tools;
-  context?: {
-    partialData?: Record<string, any>;
-  };
+  context?: { partialData?: Record<string, any> };
 };
 
 type MessageWithMetadata = UIMessage & {
   metadata?: {
     intent?: string;
+    hidden?: boolean;
     resumeIntent?: boolean;
     resumeState?: ResumeState;
   };
@@ -36,220 +50,10 @@ type MessageWithMetadata = UIMessage & {
 
 type ToolName = keyof typeof tools;
 
-/* ------------------------- Utility Functions -------------------------- */
-
-function getRawTextFromUIMessage(msg?: UIMessage) {
-  if (!msg) return "";
-  return (
-    msg.parts
-      ?.filter((p: any) => p.type === "text" && p.text)
-      .map((p: any) => p.text)
-      .join("\n")
-      .trim() || ""
-  );
-}
-
-async function extractFieldsForIntent(
-  rawText: string,
-  coreMessages: any[],
-  classifierPrompt: any
-) {
-  const systemPrompt = `
-You are a strict JSON generator. 
-Return ONLY valid JSON matching the provided schema exactly. 
-No text, no markdown, no commentary. 
-If unsure, output an empty JSON matching the schema shape.
-Each date must be a valid ISO 8601 UTC string (YYYY-MM-DDTHH:mm:ss.sssZ).
-
-${classifierPrompt.content}
-`;
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      return await generateObject({
-        model: google("gemini-2.5-flash"),
-        schema: toolSchema,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          { role: "user", content: rawText },
-          ...coreMessages,
-        ],
-      });
-    } catch (err: any) {
-      if (String(err).includes("AI_NoObjectGeneratedError") && attempt === 1) {
-        console.warn("Schema mismatch, retrying once...");
-        continue;
-      }
-      throw err;
-    }
-  }
-}
-
-async function inferMissingDateRange({
-  intent,
-  structured_data,
-  rawText,
-  coreMessages,
-}: {
-  intent: string;
-  structured_data: Record<string, any>;
-  rawText: string;
-  coreMessages: any[];
-}) {
-  const hasStart = !!structured_data?.startDate;
-  const hasEnd = !!structured_data?.endDate;
-  if (hasStart && hasEnd) {
-    const start = new Date(structured_data.startDate);
-    const end = new Date(structured_data.endDate);
-    if (start > end) {
-      console.warn(
-        `[⚠️ Invalid Range] Swapping startDate and endDate for intent "${intent}".`
-      );
-      [structured_data.startDate, structured_data.endDate] = [
-        structured_data.endDate,
-        structured_data.startDate,
-      ];
-    }
-    return structured_data;
-  }
-
-  const missingField = hasStart ? "endDate" : "startDate";
-  const knownField = hasStart ? "startDate" : "endDate";
-  const knownValue = structured_data[knownField];
-
-  const inferencePrompt = `
-You are a strict JSON generator.
-Given the user's query and the known ${knownField} = "${knownValue}",
-infer the missing ${missingField} so that the range represents a full logical period.
-
-Follow these rules carefully:
-- Always use ISO 8601 UTC format.
-- Never pick a future date.
-- The endDate must always come **after** the startDate.
-- For expressions like "this week", "last month", "past 7 days", "today", etc.,
-  ensure the range covers the full logical duration (start → end).
-- Return JSON only in this format:
-  { "${missingField}": "YYYY-MM-DDTHH:mm:ss.sssZ" }
-
-User query: "${rawText}"
-`;
-
-  try {
-    const result = await generateObject({
-      model: google("gemini-2.5-flash"),
-      schema: z.object({
-        [missingField]: z
-          .string()
-          .regex(
-            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-            "Must be a valid ISO 8601 UTC timestamp"
-          ),
-      }),
-      messages: [{ role: "system", content: inferencePrompt }, ...coreMessages],
-    });
-
-    const inferred = result?.object?.[missingField];
-    if (inferred) {
-      structured_data[missingField] = inferred;
-      console.log(
-        `[🧩 Auto-Inferred] ${missingField} = ${inferred} for intent "${intent}"`
-      );
-    }
-
-    const start = structured_data.startDate
-      ? new Date(structured_data.startDate)
-      : undefined;
-    const end = structured_data.endDate
-      ? new Date(structured_data.endDate)
-      : undefined;
-
-    if (start && end && start > end) {
-      console.warn(
-        `[⚠️ Auto-Correction] Swapping invalid date order for "${intent}".`
-      );
-      [structured_data.startDate, structured_data.endDate] = [
-        structured_data.endDate,
-        structured_data.startDate,
-      ];
-    }
-  } catch (err) {
-    console.warn(`Failed to infer ${missingField}:`, err);
-  }
-
-  return structured_data;
-}
-
-/* -------------------------- Stream Utilities -------------------------- */
-
-function streamTextResponse(text: string) {
-  return createUIMessageStreamResponse({
-    stream: createUIMessageStream({
-      execute: async ({ writer }) => {
-        const id = crypto.randomUUID();
-        writer.write({ type: "start", messageId: id });
-        writer.write({ type: "text-start", id });
-        writer.write({ type: "text-delta", id, delta: text });
-        writer.write({ type: "text-end", id });
-        writer.write({ type: "finish" });
-      },
-    }),
-  });
-}
-
-function streamJSONResponse(payload: any) {
-  return streamTextResponse(JSON.stringify(payload));
-}
-
-function streamToolResponse({
-  toolName,
-  tool,
-  toolInput,
-  executeArgs,
-}: {
-  toolName: string;
-  tool: any;
-  toolInput: any;
-  executeArgs?: any;
-}) {
-  const toolCallId = crypto.randomUUID();
-  return createUIMessageStreamResponse({
-    stream: createUIMessageStream({
-      execute: async ({ writer }) => {
-        writer.write({ type: "start" });
-        writer.write({ type: "start-step" });
-        writer.write({ type: "tool-input-start", toolCallId, toolName });
-        writer.write({
-          type: "tool-input-available",
-          toolCallId,
-          toolName,
-          input: toolInput,
-        });
-
-        try {
-          const output = await tool.execute(executeArgs ?? toolInput);
-          writer.write({ type: "tool-output-available", toolCallId, output });
-        } catch (err: any) {
-          writer.write({
-            type: "text-delta",
-            id: toolCallId,
-            delta: `Tool "${toolName}" failed: ${err?.message || String(err)}`,
-          });
-        }
-
-        writer.write({ type: "finish-step" });
-        writer.write({ type: "finish" });
-      },
-    }),
-  });
-}
-
-/* ----------------------------- POST Handler ------------------------------ */
-
 export async function POST(request: Request) {
   try {
     const { messages }: { messages: UIMessage[] } = await request.json();
+
     const coreMessages = convertToModelMessages(messages);
     const lastMessage = messages.at(-1);
     const lastUserMessage = [...messages]
@@ -258,43 +62,33 @@ export async function POST(request: Request) {
     const lastAssistant = [...messages]
       .reverse()
       .find((m) => m.role === "assistant");
+
+    const rawUserText = getRawTextFromUIMessage(lastUserMessage);
+
     const lastHadToolOutput = lastAssistant?.parts?.some(
       (p: any) => p.type?.startsWith("tool-") && p.state === "output-available"
     );
 
-    const promptIntent =
-      (lastMessage?.metadata as { intent?: string })?.intent ||
-      (lastUserMessage?.metadata as { intent?: string })?.intent ||
-      "other";
-
     const isResume =
-      (lastMessage?.metadata as { resumeIntent?: boolean })?.resumeIntent ===
-        true ||
+      (lastMessage?.metadata as any)?.resumeIntent === true ||
       lastMessage?.parts?.some((p: any) => p.text?.includes('"__resume":true'));
 
-    const userUuid = await getSessionUser();
-    const categoriesContext = await getUserCategories(userUuid);
-
-    /* ------------------------ Resume Handling ------------------------ */
     if (isResume && !lastHadToolOutput) {
-      const lastMessage = (messages.at(-1) ?? {}) as MessageWithMetadata;
+      const msg = lastMessage as MessageWithMetadata;
 
-      const textPart = lastMessage.parts?.find(
+      const textPart = msg.parts?.find(
         (p): p is { type: "text"; text: string } => p.type === "text"
       );
+
       const resumeText = textPart?.text ?? "{}";
 
       let parsed: Record<string, any> = {};
       try {
         parsed = JSON.parse(resumeText);
-      } catch {
-        parsed = {};
-      }
+      } catch {}
 
       const resumeState: ResumeState =
-        lastMessage.metadata?.resumeState ||
-        (parsed.resumeState as ResumeState) ||
-        {};
+        msg.metadata?.resumeState || parsed.resumeState || {};
 
       const mergedData = {
         ...(resumeState.context?.partialData || {}),
@@ -304,16 +98,17 @@ export async function POST(request: Request) {
       const intent = resumeState.intent;
       const selectedTool = intent ? tools[intent] : undefined;
 
+      if (!intent)
+        return streamTextResponse(
+          "Sorry — I couldn't identify what you meant. Try again?"
+        );
+
       if (!selectedTool)
         return streamTextResponse(
           `Sorry — I don't have a tool for intent "${intent}".`
         );
 
-      if (!intent) {
-        return streamTextResponse(
-          "Sorry, I couldn’t identify what you meant. Could you rephrase?"
-        );
-      }
+      const userUuid = await getSessionUser();
 
       return streamToolResponse({
         toolName: intent,
@@ -322,52 +117,50 @@ export async function POST(request: Request) {
       });
     }
 
-    /* ------------------------- Parse Input -------------------------- */
-    const rawUserText = getRawTextFromUIMessage(lastUserMessage);
-
-    /* -------------------- Help Intent Detection -------------------- */
-    const helpRegex =
-      /\b(what(\s+is|'?s)?\s*(track\s*crow|trackcrow)|tell\s+(me\s+)?(about|more\s+about)\s*(track\s*crow|trackcrow)|how\s+(does|do)\s*(track\s*crow|trackcrow)\s+(work|function)|track\s*crow\s+(guide|manual|overview|info|help|support)|explain\s*(track\s*crow|trackcrow)|track\s*crow\s+(commands?|features?|capabilities?|abilities?|options?|modes?)|show\s+(me\s+)?(how\s+track\s*crow|trackcrow)\s+(works?|helps?)|track\s*crow\s*(intro|introduction|tutorial|details?|usage)|^track\s*crow!?$)\b/i;
-
-    const crowBotHelpRegex =
-      /\b((who|what)\s+(are|is)\s*(you|crow\s*bot|crowbot)|what\s+can\s+(you|crow\s*bot|crowbot)\s+do|tell\s+(me\s+)?(about|more\s+about)\s*(you|crow\s*bot|crowbot)|how\s+(do|can)\s+i\s+(use|talk\s+to|interact\s+with|work\s+with)\s*(you|crow\s*bot|crowbot)|how\s+does\s*(it|crow\s*bot|crowbot)\s+(work|function)|show\s+(me\s+)?(commands?|features?|capabilities?|abilities?|options?|skills?|tasks?)|list\s+(commands?|features?|capabilities?)|help(\s+(me|menu|options|please|crow\s*bot|crowbot))?|crow\s*bot\s+(guide|manual|overview|intro|tutorial|support|help|info|commands?|abilities?|capabilities?)|^crow\s*bot!?$|^crowbot!?$)/i;
-
-    if (helpRegex.test(rawUserText)) {
+    if (HELP_REGEX.test(rawUserText))
       return streamTextResponse(getTrackCrowHelp());
-    }
-
-    if (crowBotHelpRegex.test(rawUserText)) {
+    if (CROWBOT_HELP_REGEX.test(rawUserText))
       return streamTextResponse(getCrowBotHelp());
+
+    const userUuid = await getSessionUser();
+    const categories = await getUserCategories(userUuid);
+    const classifierPrompt = buildClassifierPrompt(categories);
+
+    let structuredResObj;
+    try {
+      structuredResObj = await extractFieldsForIntent(
+        rawUserText,
+        coreMessages,
+        classifierPrompt
+      );
+    } catch (err: any) {
+      const msg = String(err);
+      if (SCHEMA_FAILURE_KEYWORDS.some((k) => msg.includes(k))) {
+        return streamTextResponse(ERROR_MESSAGES.schemaFailure);
+      }
+      throw err;
     }
 
-    const classifierPrompt = buildClassifierPrompt(categoriesContext);
+    const structured = structuredResObj?.object;
+    if (!structured)
+      return streamTextResponse(ERROR_MESSAGES.couldNotUnderstand);
 
-    const structuredResObj = await extractFieldsForIntent(
-      rawUserText,
-      coreMessages,
-      classifierPrompt
-    );
+    const { relevance, intent, structured_data = {} } = structured;
 
-    const structuredRes = structuredResObj?.object;
-    if (!structuredRes)
-      return streamTextResponse(`Oops, I couldn't understand your request.`);
+    if (relevance <= 2) {
+      return streamTextResponse(
+        EXPENSE_IRRELEVANT_RESPONSES[
+          Math.floor(Math.random() * EXPENSE_IRRELEVANT_RESPONSES.length)
+        ]
+      );
+    }
 
-    const { relevance, intent, structured_data } = structuredRes;
-
-    if (
-      [
-        "totalSpend",
-        "topExpense",
-        "dashboardSummary",
-        "expenseComparison",
-        "transactionSearch",
-      ].includes(intent)
-    ) {
-      const hasStart = !!structured_data?.startDate;
-      const hasEnd = !!structured_data?.endDate;
+    if (DATE_RANGE_INTENTS.includes(intent as any)) {
+      const hasStart = !!structured_data.startDate;
+      const hasEnd = !!structured_data.endDate;
 
       if ((hasStart && !hasEnd) || (!hasStart && hasEnd)) {
-        structuredRes.structured_data = await inferMissingDateRange({
+        structured.structured_data = await extractMissingDateRange({
           intent,
           structured_data,
           rawText: rawUserText,
@@ -376,36 +169,15 @@ export async function POST(request: Request) {
       }
     }
 
-    if (relevance <= 2)
-      return streamTextResponse(
-        [
-          "Hmm, that doesn’t seem like an expense or analytics request.",
-          "I couldn’t recognize this as an expense-related message.",
-          "This doesn’t look like a valid expense or spending query.",
-          "That doesn’t appear to be an expense or analytics command.",
-        ][Math.floor(Math.random() * 4)]
-      );
+    const activeMode = (lastMessage?.metadata as any)?.intent || "other";
+    const allowedIntentsForCurrentMode = ALLOWED_BY_CONTEXT[activeMode] || [];
 
-    const allowedByContext: Record<string, string[]> = {
-      transaction: ["recordExpense"],
-      analytics: [
-        "totalSpend",
-        "topExpense",
-        "expenseComparison",
-        "transactionSearch",
-        "dashboardSummary",
-      ],
-    };
-
-    console.log(structuredRes);
-
-    const allowedIntents = allowedByContext[promptIntent] || [];
     const intentMode =
-      Object.entries(allowedByContext).find(([, intents]) =>
+      Object.entries(ALLOWED_BY_CONTEXT).find(([, intents]) =>
         intents.includes(intent)
       )?.[0] || "unknown";
 
-    if (!allowedIntents.includes(intent)) {
+    if (!allowedIntentsForCurrentMode.includes(intent)) {
       const correctMode =
         intentMode === "transaction"
           ? "a transaction action"
@@ -414,37 +186,31 @@ export async function POST(request: Request) {
             : "a different type of command";
 
       return streamTextResponse(
-        `You're in "${promptIntent}" mode but asked for ${correctMode}. Please switch to the ${intentMode} mode to continue.`
+        `You're in "${activeMode}" mode but asked for ${correctMode}. Please switch to the ${intentMode} mode to continue.`
       );
     }
+
     const allIntents = getIntentMetadata();
-    const intentMeta = (intent &&
-      allIntents[intent as keyof typeof allIntents]) || {
+    const intentMeta = allIntents[intent as keyof typeof allIntents] ?? {
       required: [],
       optional: [],
     };
 
-    const requiredFields = intentMeta.required || [];
-
-    const missingRequired = requiredFields.filter(
-      (f: any) => !structured_data?.[f] && structured_data?.[f] !== 0
+    const missing = intentMeta.required.filter(
+      (field) =>
+        structured_data[field] === undefined || structured_data[field] === null
     );
 
-    if (missingRequired.length > 0) {
+    if (missing.length > 0) {
       return streamJSONResponse({
         type: "missing_fields",
-        fields: missingRequired.map((f: any) => ({
-          name: f,
-          label: f[0].toUpperCase() + f.slice(1),
-          type:
-            f === "amount"
-              ? "number"
-              : f === "timestamp"
-                ? "datetime-local"
-                : "text",
+        fields: missing.map((field) => ({
+          name: field,
+          label: field[0].toUpperCase() + field.slice(1),
+          type: FIELD_TYPES[field] ?? DEFAULT_FIELD_TYPE,
           required: true,
         })),
-        categories: categoriesContext,
+        categories,
         resumeState: { intent, context: { partialData: structured_data } },
       });
     }
@@ -454,20 +220,26 @@ export async function POST(request: Request) {
         ? tools[intent as ToolName]
         : undefined;
 
-    if (!selectedTool)
+    if (!selectedTool) {
       return streamTextResponse(
         `Sorry — I don't have a tool for intent "${intent}".`
       );
+    }
 
     return streamToolResponse({
       toolName: intent,
       tool: selectedTool,
-      toolInput: { ...(structured_data || {}), userUuid },
+      toolInput: { ...structured_data, userUuid },
     });
   } catch (err: any) {
-    if (err?.message === "Unauthorized")
-      return new Response("Unauthorized", { status: 401 });
-    console.error("POST /chat error:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    if (err?.message === "Unauthorized") {
+      return new Response(HTTP_ERRORS.unauthorized.message, {
+        status: HTTP_ERRORS.unauthorized.status,
+      });
+    }
+
+    return new Response(HTTP_ERRORS.serverError.message, {
+      status: HTTP_ERRORS.serverError.status,
+    });
   }
 }

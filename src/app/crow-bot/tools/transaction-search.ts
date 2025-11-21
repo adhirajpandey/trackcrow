@@ -44,11 +44,7 @@ async function runTransactionSearch(input: any) {
   const baseUrl = "/transactions";
   const relativeUrl = `${baseUrl}?${params.toString()}`;
 
-  // ✅ Construct full absolute URL safely
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    "http://localhost:3000";
+  const origin = process.env.NEXT_PUBLIC_APP_URL;
 
   const fullUrl = `${origin}${relativeUrl}`;
 
