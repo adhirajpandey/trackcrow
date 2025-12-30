@@ -108,9 +108,7 @@ export async function runTopExpense(input: any) {
         message = ``;
         break;
     }
-
-    // console.log("✅ Top Expense:", { message, result });
-
+    
     return { message, result };
   } catch (error) {
     console.error("❌ Failed to fetch top expense:", error);

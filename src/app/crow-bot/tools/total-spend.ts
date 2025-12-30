@@ -19,11 +19,11 @@ export async function runTotalSpend(input: any) {
 
   const { category, subcategory, remarks, startDate, endDate } = parsed;
 
-  // 🕒 Date handling
+  // Date handling
   const start = startDate ? new Date(startDate) : undefined;
   const end = endDate ? new Date(endDate) : undefined;
 
-  // ✅ Auth check
+  // Auth check
   const sessionResult = await validateSession();
   if (!sessionResult.success)
     return { error: sessionResult.error || "User not authenticated." };
@@ -33,7 +33,7 @@ export async function runTotalSpend(input: any) {
   try {
     const whereClause: any = { user_uuid: userUuid };
 
-    // ⏰ Time range filters
+    // Time range filters
     if (start && end) whereClause.timestamp = { gte: start, lte: end };
     else if (start) whereClause.timestamp = { gte: start };
     else if (end) whereClause.timestamp = { lte: end };
@@ -118,7 +118,6 @@ export async function runTotalSpend(input: any) {
           )}`
         : `⚠️ No transactions found ${timeRange}${filterText}.`;
 
-    /* ------------------ STEP 4: RETURN RESULT ------------------ */
     return {
       message,
       result: {

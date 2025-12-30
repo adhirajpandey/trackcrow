@@ -98,3 +98,7 @@ export const HTTP_ERRORS = {
 /* ---------------------- Tool Output ------------------- */
 export const TOOL_FAILURE_MESSAGE = (tool: string, err: string) =>
   `Tool "${tool}" failed: ${err}`;
+
+/* ------------------- Server Overload Message ------------------ */
+export const SERVER_OVERLOADED_MESSAGE =
+  "The server is currently overloaded. Please try again in a moment.";

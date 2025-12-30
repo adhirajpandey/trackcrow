@@ -28,6 +28,10 @@ export const logger = {
     console.info(formatLog('info', message, data));
   },
 
+  warn: (message: string, data?: any) => {
+    console.warn(formatLog("warn", message, data));
+  },
+
   error: (message: string, error?: Error, data?: any) => {
     const errorData = {
       ...data,

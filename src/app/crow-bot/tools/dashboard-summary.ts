@@ -32,7 +32,7 @@ function extractDashboardDates(structured_data: any) {
   return { startDate: parsedStartDate, endDate: parsedEndDate };
 }
 
-/* ----------------------------- EXECUTION ----------------------------- */
+/* ----------------------------- TOOL EXECUTION ----------------------------- */
 
 export async function runDashboardSummary(input: any) {
   const structured =

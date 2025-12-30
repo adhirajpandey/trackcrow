@@ -22,13 +22,13 @@ async function runTransactionSearch(input: any) {
     return { error: session.error || "User not authenticated." };
   }
 
-  // 🧩 Combine recipient + keyword gracefully
+  // Combine recipient + keyword 
   const queryTerms = [recipient, keyword]
     .filter((v) => v && v.trim().length > 0)
     .join(" ")
-    .trim(); // e.g. "Shikaari’s petrol" or "Mondal ji"
-
-  // 🧩 Construct base params
+    .trim(); 
+    
+  // Construct base params
   const params = new URLSearchParams({
     page: "1",
     sortBy: "timestamp",
@@ -47,8 +47,6 @@ async function runTransactionSearch(input: any) {
   const origin = process.env.NEXT_PUBLIC_APP_URL;
 
   const fullUrl = `${origin}${relativeUrl}`;
-
-  console.log("✅ Transaction Search URL:", fullUrl);
 
   return {
     message: `Your filtered transactions are ready to view.`,
