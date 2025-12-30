@@ -144,17 +144,40 @@ export async function validateTransactionOwnership(
   transactionId: number,
   userUuid: string
 ): Promise<
-  { success: true; transaction: any } | { success: false; error: string }
+  | { success: true; transaction: any }
+  | { success: false; error: string }
 > {
-  const transaction = await prisma.transaction.findFirst({
-    where: { id: transactionId, user_uuid: userUuid },
+  logger.debug("validateTransactionOwnership - Validating transaction ownership", {
+    transactionId,
+    userUuid
   });
 
-  if (!transaction) {
-    return { success: false, error: "Transaction not found" };
+  try {
+    const transaction = await prisma.transaction.findFirst({
+      where: { id: transactionId, user_uuid: userUuid }
+    });
+    
+    if (!transaction) {
+      logger.debug("validateTransactionOwnership - Transaction not found or not owned by user", {
+        transactionId,
+        userUuid
+      });
+      return { success: false, error: "Transaction not found" };
+    }
+    
+    logger.debug("validateTransactionOwnership - Transaction ownership validated", {
+      transactionId,
+      userUuid
+    });
+    
+    return { success: true, transaction };
+  } catch (error) {
+    logger.error("validateTransactionOwnership - Database error", error as Error, {
+      transactionId,
+      userUuid
+    });
+    return { success: false, error: "Database error" };
   }
-
-  return { success: true, transaction };
 }
 
 export async function getSessionUser() {
