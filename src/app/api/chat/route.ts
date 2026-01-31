@@ -200,7 +200,8 @@ export async function POST(request: Request) {
       return streamTextResponse(ERROR_MESSAGES.couldNotUnderstand);
     }
 
-    const { relevance, intent, structured_data = {} } = structured;
+    const { relevance, intent } = structured;
+    const structured_data = structured.structured_data || {};
 
     logger.info("POST /api/chat - Intent classified", {
       userUuid,

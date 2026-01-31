@@ -70,7 +70,7 @@ export const userReadSchema = z.object({
 const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 export const baseFields = {
-  amount: z.number().nullable().optional(),
+  amount: z.coerce.number().nullable().optional(),
   recipient: z.string().nullable().optional(),
   recipient_name: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
@@ -98,14 +98,14 @@ export const baseFields = {
 };
 
 function makeStructuredDataShape(fields: Record<string, z.ZodTypeAny>) {
-  return z.object(fields).partial();
+  return z.object(fields).partial().optional().nullable();
 }
 
 const recordExpenseSchema = z.object({
   intent: z.literal("recordExpense"),
   relevance: z.number().min(0).max(5),
   structured_data: makeStructuredDataShape({
-    amount: z.number().nullable(),
+    amount: z.coerce.number().nullable(),
     category: z.string().nullable(),
     timestamp: z.string().nullable(),
     recipient: baseFields.recipient,
@@ -181,8 +181,8 @@ const totalSpendSchema = z.object({
 
 const otherSchema = z.object({
   intent: z.literal("other"),
-  relevance: z.number().min(0).max(0),
-  structured_data: z.object({}).optional(),
+  relevance: z.number().min(0).max(5),
+  structured_data: z.record(z.string(), z.any()).optional().nullable(),
   missing_fields: z.array(z.string()).default([]),
 });
 
