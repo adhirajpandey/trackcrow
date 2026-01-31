@@ -1,7 +1,8 @@
-# TrackCrow 🐦✨
+# TrackCrow
 
 **TrackCrow** is a modern, AI-powered expense tracking application built with Next.js 16. It redefines personal finance management by leveraging AI to automate transaction logging, categorize expenses, and provide actionable insights—all through a beautiful, responsive interface.
 
+[Check Screenshots](#screenshots)
 
 ## 🚀 Features
 
@@ -89,10 +90,14 @@ Follow these steps to set up the project locally.
 
    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Screenshots
+
+
+### Dashboard
+<img width="1899" height="893" alt="Screenshot 2026-02-01 033542" src="https://github.com/user-attachments/assets/4f4b3665-79dd-4417-ba2a-d2e09a262364" />
+
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
-
-This project is licensed under the MIT License.
