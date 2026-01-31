@@ -73,10 +73,11 @@ export function ViewTransactionForm({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const router = useRouter();
-  const [isEditing, setIsEditing] = React.useState(
-    searchParams.edit === "true" ||
-      (Array.isArray(searchParams.edit) && searchParams.edit.includes("true"))
-  );
+  const isEditing = React.useMemo(() => {
+    return searchParams.edit === "true" ||
+      (Array.isArray(searchParams.edit) && searchParams.edit.includes("true"));
+  }, [searchParams.edit]);
+
   const [pendingSuggestion, setPendingSuggestion] = React.useState<{ suggestedCategoryName: string | null; suggestedSubCategoryName: string | null; categoryFound: CategoryWithSubs | undefined } | null>(null);
   const form = useForm<
     ViewTransactionFormValues,
@@ -146,7 +147,19 @@ export function ViewTransactionForm({
     }
   }, [pendingSuggestion, categories, form, subs, makeToastMessage]);
 
-  async function handleGetSuggestion() {
+  const toggleEditMode = React.useCallback((forceValue?: boolean) => {
+    const newValue = forceValue !== undefined ? forceValue : !isEditing;
+    const newSearchParams = new URLSearchParams(window.location.search);
+    if (newValue) {
+      newSearchParams.set("edit", "true");
+    } else {
+      newSearchParams.delete("edit");
+    }
+    router.replace(`${window.location.pathname}?${newSearchParams.toString()}`);
+    toast.success(newValue ? "Edit mode enabled" : "Edit mode disabled");
+  }, [isEditing, router]);
+
+  const handleGetSuggestion = React.useCallback(async () => {
     if (!transactionId) return;
 
     try {
@@ -185,9 +198,9 @@ export function ViewTransactionForm({
       console.error("Error fetching suggestions:", error);
       toast.error(`Failed to get suggestions: ${error.response?.statusText || error.message || "Unknown error"}`);
     }
-  }
+  }, [transactionId, categories, form]);
 
-  async function onSubmit(values: ViewTransactionFormValues) {
+  const onSubmit = React.useCallback(async (values: ViewTransactionFormValues) => {
     const fd = new FormData();
     fd.append("id", String(transactionId));
     // Always include recipient_name and remarks so they can be cleared
@@ -216,11 +229,51 @@ export function ViewTransactionForm({
       return;
     }
     toast.success("Saved");
-    setIsEditing(false);
     const newSearchParams = new URLSearchParams(window.location.search);
     newSearchParams.delete("edit");
     router.replace(`${window.location.pathname}?${newSearchParams.toString()}`);
-  }
+  }, [transactionId, router]);
+
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if user is typing in an input, textarea, or select element
+      const target = event.target as HTMLElement;
+      const isInputField = 
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.tagName === 'SELECT' ||
+        target.isContentEditable;
+      
+      if (isInputField) return;
+
+      const key = event.key.toLowerCase();
+
+      // E - Toggle edit mode
+      if (key === 'e') {
+        event.preventDefault();
+        toggleEditMode();
+      }
+
+      // G - Get suggestion (only when in edit mode)
+      if (key === 'g' && isEditing) {
+        event.preventDefault();
+        handleGetSuggestion();
+      }
+
+      // S - Save form (only when in edit mode)
+      if (key === 's' && isEditing) {
+        event.preventDefault();
+        form.handleSubmit(onSubmit)();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditing, form, toggleEditMode, handleGetSuggestion, onSubmit]);
+
+  // Handler logic is now correctly handled by useCallback hooks above
+
 
   return (
       <Card>
@@ -232,18 +285,7 @@ export function ViewTransactionForm({
                 id="edit-mode"
                 checked={isEditing}
                 onCheckedChange={(checked) => {
-                  setIsEditing(checked);
-                  const newSearchParams = new URLSearchParams(
-                    window.location.search
-                  );
-                  if (checked) {
-                    newSearchParams.set("edit", "true");
-                  } else {
-                    newSearchParams.delete("edit");
-                  }
-                  router.replace(
-                    `${window.location.pathname}?${newSearchParams.toString()}`
-                  );
+                  toggleEditMode(checked);
                 }}
               />
               <label
