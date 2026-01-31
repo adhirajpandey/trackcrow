@@ -17,11 +17,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const transactionId = Number(context.params.id);
+    const params = await context.params;
+    const transactionId = Number(params.id);
     if (isNaN(transactionId)) {
       logger.error("GET /api/transactions/[id]/suggest - Invalid transaction ID", undefined, {
         userUuid: session.user.uuid,
-        transactionId: context.params.id
+        transactionId: params.id
       });
       return NextResponse.json({ error: "Invalid transaction ID" }, { status: 400 });
     }
@@ -126,7 +127,7 @@ export async function GET(
     return NextResponse.json({ suggestedCategory, suggestedSubCategory });
   } catch (error) {
     logger.error("GET /api/transactions/[id]/suggest - Unexpected error", error as Error, {
-      transactionId: context?.params?.id
+      transactionId: (await context.params)?.id
     });
     return NextResponse.json(
       { message: "Internal Server Error" },
