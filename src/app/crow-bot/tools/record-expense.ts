@@ -189,9 +189,8 @@ export async function runRecordExpense(input: any) {
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 
 export const recordExpenseTool = createTool({
-  name: "recordExpense",
   description:
     "Records a new financial transaction into the database and return a summary card.",
-  inputSchema: recordExpenseSchema,
-  execute: runRecordExpense,
-});
+  parameters: recordExpenseSchema,
+  execute: runRecordExpense as any,
+} as any);

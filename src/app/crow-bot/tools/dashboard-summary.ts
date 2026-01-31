@@ -4,43 +4,19 @@ import { tool as createTool } from "ai";
 
 /* ----------------------------- ZOD SCHEMA ----------------------------- */
 
-const dashboardSummarySchema = z
-  .object({
-    startDate: z.coerce.date().optional(),
-    endDate: z.coerce.date().optional(),
-  })
-  .passthrough();
+/* ----------------------------- ZOD SCHEMA ----------------------------- */
 
-/* ----------------------------- HELPER ----------------------------- */
-
-function extractDashboardDates(structured_data: any) {
-  if (!structured_data || typeof structured_data !== "object") {
-    console.warn("⚠️ Invalid structured_data passed to dashboardSummaryTool");
-    return {};
-  }
-
-  const { startDate = null, endDate = null } = structured_data;
-
-  const parsedStartDate = startDate
-    ? new Date(startDate).toISOString()
-    : new Date(new Date().setDate(1)).toISOString();
-
-  const parsedEndDate = endDate
-    ? new Date(endDate).toISOString()
-    : new Date().toISOString(); // now
-
-  return { startDate: parsedStartDate, endDate: parsedEndDate };
-}
+const dashboardSummarySchema = z.object({
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+});
 
 /* ----------------------------- TOOL EXECUTION ----------------------------- */
 
-export async function runDashboardSummary(input: any) {
-  const structured =
-    "structured_data" in input
-      ? extractDashboardDates(input.structured_data)
-      : extractDashboardDates(input);
-
-  const { startDate, endDate } = structured;
+export async function runDashboardSummary(
+  input: z.infer<typeof dashboardSummarySchema>
+) {
+  const { startDate, endDate } = input;
 
   const sessionResult = await validateSession();
   if (!sessionResult.success) {
@@ -49,17 +25,16 @@ export async function runDashboardSummary(input: any) {
 
   return {
     message: "Ready to analyze? Your dashboard has the latest summary view.",
-    startDate,
-    endDate,
+    startDate: startDate?.toISOString(),
+    endDate: endDate?.toISOString(),
   };
 }
 
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 
 export const dashboardSummaryTool = createTool({
-  name: "dashboardSummary",
   description:
     "Used when the user asks for an overview, summary, or dashboard of their finances",
-  inputSchema: dashboardSummarySchema,
-  execute: runDashboardSummary,
-});
+  parameters: dashboardSummarySchema,
+  execute: runDashboardSummary as any,
+} as any);

@@ -77,9 +77,9 @@ export const ExpenseComparisonCard = ({
         >
           <PieChart>
             <Tooltip
-              formatter={(value: number, name: string) => [
-                `₹${value.toLocaleString("en-IN")}`,
-                name,
+              formatter={(value: number | undefined, name: string | undefined) => [
+                `₹${(value ?? 0).toLocaleString("en-IN")}`,
+                name ?? "Unknown",
               ]}
               contentStyle={{
                 backgroundColor: "#1e1e1e",

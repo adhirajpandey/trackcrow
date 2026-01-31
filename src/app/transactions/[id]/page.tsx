@@ -6,7 +6,7 @@ import {
   type ViewTransactionDefaults,
 } from "./view-transaction-form";
 import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
-import { TransactionType } from "../../../generated/prisma"; // Import enums
+import { TransactionType } from "@prisma/client"; // Import enums
 import { ErrorMessage } from "@/components/error-message";
 
 interface PrismaTransactionResult {

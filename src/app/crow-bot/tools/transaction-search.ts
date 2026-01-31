@@ -57,9 +57,8 @@ async function runTransactionSearch(input: any) {
 
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 export const transactionSearchTool = createTool({
-  name: "transactionSearch",
   description:
     "Builds a filtered transaction search link based on recipient, category, or date range.",
-  inputSchema: transactionSearchSchema,
-  execute: runTransactionSearch,
-});
+  parameters: transactionSearchSchema,
+  execute: runTransactionSearch as any,
+} as any);

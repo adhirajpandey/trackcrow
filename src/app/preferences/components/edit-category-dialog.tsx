@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit } from 'lucide-react';
 import { editCategory } from '../actions';
-import type { Category } from '@/generated/prisma/client';
+import type { Category } from '@prisma/client';
 
 export function EditCategoryDialog({ category }: { category: Category }) {
   const [open, setOpen] = useState(false);

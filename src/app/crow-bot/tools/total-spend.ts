@@ -137,9 +137,8 @@ export async function runTotalSpend(input: any) {
 
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 export const totalSpendTool = createTool({
-  name: "totalSpend",
   description:
     "Calculates total spending within a timeframe, optionally filtered by category, subcategory or remarks.",
-  inputSchema: totalSpendSchema,
-  execute: runTotalSpend,
-});
+  parameters: totalSpendSchema,
+  execute: runTotalSpend as any,
+} as any);

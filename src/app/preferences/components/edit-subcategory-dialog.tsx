@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Edit } from 'lucide-react';
 import { editSubcategory } from '../actions';
-import type { Subcategory, Category } from '@/generated/prisma/client';
+import type { Subcategory, Category } from '@prisma/client';
 
 export function EditSubcategoryDialog({
   subcategory,

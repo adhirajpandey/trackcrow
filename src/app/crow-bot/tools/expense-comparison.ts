@@ -190,9 +190,8 @@ export async function runExpenseComparison(input: any) {
 
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 export const expenseComparisonTool = createTool({
-  name: "expenseComparison",
   description:
     "Compares total spending between two specified keywords (categories, subcategories, or remarks).",
-  inputSchema: expenseComparisonSchema,
-  execute: runExpenseComparison,
-});
+  parameters: expenseComparisonSchema,
+  execute: runExpenseComparison as any,
+} as any);

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TransactionType } from "../../../generated/prisma";
+import { TransactionType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 
 type CategoryWithSubs = {

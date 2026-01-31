@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       lastRole: messages.at(-1)?.role,
     });
 
-    const coreMessages = convertToModelMessages(messages);
+    const coreMessages = await convertToModelMessages(messages);
     const lastMessage = messages.at(-1);
     const lastUserMessage = [...messages]
       .reverse()

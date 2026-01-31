@@ -118,9 +118,8 @@ export async function runTopExpense(input: any) {
 
 /* ----------------------------- EXPORT TOOL ----------------------------- */
 export const topExpenseTool = createTool({
-  name: "topExpense",
   description:
     "Finds the single highest-value transaction, adapting automatically to whether category/time filters are provided.",
-  inputSchema: topExpenseSchema,
-  execute: runTopExpense,
-});
+  parameters: topExpenseSchema,
+  execute: runTopExpense as any,
+} as any);
