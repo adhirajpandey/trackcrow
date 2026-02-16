@@ -67,8 +67,6 @@ export const userReadSchema = z.object({
   categories: z.array(categorySchema),
 });
 
-const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-
 export const baseFields = {
   amount: z.number().nullable().optional(),
   recipient: z.string().nullable().optional(),
@@ -80,21 +78,9 @@ export const baseFields = {
     .nullable()
     .optional(),
   remarks: z.string().nullable().optional(),
-  timestamp: z
-    .string()
-    .regex(iso8601Regex, "Timestamp must be in ISO 8601 format")
-    .nullable()
-    .optional(),
-  startDate: z
-    .string()
-    .regex(iso8601Regex, "startDate must be in ISO 8601 format")
-    .nullable()
-    .optional(),
-  endDate: z
-    .string()
-    .regex(iso8601Regex, "endDate must be in ISO 8601 format")
-    .nullable()
-    .optional(),
+  timestamp: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
 };
 
 function makeStructuredDataShape(fields: Record<string, z.ZodTypeAny>) {

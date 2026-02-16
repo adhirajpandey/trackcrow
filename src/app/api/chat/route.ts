@@ -6,6 +6,9 @@ import { logger } from '@/lib/logger';
 export async function POST(request: Request) {
   try {
     const { messages }: { messages: UIMessage[] } = await request.json();
+    logger.info('POST /api/chat - Route parsed request body', {
+      messageCount: Array.isArray(messages) ? messages.length : 0,
+    });
     return await handleChatRequest(messages);
   } catch (err: any) {
     if (err?.message === 'Unauthorized') {

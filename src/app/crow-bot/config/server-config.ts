@@ -41,10 +41,8 @@ export const SCHEMA_FAILURE_KEYWORDS = [
   "AI_TypeValidationError",
   "ZodError",
   "invalid_format",
-  "schema",
   "startDate must be in ISO 8601 format",
   "endDate must be in ISO 8601 format",
-  "The model is overloaded. Please try again later",
 ];
 
 /* -------------------- Error Messages ------------------ */

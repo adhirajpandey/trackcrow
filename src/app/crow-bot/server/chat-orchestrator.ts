@@ -46,7 +46,9 @@ function hasAssistantToolOutput(messages: UIMessage[]): boolean {
 
 export async function handleChatRequest(messages: UIMessage[]) {
   try {
-    logger.info('POST /api/chat - Request received');
+    logger.info('POST /api/chat - Request received', {
+      messageCount: messages.length,
+    });
 
     const lastMessage = messages.at(-1);
 
@@ -90,30 +92,62 @@ export async function handleChatRequest(messages: UIMessage[]) {
         .join('\n')
         .trim() || '';
 
+    logger.info('POST /api/chat - User message parsed', {
+      rawTextLength: rawText.length,
+      rawTextPreview: rawText.slice(0, 160),
+      isResume,
+      lastHadToolOutput,
+    });
+
     if (HELP_REGEX.test(rawText)) {
+      logger.info('POST /api/chat - Returning trackcrow help response');
       return streamTextResponse(getTrackCrowHelp());
     }
 
     if (CROWBOT_HELP_REGEX.test(rawText)) {
+      logger.info('POST /api/chat - Returning crowbot help response');
       return streamTextResponse(getCrowBotHelp());
     }
 
     const userUuid = await getSessionUser();
     const categories = await getUserCategories(userUuid);
+    logger.info('POST /api/chat - Loaded user context', {
+      userUuid,
+      categoryCount: categories.length,
+    });
 
     const classification = await classifyIntent({ messages, categories });
 
     if (classification.schemaFailure) {
+      logger.warn('POST /api/chat - Schema failure fallback returned', {
+        userUuid,
+        rawTextPreview: rawText.slice(0, 160),
+      });
       return streamTextResponse(ERROR_MESSAGES.schemaFailure);
     }
 
     if (!classification.result) {
+      logger.warn('POST /api/chat - Could not understand fallback returned', {
+        userUuid,
+        rawTextPreview: rawText.slice(0, 160),
+      });
       return streamTextResponse(ERROR_MESSAGES.couldNotUnderstand);
     }
 
     const { intent, relevance, structured_data } = classification.result;
+    logger.info('POST /api/chat - Classification accepted', {
+      userUuid,
+      intent,
+      relevance,
+      structuredKeys: Object.keys(structured_data || {}),
+    });
 
     if (isLowRelevance(relevance)) {
+      logger.info('POST /api/chat - Low relevance response returned', {
+        userUuid,
+        intent,
+        relevance,
+      });
       return streamTextResponse(getLowRelevanceResponse());
     }
 
@@ -122,11 +156,21 @@ export async function handleChatRequest(messages: UIMessage[]) {
       'other';
     const modeCheck = checkModeMismatch({ activeMode, intent });
     if (modeCheck.mismatch) {
+      logger.warn('POST /api/chat - Mode mismatch detected', {
+        userUuid,
+        activeMode,
+        intent,
+      });
       return streamTextResponse(modeCheck.message || ERROR_MESSAGES.couldNotUnderstand);
     }
 
     const missing = getMissingFields({ intent, structuredData: structured_data });
     if (missing.length > 0) {
+      logger.info('POST /api/chat - Missing fields requested', {
+        userUuid,
+        intent,
+        missing,
+      });
       return streamJSONResponse(
         buildMissingFieldsPayload({
           missing,
@@ -139,11 +183,19 @@ export async function handleChatRequest(messages: UIMessage[]) {
 
     const selectedTool = tools[intent as ToolName];
     if (!selectedTool) {
+      logger.warn('POST /api/chat - Intent has no mapped tool', {
+        userUuid,
+        intent,
+      });
       return streamTextResponse(
         `Sorry — I don't have a tool for intent "${intent}".`
       );
     }
 
+    logger.info('POST /api/chat - Dispatching tool execution', {
+      userUuid,
+      intent,
+    });
     return streamToolResponse({
       toolName: intent,
       tool: selectedTool,
@@ -151,9 +203,15 @@ export async function handleChatRequest(messages: UIMessage[]) {
     });
   } catch (err: unknown) {
     if (isApiExhaustionError(err)) {
+      logger.warn('POST /api/chat - API exhaustion fallback returned', {
+        message: (err as any)?.message || String(err),
+        code: (err as any)?.code,
+        status: (err as any)?.status,
+      });
       return streamTextResponse(SERVER_OVERLOADED_MESSAGE);
     }
 
+    logger.error('POST /api/chat - Unhandled orchestrator error', err as Error);
     throw err;
   }
 }

@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { UIMessage, generateObject } from "ai";
 import { google } from "@ai-sdk/google";
-import { toolSchema } from "@/common/schemas";
 import { MODEL, MAX_SCHEMA_RETRIES } from "@/app/crow-bot/config/server-config";
+import { logger } from "@/lib/logger";
+import { isSchemaGenerationError } from "@/app/crow-bot/utils/error-detection";
+
+const relaxedClassifierSchema = z
+  .object({
+    intent: z.string().optional().default("other"),
+    relevance: z.number().optional().default(0),
+    structured_data: z.object({}).passthrough().optional().default({}),
+    missing_fields: z.array(z.string()).optional().default([]),
+  })
+  .passthrough();
 
 export function getRawTextFromUIMessage(msg?: UIMessage) {
   if (!msg) return "";
@@ -20,23 +30,42 @@ export async function extractFieldsForIntent(
   coreMessages: any[],
   classifierPrompt: any
 ) {
-  for (let attempt = 1; attempt <= MAX_SCHEMA_RETRIES; attempt++) {
-    try {
-      return await generateObject({
-        model: google(MODEL),
-        schema: toolSchema,
-        messages: [
+  const modelMessages =
+    coreMessages.length > 0
+      ? [{ role: "system", content: classifierPrompt.content }, ...coreMessages]
+      : [
           { role: "system", content: classifierPrompt.content },
           { role: "user", content: rawText },
-          ...coreMessages,
-        ],
+        ];
+
+  for (let attempt = 1; attempt <= MAX_SCHEMA_RETRIES; attempt++) {
+    try {
+      logger.info("crow-bot/extraction - generateObject attempt", {
+        attempt,
+        maxRetries: MAX_SCHEMA_RETRIES,
+        model: MODEL,
+        rawTextLength: rawText.length,
+      });
+
+      return await generateObject({
+        model: google(MODEL),
+        schema: relaxedClassifierSchema,
+        messages: modelMessages,
       });
     } catch (err: any) {
-      if (
-        err?.message?.includes("AI_NoObjectGeneratedError") &&
-        attempt === 1
-      ) {
-        console.warn("Schema mismatch, retrying…");
+      logger.warn("crow-bot/extraction - generateObject failed", {
+        attempt,
+        maxRetries: MAX_SCHEMA_RETRIES,
+        name: err?.name,
+        code: err?.code,
+        status: err?.status,
+        message: err?.message || String(err),
+      });
+
+      if (attempt < MAX_SCHEMA_RETRIES && isSchemaGenerationError(err, [])) {
+        logger.warn("crow-bot/extraction - schema mismatch, retrying", {
+          attempt,
+        });
         continue;
       }
       throw err;
@@ -63,7 +92,11 @@ export async function extractMissingDateRange({
     const end = new Date(structured_data.endDate);
 
     if (start > end) {
-      console.warn(`[⚠️ Invalid Range] Swapping dates for ${intent}`);
+      logger.warn("crow-bot/extraction - invalid range, swapping boundaries", {
+        intent,
+        startDate: structured_data.startDate,
+        endDate: structured_data.endDate,
+      });
       [structured_data.startDate, structured_data.endDate] = [
         structured_data.endDate,
         structured_data.startDate,
@@ -85,6 +118,13 @@ User query: "${rawText}"
 `;
 
   try {
+    logger.info("crow-bot/extraction - inferring missing date boundary", {
+      intent,
+      missingField,
+      knownField,
+      knownValue: structured_data[knownField] || null,
+    });
+
     const res = await generateObject({
       model: google(MODEL),
       schema: z.object({
@@ -111,8 +151,21 @@ User query: "${rawText}"
         structured_data.startDate,
       ];
     }
+
+    logger.info("crow-bot/extraction - date inference complete", {
+      intent,
+      startDate: structured_data.startDate || null,
+      endDate: structured_data.endDate || null,
+    });
   } catch (e) {
-    console.warn("Failed inference", e);
+    logger.warn("crow-bot/extraction - date inference failed", {
+      intent,
+      missingField,
+      message: (e as any)?.message || String(e),
+      name: (e as any)?.name,
+      code: (e as any)?.code,
+      status: (e as any)?.status,
+    });
   }
 
   return structured_data;
