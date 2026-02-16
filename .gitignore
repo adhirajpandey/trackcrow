@@ -24,3 +24,6 @@
 next-env.d.ts
 
 /src/generated/prisma
+
+# local docs
+/docs/

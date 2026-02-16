@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     const page = Number.isFinite(pageNum)
       ? Math.max(1, Math.floor(pageNum))
       : 1;
-    const sizeNum = Number(sizeParam);
+    const sizeNum = sizeParam === null ? Number.NaN : Number(sizeParam);
     const pageSize = Number.isFinite(sizeNum)
       ? Math.max(1, Math.min(100, Math.floor(sizeNum)))
       : 20;
