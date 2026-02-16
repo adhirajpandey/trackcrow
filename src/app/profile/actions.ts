@@ -1,9 +1,10 @@
 'use server';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
-import { randomBytes } from 'crypto';
+import {
+  getOrCreateTokenService,
+  revokeTokenService,
+} from '@/services/profile/profile-service';
+import { requireUserSession } from '@/services/auth/guard-service';
 
 export type TokenActionState = {
   token?: string | null;
@@ -16,43 +17,35 @@ export type RevokeTokenActionState = {
 };
 
 export async function getOrCreateTokenAction(): Promise<TokenActionState> {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.uuid) {
+  const session = await requireUserSession();
+  if (!session.ok) {
     return { error: 'Unauthorized' };
   }
 
-  try {
-    const user = await prisma.user.findUnique({
-      where: { uuid: session.user.uuid },
-      select: { lt_token: true },
-    });
+  const result = await getOrCreateTokenService({
+    userUuid: session.data.userUuid,
+  });
 
-    if (user?.lt_token) {
-      return { token: user.lt_token };
-    }
-
-    const token = randomBytes(16).toString('hex');
-    await prisma.user.update({ where: { uuid: session.user.uuid }, data: { lt_token: token } });
-    return { token };
-  } catch {
+  if (!result.ok) {
     return { error: 'Failed to get token' };
   }
+
+  return { token: result.data.token };
 }
 
 export async function revokeTokenAction(): Promise<RevokeTokenActionState> {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.uuid) {
+  const session = await requireUserSession();
+  if (!session.ok) {
     return { error: 'Unauthorized' };
   }
 
-  try {
-    await prisma.user.update({
-      where: { uuid: session.user.uuid },
-      data: { lt_token: null },
-      select: { uuid: true },
-    });
-    return { success: true };
-  } catch {
+  const result = await revokeTokenService({
+    userUuid: session.data.userUuid,
+  });
+
+  if (!result.ok) {
     return { error: 'Failed to revoke token' };
   }
+
+  return { success: true };
 }

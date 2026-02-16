@@ -1,9 +1,8 @@
-import { z } from "zod";
-import prisma from "@/lib/prisma";
-import { validateSession } from "@/common/server";
-import { tool as createTool } from "ai";
-
-/* ----------------------------- ZOD SCHEMAS ----------------------------- */
+import { z } from 'zod';
+import prisma from '@/lib/prisma';
+import { validateSession } from '@/common/server';
+import { toolFail, toolOk, type ToolResult } from '@/app/crow-bot/tools/contracts';
+import { logger } from '@/lib/logger';
 
 const addTransactionSchema = z.object({
   amount: z.coerce.number().positive(),
@@ -11,21 +10,16 @@ const addTransactionSchema = z.object({
   recipient_name: z.string().optional(),
   categoryId: z.coerce.number().int().positive(),
   subcategoryId: z.coerce.number().int().positive().optional(),
-  type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
+  type: z.enum(['UPI', 'CARD', 'CASH', 'NETBANKING', 'OTHER']).default('UPI'),
   remarks: z.string().optional(),
   timestamp: z.coerce.date(),
 });
 
 export const recordExpenseSchema = z.object({}).passthrough();
 
-/* ----------------------------- HELPERS ----------------------------- */
-
 function extractTransactionFields(structured_data: any) {
-  if (!structured_data || typeof structured_data !== "object") {
-    console.warn(
-      "⚠️ Invalid structured_data passed to recordExpenseTool:",
-      structured_data
-    );
+  if (!structured_data || typeof structured_data !== 'object') {
+    logger.warn('Invalid structured_data passed to recordExpenseTool');
     return {};
   }
 
@@ -34,19 +28,17 @@ function extractTransactionFields(structured_data: any) {
     recipient = null,
     recipient_name = null,
     category = null,
-    categoryId = null,
     subcategory = null,
-    subcategoryId = null,
-    type = "UPI",
-    remarks = "",
-    description = "",
+    type = 'UPI',
+    remarks = '',
+    description = '',
     date = null,
     timestamp = null,
   } = structured_data;
 
   const parsedAmount =
-    typeof amount === "string"
-      ? parseFloat(amount.replace(/[^0-9.]/g, ""))
+    typeof amount === 'string'
+      ? parseFloat(amount.replace(/[^0-9.]/g, ''))
       : amount;
 
   const parsedTimestamp = timestamp
@@ -57,23 +49,19 @@ function extractTransactionFields(structured_data: any) {
 
   return {
     amount: parsedAmount ?? 0,
-    recipient: recipient ?? recipient_name ?? "Unknown",
-    recipient_name: recipient_name ?? recipient ?? "Unknown",
+    recipient: recipient ?? recipient_name ?? 'Unknown',
+    recipient_name: recipient_name ?? recipient ?? 'Unknown',
     category,
-    categoryId,
     subcategory,
-    subcategoryId,
-    type: type ?? "UPI",
-    remarks: remarks || description || "",
+    type: type ?? 'UPI',
+    remarks: remarks || description || '',
     timestamp: parsedTimestamp,
   };
 }
 
-/* ----------------------------- TOOL EXECUTION ----------------------------- */
-
-export async function runRecordExpense(input: any) {
+export async function runRecordExpense(input: any): Promise<ToolResult<any>> {
   const structured =
-    "structured_data" in input
+    'structured_data' in input
       ? extractTransactionFields(input.structured_data)
       : extractTransactionFields(input);
 
@@ -90,14 +78,14 @@ export async function runRecordExpense(input: any) {
 
   const sessionResult = await validateSession();
   if (!sessionResult.success) {
-    return { error: sessionResult.error || "User not authenticated." };
+    return toolFail('UNAUTHORIZED', sessionResult.error || 'User not authenticated.');
   }
   const { userUuid } = sessionResult;
 
   const categoryRecord = await prisma.category.findFirst({
     where: {
       user_uuid: userUuid,
-      name: { equals: category, mode: "insensitive" },
+      name: { equals: category, mode: 'insensitive' },
     },
   });
 
@@ -105,15 +93,16 @@ export async function runRecordExpense(input: any) {
     ? await prisma.subcategory.findFirst({
         where: {
           user_uuid: userUuid,
-          name: { equals: subcategory, mode: "insensitive" },
+          name: { equals: subcategory, mode: 'insensitive' },
         },
       })
     : null;
 
   if (!categoryRecord) {
-    return {
-      message: `❌ Category "${category}" not found. Please add it first or select an existing one.`,
-    };
+    return toolFail(
+      'VALIDATION_ERROR',
+      `❌ Category "${category}" not found. Please add it first or select an existing one.`
+    );
   }
 
   const validatedFields = addTransactionSchema.safeParse({
@@ -128,16 +117,16 @@ export async function runRecordExpense(input: any) {
   });
 
   if (!validatedFields.success) {
-    console.log("Validation failed", validatedFields.error.issues);
-    return {
-      error: "Invalid transaction data",
+    return toolFail('VALIDATION_ERROR', 'Invalid transaction data', {
       issues: validatedFields.error.issues,
-    };
+    });
   }
 
   const { categoryId, subcategoryId } = validatedFields.data;
 
-  if (!timestamp) throw new Error("Timestamp is required");
+  if (!timestamp) {
+    return toolFail('VALIDATION_ERROR', 'Timestamp is required');
+  }
 
   try {
     const transaction = await prisma.transaction.create({
@@ -151,7 +140,7 @@ export async function runRecordExpense(input: any) {
         type,
         remarks,
         timestamp: new Date(timestamp),
-        input_mode: "MANUAL",
+        input_mode: 'MANUAL',
         uuid: crypto.randomUUID(),
       },
       select: {
@@ -167,9 +156,9 @@ export async function runRecordExpense(input: any) {
       },
     });
 
-    return {
+    return toolOk({
       message: `✅ Transaction logged: ${recipient} — ₹${amount} (${category}${
-        subcategory ? " / " + subcategory : ""
+        subcategory ? ' / ' + subcategory : ''
       })`,
       transactionId: transaction.id,
       amount: transaction.amount,
@@ -179,19 +168,17 @@ export async function runRecordExpense(input: any) {
       type: transaction.type,
       remarks: transaction.remarks,
       timestamp: transaction.timestamp,
-    };
-  } catch (error: any) {
-    console.error("Failed to create transaction", error);
-    return { error: "Failed to save transaction" };
+    });
+  } catch (error) {
+    logger.error('runRecordExpense - Failed to create transaction', error as Error);
+    return toolFail('INTERNAL_ERROR', 'Failed to save transaction');
   }
 }
 
-/* ----------------------------- EXPORT TOOL ----------------------------- */
-
-export const recordExpenseTool = createTool({
-  name: "recordExpense",
+export const recordExpenseTool = ({
+  name: 'recordExpense',
   description:
-    "Records a new financial transaction into the database and return a summary card.",
+    'Records a new financial transaction into the database and return a summary card.',
   inputSchema: recordExpenseSchema,
   execute: runRecordExpense,
 });
