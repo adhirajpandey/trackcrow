@@ -1,8 +1,7 @@
-import { z } from "zod";
-import { validateSession } from "@/common/server";
-import { tool as createTool } from "ai";
-
-/* ----------------------------- ZOD SCHEMA ----------------------------- */
+import { z } from 'zod';
+import { validateSession } from '@/common/server';
+import { toolFail, toolOk, type ToolResult } from '@/app/crow-bot/tools/contracts';
+import { logger } from '@/lib/logger';
 
 const dashboardSummarySchema = z
   .object({
@@ -11,11 +10,9 @@ const dashboardSummarySchema = z
   })
   .passthrough();
 
-/* ----------------------------- HELPER ----------------------------- */
-
 function extractDashboardDates(structured_data: any) {
-  if (!structured_data || typeof structured_data !== "object") {
-    console.warn("⚠️ Invalid structured_data passed to dashboardSummaryTool");
+  if (!structured_data || typeof structured_data !== 'object') {
+    logger.warn('Invalid structured_data passed to dashboardSummaryTool');
     return {};
   }
 
@@ -27,16 +24,20 @@ function extractDashboardDates(structured_data: any) {
 
   const parsedEndDate = endDate
     ? new Date(endDate).toISOString()
-    : new Date().toISOString(); // now
+    : new Date().toISOString();
 
   return { startDate: parsedStartDate, endDate: parsedEndDate };
 }
 
-/* ----------------------------- TOOL EXECUTION ----------------------------- */
-
-export async function runDashboardSummary(input: any) {
+export async function runDashboardSummary(input: any): Promise<
+  ToolResult<{
+    message: string;
+    startDate?: string;
+    endDate?: string;
+  }>
+> {
   const structured =
-    "structured_data" in input
+    'structured_data' in input
       ? extractDashboardDates(input.structured_data)
       : extractDashboardDates(input);
 
@@ -44,22 +45,20 @@ export async function runDashboardSummary(input: any) {
 
   const sessionResult = await validateSession();
   if (!sessionResult.success) {
-    return { error: sessionResult.error || "User not authenticated." };
+    return toolFail('UNAUTHORIZED', sessionResult.error || 'User not authenticated.');
   }
 
-  return {
-    message: "Ready to analyze? Your dashboard has the latest summary view.",
+  return toolOk({
+    message: 'Ready to analyze? Your dashboard has the latest summary view.',
     startDate,
     endDate,
-  };
+  });
 }
 
-/* ----------------------------- EXPORT TOOL ----------------------------- */
-
-export const dashboardSummaryTool = createTool({
-  name: "dashboardSummary",
+export const dashboardSummaryTool = ({
+  name: 'dashboardSummary',
   description:
-    "Used when the user asks for an overview, summary, or dashboard of their finances",
+    'Used when the user asks for an overview, summary, or dashboard of their finances',
   inputSchema: dashboardSummarySchema,
   execute: runDashboardSummary,
 });
