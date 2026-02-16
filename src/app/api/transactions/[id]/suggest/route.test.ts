@@ -1,33 +1,18 @@
-import { getServerSession } from 'next-auth';
-import prisma from '@/lib/prisma';
 import { GET } from './route';
 import { parseJson } from '@/test/api-test-helpers';
+import { requireUserSession } from '@/services/auth/guard-service';
+import { suggestCategory } from '@/services/transactions/transaction-service';
 
-jest.mock('next-auth', () => ({
-  getServerSession: jest.fn(),
+jest.mock('@/services/auth/guard-service', () => ({
+  requireUserSession: jest.fn(),
 }));
 
-jest.mock('@/lib/prisma', () => ({
-  __esModule: true,
-  default: {
-    transaction: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-    },
-  },
+jest.mock('@/services/transactions/transaction-service', () => ({
+  suggestCategory: jest.fn(),
 }));
 
-type SessionMock = { user: { uuid: string } } | null;
-
-type PrismaSuggestMock = {
-  transaction: {
-    findUnique: jest.Mock;
-    findMany: jest.Mock;
-  };
-};
-
-const getServerSessionMock = getServerSession as jest.Mock<Promise<SessionMock>>;
-const prismaMock = prisma as unknown as PrismaSuggestMock;
+const requireUserSessionMock = requireUserSession as jest.Mock;
+const suggestCategoryMock = suggestCategory as jest.Mock;
 
 describe('GET /api/transactions/[id]/suggest', () => {
   beforeEach(() => {
@@ -35,7 +20,7 @@ describe('GET /api/transactions/[id]/suggest', () => {
   });
 
   it('returns 401 when user is unauthorized', async () => {
-    getServerSessionMock.mockResolvedValueOnce(null);
+    requireUserSessionMock.mockResolvedValueOnce({ ok: false, error: 'UNAUTHORIZED' });
 
     const response = await GET(new Request('http://localhost') as any, {
       params: { id: '1' },
@@ -45,7 +30,8 @@ describe('GET /api/transactions/[id]/suggest', () => {
   });
 
   it('returns 400 for invalid transaction id', async () => {
-    getServerSessionMock.mockResolvedValueOnce({ user: { uuid: 'u1' } });
+    requireUserSessionMock.mockResolvedValueOnce({ ok: true, data: { userUuid: 'u1' } });
+    suggestCategoryMock.mockResolvedValueOnce({ ok: false, error: 'VALIDATION_ERROR' });
 
     const response = await GET(new Request('http://localhost') as any, {
       params: { id: 'abc' },
@@ -57,8 +43,8 @@ describe('GET /api/transactions/[id]/suggest', () => {
   });
 
   it('returns 404 when transaction is not found', async () => {
-    getServerSessionMock.mockResolvedValueOnce({ user: { uuid: 'u1' } });
-    prismaMock.transaction.findUnique.mockResolvedValueOnce(null);
+    requireUserSessionMock.mockResolvedValueOnce({ ok: true, data: { userUuid: 'u1' } });
+    suggestCategoryMock.mockResolvedValueOnce({ ok: false, error: 'NOT_FOUND' });
 
     const response = await GET(new Request('http://localhost') as any, {
       params: { id: '4' },
@@ -69,35 +55,15 @@ describe('GET /api/transactions/[id]/suggest', () => {
     expect(body.error).toBe('Transaction not found');
   });
 
-  it('returns null suggestions when no similar transactions exist', async () => {
-    getServerSessionMock.mockResolvedValueOnce({ user: { uuid: 'u1' } });
-    prismaMock.transaction.findUnique.mockResolvedValueOnce({ recipient: 'vendor@upi' });
-    prismaMock.transaction.findMany.mockResolvedValueOnce([]);
-
-    const response = await GET(new Request('http://localhost') as any, {
-      params: { id: '4' },
+  it('returns suggestions from service', async () => {
+    requireUserSessionMock.mockResolvedValueOnce({ ok: true, data: { userUuid: 'u1' } });
+    suggestCategoryMock.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        suggestedCategory: 'Food',
+        suggestedSubCategory: 'Lunch',
+      },
     });
-
-    const body = await parseJson<{
-      suggestedCategory: string | null;
-      suggestedSubCategory: string | null;
-    }>(response);
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      suggestedCategory: null,
-      suggestedSubCategory: null,
-    });
-  });
-
-  it('returns most frequent category and subcategory suggestions', async () => {
-    getServerSessionMock.mockResolvedValueOnce({ user: { uuid: 'u1' } });
-    prismaMock.transaction.findUnique.mockResolvedValueOnce({ recipient: 'vendor@upi' });
-    prismaMock.transaction.findMany.mockResolvedValueOnce([
-      { Category: { name: 'Food' }, Subcategory: { name: 'Lunch' } },
-      { Category: { name: 'Food' }, Subcategory: { name: 'Lunch' } },
-      { Category: { name: 'Shopping' }, Subcategory: { name: 'Groceries' } },
-    ]);
 
     const response = await GET(new Request('http://localhost') as any, {
       params: { id: '4' },
@@ -113,9 +79,9 @@ describe('GET /api/transactions/[id]/suggest', () => {
     expect(body.suggestedSubCategory).toBe('Lunch');
   });
 
-  it('returns 500 on unexpected errors', async () => {
-    getServerSessionMock.mockResolvedValueOnce({ user: { uuid: 'u1' } });
-    prismaMock.transaction.findUnique.mockRejectedValueOnce(new Error('db error'));
+  it('returns 500 on service failure', async () => {
+    requireUserSessionMock.mockResolvedValueOnce({ ok: true, data: { userUuid: 'u1' } });
+    suggestCategoryMock.mockResolvedValueOnce({ ok: false, error: 'INTERNAL_ERROR' });
 
     const response = await GET(new Request('http://localhost') as any, {
       params: { id: '4' },
