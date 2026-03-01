@@ -47,6 +47,24 @@ const smsParsers: SmsParser[] = [
       };
     },
   },
+  // Kotak Credit Card: "INR 200 spent on Kotak Credit Card x6387 on 28-FEB-2026 at UPI-600117529647-HAMAN. Avl limit INR 29668.72 ..."
+  {
+    name: 'KOTAK_CREDIT_CARD',
+    test: (message) => message.includes('Kotak Credit Card') && message.includes('spent on') && message.includes(' at '),
+    regex: /INR\s+(?<amount>[\d,.]+)\s+spent\s+on\s+Kotak\s+Credit\s+Card\s+(?<card_number>x\d+)\s+on\s+.+?\s+at\s+UPI-(?<reference>\d+)-(?<recipient_name>[^.]+)\./i,
+    mapper: (match) => {
+      const groups = match.groups ?? {};
+      return {
+        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
+        recipient: groups.recipient_name?.trim() ?? null,
+        recipient_name: groups.recipient_name?.trim() ?? null,
+        reference: groups.reference ?? null,
+        type: 'CARD',
+        account: 'KOTAK',
+      };
+    },
+  },
+
   // HDFC UPI: Format with line breaks
   {
     name: 'HDFC_UPI_FORMATTED',
