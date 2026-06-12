@@ -1,44 +1,74 @@
-import { NextResponse } from 'next/server';
-import { logger } from '@/lib/logger';
-import { requireUserSession } from '@/services/auth/guard-service';
-import { listTransactions } from '@/services/transactions/transaction-service';
+import { z } from "zod";
 
-export async function GET(req: Request) {
-  try {
-    logger.info('GET /api/transactions - Starting transaction fetch');
+import { TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
+import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
+import { requireSessionUser } from "@/server/auth/session";
+import {
+  createTransaction,
+  listTransactions,
+} from "@/server/modules/transactions/service";
 
-    const session = await requireUserSession();
-    if (!session.ok) {
-      logger.info('GET /api/transactions - Unauthorized request');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const createTransactionSchema = z.object({
+  amount: z.coerce.number().positive(),
+  recipientRaw: z.string().trim().min(1),
+  recipientName: z.string().trim().min(1).optional().nullable(),
+  categoryId: z.coerce.number().int().positive().optional().nullable(),
+  subcategoryId: z.coerce.number().int().positive().optional().nullable(),
+  type: z.nativeEnum(TransactionType),
+  remarks: z.string().optional().nullable(),
+  timestamp: z.coerce.date(),
+  reference: z.string().optional().nullable(),
+  accountLabel: z.string().optional().nullable(),
+  locationRaw: z.string().optional().nullable(),
+});
 
-    const serviceResult = await listTransactions({
-      userUuid: session.data.userUuid,
-      searchParams: new URL(req.url).searchParams,
-    });
-
-    if (!serviceResult.ok) {
-      return NextResponse.json(
-        { message: 'Internal Server Error' },
-        { status: 500 }
-      );
-    }
-
-    logger.info('GET /api/transactions - Successfully fetched transactions', {
-      userUuid: session.data.userUuid,
-      returnedCount: serviceResult.data.transactions.length,
-      total: serviceResult.data.total,
-      page: serviceResult.data.page,
-      pageSize: serviceResult.data.pageSize,
-    });
-
-    return NextResponse.json(serviceResult.data, { status: 200 });
-  } catch (error) {
-    logger.error('GET /api/transactions - Unexpected error', error as Error);
-    return NextResponse.json(
-      { message: 'Internal Server Error' },
-      { status: 500 }
-    );
+export async function GET(request: Request) {
+  const session = await requireSessionUser();
+  const sessionData = unwrapOrResponse(session);
+  if (sessionData instanceof Response) {
+    return sessionData;
   }
+
+  const result = await listTransactions(
+    sessionData.userUuid,
+    new URL(request.url).searchParams
+  );
+  const data = unwrapOrResponse(result);
+  if (data instanceof Response) {
+    return data;
+  }
+
+  return jsonOk(data);
+}
+
+export async function POST(request: Request) {
+  const session = await requireSessionUser();
+  const sessionData = unwrapOrResponse(session);
+  if (sessionData instanceof Response) {
+    return sessionData;
+  }
+
+  let json: unknown;
+  try {
+    json = await request.json();
+  } catch {
+    return jsonError("Invalid JSON body", 400);
+  }
+
+  const parsed = createTransactionSchema.safeParse(json);
+  if (!parsed.success) {
+    return jsonError("Invalid request", 400, { issues: parsed.error.issues });
+  }
+
+  const result = await createTransaction({
+    userUuid: sessionData.userUuid,
+    ...parsed.data,
+    source: TransactionSource.MANUAL,
+  });
+  const data = unwrapOrResponse(result);
+  if (data instanceof Response) {
+    return data;
+  }
+
+  return jsonOk(data, 201);
 }

@@ -1,32 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 import {
   ViewTransactionForm,
   type ViewTransactionDefaults,
 } from "./view-transaction-form";
-import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
-import { TransactionType } from "../../../generated/prisma"; // Import enums
 import { ErrorMessage } from "@/components/error-message";
-
-interface PrismaTransactionResult {
-  uuid: string;
-  id: number;
-  type: TransactionType;
-  user_uuid: string;
-  timestamp: Date;
-  amount: Decimal;
-  recipient: string;
-  recipient_name: string | null;
-  reference: string | null;
-  account: string | null;
-  remarks: string | null;
-  location: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  categoryId: number | null;
-  subcategoryId: number | null;
-}
+import { unwrapOrResponse } from "@/server/api/responses";
+import { toCategoryOption } from "@/server/modules/categories/helpers";
+import { listCategoriesForUser } from "@/server/modules/categories/service";
+import { getTransactionById } from "@/server/modules/transactions/service";
 
 export default async function ViewTransactionPage({
   params,
@@ -51,35 +33,29 @@ export default async function ViewTransactionPage({
     );
   }
 
-  const [categories, txn] = await Promise.all([
-    prisma.category.findMany({
-      where: { user_uuid: session.user.uuid },
-      include: { Subcategory: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.transaction.findFirst({
-      where: { id: idNum, user_uuid: session.user.uuid },
-    }) as Promise<PrismaTransactionResult | null>, // Explicitly cast txn
+  const [categoriesResult, transactionResult] = await Promise.all([
+    listCategoriesForUser(session.user.uuid),
+    getTransactionById(session.user.uuid, idNum),
   ]);
 
-  if (!txn) {
-    return (
-      <ErrorMessage message="Transaction not found" />
-    );
+  const categoriesData = unwrapOrResponse(categoriesResult);
+  const txn = unwrapOrResponse(transactionResult);
+
+  if (categoriesData instanceof Response || txn instanceof Response) {
+    return <ErrorMessage message="Transaction not found" />;
   }
 
-  const amount = txn.amount.toNumber();
   const defaults: ViewTransactionDefaults = {
-    amount,
-    recipient: txn.recipient,
-    recipient_name: txn.recipient_name ?? "",
-    categoryId: (txn.categoryId ?? undefined) as number | undefined,
+    amount: txn.amount,
+    recipientRaw: txn.recipientRaw,
+    recipientName: txn.recipientName ?? txn.recipientDisplayName,
+    categoryId: txn.categoryId ?? undefined,
     subcategoryId: txn.subcategoryId ?? undefined,
-    type: String(txn.type) as ViewTransactionDefaults["type"],
+    type: txn.type,
     remarks: txn.remarks ?? "",
-    same_as_recipient: (txn.recipient_name ?? "") === (txn.recipient ?? ""),
-    // Pass Date; component renders in Asia/Kolkata and converts back to UTC
-    timestamp: txn.timestamp,
+    sameAsRecipient:
+      (txn.recipientName ?? txn.recipientDisplayName) === txn.recipientRaw,
+    timestamp: new Date(txn.timestamp),
   };
 
   return (
@@ -94,7 +70,7 @@ export default async function ViewTransactionPage({
       </div>
       <div className="py-2 md:py-4">
         <ViewTransactionForm
-          categories={categories}
+          categories={categoriesData.map(toCategoryOption)}
           defaults={defaults}
           transactionId={txn.id}
           searchParams={resolvedSearchParams}

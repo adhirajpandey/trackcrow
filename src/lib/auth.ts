@@ -1,10 +1,10 @@
-import prisma from "@/lib/prisma";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { defaultCategoriesMap } from "@/common/utils";
-import { logger } from "@/lib/logger";
 
-// Extend the Session and User types to include custom properties
+import prisma from "@/lib/prisma-rewrite";
+import { logger } from "@/lib/logger";
+import { ensureUserBootstrap } from "@/server/modules/users/service";
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -18,41 +18,11 @@ declare module "next-auth" {
   }
 }
 
-async function createDefaultCategoriesAndSubcategories(user_uuid: string) {
-  logger.debug("Creating default categories and subcategories", {
-    userUuid: user_uuid,
-    categoryCount: defaultCategoriesMap.length
-  });
-
-  for (const cat of defaultCategoriesMap) {
-    const category = await prisma.category.create({
-      data: {
-        name: cat.name,
-        user_uuid: user_uuid,
-      },
-    });
-
-    await prisma.subcategory.createMany({
-      data: cat.subcategories.map((sub) => ({
-        name: sub,
-        categoryId: category.id,
-        user_uuid: user_uuid,
-      })),
-    });
-  }
-
-  logger.info("Default categories and subcategories created successfully", {
-    userUuid: user_uuid,
-    categoryCount: defaultCategoriesMap.length
-  });
-}
-
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },
-
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -62,64 +32,39 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn(params) {
       if (!params.user.email) {
-        logger.info("Sign in attempt without email");
+        logger.info("signIn - Missing user email");
         return false;
       }
-      
-      logger.info("Sign in attempt", {
+
+      const bootstrap = await ensureUserBootstrap({
         email: params.user.email,
-        name: params.user.name,
-        provider: params.account?.provider
+        name: params.user.name ?? "No Name",
+        image: params.user.image ?? null,
+        provider: params.account?.provider ?? "google",
       });
-      
-      try {
-        const existingUser = await prisma.user.findUnique({
-          where: {
-            email: params.user.email,
-          },
-        });
-        if (existingUser) {
-          logger.info("Existing user signed in", {
-            userUuid: existingUser.uuid,
-            email: existingUser.email
-          });
-          return true;
-        }
-        
-        const user = await prisma.user.create({
-          data: {
-            email: params.user.email,
-            name: params.user.name ?? "No Name",
-            image: params.user.image,
-            provider: "Google",
-            uuid: crypto.randomUUID(),
-            updatedAt: new Date(),
-          },
-        });
 
-        logger.info("New user created", {
-          userUuid: user.uuid,
-          email: user.email,
-          name: user.name
-        });
-
-        await createDefaultCategoriesAndSubcategories(user.uuid);
-
-        return true;
-      } catch (error) {
-        logger.error("Sign in error", error as Error, {
-          email: params.user.email
+      if (!bootstrap.ok) {
+        logger.error("signIn - Failed to bootstrap user", undefined, {
+          email: params.user.email,
         });
         return false;
       }
+
+      return true;
     },
     async jwt({ token, user, account }) {
       if (account && user.email) {
         const dbUser = await prisma.user.findUnique({
-          where: {
-            email: user.email,
+          where: { email: user.email },
+          select: {
+            id: true,
+            uuid: true,
+            email: true,
+            name: true,
+            subscription: true,
           },
         });
+
         if (dbUser) {
           token.id = dbUser.id;
           token.uuid = dbUser.uuid;

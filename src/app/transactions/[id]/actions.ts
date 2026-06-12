@@ -3,17 +3,19 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
-import { requireUserSession } from '@/services/auth/guard-service';
+import { TransactionSource, TransactionType } from '@/generated/prisma-rewrite';
+import { unwrapOrResponse } from '@/server/api/responses';
+import { requireSessionUser } from '@/server/auth/session';
 import {
-  deleteTransactionById,
-  updateManualTransaction,
-} from '@/services/transactions/transaction-service';
+  deleteTransaction as deleteTransactionMutation,
+  updateTransaction as updateTransactionMutation,
+} from '@/server/modules/transactions/service';
 
 const updateTransactionSchema = z.object({
   id: z.coerce.number().int().positive(),
   amount: z.coerce.number().positive(),
-  recipient: z.string().min(1),
-  recipient_name: z.string().optional().nullable(),
+  recipientRaw: z.string().min(1),
+  recipientName: z.string().optional().nullable(),
   categoryId: z
     .preprocess(
       (v) => (v === '' ? null : v),
@@ -26,7 +28,7 @@ const updateTransactionSchema = z.object({
       z.union([z.coerce.number().int().positive(), z.null()])
     )
     .optional(),
-  type: z.enum(['UPI', 'CARD', 'CASH', 'NETBANKING', 'OTHER']).default('UPI'),
+  type: z.nativeEnum(TransactionType).default(TransactionType.UPI),
   remarks: z.string().optional().nullable(),
   timestamp: z.coerce.date().optional().nullable(),
 });
@@ -34,16 +36,17 @@ const updateTransactionSchema = z.object({
 export async function updateTransaction(formData: FormData) {
   logger.info('updateTransaction - Starting transaction update');
 
-  const session = await requireUserSession();
-  if (!session.ok) {
+  const session = await requireSessionUser();
+  const sessionData = unwrapOrResponse(session);
+  if (sessionData instanceof Response) {
     return { error: 'Unauthorized' };
   }
 
   const parsed = updateTransactionSchema.safeParse({
     id: formData.get('id'),
     amount: formData.get('amount'),
-    recipient: formData.get('recipient'),
-    recipient_name: formData.get('recipient_name'),
+    recipientRaw: formData.get('recipientRaw'),
+    recipientName: formData.get('recipientName'),
     categoryId: formData.get('categoryId'),
     subcategoryId: formData.get('subcategoryId'),
     type: formData.get('type'),
@@ -55,9 +58,11 @@ export async function updateTransaction(formData: FormData) {
     return { error: 'Invalid fields', issues: parsed.error.issues } as const;
   }
 
-  const result = await updateManualTransaction({
-    userUuid: session.data.userUuid,
+  const result = await updateTransactionMutation({
+    userUuid: sessionData.userUuid,
     ...parsed.data,
+    timestamp: parsed.data.timestamp ?? new Date(),
+    source: TransactionSource.MANUAL,
   });
 
   if (!result.ok) {
@@ -78,15 +83,13 @@ export async function deleteTransaction(transactionId: number) {
     transactionId,
   });
 
-  const session = await requireUserSession();
-  if (!session.ok) {
+  const session = await requireSessionUser();
+  const sessionData = unwrapOrResponse(session);
+  if (sessionData instanceof Response) {
     return { error: 'Unauthorized' };
   }
 
-  const result = await deleteTransactionById({
-    userUuid: session.data.userUuid,
-    transactionId,
-  });
+  const result = await deleteTransactionMutation(sessionData.userUuid, transactionId);
 
   if (!result.ok) {
     if (result.error === 'NOT_FOUND') {

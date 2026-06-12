@@ -5,10 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Image from "next/image";
 import { AccountUtilities } from "./components/account-utilities";
-import prisma from "@/lib/prisma";
 import { ErrorMessage } from "@/components/error-message";
-
-
+import { listDeviceTokens } from "@/server/modules/device-tokens/service";
+import { unwrapOrResponse } from "@/server/api/responses";
 
 export default async function UserPage() {
   const session = await getServerSession(authOptions);
@@ -18,12 +17,11 @@ export default async function UserPage() {
     );
   }
 
-  // Determine if a token exists to control revoke button initial state
-  const me = await prisma.user.findUnique({
-    where: { uuid: session.user.uuid },
-    select: { lt_token: true },
-  });
-  const hasTokenInitially = Boolean(me?.lt_token);
+  const tokensResult = await listDeviceTokens(session.user.uuid);
+  const tokens = unwrapOrResponse(tokensResult);
+  if (tokens instanceof Response) {
+    return <ErrorMessage message="Failed to load device tokens" />;
+  }
 
   return (
     <div className="container mx-auto p-6 lg:pl-8 space-y-6">
@@ -83,9 +81,9 @@ export default async function UserPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Create or revoke a device token to authenticate client devices.
+              Create and revoke device tokens to authenticate client devices.
             </p>
-            <AccountUtilities hasTokenInitially={hasTokenInitially} />
+            <AccountUtilities initialTokens={tokens} />
           </CardContent>
         </Card>
       </div>

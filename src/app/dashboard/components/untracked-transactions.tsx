@@ -1,11 +1,11 @@
-import type { Transaction } from "@/common/schemas";
+import type { TransactionRecord } from "@/common/types";
 import { TransactionListCard } from "./transaction-list-card";
 
 export function UntrackedTransactions({
   txns,
   selectedTimeframe,
 }: {
-  txns: Transaction[];
+  txns: TransactionRecord[];
   selectedTimeframe: string;
 }) {
   return (

@@ -7,7 +7,6 @@ import { signOut, useSession } from "next-auth/react";
 import {
   Home,
   Wallet,
-  Bot,
   Settings,
   User,
   ChevronLeft,
@@ -28,7 +27,6 @@ import Image from "next/image";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Transactions", href: "/transactions", icon: Wallet },
-  { name: "Crow Bot", href: "/crow-bot", icon: Bot },
   { name: "Preferences", href: "/preferences", icon: Settings },
   { name: "Profile", href: "/profile", icon: User },
 ];

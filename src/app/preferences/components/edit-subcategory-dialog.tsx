@@ -22,14 +22,14 @@ import {
 } from '@/components/ui/select';
 import { Edit } from 'lucide-react';
 import { editSubcategory } from '../actions';
-import type { Subcategory, Category } from '@/generated/prisma/client';
+import type { CategoryOption } from '@/common/types';
 
 export function EditSubcategoryDialog({
   subcategory,
   categories,
 }: {
-  subcategory: Subcategory;
-  categories: Category[];
+  subcategory: CategoryOption["subcategories"][number];
+  categories: CategoryOption[];
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);

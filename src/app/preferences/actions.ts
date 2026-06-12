@@ -2,16 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { requireUserSession } from '@/services/auth/guard-service';
+import { unwrapOrResponse } from '@/server/api/responses';
+import { requireSessionUser } from '@/server/auth/session';
 import {
-  addCategoryService,
-  addSubcategoryService,
-  deleteCategoryService,
-  deleteSubcategoryService,
-  editCategoryService,
-  editSubcategoryService,
-  resetToDefaultService,
-} from '@/services/preferences/preferences-service';
+  createCategory,
+  createSubcategory,
+  deleteCategory as deleteCategoryMutation,
+  deleteSubcategory as deleteSubcategoryMutation,
+  updateCategory,
+  updateSubcategory,
+} from '@/server/modules/categories/mutations';
+import { resetCategoriesToDefault } from '@/server/modules/categories/service';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Category name is required'),
@@ -23,12 +24,13 @@ const subcategorySchema = z.object({
 });
 
 async function getUserUuid() {
-  const session = await requireUserSession();
-  if (!session.ok) {
+  const session = await requireSessionUser();
+  const sessionData = unwrapOrResponse(session);
+  if (sessionData instanceof Response) {
     return null;
   }
 
-  return session.data.userUuid;
+  return sessionData.userUuid;
 }
 
 export async function addCategory(formData: FormData) {
@@ -45,10 +47,7 @@ export async function addCategory(formData: FormData) {
     return { error: 'Invalid fields' };
   }
 
-  const result = await addCategoryService({
-    userUuid,
-    name: validatedFields.data.name,
-  });
+  const result = await createCategory(userUuid, { name: validatedFields.data.name });
 
   if (!result.ok) {
     return { error: 'Failed to add category' };
@@ -72,11 +71,7 @@ export async function addSubcategory(formData: FormData) {
     return { error: 'Invalid fields' };
   }
 
-  const result = await addSubcategoryService({
-    userUuid,
-    name: validatedFields.data.name,
-    categoryId: validatedFields.data.categoryId,
-  });
+  const result = await createSubcategory(userUuid, validatedFields.data);
 
   if (!result.ok) {
     return { error: 'Failed to add subcategory' };
@@ -100,9 +95,7 @@ export async function editCategory(formData: FormData) {
     return { error: 'Invalid fields' };
   }
 
-  const result = await editCategoryService({
-    userUuid,
-    categoryId,
+  const result = await updateCategory(userUuid, categoryId, {
     name: validatedFields.data.name,
   });
 
@@ -129,12 +122,7 @@ export async function editSubcategory(formData: FormData) {
     return { error: 'Invalid fields' };
   }
 
-  const result = await editSubcategoryService({
-    userUuid,
-    subcategoryId,
-    name: validatedFields.data.name,
-    categoryId: validatedFields.data.categoryId,
-  });
+  const result = await updateSubcategory(userUuid, subcategoryId, validatedFields.data);
 
   if (!result.ok) {
     return { error: 'Failed to edit subcategory' };
@@ -149,7 +137,7 @@ export async function deleteCategory(categoryId: number) {
     return { error: 'Unauthorized' };
   }
 
-  const result = await deleteCategoryService({ userUuid, categoryId });
+  const result = await deleteCategoryMutation(userUuid, categoryId);
   if (!result.ok) {
     return { error: 'Failed to delete category' };
   }
@@ -163,7 +151,7 @@ export async function deleteSubcategory(subcategoryId: number) {
     return { error: 'Unauthorized' };
   }
 
-  const result = await deleteSubcategoryService({ userUuid, subcategoryId });
+  const result = await deleteSubcategoryMutation(userUuid, subcategoryId);
   if (!result.ok) {
     return { error: 'Failed to delete subcategory' };
   }
@@ -177,7 +165,7 @@ export async function resetToDefault() {
     return { error: 'Unauthorized' };
   }
 
-  const result = await resetToDefaultService({ userUuid });
+  const result = await resetCategoriesToDefault(userUuid);
   if (!result.ok) {
     return { error: 'Failed to reset categories' };
   }

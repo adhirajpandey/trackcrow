@@ -25,25 +25,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-type CategoryWithSubs = {
-  id: number;
-  name: string;
-  Subcategory: { id: number; name: string; categoryId: number }[];
-};
+import type { CategoryOption } from "@/common/types";
 
 const formSchema = z.object({
   amount: z.number().positive(),
-  recipient: z.string().min(1),
-  recipient_name: z.string().optional(),
-  // Use IDs from user's categories
-    categoryId: z.number().int().positive(),
+  recipientRaw: z.string().min(1),
+  recipientName: z.string().optional(),
+  categoryId: z.number().int().positive(),
   subcategoryId: z.number().int().positive().optional(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]).default("UPI"),
   remarks: z.string().optional(),
   timestamp: z.date(),
-  // UI toggle: when true, keep recipient_name same as recipient
-  same_as_recipient: z.boolean().default(true),
+  sameAsRecipient: z.boolean().default(true),
 });
 
 export type AddTransactionFormValues = z.infer<typeof formSchema>;
@@ -51,20 +44,20 @@ export type AddTransactionFormValues = z.infer<typeof formSchema>;
 export function AddTransactionForm({
   categories,
 }: {
-  categories: CategoryWithSubs[];
+  categories: CategoryOption[];
 }) {
   const form = useForm<AddTransactionFormValues, any, AddTransactionFormValues>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       amount: undefined,
-      recipient: "",
-      recipient_name: "",
+      recipientRaw: "",
+      recipientName: "",
       categoryId: undefined,
       subcategoryId: undefined,
       type: "UPI",
       remarks: "",
       timestamp: new Date(),
-      same_as_recipient: true,
+      sameAsRecipient: true,
     },
   });
 
@@ -121,7 +114,7 @@ export function AddTransactionForm({
                 />
                 <FormField
                   control={form.control}
-                  name="recipient"
+                  name="recipientRaw"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
@@ -132,8 +125,8 @@ export function AddTransactionForm({
                           required
                           value={field.value ?? ""}
                           onChange={(e) => {
-                            if (form.getValues("same_as_recipient")) {
-                              form.setValue("recipient_name", e.target.value, {
+                            if (form.getValues("sameAsRecipient")) {
+                              form.setValue("recipientName", e.target.value, {
                                 shouldValidate: true,
                                 shouldDirty: true,
                               });
@@ -148,7 +141,7 @@ export function AddTransactionForm({
                 />
                 <FormField
                   control={form.control}
-                  name="recipient_name"
+                  name="recipientName"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Recipient Name</FormLabel>
@@ -158,16 +151,16 @@ export function AddTransactionForm({
                             className="flex-1"
                             value={field.value ?? ""}
                             onChange={field.onChange}
-                            disabled={form.watch("same_as_recipient")}
+                            disabled={form.watch("sameAsRecipient")}
                           />
                           <div className="flex items-center gap-2">
                             <Switch
-                              checked={form.watch("same_as_recipient")}
+                              checked={form.watch("sameAsRecipient")}
                               onCheckedChange={(checked) => {
-                                form.setValue("same_as_recipient", checked);
+                                form.setValue("sameAsRecipient", checked);
                                 if (checked) {
-                                  const currentRecipient = form.getValues("recipient") || "";
-                                  form.setValue("recipient_name", currentRecipient, {
+                                  const currentRecipient = form.getValues("recipientRaw") || "";
+                                  form.setValue("recipientName", currentRecipient, {
                                     shouldValidate: true,
                                     shouldDirty: true,
                                   });
@@ -272,7 +265,7 @@ export function AddTransactionForm({
                   render={({ field }) => {
                     const selectedCatId = form.watch("categoryId");
                     const selectedCat = categories.find((c) => c.id === selectedCatId);
-                    const subs = selectedCat?.Subcategory ?? [];
+                    const subs = selectedCat?.subcategories ?? [];
                     return (
                       <FormItem>
                         <FormLabel>Subcategory</FormLabel>

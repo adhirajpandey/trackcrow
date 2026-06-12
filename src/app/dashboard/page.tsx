@@ -1,9 +1,7 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
-import { getUserTransactions } from "@/common/server";
-import { type Transaction } from "@/common/schemas";
-import { getUserDetails } from "@/common/server";
+import type { TransactionRecord, UserCategorySummary } from "@/common/types";
 import { DashboardTimeframeSelector } from "@/app/dashboard/components/timeframe-selector";
 import { Summary } from "@/app/dashboard/components/summary";
 import { CategoricalSpends } from "@/app/dashboard/components/categorical-spends";
@@ -16,6 +14,10 @@ import {
   getCurrentMonthYYYYMM,
   getCategoricalSpends,
 } from "@/common/utils";
+import { unwrapOrResponse } from "@/server/api/responses";
+import { toUserCategorySummary } from "@/server/modules/categories/helpers";
+import { listCategoriesForUser } from "@/server/modules/categories/service";
+import { listTransactionsForRange } from "@/server/modules/transactions/service";
 
 interface DashboardSearchParams {
   month?: string;
@@ -32,25 +34,24 @@ export default async function DashboardPage({
       <ErrorMessage message="Please sign in to view this page" />
     );
   }
-  let transactions: Transaction[] = [];
-  let userCategories: { name: string; subcategories: string[] }[] = [];
+  let transactions: TransactionRecord[] = [];
+  let userCategories: UserCategorySummary[] = [];
 
   const { month } = await searchParams;
   const { startDate, endDate, selectedMonth } = parseMonthParam(month || "");
 
   try {
-    // Populate category and subcategory names for dashboard summaries
-    transactions = await getUserTransactions(
-      session.user.uuid,
-      true,
-      startDate,
-      endDate
-    );
-    const userDetails = await getUserDetails(session.user.uuid);
-
-    if (userDetails) {
-      userCategories = userDetails.categories;
+    const [transactionsResult, categoriesResult] = await Promise.all([
+      listTransactionsForRange(session.user.uuid, { startDate, endDate }),
+      listCategoriesForUser(session.user.uuid),
+    ]);
+    const transactionData = unwrapOrResponse(transactionsResult);
+    const categoryData = unwrapOrResponse(categoriesResult);
+    if (transactionData instanceof Response || categoryData instanceof Response) {
+      throw new Error("Failed to load dashboard data");
     }
+    transactions = transactionData;
+    userCategories = categoryData.map(toUserCategorySummary);
   } catch {
     return (
       <ErrorMessage message="Failed to load transactions or user categories" />

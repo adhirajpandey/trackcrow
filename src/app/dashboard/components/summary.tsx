@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { numberToINR } from "@/common/utils";
-import type { Transaction } from "@/common/schemas";
+import type { TransactionRecord, UserCategorySummary } from "@/common/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -12,9 +12,9 @@ export function Summary({
   selectedTimeframe,
   userCategories,
 }: {
-  transactions: Transaction[];
+  transactions: TransactionRecord[];
   selectedTimeframe: string;
-  userCategories: { name: string; subcategories: string[] }[];
+  userCategories: UserCategorySummary[];
 }) {
   const router = useRouter();
   if (!transactions || transactions.length === 0) {

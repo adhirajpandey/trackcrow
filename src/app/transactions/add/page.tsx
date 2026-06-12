@@ -1,8 +1,10 @@
 import { AddTransactionForm } from "./add-transaction-form";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 import { ErrorMessage } from "@/components/error-message";
+import { unwrapOrResponse } from "@/server/api/responses";
+import { toCategoryOption } from "@/server/modules/categories/helpers";
+import { listCategoriesForUser } from "@/server/modules/categories/service";
 
 export default async function AddTransactionPage() {
   const session = await getServerSession(authOptions);
@@ -13,11 +15,11 @@ export default async function AddTransactionPage() {
     );
   }
 
-  const categories = await prisma.category.findMany({
-    where: { user_uuid: session.user.uuid },
-    include: { Subcategory: true },
-    orderBy: { name: "asc" },
-  });
+  const categoriesResult = await listCategoriesForUser(session.user.uuid);
+  const categoriesData = unwrapOrResponse(categoriesResult);
+  if (categoriesData instanceof Response) {
+    return <ErrorMessage message="Failed to load categories" />;
+  }
 
   return (
     <div className="container mx-auto p-6 lg:pl-8 space-y-6">
@@ -30,7 +32,7 @@ export default async function AddTransactionPage() {
         </div>
       </div>
       <div className="py-2 md:py-4">
-        <AddTransactionForm categories={categories} />
+        <AddTransactionForm categories={categoriesData.map(toCategoryOption)} />
       </div>
     </div>
   );

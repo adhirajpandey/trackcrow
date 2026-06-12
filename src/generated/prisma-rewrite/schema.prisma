@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-rewrite"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  uuid          String        @id @default(uuid())
+  id            Int           @unique @default(autoincrement())
+  email         String        @unique
+  name          String
+  image         String?
+  provider      String
+  subscription  Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  categories    Category[]
+  subcategories Subcategory[]
+  recipients    Recipient[]
+  transactions  Transaction[]
+  rawMessages   RawMessage[]
+  deviceTokens  DeviceToken[]
+
+  @@map("user")
+}
+
+model Category {
+  id            Int           @id @default(autoincrement())
+  uuid          String        @unique @default(uuid())
+  userUuid      String        @map("user_uuid")
+  name          String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  subcategories Subcategory[]
+  transactions  Transaction[]
+
+  @@unique([userUuid, name])
+  @@map("category")
+}
+
+model Subcategory {
+  id           Int           @id @default(autoincrement())
+  uuid         String        @unique @default(uuid())
+  userUuid     String        @map("user_uuid")
+  categoryId   Int
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([categoryId, name])
+  @@map("subcategory")
+}
+
+model Recipient {
+  id             Int                   @id @default(autoincrement())
+  uuid           String                @unique @default(uuid())
+  userUuid       String                @map("user_uuid")
+  displayName    String
+  normalizedName String                @map("normalized_name")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  user           User                  @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  identifiers    RecipientIdentifier[]
+  transactions   Transaction[]
+
+  @@unique([userUuid, normalizedName])
+  @@map("recipient")
+}
+
+model RecipientIdentifier {
+  id              Int                     @id @default(autoincrement())
+  uuid            String                  @unique @default(uuid())
+  userUuid        String                  @map("user_uuid")
+  recipientId     Int                     @map("recipient_id")
+  kind            RecipientIdentifierKind
+  value           String
+  normalizedValue String                  @map("normalized_value")
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  recipient       Recipient               @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([userUuid, kind, normalizedValue])
+  @@map("recipient_identifier")
+}
+
+model Transaction {
+  id            Int               @id @default(autoincrement())
+  uuid          String            @unique @default(uuid())
+  userUuid      String            @map("user_uuid")
+  recipientId   Int               @map("recipient_id")
+  categoryId    Int?              @map("category_id")
+  subcategoryId Int?              @map("subcategory_id")
+  amount        Decimal
+  currency      String            @default("INR")
+  type          TransactionType   @default(UPI)
+  source        TransactionSource
+  recipientRaw  String            @map("recipient_raw")
+  recipientName String?           @map("recipient_name")
+  reference     String?
+  accountLabel  String?           @map("account_label")
+  remarks       String?
+  locationRaw   String?           @map("location_raw")
+  timestamp     DateTime          @db.Timestamptz(6)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  recipient     Recipient         @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  category      Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory   Subcategory?      @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  rawMessages   RawMessage[]
+
+  @@map("transaction")
+}
+
+model RawMessage {
+  id            Int              @id @default(autoincrement())
+  uuid          String           @unique @default(uuid())
+  userUuid      String           @map("user_uuid")
+  transactionId Int?             @map("transaction_id")
+  body          String
+  source        RawMessageSource @default(SMS)
+  parseStatus   ParseStatus      @map("parse_status")
+  parserName    String?          @map("parser_name")
+  failureReason String?          @map("failure_reason")
+  parsedPayload Json?            @map("parsed_payload")
+  locationRaw   String?          @map("location_raw")
+  receivedAt    DateTime         @default(now()) @map("received_at")
+  createdAt     DateTime         @default(now())
+  user          User             @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  transaction   Transaction?     @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@map("raw_message")
+}
+
+model DeviceToken {
+  id          Int       @id @default(autoincrement())
+  uuid        String    @unique @default(uuid())
+  userUuid    String    @map("user_uuid")
+  label       String?
+  tokenHash   String    @unique @map("token_hash")
+  tokenPrefix String    @map("token_prefix")
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime? @map("last_used_at")
+  revokedAt   DateTime? @map("revoked_at")
+  user        User      @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+
+  @@map("device_token")
+}
+
+enum TransactionType {
+  UPI
+  CARD
+  CASH
+  NETBANKING
+  OTHER
+}
+
+enum TransactionSource {
+  SMS
+  MANUAL
+}
+
+enum RawMessageSource {
+  SMS
+}
+
+enum ParseStatus {
+  PARSED
+  UNPARSEABLE
+  FAILED
+}
+
+enum RecipientIdentifierKind {
+  UPI_ID
+  PHONE
+  CARD_MERCHANT
+  BANK_ACCOUNT
+  TEXT
+}

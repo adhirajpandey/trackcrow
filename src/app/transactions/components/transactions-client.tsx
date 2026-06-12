@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Transaction } from "@/common/schemas";
+import type { TransactionRecord, UserCategorySummary } from "@/common/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ function ActionsCell({
   transaction,
   onTransactionDeleted
 }: { 
-  transaction: Transaction;
+  transaction: TransactionRecord;
   onTransactionDeleted?: (transactionId: number) => void;
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -68,7 +68,7 @@ function ActionsCell({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          {transaction.location && (
+          {transaction.locationRaw && (
             <DropdownMenuItem
               className="cursor-pointer"
               onSelect={(e) => {
@@ -76,7 +76,7 @@ function ActionsCell({
                 e.stopPropagation();
                 window.open(
                   `https://www.google.com/maps/search/${encodeURIComponent(
-                    transaction.location || ""
+                    transaction.locationRaw || ""
                   )}`,
                   "_blank"
                 );
@@ -132,7 +132,7 @@ function ActionsCell({
 }
 
 type TransactionsResponse = {
-  transactions: Transaction[];
+  transactions: TransactionRecord[];
   page: number;
   pageSize: number;
   total: number;
@@ -154,7 +154,7 @@ function toMonthKey(date: Date): MonthKey {
 export function TransactionsClient({
   userCategories,
 }: {
-  userCategories: { name: string; subcategories: string[] }[];
+  userCategories: UserCategorySummary[];
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -365,7 +365,7 @@ export function TransactionsClient({
   };
 
 
-  const columns: ColumnDef<Transaction>[] = useMemo(
+  const columns: ColumnDef<TransactionRecord>[] = useMemo(
     () => [
       {
         accessorKey: "timestamp",
@@ -391,7 +391,7 @@ export function TransactionsClient({
           );
         },
         cell: ({ row }) => {
-          const t = row.original as Transaction;
+          const t = row.original as TransactionRecord;
           const ts = t.timestamp as string | Date;
           return <div>{formatDateTime(ts)}</div>;
         },
@@ -421,7 +421,7 @@ export function TransactionsClient({
         },
         cell: ({ row }) => (
           <div>
-            {numberToINR(Math.abs((row.original as Transaction).amount))}
+            {numberToINR(Math.abs((row.original as TransactionRecord).amount))}
           </div>
         ),
       },
@@ -430,7 +430,7 @@ export function TransactionsClient({
         accessorFn: (row) =>
           `${row.category ?? "Uncategorized"}${row.subcategory ? ` · ${row.subcategory}` : ""}`,
         cell: ({ row }) => {
-          const t = row.original as Transaction;
+          const t = row.original as TransactionRecord;
           return (
             <div className="text-sm text-muted-foreground truncate">
               {t.category || "Uncategorized"}
@@ -441,10 +441,11 @@ export function TransactionsClient({
       },
       {
         header: "Recipient",
-        accessorFn: (row) => row.recipient_name || row.recipient,
+        accessorFn: (row) =>
+          row.recipientName || row.recipientDisplayName || row.recipientRaw,
         cell: ({ row }) => {
-          const t = row.original as Transaction;
-          const primary = t.recipient_name || t.recipient;
+          const t = row.original as TransactionRecord;
+          const primary = t.recipientName || t.recipientDisplayName || t.recipientRaw;
           return (
             <div className="min-w-0">
               <div className="font-medium text-sm truncate">{primary}</div>
@@ -457,7 +458,7 @@ export function TransactionsClient({
         accessorKey: "remarks",
         cell: ({ row }) => (
           <div className="text-sm text-muted-foreground truncate">
-            {(row.original as Transaction).remarks ?? "-"}
+            {(row.original as TransactionRecord).remarks ?? "-"}
           </div>
         ),
       },
@@ -578,7 +579,7 @@ export function TransactionsClient({
                   onSortingChange={setSorting}
                   manualSorting
                   headerClassName="font-semibold"
-                  rowHref={(row) => `/transactions/${(row as Transaction).id}`}
+                  rowHref={(row) => `/transactions/${(row as TransactionRecord).id}`}
                 />
               </div>
             )}

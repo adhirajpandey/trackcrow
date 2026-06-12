@@ -9,7 +9,7 @@ import {
   formatDate,
   toDate,
 } from "@/common/utils";
-import type { Transaction } from "@/common/schemas";
+import type { TransactionRecord } from "@/common/types";
 import {
   LineChart,
   Line,
@@ -71,7 +71,7 @@ function formatDayLabel(day: number, target: SelectedMonth) {
 }
 
 function getCumulativeDailySpendingForMonth(
-  transactions: Transaction[],
+  transactions: TransactionRecord[],
   target: SelectedMonth,
 ) {
   const { year, month, daysInMonth } = getMonthMeta(target);
@@ -101,7 +101,7 @@ export function MonthlySpendingChart({
   transactions,
   selectedMonth = null,
 }: {
-  transactions: Transaction[];
+  transactions: TransactionRecord[];
   selectedMonth?: SelectedMonth;
 }) {
   if (!selectedMonth) {

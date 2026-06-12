@@ -23,8 +23,8 @@ export default function LandingPage() {
                 </span>
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-                Your SMS receipts become smart insights. Crow Bot does the math.
-                You stay in control.
+                Your SMS receipts become structured expense history with clear
+                insights and less manual work.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 {/* Client-side button for Get Started/Open Dashboard */}
@@ -112,8 +112,8 @@ export default function LandingPage() {
                   icon="📱"
                 />
                 <FeatureListItem
-                  title="Meet Your Personal Finance Assistant"
-                  description="Meet Crow Bot – your sassy AI sidekick. Add transactions, update budgets, and manage your money with simple commands. No more endless clicking. Just tell Crow what you need."
+                  title="Correct and Organize Fast"
+                  description="Review imported transactions, fix missing details, and keep categories clean without fighting the interface."
                   icon="🤖"
                 />
                 <FeatureListItem

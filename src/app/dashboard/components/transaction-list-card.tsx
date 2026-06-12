@@ -1,13 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { numberToINR, formatDateTime, toDate } from "@/common/utils";
-import type { Transaction } from "@/common/schemas";
+import type { TransactionRecord } from "@/common/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 interface TransactionListCardProps {
   title: string;
-  txns: Transaction[];
+  txns: TransactionRecord[];
   viewAllHref: string;
   emptyMessage: string;
 }
@@ -63,14 +63,16 @@ export function TransactionListCard({
                       <Avatar className="h-8 w-8 text-xs">
                         <AvatarFallback className="text-xs">
                           {(
-                            txn.recipient_name?.[0] || txn.recipient[0]
+                            txn.recipientName?.[0] ||
+                            txn.recipientDisplayName[0] ||
+                            txn.recipientRaw[0]
                           )?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <div className="font-medium text-sm truncate">
-                            {txn.recipient_name || txn.recipient}
+                            {txn.recipientName || txn.recipientDisplayName}
                           </div>
                           {txn.type ? (
                             <span className="ml-2 inline-block shrink-0 rounded px-2 py-0.5 bg-muted text-muted-foreground text-[10px]">
