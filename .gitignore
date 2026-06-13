@@ -22,6 +22,7 @@
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+__pycache__/
 
 /src/generated/prisma
 /src/generated/prisma-rewrite
@@ -29,3 +30,6 @@ next-env.d.ts
 
 # local docs
 /docs/
+
+# local migration exports
+/scripts/data/

@@ -12,14 +12,14 @@ Where intent is still not fully settled, the document records the open design it
 
 ## Current State Summary
 
-TrackCrow is currently a Next.js App Router application with Prisma/PostgreSQL, NextAuth Google sign-in, server actions, API routes, and a mixed backend access pattern.
+TrackCrow is currently a Next.js App Router application with Prisma/PostgreSQL, NextAuth Google sign-in, route handlers, server actions, and a backend-first rewrite that is now largely behind `/api/*`.
 
 Observed backend shape:
 
-- API routes exist for `transactions`, `transactions/sms`, `transactions/[id]/suggest`, `user/self`, `chat`, and NextAuth.
-- Server actions are used for manual transaction creation, transaction updates/deletes, category management, and profile token operations.
-- Service modules contain most reusable backend logic, but some page-level server components still query Prisma directly.
-- `crow-bot` is a meaningful subsystem with route, orchestration, tool handlers, prompts, and tests, but it is separable from the core expense-tracking backend.
+- API routes exist for `me`, `categories`, `categories/reset-defaults`, `device-tokens`, `imports/sms`, `recipients`, `subcategories`, `transactions`, `transactions/[id]/suggest`, and dashboard summaries.
+- Server actions remain as UI adapters for form submission, but they now call the API surface instead of the backend modules directly.
+- Backend service modules still contain the reusable business logic, while page-level server components now consume the internal API boundary.
+- `crow-bot` has been removed from the rewrite branch.
 
 Observed domain shape:
 
@@ -27,8 +27,12 @@ Observed domain shape:
 - `Transaction`
 - `Category`
 - `Subcategory`
-- enum-based transaction type and input mode
-- user-level long-lived device token (`lt_token`) used for SMS ingestion auth
+- `Recipient`
+- `RecipientIdentifier`
+- `RawMessage`
+- `DeviceToken`
+- app-local transaction type/source literals in `src/common/types.ts`
+- device-token based SMS ingestion auth
 
 Observed product shape from the code:
 
@@ -41,7 +45,6 @@ Observed product shape from the code:
 - user-managed categories and subcategories
 - simple suggestion engine based on prior recipient categorization
 - profile page with device token create/revoke
-- AI chat assistant tied to transaction queries and expense recording
 
 ## Capability Map
 
@@ -172,7 +175,7 @@ Only after backend contracts are stable:
 - remove page-level direct Prisma coupling
 - replace server-action-only flows where API boundaries are required
 
-Crowbot remains deferred unless backend schema decisions require placeholder integration points.
+Crowbot remains deferred and is not part of this rewrite branch.
 
 ## Backend V1 Proposal
 
@@ -282,6 +285,8 @@ The next revision of this document should add:
 - migration/reset strategy
 - frontend dependency notes for the later rewrite phase
 
+That migration/reset strategy is now partially implemented for local validation and should be treated as the seed for the real production migration workflow, not the final production procedure itself.
+
 ## Implementation Status Update
 
 This section records what has already been done in the backend rewrite branch so the document reflects the actual repo state rather than only the original intent.
@@ -297,7 +302,7 @@ This section records what has already been done in the backend rewrite branch so
   - `Transaction`
   - `RawMessage`
   - `DeviceToken`
-- Added a new generated Prisma client path for the rewrite backend:
+- Added a new generated Prisma client path for the rewrite backend and moved it out of git tracking:
   - `src/generated/prisma-rewrite`
   - `src/lib/prisma-rewrite.ts`
 - Updated auth/bootstrap flow to use the rewrite backend model and idempotent default category setup.
@@ -334,6 +339,7 @@ This section records what has already been done in the backend rewrite branch so
   - `GET /api/dashboard/summary`
   - `GET /api/dashboard/spending-by-category`
   - `GET /api/dashboard/spending-by-period`
+- Added `GET /api/subcategories` / `PATCH /api/subcategories/:id` / `DELETE /api/subcategories/:id` support for taxonomy editing parity.
 - Removed legacy API routes superseded by the rewrite:
   - `api/chat`
   - `api/transactions/sms`
@@ -344,9 +350,12 @@ This section records what has already been done in the backend rewrite branch so
   - `src/common/server.ts`
   - `src/common/schemas.ts`
   - legacy `src/lib/prisma.ts`
-- Added app-facing shared DTO/types in `src/common/types.ts`.
-- Moved active page-level backend usage away from the deleted old service layer and onto the rewrite backend modules.
-- Added route-level Jest coverage for the rewritten backend routes.
+- Added app-facing shared DTO/types and enum literals in `src/common/types.ts`.
+- Moved page-level reads and server-action mutations onto the internal API boundary.
+- Removed stale generated Prisma output from git tracking and updated ignore rules.
+- Fixed the repo lint entry for ESLint 9 / Next 16.
+- Added route-level Jest coverage for the rewritten backend routes, including subcategory routes.
+- Verified `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm exec jest --runInBand`, and `pnpm build` on the rewrite branch.
 
 ### Verified So Far
 
@@ -356,55 +365,99 @@ This section records what has already been done in the backend rewrite branch so
 
 ### What Is Still Missing Relative To The Original Plan
 
-- The frontend is not yet fully API-first:
-  - several pages still call backend modules or server actions directly instead of consuming the rewritten JSON APIs.
-- The backend layering is improved but not final:
-  - Prisma access still lives directly inside service modules instead of a separate repository/data-access layer.
-- Some frontend code still depends on Prisma-generated enums/types instead of app-local shared types.
-- Repo hygiene is not fully closed out:
-  - stale `.next` generated validator artifacts still exist
-  - stale comments and empty leftover directories still need cleanup
-  - lint/typecheck verification is not yet clean end-to-end
-- The migration/reset path exists but still needs final full verification against a clean local reset/build cycle.
+- Prisma access still lives directly inside service modules instead of a separate repository/data-access layer.
+- The app still uses server actions as thin UI adapters; that is acceptable for now, but it is not the final external-client story.
 - Service-level/domain-level tests are thinner than originally intended; most coverage today is route-level.
+- `next.config.ts` still uses `images.domains`, which Next 16 warns about during build.
+
+## Migration Validation Status
+
+This section records the migration-validation tooling that now exists for local rewrite verification.
+
+### Implemented Migration Tooling
+
+- Added export/import tooling under `scripts/` for one-user legacy-to-rewrite database migration validation:
+  - `rewrite_migration_lib.py`
+  - `export-rewrite-source.py`
+  - `import-rewrite-target.py`
+  - `migrate-rewrite-user.ps1`
+  - `setup-raspi-rewrite-db.ps1`
+  - `set-rewrite-db-env.py`
+- Added ignore rules for local migration artifacts:
+  - `/scripts/data/`
+  - `__pycache__/`
+- The migration tooling currently:
+  - exports one legacy user by email from the source database in `.env`
+  - creates deterministic recipient and recipient-identifier rows from legacy transaction data
+  - maps legacy `input_mode` to rewrite `source`
+  - maps legacy transaction fields onto rewrite transaction columns
+  - migrates legacy `raw_message` values into rewrite `raw_message`
+  - migrates legacy `lt_token` into rewrite `device_token`
+  - resets sequences after explicit ID inserts
+  - updates local `.env.local` to point the backend at the rewrite test database
+
+### Local Validation Run Completed
+
+- Provisioned a dedicated Postgres 16 container on the Raspberry Pi reachable over Tailscale.
+- Pushed the current Prisma schema into that database with `prisma db push`.
+- Regenerated the rewrite Prisma client against the current schema.
+- Exported and imported one real legacy user successfully for backend validation.
+- Verified the backend locally against the migrated rewrite database.
+
+### Validated Results
+
+- Imported counts for the validated user:
+  - `user`: 1
+  - `category`: 4
+  - `subcategory`: 16
+  - `recipient`: 1067
+  - `recipient_identifier`: 1369
+  - `transaction`: 3126
+  - `raw_message`: 1234
+  - `device_token`: 1
+- Referential integrity checks passed for:
+  - `transaction -> recipient`
+  - `raw_message -> transaction`
+  - `subcategory -> category`
+- Backend smoke testing against the migrated rewrite database looked correct.
+
+### Current Limits Of This Tooling
+
+- The workflow is intentionally scoped to one-user validation, not bulk production migration.
+- It assumes the source database is the current legacy schema from `.env`.
+- It uses `prisma db push` for empty rewrite test databases and does not solve the long-term migration-history problem.
+- It does not yet include production-grade dry-run reporting, resumability, or rollback orchestration.
+- It does not yet migrate all users or provide a staged cutover workflow.
 
 ## Next Steps
 
 The next implementation steps should be:
 
-1. Clean the repo state fully.
-   - Remove empty leftover legacy directories.
-   - Remove stale references/comments.
-   - Ensure deleted legacy backend files are fully gone from active imports.
+1. Generalize the migration tooling from one-user validation to production-grade migration planning.
+   - support multi-user or full-database export/import
+   - produce preflight counts and post-import verification reports
+   - define how to handle retries and idempotency
 
-2. Get the branch to a clean verification baseline.
-   - Stop any running Next/dev processes.
-   - clear `.next`
-   - run `pnpm exec tsc --noEmit`
-   - fix the repo lint setup or replace the stale lint path with a working one
+2. Resolve the rewrite migration-history strategy.
+   - decide whether to squash/reset Prisma migrations for the rewrite baseline
+   - ensure a clean empty-database bootstrap path exists without relying on conflicting historical migrations
 
-3. Finish the frontend boundary migration.
-   - Move remaining page/server-action mutations to consume the rewritten API routes where that is the intended long-term boundary.
-   - Keep the frontend client-agnostic contract aligned with the backend DTOs rather than Prisma shapes.
+3. Add focused tests around the migration transform rules.
+   - recipient resolution and identifier canonicalization
+   - `input_mode -> source` mapping
+   - raw-message migration behavior
+   - legacy token to device-token migration behavior
 
-4. Remove remaining Prisma-specific types from frontend code.
-   - keep Prisma enums/types inside `src/server` where possible
-   - use `src/common/types.ts` for app-facing DTOs
-
-5. Introduce repository/data-access separation for the highest-value modules first.
+4. Introduce repository/data-access separation for the highest-value runtime modules first.
    - start with `transactions`
    - then `categories`
    - then `device-tokens`
 
-6. Add focused service/domain tests for core behavior.
-   - recipient resolution
+5. Add focused service/domain tests for core backend behavior outside the migration path.
    - SMS import persistence rules
    - category/subcategory ownership validation
    - suggestion behavior
 
-7. Run a final backend rewrite checkpoint after cleanup.
-   - schema generate
-   - migration/reset verification
-   - typecheck
-   - route tests
-   - lint
+6. Convert `next.config.ts` to `images.remotePatterns`.
+   - keep the existing Google image host support
+   - remove the Next 16 build warning
