@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getCategories } from "@/lib/internal-api";
 import {
   Card,
   CardContent,
@@ -22,9 +23,6 @@ import { EditCategoryDialog } from "./components/edit-category-dialog";
 import { EditSubcategoryDialog } from "./components/edit-subcategory-dialog";
 import { ResetAllDialog } from "./components/reset-all-dialog";
 import { ErrorMessage } from "@/components/error-message";
-import { unwrapOrResponse } from "@/server/api/responses";
-import { toCategoryOption } from "@/server/modules/categories/helpers";
-import { listCategoriesForUser } from "@/server/modules/categories/service";
 
 export default async function PreferencesPage() {
   const session = await getServerSession(authOptions);
@@ -35,12 +33,12 @@ export default async function PreferencesPage() {
     );
   }
 
-  const categoriesResult = await listCategoriesForUser(session.user.uuid);
-  const categoriesData = unwrapOrResponse(categoriesResult);
-  if (categoriesData instanceof Response) {
+  let categories;
+  try {
+    categories = await getCategories();
+  } catch {
     return <ErrorMessage message="Failed to load categories" />;
   }
-  const categories = categoriesData.map(toCategoryOption);
 
   return (
     <div className="container mx-auto p-6 lg:pl-8 space-y-6">

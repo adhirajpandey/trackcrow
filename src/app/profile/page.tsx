@@ -4,10 +4,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Image from "next/image";
+import { getDeviceTokens } from "@/lib/internal-api";
 import { AccountUtilities } from "./components/account-utilities";
 import { ErrorMessage } from "@/components/error-message";
-import { listDeviceTokens } from "@/server/modules/device-tokens/service";
-import { unwrapOrResponse } from "@/server/api/responses";
 
 export default async function UserPage() {
   const session = await getServerSession(authOptions);
@@ -17,9 +16,10 @@ export default async function UserPage() {
     );
   }
 
-  const tokensResult = await listDeviceTokens(session.user.uuid);
-  const tokens = unwrapOrResponse(tokensResult);
-  if (tokens instanceof Response) {
+  let tokens;
+  try {
+    tokens = await getDeviceTokens();
+  } catch {
     return <ErrorMessage message="Failed to load device tokens" />;
   }
 

@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+import type { CategoryOption } from "@/common/types";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
+import { toCategoryOption } from "@/server/modules/categories/helpers";
 import { listCategoriesForUser } from "@/server/modules/categories/service";
 import { createCategory } from "@/server/modules/categories/mutations";
 
@@ -22,7 +24,7 @@ export async function GET() {
     return data;
   }
 
-  return jsonOk(data);
+  return jsonOk(data.map((category): CategoryOption => toCategoryOption(category)));
 }
 
 export async function POST(request: Request) {

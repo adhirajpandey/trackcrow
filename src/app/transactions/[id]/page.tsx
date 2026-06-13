@@ -1,14 +1,11 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getCategories, getTransaction } from "@/lib/internal-api";
 import {
   ViewTransactionForm,
   type ViewTransactionDefaults,
 } from "./view-transaction-form";
 import { ErrorMessage } from "@/components/error-message";
-import { unwrapOrResponse } from "@/server/api/responses";
-import { toCategoryOption } from "@/server/modules/categories/helpers";
-import { listCategoriesForUser } from "@/server/modules/categories/service";
-import { getTransactionById } from "@/server/modules/transactions/service";
 
 export default async function ViewTransactionPage({
   params,
@@ -33,15 +30,14 @@ export default async function ViewTransactionPage({
     );
   }
 
-  const [categoriesResult, transactionResult] = await Promise.all([
-    listCategoriesForUser(session.user.uuid),
-    getTransactionById(session.user.uuid, idNum),
-  ]);
-
-  const categoriesData = unwrapOrResponse(categoriesResult);
-  const txn = unwrapOrResponse(transactionResult);
-
-  if (categoriesData instanceof Response || txn instanceof Response) {
+  let categories;
+  let txn;
+  try {
+    [categories, txn] = await Promise.all([
+      getCategories(),
+      getTransaction(idNum),
+    ]);
+  } catch {
     return <ErrorMessage message="Transaction not found" />;
   }
 
@@ -70,7 +66,7 @@ export default async function ViewTransactionPage({
       </div>
       <div className="py-2 md:py-4">
         <ViewTransactionForm
-          categories={categoriesData.map(toCategoryOption)}
+          categories={categories}
           defaults={defaults}
           transactionId={txn.id}
           searchParams={resolvedSearchParams}

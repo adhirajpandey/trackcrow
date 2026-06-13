@@ -2,11 +2,9 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { TRANSACTION_TYPES } from '@/common/types';
+import { createManualTransaction, getApiErrorMessage } from '@/lib/internal-api';
 import { logger } from '@/lib/logger';
-import { TransactionSource, TransactionType } from '@/generated/prisma-rewrite';
-import { unwrapOrResponse } from '@/server/api/responses';
-import { requireSessionUser } from '@/server/auth/session';
-import { createTransaction } from '@/server/modules/transactions/service';
 
 const addTransactionSchema = z.object({
   amount: z.coerce.number().positive(),
@@ -14,19 +12,13 @@ const addTransactionSchema = z.object({
   recipientName: z.string().optional(),
   categoryId: z.coerce.number().int().positive(),
   subcategoryId: z.coerce.number().int().positive().optional(),
-  type: z.nativeEnum(TransactionType).default(TransactionType.UPI),
+  type: z.enum(TRANSACTION_TYPES).default('UPI'),
   remarks: z.string().optional(),
   timestamp: z.coerce.date(),
 });
 
 export async function addTransaction(formData: FormData) {
   logger.info('addTransaction - Starting manual transaction creation');
-
-  const session = await requireSessionUser();
-  const sessionData = unwrapOrResponse(session);
-  if (sessionData instanceof Response) {
-    return { error: 'Unauthorized' };
-  }
 
   const getOpt = (v: FormDataEntryValue | null) => (v === null ? undefined : v);
 
@@ -45,14 +37,13 @@ export async function addTransaction(formData: FormData) {
     return { error: 'Invalid fields', issues: validatedFields.error.issues };
   }
 
-  const result = await createTransaction({
-    userUuid: sessionData.userUuid,
-    ...validatedFields.data,
-    source: TransactionSource.MANUAL,
-  });
-
-  if (!result.ok) {
-    return { error: 'Failed to create transaction' };
+  try {
+    await createManualTransaction({
+      ...validatedFields.data,
+      timestamp: validatedFields.data.timestamp.toISOString(),
+    });
+  } catch (error) {
+    return { error: getApiErrorMessage(error, 'Failed to create transaction') };
   }
 
   revalidatePath('/transactions');

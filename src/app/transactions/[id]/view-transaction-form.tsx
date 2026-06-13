@@ -7,8 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 
-import { TransactionType } from "@/generated/prisma-rewrite";
-import type { CategoryOption } from "@/common/types";
+import { TRANSACTION_TYPES, type CategoryOption } from "@/common/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -35,7 +34,7 @@ const formSchema = z.object({
   recipientName: z.string().optional(),
   categoryId: z.number().int().positive().optional(),
   subcategoryId: z.number().int().positive().optional(),
-  type: z.nativeEnum(TransactionType).default(TransactionType.UPI),
+  type: z.enum(TRANSACTION_TYPES).default("UPI"),
   remarks: z.string().optional(),
   sameAsRecipient: z.boolean().default(true),
   timestamp: z.date(),
@@ -546,7 +545,7 @@ export function ViewTransactionForm({
                     <FormLabel>Type</FormLabel>
                     <FormControl>
                       <Select
-                        value={field.value ?? TransactionType.UPI}
+                        value={field.value ?? "UPI"}
                         onValueChange={(value) => field.onChange(value)}
                         disabled={!isEditing}
                       >
@@ -554,7 +553,7 @@ export function ViewTransactionForm({
                           <SelectValue placeholder="Select a type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(TransactionType).map((type) => (
+                          {TRANSACTION_TYPES.map((type) => (
                             <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>

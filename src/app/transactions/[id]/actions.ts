@@ -2,14 +2,13 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { logger } from '@/lib/logger';
-import { TransactionSource, TransactionType } from '@/generated/prisma-rewrite';
-import { unwrapOrResponse } from '@/server/api/responses';
-import { requireSessionUser } from '@/server/auth/session';
+import { TRANSACTION_TYPES } from '@/common/types';
 import {
-  deleteTransaction as deleteTransactionMutation,
-  updateTransaction as updateTransactionMutation,
-} from '@/server/modules/transactions/service';
+  deleteManualTransaction,
+  getApiErrorMessage,
+  updateManualTransaction,
+} from '@/lib/internal-api';
+import { logger } from '@/lib/logger';
 
 const updateTransactionSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -28,19 +27,13 @@ const updateTransactionSchema = z.object({
       z.union([z.coerce.number().int().positive(), z.null()])
     )
     .optional(),
-  type: z.nativeEnum(TransactionType).default(TransactionType.UPI),
+  type: z.enum(TRANSACTION_TYPES).default('UPI'),
   remarks: z.string().optional().nullable(),
   timestamp: z.coerce.date().optional().nullable(),
 });
 
 export async function updateTransaction(formData: FormData) {
   logger.info('updateTransaction - Starting transaction update');
-
-  const session = await requireSessionUser();
-  const sessionData = unwrapOrResponse(session);
-  if (sessionData instanceof Response) {
-    return { error: 'Unauthorized' };
-  }
 
   const parsed = updateTransactionSchema.safeParse({
     id: formData.get('id'),
@@ -58,19 +51,19 @@ export async function updateTransaction(formData: FormData) {
     return { error: 'Invalid fields', issues: parsed.error.issues } as const;
   }
 
-  const result = await updateTransactionMutation({
-    userUuid: sessionData.userUuid,
-    ...parsed.data,
-    timestamp: parsed.data.timestamp ?? new Date(),
-    source: TransactionSource.MANUAL,
-  });
-
-  if (!result.ok) {
-    if (result.error === 'NOT_FOUND') {
-      return { error: 'Transaction not found' } as const;
-    }
-
-    return { error: 'Failed to update transaction' } as const;
+  try {
+    await updateManualTransaction(parsed.data.id, {
+      amount: parsed.data.amount,
+      recipientRaw: parsed.data.recipientRaw,
+      recipientName: parsed.data.recipientName ?? null,
+      categoryId: parsed.data.categoryId ?? null,
+      subcategoryId: parsed.data.subcategoryId ?? null,
+      type: parsed.data.type,
+      remarks: parsed.data.remarks ?? null,
+      timestamp: (parsed.data.timestamp ?? new Date()).toISOString(),
+    });
+  } catch (error) {
+    return { error: getApiErrorMessage(error, 'Failed to update transaction') } as const;
   }
 
   revalidatePath('/transactions');
@@ -82,21 +75,10 @@ export async function deleteTransaction(transactionId: number) {
   logger.info('deleteTransaction - Starting transaction deletion', {
     transactionId,
   });
-
-  const session = await requireSessionUser();
-  const sessionData = unwrapOrResponse(session);
-  if (sessionData instanceof Response) {
-    return { error: 'Unauthorized' };
-  }
-
-  const result = await deleteTransactionMutation(sessionData.userUuid, transactionId);
-
-  if (!result.ok) {
-    if (result.error === 'NOT_FOUND') {
-      return { error: 'Transaction not found' };
-    }
-
-    return { error: 'Failed to delete transaction' };
+  try {
+    await deleteManualTransaction(transactionId);
+  } catch (error) {
+    return { error: getApiErrorMessage(error, 'Failed to delete transaction') };
   }
 
   revalidatePath('/transactions');

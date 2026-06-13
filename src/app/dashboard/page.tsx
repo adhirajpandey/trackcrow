@@ -1,7 +1,9 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { getCategories, getTransactions } from "@/lib/internal-api";
 import type { TransactionRecord, UserCategorySummary } from "@/common/types";
+import { toUserCategorySummary } from "@/common/types";
 import { DashboardTimeframeSelector } from "@/app/dashboard/components/timeframe-selector";
 import { Summary } from "@/app/dashboard/components/summary";
 import { CategoricalSpends } from "@/app/dashboard/components/categorical-spends";
@@ -14,10 +16,6 @@ import {
   getCurrentMonthYYYYMM,
   getCategoricalSpends,
 } from "@/common/utils";
-import { unwrapOrResponse } from "@/server/api/responses";
-import { toUserCategorySummary } from "@/server/modules/categories/helpers";
-import { listCategoriesForUser } from "@/server/modules/categories/service";
-import { listTransactionsForRange } from "@/server/modules/transactions/service";
 
 interface DashboardSearchParams {
   month?: string;
@@ -41,17 +39,22 @@ export default async function DashboardPage({
   const { startDate, endDate, selectedMonth } = parseMonthParam(month || "");
 
   try {
-    const [transactionsResult, categoriesResult] = await Promise.all([
-      listTransactionsForRange(session.user.uuid, { startDate, endDate }),
-      listCategoriesForUser(session.user.uuid),
-    ]);
-    const transactionData = unwrapOrResponse(transactionsResult);
-    const categoryData = unwrapOrResponse(categoriesResult);
-    if (transactionData instanceof Response || categoryData instanceof Response) {
-      throw new Error("Failed to load dashboard data");
+    const query = new URLSearchParams();
+    query.set("page", "1");
+    query.set("size", "500");
+    if (startDate) {
+      query.set("startDate", startDate.toISOString());
     }
-    transactions = transactionData;
-    userCategories = categoryData.map(toUserCategorySummary);
+    if (endDate) {
+      query.set("endDate", endDate.toISOString());
+    }
+
+    const [transactionsResponse, categories] = await Promise.all([
+      getTransactions(`?${query.toString()}`),
+      getCategories(),
+    ]);
+    transactions = transactionsResponse.transactions;
+    userCategories = categories.map(toUserCategorySummary);
   } catch {
     return (
       <ErrorMessage message="Failed to load transactions or user categories" />

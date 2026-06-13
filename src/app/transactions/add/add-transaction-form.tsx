@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CategoryOption } from "@/common/types";
+import { TRANSACTION_TYPES, type CategoryOption } from "@/common/types";
 
 const formSchema = z.object({
   amount: z.number().positive(),
@@ -313,7 +313,7 @@ export function AddTransactionForm({
                             <SelectValue placeholder="Select a type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"] as const).map((t) => (
+                            {TRANSACTION_TYPES.map((t) => (
                               <SelectItem key={t} value={t}>
                                 {t}
                               </SelectItem>

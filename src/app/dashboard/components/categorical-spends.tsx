@@ -41,24 +41,44 @@ export function CategoricalSpends({
 
   const total = spends.reduce((s, c) => s + c.totalSpend, 0);
 
-  // Prepare segments with percent and color
-  const segments = spends.map((s, i) => {
-    const color = getCategoryColor(i);
-    return {
-      ...s,
-      percent: total > 0 ? (s.totalSpend / total) * 100 : 0,
-      colorHex: color.hex,
-      colorClass: color.bgClass,
-    };
-  });
-
   // SVG donut parameters
   const size = 180;
   const stroke = 18;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  let offsetAccumulator = 0;
+  const segments = spends.reduce<
+    Array<{
+      category: string;
+      totalSpend: number;
+      count: number;
+      percent: number;
+      colorHex: string;
+      colorClass: string;
+      dashArray: string;
+      dashOffset: number;
+    }>
+  >((accumulator, spend, index) => {
+    const color = getCategoryColor(index);
+    const percent = total > 0 ? (spend.totalSpend / total) * 100 : 0;
+    const dash = (percent / 100) * circumference;
+    const dashOffset =
+      accumulator.length === 0
+        ? 0
+        : accumulator[accumulator.length - 1].dashOffset -
+          ((accumulator[accumulator.length - 1].percent / 100) * circumference);
+
+    accumulator.push({
+      ...spend,
+      percent,
+      colorHex: color.hex,
+      colorClass: color.bgClass,
+      dashArray: `${dash} ${circumference - dash}`,
+      dashOffset,
+    });
+
+    return accumulator;
+  }, []);
 
   return (
     <Card className="h-full flex flex-col">
@@ -87,10 +107,6 @@ export function CategoricalSpends({
 
                 {/* segments */}
                 {segments.map((seg) => {
-                  const dash = (seg.percent / 100) * circumference;
-                  const dashArray = `${dash} ${circumference - dash}`;
-                  const dashOffset = -offsetAccumulator;
-                  offsetAccumulator += dash;
                   return (
                     <circle
                       key={seg.category}
@@ -99,8 +115,8 @@ export function CategoricalSpends({
                       stroke={seg.colorHex}
                       strokeWidth={stroke}
                       strokeLinecap="round"
-                      strokeDasharray={dashArray}
-                      strokeDashoffset={dashOffset}
+                      strokeDasharray={seg.dashArray}
+                      strokeDashoffset={seg.dashOffset}
                       transform={`rotate(-90)`}
                     />
                   );
