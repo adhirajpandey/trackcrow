@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `src/app/`: Next.js App Router pages, route handlers, and feature modules (`dashboard`, `transactions`, `crow-bot`, `preferences`, `profile`).
+- `src/app/`: Next.js App Router pages, route handlers, and feature modules (`dashboard`, `transactions`, `preferences`, `profile`).
 - `src/components/`: shared UI and layout components; base primitives live in `src/components/ui/`.
 - `src/lib/` and `src/common/`: cross-cutting utilities (auth, Prisma client, schemas, parsers, server helpers).
 - `prisma/`: schema and migration history; update this for any data-model change.
@@ -28,12 +28,13 @@
 - Use `@/*` import alias for internal imports when it improves readability.
 
 ## Testing Guidelines
-- No formal automated test suite is currently configured (`package.json` has no `test` script).
-- Minimum quality gate today is `pnpm lint` plus manual verification of modified flows.
-- When adding tests, colocate by feature (for example, `src/app/<feature>/__tests__/`) and add a `pnpm test` script in the same PR.
+- Jest is configured for TypeScript tests under `src/**/*.test.ts`.
+- Run `pnpm test` for the full test suite or `pnpm test:unit` for the focused common/server unit suite.
+- Minimum quality gate today is `pnpm lint`, `pnpm test`, and manual verification of modified flows.
+- When adding tests, colocate them with the module or feature they exercise.
 
 ## Commit & Pull Request Guidelines
-- Follow the existing commit style: `<type>(<scope>): <summary>` (examples: `feat(crow-bot): ...`, `fix(route.ts): ...`, `docs(README.md): ...`).
+- Follow the existing commit style: `<type>(<scope>): <summary>` (examples: `feat(transactions): ...`, `fix(route.ts): ...`, `docs(README.md): ...`).
 - Keep commits focused; separate dependency/lockfile updates as `build(...)` when possible.
 - PRs should include:
   - concise problem/solution description,
