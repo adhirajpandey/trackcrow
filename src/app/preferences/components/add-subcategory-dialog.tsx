@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,19 +15,35 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
-import { addSubcategory } from '../actions';
+import { createSubcategoryRecord, getApiErrorMessage } from '@/lib/api-client';
 
 export function AddSubcategoryDialog({ categoryId }: { categoryId: number }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const formAction = async (formData: FormData) => {
-    const result = await addSubcategory(formData);
-    if (result?.error) {
-      setError(result.error);
-    } else {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') ?? '').trim();
+
+    if (!name) {
+      setError('Invalid fields');
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      await createSubcategoryRecord({ categoryId, name });
       setError(null);
       setOpen(false);
+      router.refresh();
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Failed to add subcategory'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -46,7 +63,7 @@ export function AddSubcategoryDialog({ categoryId }: { categoryId: number }) {
             {error && <p className="text-red-500 text-sm pt-2">{error}</p>}
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="col-span-1">
@@ -57,7 +74,7 @@ export function AddSubcategoryDialog({ categoryId }: { categoryId: number }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={isSaving}>Save</Button>
           </DialogFooter>
         </form>
       </DialogContent>

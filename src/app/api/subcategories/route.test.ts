@@ -1,14 +1,14 @@
 import { POST } from "./route";
 
 import { requireSessionUser } from "@/server/auth/session";
-import { createSubcategory } from "@/server/modules/categories/mutations";
+import { createSubcategory } from "@/server/modules/categories/service";
 import { makeJsonRequest, parseJson } from "@/test/api-test-helpers";
 
 jest.mock("@/server/auth/session", () => ({
   requireSessionUser: jest.fn(),
 }));
 
-jest.mock("@/server/modules/categories/mutations", () => ({
+jest.mock("@/server/modules/categories/service", () => ({
   createSubcategory: jest.fn(),
 }));
 

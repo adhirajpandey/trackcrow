@@ -4,15 +4,12 @@ import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
-export type DeviceTokenDto = {
-  id: number;
-  uuid: string;
-  label: string | null;
-  tokenPrefix: string;
-  createdAt: Date;
-  lastUsedAt: Date | null;
-  revokedAt: Date | null;
-};
+import type {
+  CreateDeviceTokenInput,
+  DeviceTokenDto,
+  DeviceTokenListInput,
+  RevokeDeviceTokenInput,
+} from "./types";
 
 export function hashDeviceToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -35,11 +32,11 @@ function toDeviceTokenDto(token: {
 }
 
 export async function listDeviceTokens(
-  userUuid: string
+  input: DeviceTokenListInput
 ): Promise<ServiceResult<DeviceTokenDto[], "INTERNAL_ERROR">> {
   try {
     const tokens = await prisma.deviceToken.findMany({
-      where: { userUuid },
+      where: { userUuid: input.userUuid },
       select: {
         id: true,
         uuid: true,
@@ -55,15 +52,14 @@ export async function listDeviceTokens(
     return ok(tokens.map(toDeviceTokenDto));
   } catch (error) {
     logger.error("listDeviceTokens - Failed to list tokens", error as Error, {
-      userUuid,
+      userUuid: input.userUuid,
     });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function createDeviceToken(
-  userUuid: string,
-  label?: string
+  input: CreateDeviceTokenInput
 ): Promise<
   ServiceResult<
     {
@@ -77,8 +73,8 @@ export async function createDeviceToken(
     const plainToken = randomBytes(24).toString("hex");
     const tokenRecord = await prisma.deviceToken.create({
       data: {
-        userUuid,
-        label: label?.trim() || null,
+        userUuid: input.userUuid,
+        label: input.label?.trim() || null,
         tokenHash: hashDeviceToken(plainToken),
         tokenPrefix: buildTokenPrefix(plainToken),
       },
@@ -99,21 +95,20 @@ export async function createDeviceToken(
     });
   } catch (error) {
     logger.error("createDeviceToken - Failed to create token", error as Error, {
-      userUuid,
+      userUuid: input.userUuid,
     });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function revokeDeviceToken(
-  userUuid: string,
-  tokenId: number
+  input: RevokeDeviceTokenInput
 ): Promise<ServiceResult<{ revoked: true }, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
     const existing = await prisma.deviceToken.findFirst({
       where: {
-        id: tokenId,
-        userUuid,
+        id: input.tokenId,
+        userUuid: input.userUuid,
         revokedAt: null,
       },
       select: { id: true },
@@ -124,15 +119,15 @@ export async function revokeDeviceToken(
     }
 
     await prisma.deviceToken.update({
-      where: { id: tokenId },
+      where: { id: input.tokenId },
       data: { revokedAt: new Date() },
     });
 
     return ok({ revoked: true });
   } catch (error) {
     logger.error("revokeDeviceToken - Failed to revoke token", error as Error, {
-      userUuid,
-      tokenId,
+      userUuid: input.userUuid,
+      tokenId: input.tokenId,
     });
     return fail("INTERNAL_ERROR");
   }

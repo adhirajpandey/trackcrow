@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +16,7 @@ import {
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
-import { deleteTransaction } from '../[id]/actions';
+import { deleteManualTransaction, getApiErrorMessage } from '@/lib/api-client';
 
 interface DeleteTransactionDialogProps {
   /** The ID of the transaction to delete */
@@ -35,6 +36,7 @@ export function DeleteTransactionDialog({
   onClose,
   onTransactionDeleted
 }: DeleteTransactionDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,26 +46,15 @@ export function DeleteTransactionDialog({
     setError(null);
     
     try {
-      const result = await deleteTransaction(transactionId);
-      
-      if (result?.error) {
-        setError(result.error);
-        toast.error(result.error);
-      } else {
-        // Success - close dialog and show toast
-        setOpen(false);
-        setError(null);
-        toast.success('Transaction deleted successfully');
-        
-        // Call the callback to remove the row from the table
-        onTransactionDeleted?.(transactionId);
-        
-        // Ensure dropdown is closed
-        onClose?.();
-      }
+      await deleteManualTransaction(transactionId);
+      setOpen(false);
+      setError(null);
+      toast.success('Transaction deleted successfully');
+      onTransactionDeleted?.(transactionId);
+      onClose?.();
+      router.refresh();
     } catch (error) {
-      console.error('Unexpected error during deletion:', error);
-      const errorMessage = 'An unexpected error occurred';
+      const errorMessage = getApiErrorMessage(error, 'Failed to delete transaction');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

@@ -2,64 +2,22 @@ import { TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { resolveRecipient } from "@/server/modules/recipients/service";
-import { fail, ok, type ServiceResult } from "@/server/shared/result";
+import { fail, ok } from "@/server/shared/result";
 
-export type TransactionDto = {
-  id: number;
-  uuid: string;
-  userUuid: string;
-  amount: number;
-  currency: string;
-  type: TransactionType;
-  source: TransactionSource;
-  recipientRaw: string;
-  recipientName: string | null;
-  recipientDisplayName: string;
-  reference: string | null;
-  accountLabel: string | null;
-  remarks: string | null;
-  locationRaw: string | null;
-  timestamp: string;
-  createdAt: string;
-  updatedAt: string;
-  category: string | null;
-  subcategory: string | null;
-  categoryId: number | null;
-  subcategoryId: number | null;
-};
-
-export type TransactionListDto = {
-  transactions: TransactionDto[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-  firstTxnDate: string | null;
-  lastTxnDate: string | null;
-};
-
-export type TransactionListRangeInput = {
-  startDate?: Date;
-  endDate?: Date;
-};
-
-export type TransactionWriteInput = {
-  userUuid: string;
-  amount: number;
-  recipientRaw: string;
-  recipientName?: string | null;
-  categoryId?: number | null;
-  subcategoryId?: number | null;
-  type: TransactionType;
-  remarks?: string | null;
-  timestamp: Date;
-  reference?: string | null;
-  accountLabel?: string | null;
-  locationRaw?: string | null;
-  source: TransactionSource;
-};
+import type {
+  ListTransactionsInput,
+  TransactionCreateResult,
+  TransactionDeleteResult,
+  TransactionDto,
+  TransactionGetResult,
+  TransactionListRangeInput,
+  TransactionListResult,
+  TransactionLookupInput,
+  TransactionSuggestResult,
+  TransactionUpdateInput,
+  TransactionUpdateResult,
+  TransactionWriteInput,
+} from "./types";
 
 type TransactionRecord = {
   id: number;
@@ -168,35 +126,17 @@ async function getOwnedTransaction(userUuid: string, transactionId: number) {
 }
 
 export async function listTransactions(
-  userUuid: string,
-  searchParams: URLSearchParams
-): Promise<ServiceResult<TransactionListDto, "INTERNAL_ERROR">> {
-  const pageNum = Number(searchParams.get("page"));
-  const sizeNum = Number(searchParams.get("size"));
-  const page = Number.isFinite(pageNum) ? Math.max(1, Math.floor(pageNum)) : 1;
-  const pageSize = Number.isFinite(sizeNum)
-    ? Math.max(1, Math.min(100, Math.floor(sizeNum)))
-    : 20;
+  input: ListTransactionsInput
+): Promise<TransactionListResult> {
+  const page = input.page ? Math.max(1, Math.floor(input.page)) : 1;
+  const pageSize = input.size ? Math.max(1, Math.min(100, Math.floor(input.size))) : 20;
   const skip = (page - 1) * pageSize;
+  const q = input.q?.trim() ?? "";
+  const sortBy = input.sortBy;
+  const sortOrder = input.sortOrder === "asc" ? "asc" : "desc";
+  const categoryFilters = input.categories ?? [];
 
-  const q = searchParams.get("q")?.trim() ?? "";
-  const sortBy = searchParams.get("sortBy");
-  const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
-  const startDateParam = searchParams.get("startDate");
-  const endDateParam = searchParams.get("endDate");
-
-  const categoryParams = searchParams.getAll("category");
-  const categoriesCsv = searchParams.get("categories");
-  const categoryFilters = Array.from(
-    new Set([
-      ...categoryParams,
-      ...(categoriesCsv
-        ? categoriesCsv.split(",").map((value) => value.trim()).filter(Boolean)
-        : []),
-    ])
-  );
-
-  const where: Record<string, unknown> = { userUuid };
+  const where: Record<string, unknown> = { userUuid: input.userUuid };
   const andFilters: Array<Record<string, unknown>> = [];
 
   if (q) {
@@ -231,11 +171,11 @@ export async function listTransactions(
     }
   }
 
-  if (startDateParam || endDateParam) {
+  if (input.startDate || input.endDate) {
     andFilters.push({
       timestamp: {
-        ...(startDateParam ? { gte: new Date(startDateParam) } : {}),
-        ...(endDateParam ? { lte: new Date(endDateParam) } : {}),
+        ...(input.startDate ? { gte: input.startDate } : {}),
+        ...(input.endDate ? { lte: input.endDate } : {}),
       },
     });
   }
@@ -247,12 +187,12 @@ export async function listTransactions(
   try {
     const [firstTxn, lastTxn, total] = await Promise.all([
       prisma.transaction.findFirst({
-        where: { userUuid },
+        where: { userUuid: input.userUuid },
         orderBy: { timestamp: "asc" },
         select: { timestamp: true },
       }),
       prisma.transaction.findFirst({
-        where: { userUuid },
+        where: { userUuid: input.userUuid },
         orderBy: { timestamp: "desc" },
         select: { timestamp: true },
       }),
@@ -293,18 +233,17 @@ export async function listTransactions(
     });
   } catch (error) {
     logger.error("listTransactions - Failed to list transactions", error as Error, {
-      userUuid,
+      userUuid: input.userUuid,
     });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function getTransactionById(
-  userUuid: string,
-  transactionId: number
-): Promise<ServiceResult<TransactionDto, "NOT_FOUND" | "INTERNAL_ERROR">> {
+  input: TransactionLookupInput
+): Promise<TransactionGetResult> {
   try {
-    const transaction = await getOwnedTransaction(userUuid, transactionId);
+    const transaction = await getOwnedTransaction(input.userUuid, input.transactionId);
     if (!transaction) {
       return fail("NOT_FOUND");
     }
@@ -312,21 +251,20 @@ export async function getTransactionById(
     return ok(toTransactionDto(transaction as unknown as TransactionRecord));
   } catch (error) {
     logger.error("getTransactionById - Failed to load transaction", error as Error, {
-      userUuid,
-      transactionId,
+      userUuid: input.userUuid,
+      transactionId: input.transactionId,
     });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function listTransactionsForRange(
-  userUuid: string,
-  input: TransactionListRangeInput = {}
-): Promise<ServiceResult<TransactionDto[], "INTERNAL_ERROR">> {
+  input: TransactionListRangeInput
+) {
   try {
     const records = await prisma.transaction.findMany({
       where: {
-        userUuid,
+        userUuid: input.userUuid,
         ...(input.startDate || input.endDate
           ? {
               timestamp: {
@@ -349,7 +287,7 @@ export async function listTransactionsForRange(
     );
   } catch (error) {
     logger.error("listTransactionsForRange - Failed to load transactions", error as Error, {
-      userUuid,
+      userUuid: input.userUuid,
     });
     return fail("INTERNAL_ERROR");
   }
@@ -357,12 +295,7 @@ export async function listTransactionsForRange(
 
 export async function createTransaction(
   input: TransactionWriteInput
-): Promise<
-  ServiceResult<
-    { id: number; uuid: string },
-    "VALIDATION_ERROR" | "INTERNAL_ERROR"
-  >
-> {
+): Promise<TransactionCreateResult> {
   try {
     const hasCategory = await ensureOwnedCategory(input.userUuid, input.categoryId);
     if (!hasCategory) {
@@ -423,13 +356,11 @@ export async function createTransaction(
 }
 
 export async function updateTransaction(
-  input: TransactionWriteInput & { id: number }
-): Promise<
-  ServiceResult<{ id: number }, "NOT_FOUND" | "VALIDATION_ERROR" | "INTERNAL_ERROR">
-> {
+  input: TransactionUpdateInput
+): Promise<TransactionUpdateResult> {
   try {
     const existing = await prisma.transaction.findFirst({
-      where: { id: input.id, userUuid: input.userUuid },
+      where: { id: input.transactionId, userUuid: input.userUuid },
       select: { id: true },
     });
     if (!existing) {
@@ -462,7 +393,7 @@ export async function updateTransaction(
     }
 
     await prisma.transaction.update({
-      where: { id: input.id },
+      where: { id: input.transactionId },
       data: {
         recipientId: recipientResult.data.recipientId,
         categoryId: input.categoryId ?? null,
@@ -479,52 +410,45 @@ export async function updateTransaction(
       },
     });
 
-    return ok({ id: input.id });
+    return ok({ id: input.transactionId });
   } catch (error) {
     logger.error("updateTransaction - Failed to update transaction", error as Error, {
       userUuid: input.userUuid,
-      transactionId: input.id,
+      transactionId: input.transactionId,
     });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function deleteTransaction(
-  userUuid: string,
-  transactionId: number
-): Promise<ServiceResult<{ id: number }, "NOT_FOUND" | "INTERNAL_ERROR">> {
+  input: TransactionLookupInput
+): Promise<TransactionDeleteResult> {
   try {
     const existing = await prisma.transaction.findFirst({
-      where: { id: transactionId, userUuid },
+      where: { id: input.transactionId, userUuid: input.userUuid },
       select: { id: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
 
-    await prisma.transaction.delete({ where: { id: transactionId } });
-    return ok({ id: transactionId });
+    await prisma.transaction.delete({ where: { id: input.transactionId } });
+    return ok({ id: input.transactionId });
   } catch (error) {
     logger.error("deleteTransaction - Failed to delete transaction", error as Error, {
-      userUuid,
-      transactionId,
+      userUuid: input.userUuid,
+      transactionId: input.transactionId,
     });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function suggestTransactionCategory(
-  userUuid: string,
-  transactionId: number
-): Promise<
-  ServiceResult<
-    { suggestedCategory: string | null; suggestedSubCategory: string | null },
-    "NOT_FOUND" | "INTERNAL_ERROR"
-  >
-> {
+  input: TransactionLookupInput
+): Promise<TransactionSuggestResult> {
   try {
     const current = await prisma.transaction.findFirst({
-      where: { id: transactionId, userUuid },
+      where: { id: input.transactionId, userUuid: input.userUuid },
       select: { id: true, recipientId: true },
     });
     if (!current) {
@@ -533,9 +457,9 @@ export async function suggestTransactionCategory(
 
     const matches = await prisma.transaction.findMany({
       where: {
-        userUuid,
+        userUuid: input.userUuid,
         recipientId: current.recipientId,
-        id: { not: transactionId },
+        id: { not: input.transactionId },
         categoryId: { not: null },
       },
       include: {
@@ -572,8 +496,8 @@ export async function suggestTransactionCategory(
     return ok({ suggestedCategory, suggestedSubCategory });
   } catch (error) {
     logger.error("suggestTransactionCategory - Failed to build suggestion", error as Error, {
-      userUuid,
-      transactionId,
+      userUuid: input.userUuid,
+      transactionId: input.transactionId,
     });
     return fail("INTERNAL_ERROR");
   }

@@ -3,22 +3,10 @@ import { logger } from "@/lib/logger";
 import { ensureDefaultCategoriesForUser } from "@/server/modules/categories/service";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
-export type MeDto = {
-  uuid: string;
-  id: number;
-  email: string;
-  name: string;
-  image: string | null;
-  subscription: number;
-};
+import type { EnsureUserBootstrapInput, GetMeInput, MeDto } from "./types";
 
 export async function ensureUserBootstrap(
-  input: {
-    email: string;
-    name: string;
-    image?: string | null;
-    provider: string;
-  }
+  input: EnsureUserBootstrapInput
 ): Promise<ServiceResult<MeDto, "INTERNAL_ERROR">> {
   try {
     const user = await prisma.user.upsert({
@@ -44,7 +32,7 @@ export async function ensureUserBootstrap(
       },
     });
 
-    const bootstrapResult = await ensureDefaultCategoriesForUser(user.uuid);
+    const bootstrapResult = await ensureDefaultCategoriesForUser({ userUuid: user.uuid });
     if (!bootstrapResult.ok) {
       return bootstrapResult;
     }
@@ -59,11 +47,11 @@ export async function ensureUserBootstrap(
 }
 
 export async function getMe(
-  userUuid: string
+  input: GetMeInput
 ): Promise<ServiceResult<MeDto, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
     const user = await prisma.user.findUnique({
-      where: { uuid: userUuid },
+      where: { uuid: input.userUuid },
       select: {
         uuid: true,
         id: true,
@@ -81,7 +69,7 @@ export async function getMe(
     return ok(user);
   } catch (error) {
     logger.error("getMe - Failed to load current user", error as Error, {
-      userUuid,
+      userUuid: input.userUuid,
     });
     return fail("INTERNAL_ERROR");
   }

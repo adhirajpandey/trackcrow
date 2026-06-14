@@ -1,27 +1,21 @@
 import { POST } from "./route";
 
-import {
-  importSmsTransaction,
-  parseTokenFromAuthHeader,
-} from "@/server/modules/imports/sms-service";
+import { importSmsTransaction } from "@/server/modules/imports/service";
 import {
   makeJsonRequest,
   makeRequest,
   parseJson,
 } from "@/test/api-test-helpers";
 
-jest.mock("@/server/modules/imports/sms-service", () => ({
+jest.mock("@/server/modules/imports/service", () => ({
   importSmsTransaction: jest.fn(),
-  parseTokenFromAuthHeader: jest.fn(),
 }));
 
 const importSmsTransactionMock = importSmsTransaction as jest.Mock;
-const parseTokenFromAuthHeaderMock = parseTokenFromAuthHeader as jest.Mock;
 
 describe("POST /api/imports/sms", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    parseTokenFromAuthHeaderMock.mockReturnValue("abc");
   });
 
   it("returns 400 for invalid JSON body", async () => {

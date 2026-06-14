@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Edit } from 'lucide-react';
-import { editSubcategory } from '../actions';
+import { getApiErrorMessage, updateSubcategoryRecord } from '@/lib/api-client';
 import type { CategoryOption } from '@/common/types';
 
 export function EditSubcategoryDialog({
@@ -31,16 +32,33 @@ export function EditSubcategoryDialog({
   subcategory: CategoryOption["subcategories"][number];
   categories: CategoryOption[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const formAction = async (formData: FormData) => {
-    const result = await editSubcategory(formData);
-    if (result?.error) {
-      setError(result.error);
-    } else {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') ?? '').trim();
+    const categoryId = Number(formData.get('categoryId'));
+
+    if (!name || !Number.isFinite(categoryId) || categoryId <= 0) {
+      setError('Invalid fields');
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      await updateSubcategoryRecord(subcategory.id, { name, categoryId });
       setError(null);
       setOpen(false);
+      router.refresh();
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Failed to edit subcategory'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -59,7 +77,7 @@ export function EditSubcategoryDialog({
             {error && <p className="text-red-500 text-sm pt-2">{error}</p>}
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
@@ -71,7 +89,6 @@ export function EditSubcategoryDialog({
                 defaultValue={subcategory.name}
                 className="col-span-3"
               />
-              <input type="hidden" name="subcategoryId" value={subcategory.id} />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">
@@ -92,7 +109,7 @@ export function EditSubcategoryDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSaving}>Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

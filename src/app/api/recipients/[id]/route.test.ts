@@ -1,14 +1,14 @@
 import { GET } from "./route";
 
 import { requireSessionUser } from "@/server/auth/session";
-import { getRecipient } from "@/server/modules/recipients/queries";
+import { getRecipient } from "@/server/modules/recipients/service";
 import { parseJson } from "@/test/api-test-helpers";
 
 jest.mock("@/server/auth/session", () => ({
   requireSessionUser: jest.fn(),
 }));
 
-jest.mock("@/server/modules/recipients/queries", () => ({
+jest.mock("@/server/modules/recipients/service", () => ({
   getRecipient: jest.fn(),
 }));
 

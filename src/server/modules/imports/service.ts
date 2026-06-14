@@ -2,21 +2,15 @@ import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { parseTransactionMessage } from "@/common/sms-parser";
 import { ParseStatus, TransactionSource } from "@/generated/prisma-rewrite";
-import { createTransaction } from "@/server/modules/transactions/service";
 import { hashDeviceToken } from "@/server/modules/device-tokens/service";
+import { createTransaction } from "@/server/modules/transactions/service";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
-export function parseTokenFromAuthHeader(headerValue: string | null): string | null {
-  if (!headerValue) return null;
-  const match = headerValue.match(/^Token\s+(\S+)$/i);
-  return match ? match[1] : null;
-}
+import type { ImportSmsInput } from "./types";
 
-export async function importSmsTransaction(input: {
-  token: string | null;
-  message: string;
-  location?: string | null;
-}): Promise<
+export async function importSmsTransaction(
+  input: ImportSmsInput
+): Promise<
   ServiceResult<
     { id: number; uuid: string },
     "UNAUTHORIZED" | "UNPROCESSABLE" | "INTERNAL_ERROR"

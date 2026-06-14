@@ -1,9 +1,9 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { addTransaction } from "./actions";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TRANSACTION_TYPES, type CategoryOption } from "@/common/types";
+import { createManualTransaction, getApiErrorMessage } from "@/lib/api-client";
 
 const formSchema = z.object({
   amount: z.number().positive(),
@@ -46,6 +47,7 @@ export function AddTransactionForm({
 }: {
   categories: CategoryOption[];
 }) {
+  const router = useRouter();
   const form = useForm<AddTransactionFormValues, any, AddTransactionFormValues>({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
@@ -60,21 +62,32 @@ export function AddTransactionForm({
       sameAsRecipient: true,
     },
   });
+  const sameAsRecipient = useWatch({
+    control: form.control,
+    name: "sameAsRecipient",
+  });
+  const selectedCategoryId = useWatch({
+    control: form.control,
+    name: "categoryId",
+  });
 
   async function onSubmit(values: AddTransactionFormValues) {
-    const formData = new FormData();
-    Object.entries(values).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        formData.append(key, value instanceof Date ? value.toISOString() : String(value));
-      }
-    });
-
-    const result = await addTransaction(formData);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success(result.message);
+    try {
+      await createManualTransaction({
+        amount: values.amount,
+        recipientRaw: values.recipientRaw,
+        recipientName: values.recipientName || null,
+        categoryId: values.categoryId,
+        subcategoryId: values.subcategoryId,
+        type: values.type,
+        remarks: values.remarks || null,
+        timestamp: values.timestamp.toISOString(),
+      });
+      toast.success("Transaction added successfully");
       form.reset();
+      router.refresh();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to create transaction"));
     }
   }
 
@@ -125,7 +138,7 @@ export function AddTransactionForm({
                           required
                           value={field.value ?? ""}
                           onChange={(e) => {
-                            if (form.getValues("sameAsRecipient")) {
+                            if (sameAsRecipient) {
                               form.setValue("recipientName", e.target.value, {
                                 shouldValidate: true,
                                 shouldDirty: true,
@@ -151,11 +164,11 @@ export function AddTransactionForm({
                             className="flex-1"
                             value={field.value ?? ""}
                             onChange={field.onChange}
-                            disabled={form.watch("sameAsRecipient")}
+                            disabled={sameAsRecipient}
                           />
                           <div className="flex items-center gap-2">
                             <Switch
-                              checked={form.watch("sameAsRecipient")}
+                              checked={sameAsRecipient}
                               onCheckedChange={(checked) => {
                                 form.setValue("sameAsRecipient", checked);
                                 if (checked) {
@@ -263,8 +276,7 @@ export function AddTransactionForm({
                   control={form.control}
                   name="subcategoryId"
                   render={({ field }) => {
-                    const selectedCatId = form.watch("categoryId");
-                    const selectedCat = categories.find((c) => c.id === selectedCatId);
+                    const selectedCat = categories.find((c) => c.id === selectedCategoryId);
                     const subs = selectedCat?.subcategories ?? [];
                     return (
                       <FormItem>
@@ -273,11 +285,11 @@ export function AddTransactionForm({
                           <Select
                             value={String(field.value ?? "")}
                             onValueChange={(val) => field.onChange(Number(val))}
-                            disabled={!selectedCatId || subs.length === 0}
+                            disabled={!selectedCategoryId || subs.length === 0}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder={
-                                !selectedCatId
+                                !selectedCategoryId
                                   ? "Select a category first"
                                   : subs.length === 0
                                   ? "No subcategories"

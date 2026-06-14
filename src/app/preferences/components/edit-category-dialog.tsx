@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,20 +15,36 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit } from 'lucide-react';
-import { editCategory } from '../actions';
+import { getApiErrorMessage, updateCategoryRecord } from '@/lib/api-client';
 import type { CategoryOption } from '@/common/types';
 
 export function EditCategoryDialog({ category }: { category: CategoryOption }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const formAction = async (formData: FormData) => {
-    const result = await editCategory(formData);
-    if (result?.error) {
-      setError(result.error);
-    } else {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') ?? '').trim();
+
+    if (!name) {
+      setError('Invalid fields');
+      setIsSaving(false);
+      return;
+    }
+
+    try {
+      await updateCategoryRecord(category.id, { name });
       setError(null);
       setOpen(false);
+      router.refresh();
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Failed to edit category'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -46,7 +63,7 @@ export function EditCategoryDialog({ category }: { category: CategoryOption }) {
             {error && <p className="text-red-500 text-sm pt-2">{error}</p>}
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
@@ -58,11 +75,10 @@ export function EditCategoryDialog({ category }: { category: CategoryOption }) {
                 defaultValue={category.name}
                 className="col-span-3"
               />
-              <input type="hidden" name="categoryId" value={category.id} />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSaving}>Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

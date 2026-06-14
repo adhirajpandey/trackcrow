@@ -1,4 +1,4 @@
-import type { CategoryDto } from "@/server/modules/categories/service";
+import type { CategoryDto } from "@/server/modules/categories/types";
 
 import type { CategoryOption, UserCategorySummary } from "@/common/types";
 

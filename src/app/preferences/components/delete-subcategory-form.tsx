@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -15,9 +16,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { deleteSubcategory } from '../actions';
+import { deleteSubcategoryRecord, getApiErrorMessage } from '@/lib/api-client';
 
 export function DeleteSubcategoryForm({ subcategoryId }: { subcategoryId: number }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -27,17 +29,13 @@ export function DeleteSubcategoryForm({ subcategoryId }: { subcategoryId: number
     setError(null);
     
     try {
-      const result = await deleteSubcategory(subcategoryId);
-      if (result?.error) {
-        setError(result.error);
-        toast.error(result.error);
-      } else {
-        setError(null);
-        setOpen(false);
-        toast.success('Subcategory deleted successfully');
-      }
-    } catch {
-      const errorMessage = 'An unexpected error occurred';
+      await deleteSubcategoryRecord(subcategoryId);
+      setError(null);
+      setOpen(false);
+      toast.success('Subcategory deleted successfully');
+      router.refresh();
+    } catch (error) {
+      const errorMessage = getApiErrorMessage(error, 'Failed to delete subcategory');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

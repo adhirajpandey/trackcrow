@@ -2,15 +2,15 @@ import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
-function buildDateFilter(searchParams: URLSearchParams) {
-  const startDate = searchParams.get("startDate");
-  const endDate = searchParams.get("endDate");
+import type { DashboardRangeInput, SpendingByPeriodInput } from "./types";
+
+function buildDateFilter(input: { startDate?: Date; endDate?: Date }) {
   return {
-    ...(startDate || endDate
+    ...(input.startDate || input.endDate
       ? {
           timestamp: {
-            ...(startDate ? { gte: new Date(startDate) } : {}),
-            ...(endDate ? { lte: new Date(endDate) } : {}),
+            ...(input.startDate ? { gte: input.startDate } : {}),
+            ...(input.endDate ? { lte: input.endDate } : {}),
           },
         }
       : {}),
@@ -18,8 +18,7 @@ function buildDateFilter(searchParams: URLSearchParams) {
 }
 
 export async function getDashboardSummary(
-  userUuid: string,
-  searchParams: URLSearchParams
+  input: DashboardRangeInput
 ): Promise<
   ServiceResult<
     {
@@ -33,8 +32,8 @@ export async function getDashboardSummary(
   >
 > {
   const where = {
-    userUuid,
-    ...buildDateFilter(searchParams),
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
   };
 
   try {
@@ -61,14 +60,15 @@ export async function getDashboardSummary(
       averageSpend: Number(aggregate._avg.amount ?? 0),
     });
   } catch (error) {
-    logger.error("getDashboardSummary - Failed", error as Error, { userUuid });
+    logger.error("getDashboardSummary - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function getSpendingByCategory(
-  userUuid: string,
-  searchParams: URLSearchParams
+  input: DashboardRangeInput
 ): Promise<
   ServiceResult<
     Array<{
@@ -80,8 +80,8 @@ export async function getSpendingByCategory(
   >
 > {
   const where = {
-    userUuid,
-    ...buildDateFilter(searchParams),
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
   };
 
   try {
@@ -110,14 +110,15 @@ export async function getSpendingByCategory(
         .sort((a, b) => b.totalSpend - a.totalSpend)
     );
   } catch (error) {
-    logger.error("getSpendingByCategory - Failed", error as Error, { userUuid });
+    logger.error("getSpendingByCategory - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
     return fail("INTERNAL_ERROR");
   }
 }
 
 export async function getSpendingByPeriod(
-  userUuid: string,
-  searchParams: URLSearchParams
+  input: SpendingByPeriodInput
 ): Promise<
   ServiceResult<
     Array<{
@@ -128,10 +129,10 @@ export async function getSpendingByPeriod(
     "INTERNAL_ERROR"
   >
 > {
-  const granularity = searchParams.get("granularity") === "day" ? "day" : "month";
+  const granularity = input.granularity === "day" ? "day" : "month";
   const where = {
-    userUuid,
-    ...buildDateFilter(searchParams),
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
   };
 
   try {
@@ -163,7 +164,9 @@ export async function getSpendingByPeriod(
       }))
     );
   } catch (error) {
-    logger.error("getSpendingByPeriod - Failed", error as Error, { userUuid });
+    logger.error("getSpendingByPeriod - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
     return fail("INTERNAL_ERROR");
   }
 }

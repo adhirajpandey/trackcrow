@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -14,9 +15,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { resetToDefault } from '../actions';
+import { getApiErrorMessage, resetCategoryDefaults } from '@/lib/api-client';
 
 export function ResetAllDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
@@ -26,18 +28,13 @@ export function ResetAllDialog() {
     setError(null);
     
     try {
-      const result = await resetToDefault();
-      if (result?.error) {
-        setError(result.error);
-        toast.error(result.error);
-      } else {
-        setError(null);
-        setOpen(false);
-        toast.success('Categories reset to default successfully');
-      }
+      await resetCategoryDefaults();
+      setError(null);
+      setOpen(false);
+      toast.success('Categories reset to default successfully');
+      router.refresh();
     } catch (error) {
-      console.error('Unexpected error during reset:', error);
-      const errorMessage = 'An unexpected error occurred';
+      const errorMessage = getApiErrorMessage(error, 'Failed to reset categories');
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

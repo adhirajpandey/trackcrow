@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { getApiErrorMessage, updateManualTransaction } from "@/lib/api-client";
 
 const formSchema = z.object({
   amount: z.number().positive(),
@@ -199,49 +200,26 @@ export function ViewTransactionForm({
 
   const onSubmit = React.useCallback(
     async (values: ViewTransactionFormValues) => {
-      const formData = new FormData();
-      const entries: [string, string | number | Date | null | undefined][] = [
-        ["id", transactionId],
-        ["amount", values.amount],
-        ["recipientRaw", values.recipientRaw],
-        ["recipientName", values.recipientName ?? ""],
-        ["timestamp", values.timestamp],
-        ["categoryId", values.categoryId],
-        ["subcategoryId", values.subcategoryId],
-        ["type", values.type],
-        ["remarks", values.remarks ?? ""],
-      ];
+      try {
+        await updateManualTransaction(transactionId, {
+          amount: values.amount,
+          recipientRaw: values.recipientRaw,
+          recipientName: values.recipientName ?? null,
+          categoryId: values.categoryId ?? null,
+          subcategoryId: values.subcategoryId ?? null,
+          type: values.type,
+          remarks: values.remarks ?? null,
+          timestamp: values.timestamp.toISOString(),
+        });
 
-      for (const [key, value] of entries) {
-        if (key === "recipientName" || key === "remarks") {
-          formData.append(
-            key,
-            value instanceof Date ? value.toISOString() : String(value)
-          );
-          continue;
-        }
-
-        if (value === undefined || value === null || value === "") {
-          continue;
-        }
-
-        formData.append(
-          key,
-          value instanceof Date ? value.toISOString() : String(value)
-        );
+        toast.success("Saved");
+        const nextSearchParams = new URLSearchParams(window.location.search);
+        nextSearchParams.delete("edit");
+        router.replace(`${window.location.pathname}?${nextSearchParams.toString()}`);
+        router.refresh();
+      } catch (error) {
+        toast.error(getApiErrorMessage(error, "Failed to update transaction"));
       }
-
-      const { updateTransaction } = await import("./actions");
-      const result = await updateTransaction(formData);
-      if ("error" in result && result.error) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("Saved");
-      const nextSearchParams = new URLSearchParams(window.location.search);
-      nextSearchParams.delete("edit");
-      router.replace(`${window.location.pathname}?${nextSearchParams.toString()}`);
     },
     [router, transactionId]
   );
