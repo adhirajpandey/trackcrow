@@ -83,6 +83,10 @@ Primary rewrite goals:
 - Backend v1 requirements: transaction CRUD, SMS ingestion, dashboard analytics, category management, device token flow, and suggestion engine.
 - Deferred from v1: crowbot/chat.
 - Privacy/security target for v1: standard app-level protection, with stronger privacy controls later.
+- Migration target: the rewrite must support full production-database migration, not only one-user validation imports.
+- Prisma migration strategy: the rewrite schema becomes the new clean baseline; old Prisma migration history will not be preserved.
+- SMS duplicate policy: allow duplicate transactions, matching prior product behavior.
+- Service/repository extraction: defer repository/data-access separation until the backend is running end-to-end.
 
 ## Proposed Rewrite Process
 
@@ -147,17 +151,34 @@ Draft backend surfaces:
 - `POST /api/categories`
 - `PATCH /api/categories/:id`
 - `DELETE /api/categories/:id`
+- `POST /api/categories/reset-defaults`
+- `POST /api/subcategories`
+- `PATCH /api/subcategories/:id`
+- `DELETE /api/subcategories/:id`
 - `GET /api/transactions`
 - `POST /api/transactions`
 - `GET /api/transactions/:id`
 - `PATCH /api/transactions/:id`
 - `DELETE /api/transactions/:id`
+- `GET /api/transactions/:id/suggest`
 - `POST /api/imports/sms`
+- `GET /api/device-tokens`
 - `POST /api/device-tokens`
 - `DELETE /api/device-tokens/:id` or revoke endpoint
 - `GET /api/dashboard/summary`
 - `GET /api/dashboard/spending-by-category`
 - `GET /api/dashboard/spending-by-period`
+
+Supporting but non-core v1 surfaces currently present in the rewrite:
+
+- `GET /api/recipients`
+- `GET /api/recipients/:id`
+
+API contract decision:
+
+- `recipients` should remain available in code for now as internal/supporting endpoints around the normalized recipient model.
+- `recipients` are not part of the official backend v1 product contract.
+- `subcategories`, `categories/reset-defaults`, and `GET /api/device-tokens` are part of the official backend v1 contract because the original product behavior depends on them.
 
 Draft API design principles:
 
@@ -225,6 +246,7 @@ These are now active defaults unless changed later:
 - Crowbot already depends on transaction/category semantics, so schema changes need a deliberate future compatibility plan even if chat is deferred.
 - Permanent raw SMS retention increases privacy and schema design pressure, so message storage needs a clear purpose and boundary.
 - Suggestion behavior is in v1 scope, so transaction, recipient, and category relationships need to support lightweight inference without depending on chat.
+- Production migration now matters more than local architecture cleanup, so migration correctness and repeatability are the primary delivery risks.
 
 ## Implementation Strategy For The Rewrite
 
@@ -238,6 +260,11 @@ These are now active defaults unless changed later:
    - persistence access
 6. Add Jest coverage around the new route contracts and service behavior.
 7. Rewrite frontend pages only after backend contracts stop moving.
+
+Implementation priority update:
+
+- With the backend rewrite and internal API boundary now in place, the next priority is production migration readiness rather than service/repository layering.
+- Repository/data-access extraction remains desirable, but it is explicitly deferred until the backend is operating correctly against the migrated rewrite database.
 
 Recommended backend delivery order:
 
@@ -268,9 +295,9 @@ Where possible, existing API tests should be used as reference behavior, not cop
 
 ## Remaining Open Design Item
 
-One decision is still intentionally open because you marked it as unsure:
+One product-model decision is still intentionally open:
 
-- Should accounts or payment instruments become first-class entities in backend v1, or should the first rewrite keep them as transaction-level attributes and revisit normalization later?
+- Should accounts or payment instruments become first-class entities in backend v1, or should the rewrite continue to keep them as transaction-level attributes and revisit normalization later?
 
 Current recommendation:
 
@@ -370,94 +397,145 @@ This section records what has already been done in the backend rewrite branch so
 - Service-level/domain-level tests are thinner than originally intended; most coverage today is route-level.
 - `next.config.ts` still uses `images.domains`, which Next 16 warns about during build.
 
-## Migration Validation Status
+## Migration And Deployment Status
 
-This section records the migration-validation tooling that now exists for local rewrite verification.
+This section records the migration tooling and the completed production rewrite migration.
 
 ### Implemented Migration Tooling
 
-- Added export/import tooling under `scripts/` for one-user legacy-to-rewrite database migration validation:
+- Added full-database export/import tooling under `scripts/`:
   - `rewrite_migration_lib.py`
   - `export-rewrite-source.py`
   - `import-rewrite-target.py`
-  - `migrate-rewrite-user.ps1`
+  - `migrate-rewrite-production.ps1`
+  - `migrate-rewrite-production-inplace.ps1`
+  - `reset-production-public-schema.py`
   - `setup-raspi-rewrite-db.ps1`
   - `set-rewrite-db-env.py`
-- Added ignore rules for local migration artifacts:
-  - `/scripts/data/`
-  - `__pycache__/`
-- The migration tooling currently:
-  - exports one legacy user by email from the source database in `.env`
+- Added local migration artifact ignore rules for `/scripts/data/` and `__pycache__/`.
+- The migration tooling now:
+  - exports all legacy users and their categories, subcategories, and transactions
   - creates deterministic recipient and recipient-identifier rows from legacy transaction data
   - maps legacy `input_mode` to rewrite `source`
   - maps legacy transaction fields onto rewrite transaction columns
   - migrates legacy `raw_message` values into rewrite `raw_message`
-  - migrates legacy `lt_token` into rewrite `device_token`
+  - migrates legacy `lt_token` values into rewrite `device_token`
   - resets sequences after explicit ID inserts
-  - updates local `.env.local` to point the backend at the rewrite test database
+  - writes `verification.json` and fails if count or timestamp checks fail
 
-### Local Validation Run Completed
+### Raspberry Pi Full Dry Run Completed
 
-- Provisioned a dedicated Postgres 16 container on the Raspberry Pi reachable over Tailscale.
-- Pushed the current Prisma schema into that database with `prisma db push`.
-- Regenerated the rewrite Prisma client against the current schema.
-- Exported and imported one real legacy user successfully for backend validation.
-- Verified the backend locally against the migrated rewrite database.
+- Provisioned and force-reset a dedicated Postgres 16 container on the Raspberry Pi reachable over Tailscale.
+- Ran a full production-data export/import dry run against the fresh rewrite target.
+- Verified all expected counts and the locked timestamp sample before touching production.
 
-### Validated Results
+### Production Migration Completed
 
-- Imported counts for the validated user:
-  - `user`: 1
-  - `category`: 4
-  - `subcategory`: 16
-  - `recipient`: 1067
-  - `recipient_identifier`: 1369
-  - `transaction`: 3126
-  - `raw_message`: 1234
-  - `device_token`: 1
-- Referential integrity checks passed for:
-  - `transaction -> recipient`
-  - `raw_message -> transaction`
-  - `subcategory -> category`
-- Backend smoke testing against the migrated rewrite database looked correct.
+- Created final production export at `scripts/data/production-final-export-20260613-184313`.
+- Reset the existing production managed Postgres `public` schema.
+- Prisma `migrate deploy` could not be used against the pooled production URL during the cutover, so the rewrite baseline SQL was applied directly.
+- Imported the final production export into the rewrite schema.
+- Deployed the rewrite backend successfully.
+- Confirmed a post-deploy transaction categorization write landed in production:
+  - transaction `4881`
+  - category `Shopping`
+  - subcategory `Others`
 
-### Current Limits Of This Tooling
+### Production Verification Results
 
-- The workflow is intentionally scoped to one-user validation, not bulk production migration.
-- It assumes the source database is the current legacy schema from `.env`.
-- It uses `prisma db push` for empty rewrite test databases and does not solve the long-term migration-history problem.
-- It does not yet include production-grade dry-run reporting, resumability, or rollback orchestration.
-- It does not yet migrate all users or provide a staged cutover workflow.
+- Final migrated production counts:
+  - `user`: 8
+  - `category`: 28
+  - `subcategory`: 112
+  - `recipient`: 1360
+  - `recipient_identifier`: 1686
+  - `transaction`: 3840
+  - `raw_message`: 1625
+  - `device_token`: 3
+- Timestamp sample verification:
+  - transaction `4878`
+  - source timestamp: `2026-06-12T16:50:34.186000`
+  - migrated instant: `2026-06-12T16:50:34.186000+00:00`
+  - rendered IST: `2026-06-12T22:20:34.186000+05:30`
+- Production now contains only the rewrite schema tables:
+  - `category`
+  - `device_token`
+  - `raw_message`
+  - `recipient`
+  - `recipient_identifier`
+  - `subcategory`
+  - `transaction`
+  - `user`
+
+### Mobile SMS Ingestion Contract
+
+- Mobile clients should send SMS payloads to `POST /api/imports/sms`.
+- Auth header format is `Authorization: Token <device-token>`.
+- Request body shape is:
+
+```json
+{
+  "data": {
+    "message": "<full SMS text>"
+  },
+  "metadata": {
+    "location": null
+  }
+}
+```
+
+- The removed legacy endpoint `POST /api/transactions/sms` should no longer be used.
+
+## Timestamp Migration Decision
+
+This section records the current timestamp interpretation decision so the migration logic does not drift later.
+
+### Decision
+
+- Legacy `transaction.timestamp` values should be treated as UTC-semantic timestamps even though the legacy column type is `timestamp without time zone`.
+- Rewrite `transaction.timestamp` should remain `timestamptz` and preserve the same instant.
+- UI rendering should continue to convert stored instants into `Asia/Kolkata` for display.
+
+### Why This Is The Current Recommendation
+
+- A real transaction check (`transaction.id = 4878`) showed:
+  - legacy source `timestamp = 2026-06-12 16:50:34.186`
+  - the app UI displayed the corresponding India wall-clock time around `22:20`
+  - the migrated rewrite DB stores `2026-06-12 22:20:34.186+05:30`
+- This means the existing product behavior was already effectively treating the legacy stored value as a UTC-like instant and formatting it into IST for users.
+- Reinterpreting old legacy values as raw IST wall-clock times during migration would shift user-visible transaction times by `5 hours 30 minutes` relative to what users actually saw in the app.
+
+### Operational Rule
+
+- For migrated legacy transaction timestamps:
+  - interpret the legacy naive timestamp as UTC
+  - write the same instant into rewrite `timestamptz`
+- Apply the same rule to legacy audit timestamps (`createdAt`, `updatedAt`) unless stronger contrary evidence appears.
+- Do not rely on database server timezone defaults during migration.
+- Do not mix UTC and IST interpretation rules across different legacy rows.
+
+### Follow-Up Required
+
+- Lock this behavior in migration tests with known examples, including `transaction.id = 4878`.
+- Add compare-report output that verifies:
+  - source timestamp string
+  - migrated instant
+  - rendered IST display value
+- Document the same rule in the final production migration runbook.
 
 ## Next Steps
 
 The next implementation steps should be:
 
-1. Generalize the migration tooling from one-user validation to production-grade migration planning.
-   - support multi-user or full-database export/import
-   - produce preflight counts and post-import verification reports
-   - define how to handle retries and idempotency
-
-2. Resolve the rewrite migration-history strategy.
-   - decide whether to squash/reset Prisma migrations for the rewrite baseline
-   - ensure a clean empty-database bootstrap path exists without relying on conflicting historical migrations
-
-3. Add focused tests around the migration transform rules.
-   - recipient resolution and identifier canonicalization
-   - `input_mode -> source` mapping
-   - raw-message migration behavior
-   - legacy token to device-token migration behavior
-
-4. Introduce repository/data-access separation for the highest-value runtime modules first.
-   - start with `transactions`
-   - then `categories`
-   - then `device-tokens`
-
-5. Add focused service/domain tests for core backend behavior outside the migration path.
+1. Add focused service/domain tests for core backend behavior.
    - SMS import persistence rules
    - category/subcategory ownership validation
    - suggestion behavior
 
-6. Convert `next.config.ts` to `images.remotePatterns`.
+2. Convert `next.config.ts` to `images.remotePatterns`.
    - keep the existing Google image host support
    - remove the Next 16 build warning
+
+Deferred until after the backend is running cleanly on the migrated rewrite database:
+
+- repository/data-access separation for runtime modules such as `transactions`, `categories`, and `device-tokens`

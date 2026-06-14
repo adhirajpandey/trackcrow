@@ -15,6 +15,7 @@
 - `pnpm lint`: run Next.js/ESLint checks.
 - Prisma workflow examples:
   - `pnpm dlx prisma migrate dev --name <change>`
+  - `pnpm dlx prisma migrate deploy`
   - `pnpm dlx prisma generate`
 
 ## Coding Style & Naming Conventions

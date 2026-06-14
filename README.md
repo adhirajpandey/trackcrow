@@ -20,7 +20,11 @@ A Next.js application for modern AI-powered expense tracking.
 ## Getting Started
 
 ```bash
+pnpm install
+pnpm exec prisma migrate deploy
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
+
+For schema changes after the rewrite baseline, create normal Prisma migrations and apply them with `pnpm exec prisma migrate deploy` in tracked environments.
