@@ -6,7 +6,7 @@ import os
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -29,6 +29,23 @@ DEFAULT_TARGET_CONTAINER = "trackcrow-rewrite-postgres"
 DEFAULT_TARGET_VOLUME = "trackcrow-rewrite-postgres-data"
 LEGACY_DEVICE_TOKEN_LABEL = "Migrated legacy token"
 LEGACY_RAW_MESSAGE_PARSER = "legacy-import"
+IST_TIMEZONE = timezone(timedelta(hours=5, minutes=30), name="Asia/Kolkata")
+LEGACY_EXPORT_TABLES = [
+    "user",
+    "category",
+    "subcategory",
+    "transaction",
+]
+REWRITE_IMPORT_TABLES = [
+    "user",
+    "category",
+    "subcategory",
+    "recipient",
+    "recipient_identifier",
+    "transaction",
+    "raw_message",
+    "device_token",
+]
 
 
 class MigrationError(Exception):
@@ -92,16 +109,37 @@ def json_default(value: Any) -> Any:
 
 
 def write_json(path: Path, payload: Any) -> None:
-    path.write_text(json.dumps(payload, indent=2, default=json_default), encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, default=json_default),
+        encoding="utf-8",
+    )
 
 
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def fetch_all(cursor, query: str, params: tuple[Any, ...]) -> list[dict[str, Any]]:
+def fetch_all(cursor, query: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
     cursor.execute(query, params)
     return list(cursor.fetchall())
+
+
+def count_rows(cursor, table_name: str) -> int:
+    cursor.execute(
+        sql.SQL('SELECT COUNT(*) FROM {table_name}').format(
+            table_name=sql.Identifier(table_name),
+        )
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return 0
+    if isinstance(row, dict):
+        return int(next(iter(row.values())))
+    return int(row[0])
+
+
+def count_tables(cursor, table_names: list[str]) -> dict[str, int]:
+    return {table_name: count_rows(cursor, table_name) for table_name in table_names}
 
 
 def normalize_value(value: str) -> str:
@@ -137,6 +175,22 @@ def coerce_datetime(value: Any) -> datetime | None:
         normalized = value.replace("Z", "+00:00")
         return datetime.fromisoformat(normalized)
     raise MigrationError(f"Unsupported datetime value: {value!r}")
+
+
+def legacy_timestamp_to_utc(value: Any) -> datetime | None:
+    coerced = coerce_datetime(value)
+    if coerced is None:
+        return None
+    if coerced.tzinfo is None:
+        return coerced.replace(tzinfo=timezone.utc)
+    return coerced.astimezone(timezone.utc)
+
+
+def render_ist(value: Any) -> str | None:
+    coerced = legacy_timestamp_to_utc(value)
+    if coerced is None:
+        return None
+    return coerced.astimezone(IST_TIMEZONE).isoformat()
 
 
 def stable_uuid(namespace: str, *parts: Any) -> str:
@@ -185,14 +239,38 @@ def update_env_local_database_url(target_url: str) -> None:
     LOCAL_ENV_FILE.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 
 
-def db_push_command(target_url: str) -> str:
-    escaped = target_url.replace("'", "''")
-    return f"$env:DATABASE_URL='{escaped}'; pnpm exec prisma db push --skip-generate"
-
-
 def prisma_generate_command(target_url: str) -> str:
     escaped = target_url.replace("'", "''")
     return f"$env:DATABASE_URL='{escaped}'; pnpm exec prisma generate"
+
+
+def prisma_migrate_deploy_command(target_url: str) -> str:
+    escaped = target_url.replace("'", "''")
+    return f"$env:DATABASE_URL='{escaped}'; pnpm exec prisma migrate deploy"
+
+
+def format_counts(label: str, counts: dict[str, int]) -> dict[str, Any]:
+    return {"label": label, "counts": counts}
+
+
+def build_timestamp_sample(transactions: list[dict[str, Any]]) -> dict[str, Any] | None:
+    target_transaction = next(
+        (row for row in transactions if int(row["id"]) == 4878),
+        None,
+    )
+    if target_transaction is None:
+        return None
+    source_timestamp = target_transaction["timestamp"]
+    return {
+        "transactionId": 4878,
+        "sourceTimestamp": (
+            source_timestamp.isoformat()
+            if isinstance(source_timestamp, datetime)
+            else str(source_timestamp)
+        ),
+        "migratedInstant": legacy_timestamp_to_utc(source_timestamp).isoformat(),
+        "renderedIst": render_ist(source_timestamp),
+    }
 
 
 @dataclass
@@ -220,10 +298,10 @@ class LegacyRecipientIdentifier:
 
 
 def build_recipient_graph(
-    user_uuid: str, transactions: list[dict[str, Any]]
+    transactions: list[dict[str, Any]]
 ) -> tuple[list[LegacyRecipient], list[LegacyRecipientIdentifier], dict[int, int]]:
-    recipients_by_name: dict[str, LegacyRecipient] = {}
-    identifiers_by_key: dict[tuple[str, str], LegacyRecipientIdentifier] = {}
+    recipients_by_name: dict[tuple[str, str], LegacyRecipient] = {}
+    identifiers_by_key: dict[tuple[str, str, str], LegacyRecipientIdentifier] = {}
     transaction_recipient_ids: dict[int, int] = {}
     recipient_id = 1
     identifier_id = 1
@@ -231,12 +309,15 @@ def build_recipient_graph(
     ordered_transactions = sorted(
         transactions,
         key=lambda row: (
-            coerce_datetime(row["createdAt"]) or datetime.min,
+            row["user_uuid"],
+            legacy_timestamp_to_utc(row["createdAt"])
+            or datetime.min.replace(tzinfo=timezone.utc),
             row["id"],
         ),
     )
 
     for transaction in ordered_transactions:
+        user_uuid = transaction["user_uuid"]
         recipient_raw = (transaction["recipient"] or "").strip()
         if not recipient_raw:
             raise MigrationError(f"Transaction {transaction['id']} has empty recipient")
@@ -244,16 +325,19 @@ def build_recipient_graph(
         normalized_name = normalize_value(display_name)
         normalized_raw = normalize_value(recipient_raw)
         identifier_kind = detect_identifier_kind(recipient_raw)
-        identifier_key = (identifier_kind, normalized_raw)
-        created_at = coerce_datetime(transaction["createdAt"]) or datetime.utcnow()
-        updated_at = coerce_datetime(transaction["updatedAt"]) or created_at
+        recipient_key = (user_uuid, normalized_name)
+        identifier_key = (user_uuid, identifier_kind, normalized_raw)
+        created_at = legacy_timestamp_to_utc(transaction["createdAt"]) or datetime.now(
+            timezone.utc
+        )
+        updated_at = legacy_timestamp_to_utc(transaction["updatedAt"]) or created_at
 
         identifier = identifiers_by_key.get(identifier_key)
         if identifier:
             transaction_recipient_ids[transaction["id"]] = identifier.recipient_id
             continue
 
-        recipient = recipients_by_name.get(normalized_name)
+        recipient = recipients_by_name.get(recipient_key)
         if recipient is None:
             recipient = LegacyRecipient(
                 id=recipient_id,
@@ -264,7 +348,7 @@ def build_recipient_graph(
                 created_at=created_at,
                 updated_at=updated_at,
             )
-            recipients_by_name[normalized_name] = recipient
+            recipients_by_name[recipient_key] = recipient
             recipient_id += 1
         else:
             if created_at < recipient.created_at:
@@ -323,5 +407,5 @@ def chunked_insert(
     if not rows:
         return
     column_sql = ", ".join(f'"{column}"' for column in columns)
-    sql = f'INSERT INTO "{table_name}" ({column_sql}) VALUES %s'
-    execute_values(cursor, sql, rows, page_size=page_size)
+    query = f'INSERT INTO "{table_name}" ({column_sql}) VALUES %s'
+    execute_values(cursor, query, rows, page_size=page_size)

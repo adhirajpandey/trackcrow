@@ -5,7 +5,8 @@ param(
   [string]$DatabaseName = "trackcrow_rewrite",
   [string]$DatabaseUser = "trackcrow",
   [int]$Port = 55432,
-  [string]$Password = ""
+  [string]$Password = "",
+  [switch]$ForceRecreate
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,6 +18,12 @@ if (-not $passwordProvided) {
 
 $sshExe = "C:\Windows\System32\OpenSSH\ssh.exe"
 $containerExists = & $sshExe $SshHost "docker container inspect $ContainerName >/dev/null 2>&1; echo `$?"
+
+if ($ForceRecreate) {
+  & $sshExe $SshHost "docker rm -f $ContainerName >/dev/null 2>&1 || true"
+  & $sshExe $SshHost "docker volume rm -f $VolumeName >/dev/null 2>&1 || true"
+  $containerExists = "1"
+}
 
 if ($containerExists.Trim() -eq "0") {
   if (-not $passwordProvided) {
@@ -34,4 +41,4 @@ if ($containerExists.Trim() -eq "0") {
 $tailscaleIp = (& $sshExe $SshHost "tailscale ip -4").Trim()
 $databaseUrl = "postgresql://${DatabaseUser}:${Password}@${tailscaleIp}:${Port}/${DatabaseName}"
 
-Write-Host $databaseUrl
+Write-Output $databaseUrl
