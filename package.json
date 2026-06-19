@@ -12,14 +12,23 @@
     "test:unit": "jest src/common src/server --runInBand"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@prisma/client": "^6.19.2",
     "@prisma/extension-accelerate": "^3.0.1",
+    "@tailwindcss/postcss": "^4.3.1",
+    "@tanstack/react-query": "^5.101.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "lucide-react": "^1.21.0",
     "next": "^16.1.6",
     "next-auth": "^4.24.13",
     "prisma": "^6.19.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-hook-form": "^7.79.0",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {

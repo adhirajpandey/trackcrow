@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "TrackCrow",
-  description: "TrackCrow is under active rewrite.",
+  description: "Personal spending intelligence for transaction-heavy lives.",
 };
 
 export default function RootLayout({
