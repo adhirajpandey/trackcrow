@@ -381,21 +381,29 @@ This section records what has already been done in the backend rewrite branch so
 - Moved page-level reads and server-action mutations onto the internal API boundary.
 - Removed stale generated Prisma output from git tracking and updated ignore rules.
 - Fixed the repo lint entry for ESLint 9 / Next 16.
-- Added route-level Jest coverage for the rewritten backend routes, including subcategory routes.
+- Added route-level Jest coverage for the rewritten backend routes, including subcategory routes, during the initial backend rewrite pass.
+- Replaced most rewritten route-test coverage with focused service-level Jest coverage for:
+  - `categories`
+  - `dashboard`
+  - `device-tokens`
+  - `imports`
+  - `transactions`
 - Verified `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm exec jest --runInBand`, and `pnpm build` on the rewrite branch.
 
 ### Verified So Far
 
-- Rewritten API route tests are passing.
+- Core rewritten service tests are passing for categories, dashboard, device tokens, imports, and transactions.
 - SMS parser tests are passing.
-- The rewritten backend route surface is functional in test coverage.
+- The rewritten backend route surface is functional, with controller/service layering in place behind `/api/*`.
+- `next.config.ts` now uses `images.remotePatterns` for the Google-hosted profile images used by auth.
 
 ### What Is Still Missing Relative To The Original Plan
 
+- Some backend cleanup items are being deferred deliberately so frontend rewrite work can start against the stabilized API surface instead of waiting for lower-priority backend refinements.
 - Prisma access still lives directly inside service modules instead of a separate repository/data-access layer.
 - The app still uses server actions as thin UI adapters; that is acceptable for now, but it is not the final external-client story.
-- Service-level/domain-level tests are thinner than originally intended; most coverage today is route-level.
-- `next.config.ts` still uses `images.domains`, which Next 16 warns about during build.
+- Service-level/domain-level coverage still has gaps around recipient resolution, user bootstrap/auth flows, migration invariants, and some edge-case analytics/suggestion behavior.
+- The migration/deployment knowledge is captured in this document and scripts, but not yet condensed into a single canonical production runbook.
 
 ## Migration And Deployment Status
 
@@ -527,15 +535,30 @@ This section records the current timestamp interpretation decision so the migrat
 
 The next implementation steps should be:
 
-1. Add focused service/domain tests for core backend behavior.
-   - SMS import persistence rules
-   - category/subcategory ownership validation
-   - suggestion behavior
+1. Refresh this rewrite document whenever implementation status changes so it stays usable as the source of truth.
+   - remove stale "pending" items once they land
+   - keep the completed-vs-remaining sections aligned with git history
 
-2. Convert `next.config.ts` to `images.remotePatterns`.
-   - keep the existing Google image host support
-   - remove the Next 16 build warning
+2. Add the remaining focused service/domain and migration tests.
+   - recipient resolution behavior
+   - user bootstrap/auth service behavior
+   - timestamp migration invariants and verification output
+   - dashboard/suggestion edge cases beyond the current representative coverage
+
+3. Turn the migration and deployment notes into a single production runbook.
+   - export/import procedure
+   - baseline SQL application path
+   - verification checklist
+   - timestamp interpretation rule
+   - failure and rollback handling
+
+4. Run a post-migration production hardening pass.
+   - SMS import behavior under production-like inputs
+   - device-token lifecycle and revocation behavior
+   - transaction/category/subcategory ownership enforcement
+   - logging and failure-path review
 
 Deferred until after the backend is running cleanly on the migrated rewrite database:
 
+- This deferral is voluntary. These items are not current blockers for the frontend rewrite, and they are being postponed intentionally to keep work focused on the next highest-value phase.
 - repository/data-access separation for runtime modules such as `transactions`, `categories`, and `device-tokens`
