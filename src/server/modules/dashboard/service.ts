@@ -17,6 +17,19 @@ function buildDateFilter(input: { startDate?: Date; endDate?: Date }) {
   };
 }
 
+function buildRawMessageDateFilter(input: { startDate?: Date; endDate?: Date }) {
+  return {
+    ...(input.startDate || input.endDate
+      ? {
+          receivedAt: {
+            ...(input.startDate ? { gte: input.startDate } : {}),
+            ...(input.endDate ? { lte: input.endDate } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
 export async function getDashboardSummary(
   input: DashboardRangeInput
 ): Promise<
@@ -165,6 +178,97 @@ export async function getSpendingByPeriod(
     );
   } catch (error) {
     logger.error("getSpendingByPeriod - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function getImportHealth(
+  input: DashboardRangeInput
+): Promise<
+  ServiceResult<
+    {
+      parsedCount: number;
+      failedCount: number;
+      unparseableCount: number;
+    },
+    "INTERNAL_ERROR"
+  >
+> {
+  const where = {
+    userUuid: input.userUuid,
+    ...buildRawMessageDateFilter(input),
+  };
+
+  try {
+    const [parsedCount, failedCount, unparseableCount] = await Promise.all([
+      prisma.rawMessage.count({ where: { ...where, parseStatus: "PARSED" } }),
+      prisma.rawMessage.count({ where: { ...where, parseStatus: "FAILED" } }),
+      prisma.rawMessage.count({ where: { ...where, parseStatus: "UNPARSEABLE" } }),
+    ]);
+
+    return ok({ parsedCount, failedCount, unparseableCount });
+  } catch (error) {
+    logger.error("getImportHealth - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function getRecentLargeTransactions(
+  input: DashboardRangeInput & { take?: number }
+): Promise<
+  ServiceResult<
+    Array<{
+      uuid: string;
+      recipient: string;
+      category: string | null;
+      amount: number;
+      timestamp: string;
+      source: string;
+    }>,
+    "INTERNAL_ERROR"
+  >
+> {
+  const where = {
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
+  };
+
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where,
+      orderBy: [{ amount: "desc" }, { timestamp: "desc" }],
+      take: input.take ?? 5,
+      select: {
+        uuid: true,
+        amount: true,
+        timestamp: true,
+        source: true,
+        recipientName: true,
+        recipientRaw: true,
+        recipient: { select: { displayName: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    return ok(
+      transactions.map((transaction) => ({
+        uuid: transaction.uuid,
+        recipient:
+          transaction.recipientName ??
+          transaction.recipient?.displayName ??
+          transaction.recipientRaw,
+        category: transaction.category?.name ?? null,
+        amount: Number(transaction.amount),
+        timestamp: transaction.timestamp.toISOString(),
+        source: transaction.source,
+      }))
+    );
+  } catch (error) {
+    logger.error("getRecentLargeTransactions - Failed", error as Error, {
       userUuid: input.userUuid,
     });
     return fail("INTERNAL_ERROR");

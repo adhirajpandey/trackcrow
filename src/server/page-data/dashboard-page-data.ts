@@ -5,6 +5,8 @@ import { z } from "zod";
 import { requirePageSessionUser } from "@/server/auth/session";
 import {
   getDashboardSummary,
+  getImportHealth,
+  getRecentLargeTransactions,
   getSpendingByCategory,
   getSpendingByPeriod,
 } from "@/server/modules/dashboard/service";
@@ -34,6 +36,21 @@ export type DashboardPeriodSpendDto = {
   transactionCount: number;
 };
 
+export type DashboardImportHealthDto = {
+  parsedCount: number;
+  failedCount: number;
+  unparseableCount: number;
+};
+
+export type DashboardRecentTransactionDto = {
+  uuid: string;
+  recipient: string;
+  category: string | null;
+  amount: number;
+  timestamp: string;
+  source: string;
+};
+
 export type DashboardPageData = {
   status: "ready" | "error";
   message: string | null;
@@ -44,8 +61,10 @@ export type DashboardPageData = {
     image: string | null;
   };
   summary: DashboardSummaryDto;
+  importHealth: DashboardImportHealthDto;
   spendingByCategory: DashboardCategorySpendDto[];
   spendingByPeriod: DashboardPeriodSpendDto[];
+  recentLargeTransactions: DashboardRecentTransactionDto[];
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -56,6 +75,12 @@ const emptySummary: DashboardSummaryDto = {
   categorizedCount: 0,
   uncategorizedCount: 0,
   averageSpend: 0,
+};
+
+const emptyImportHealth: DashboardImportHealthDto = {
+  parsedCount: 0,
+  failedCount: 0,
+  unparseableCount: 0,
 };
 
 function firstParam(value: string | string[] | undefined) {
@@ -102,8 +127,10 @@ function emptyDashboardData(
     rangeLabel,
     user,
     summary: emptySummary,
+    importHealth: emptyImportHealth,
     spendingByCategory: [],
     spendingByPeriod: [],
+    recentLargeTransactions: [],
   };
 }
 
@@ -128,24 +155,38 @@ export async function getDashboardPageData(
     startDate: parseDateInput(normalizedSearch.startDate),
     endDate: parseDateInput(normalizedSearch.endDate),
   };
+  const rangeInput = {
+    userUuid: sessionUser.userUuid,
+    ...dateRange,
+  };
 
-  const [summary, spendingByCategory, spendingByPeriod] = await Promise.all([
-    getDashboardSummary({
-      userUuid: sessionUser.userUuid,
-      ...dateRange,
-    }),
-    getSpendingByCategory({
-      userUuid: sessionUser.userUuid,
-      ...dateRange,
-    }),
+  const [
+    summary,
+    spendingByCategory,
+    spendingByPeriod,
+    importHealth,
+    recentLargeTransactions,
+  ] = await Promise.all([
+    getDashboardSummary(rangeInput),
+    getSpendingByCategory(rangeInput),
     getSpendingByPeriod({
-      userUuid: sessionUser.userUuid,
-      ...dateRange,
+      ...rangeInput,
       granularity: "month",
+    }),
+    getImportHealth(rangeInput),
+    getRecentLargeTransactions({
+      ...rangeInput,
+      take: 5,
     }),
   ]);
 
-  if (!summary.ok || !spendingByCategory.ok || !spendingByPeriod.ok) {
+  if (
+    !summary.ok ||
+    !spendingByCategory.ok ||
+    !spendingByPeriod.ok ||
+    !importHealth.ok ||
+    !recentLargeTransactions.ok
+  ) {
     return emptyDashboardData(
       user,
       rangeLabel,
@@ -159,7 +200,9 @@ export async function getDashboardPageData(
     rangeLabel,
     user,
     summary: summary.data,
+    importHealth: importHealth.data,
     spendingByCategory: spendingByCategory.data,
     spendingByPeriod: spendingByPeriod.data,
+    recentLargeTransactions: recentLargeTransactions.data,
   };
 }
