@@ -33,3 +33,6 @@ __pycache__/
 
 # local migration exports
 /scripts/data/
+
+# browser verification artifacts
+.playwright-mcp/
