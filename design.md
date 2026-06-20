@@ -1,255 +1,253 @@
+# TrackCrow Calm Ledger Design System
+
 ## Overview
 
-ClickHouse's marketing surface is the highest-contrast interface in the database / data-platform category. The base atmosphere is **near-pure black canvas** (`{colors.canvas}` — #0a0a0a) with **electric yellow** (`{colors.primary}` — #faff69) as the singular brand voltage. The yellow handles every primary CTA, every stat-callout number, every "GET STARTED" badge — used scarcely on individual elements but generously on full-bleed yellow CTA cards. White typography in confident weight-700 sans-serif anchors the editorial body.
+TrackCrow is a personal expense tracking product for users who capture spending from SMS, review imported transactions, correct merchant/category details, and read simple spending summaries. The interface should feel calm, trustworthy, and built for repeated financial review rather than marketing spectacle.
 
-The yellow + black pairing is what makes ClickHouse instantly recognizable. Where Snowflake uses cool blue gradients and Databricks uses red + slate, ClickHouse leans hard into one electric yellow that does all the brand work. Code blocks, terminal output, and product UI fragments embed directly in dark `{colors.surface-card}` (#1a1a1a) cards across every page.
+The design direction is **Calm Ledger**: dark-only, data-dense, restrained, and privacy-conscious. TrackCrow should not borrow the visual language of database tooling, neon developer brands, or generic crypto finance dashboards. It should feel like a quiet transaction workspace: clear numbers, stable surfaces, readable tables, and purposeful status color.
 
-Type voice runs **Inter** at confident weights — 700 for display headlines (with negative letter-spacing -1 to -2.5px), 600 for sub-titles and buttons, 400 for body. The system has no display-serif counter-voice; everything is one geometric humanist sans, scaled and weighted for hierarchy.
-
-**Key Characteristics:**
-- Near-pure black canvas (`{colors.canvas}` — #0a0a0a) with white type. The system has no light-mode marketing surface.
-- Electric yellow primary (`{colors.primary}` — #faff69). Used on primary CTAs, large stat-callout numbers ("2.8k+", "74k+"), and full-bleed yellow CTA bands.
-- Inter at weight 700 for display, weight 600 for sub-titles + buttons, weight 400 for body. No serif counterpoint.
-- Dark surface cards (`{colors.surface-card}` — #1a1a1a) for feature cards, code windows, and product mockups. Cards barely lighter than canvas — color-block contrast is subtle.
-- Code blocks render in JetBrains Mono inside `{colors.surface-card}`. SQL syntax-highlighted in muted blues / yellows / grays.
-- Stat numbers in yellow + sans-700 + huge size carry the credibility moment ("779+", "2.8k+", "47k+" community / contributor / star counts).
-- Border radius is hierarchical: `{rounded.md}` (8px) for buttons, `{rounded.lg}` (12px) for content cards. No pill except in tag badges.
-- Section rhythm `{spacing.section}` (96px) between major editorial bands.
+**Key characteristics:**
+- Deep ink charcoal page background, not pure black.
+- Ledger green primary color for brand identity, constructive actions, and selected navigation.
+- Amber review accent for SMS imports, uncategorized items, pending corrections, and attention states.
+- Muted blue information accent for neutral analytics, links, and non-urgent system feedback.
+- Red destructive color reserved for failed imports, deletes, revokes, and irreversible actions.
+- Layered graphite/slate surfaces with restrained borders and minimal shadow.
+- Dense but readable spacing for dashboards, transaction tables, and settings screens.
+- Semantic tokens only in app code, with raw color values contained in the token layer.
 
 ## Colors
 
-### Brand & Accent
-- **Primary (Electric Yellow)** (`{colors.primary}` — #faff69): The signature brand color. All primary CTA backgrounds, large stat-callout numbers, full-bleed yellow CTA cards. The yellow is the brand.
-- **Primary Active** (`{colors.primary-active}` — #e6eb52): Press / hover-darker variant.
-- **Primary Disabled** (`{colors.primary-disabled}` — #3a3a1f): Desaturated dark-yellow on dark canvas.
+### Brand And Semantic Tokens
 
-### Surface
-- **Canvas** (`{colors.canvas}` — #0a0a0a): The default page floor. Near-pure black.
-- **Surface Soft** (`{colors.surface-soft}` — #121212): Section dividers, very-soft band tints.
-- **Surface Card** (`{colors.surface-card}` — #1a1a1a): Feature cards, code windows, product mockups, pricing tier cards.
-- **Surface Elevated** (`{colors.surface-elevated}` — #242424): Nested cards inside larger dark cards.
-- **Surface Yellow Band** (`{colors.surface-yellow-band}` — #faff69): The yellow CTA card / band fill — same hex as primary.
-- **Hairline** (`{colors.hairline}` — #2a2a2a): 1px borders on cards.
-- **Hairline Strong** (`{colors.hairline-strong}` — #3a3a3a): Heavier divider on input underlines and emphasis.
+| Token | Value | Use |
+|---|---:|---|
+| `{colors.background}` | `#0f1411` | App canvas and page floor. Deep ink charcoal with a slight green cast. |
+| `{colors.foreground}` | `#edf5ef` | Primary text on dark surfaces. |
+| `{colors.card}` | `#17201b` | Standard panels, metric tiles, table containers, and forms. |
+| `{colors.card-foreground}` | `#edf5ef` | Text on card surfaces. |
+| `{colors.popover}` | `#1b261f` | Menus, dialogs, sheets, and dropdowns. |
+| `{colors.popover-foreground}` | `#edf5ef` | Text on popovers. |
+| `{colors.primary}` | `#68d391` | Ledger green: primary actions, active navigation, selected rows, positive brand emphasis. |
+| `{colors.primary-active}` | `#7ee6a5` | Primary hover/pressed state. |
+| `{colors.primary-foreground}` | `#07110b` | Text/icons on primary backgrounds. |
+| `{colors.secondary}` | `#223027` | Secondary buttons, subdued active states, elevated controls. |
+| `{colors.secondary-foreground}` | `#d7e5dc` | Text/icons on secondary surfaces. |
+| `{colors.muted}` | `#121a16` | Sidebar panels, subtle bands, skeleton bases. |
+| `{colors.muted-foreground}` | `#9fb2a7` | Secondary labels, helper text, timestamps, empty-state body. |
+| `{colors.accent}` | `#f2b84b` | Review amber for import attention, uncategorized badges, and pending states. |
+| `{colors.accent-foreground}` | `#1a1204` | Text/icons on amber accent backgrounds. |
+| `{colors.info}` | `#79a8d8` | Neutral analytics, informational links, chart highlights. |
+| `{colors.destructive}` | `#ff6b6b` | Failed states, deletes, revokes, irreversible confirmations. |
+| `{colors.border}` | `#2b3a31` | Standard borders and dividers. |
+| `{colors.input}` | `#31433a` | Input borders and control outlines. |
+| `{colors.ring}` | `#68d391` | Focus rings and keyboard-visible outlines. |
 
-### Text
-- **Ink / On Dark** (`{colors.on-dark}` — #ffffff): All headline and primary text.
-- **Body** (`{colors.body}` — #cccccc): Default running-text color.
-- **Body Strong** (`{colors.body-strong}` — #e6e6e6): Emphasized paragraphs.
-- **Muted** (`{colors.muted}` — #888888): Footer links, captions, breadcrumbs.
-- **Muted Soft** (`{colors.muted-soft}` — #5a5a5a): Tertiary text — fine print.
-- **On Primary / On Yellow** (`{colors.on-primary}` / `{colors.on-yellow}` — #0a0a0a): Black text on yellow CTAs and yellow CTA bands. The high-contrast yellow + black combo is the brand action signal.
+### Color Roles
 
-### Semantic / Accent
-- **Accent Emerald** (`{colors.accent-emerald}` — #22c55e): Success states, "active" status indicators in product UI.
-- **Accent Rose** (`{colors.accent-rose}` — #ef4444): Error states, "down" indicators.
-- **Accent Blue** (`{colors.accent-blue}` — #3b82f6): Info states, code-syntax highlighting.
+- Use ledger green for the single primary action on a screen and for selected navigation. Do not use green for every positive number.
+- Use amber when a user needs to review or correct imported data. This includes SMS parsing uncertainty, uncategorized transactions, and pending category suggestions.
+- Use muted blue for informational chart series, links, or system context that is not a warning.
+- Use red only for errors, failed imports, destructive actions, and revoked/expired credentials.
+- Do not introduce raw hex values inside feature components. Add or adjust semantic tokens first.
 
 ## Typography
 
-### Font Family
-The system runs **Inter** for everything — display, body, navigation, buttons, captions. **JetBrains Mono** handles code blocks. The fallback stack walks `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`.
+TrackCrow uses the existing sans and mono stacks:
 
-The single-family approach is deliberate: Inter at weight 700 + 600 + 400 covers the entire hierarchy without needing a serif or display counter-voice. The geometric humanist character of Inter at confident bold weight gives ClickHouse a precise, engineered feel that matches the database's performance-first positioning.
+- Sans: `Inter, ui-sans-serif, system-ui, sans-serif`
+- Mono: `"JetBrains Mono", "SFMono-Regular", Consolas, monospace`
 
-### Hierarchy
+The product is data-first, so type should prioritize legibility and stable numeric scanning over dramatic headlines.
 
-| Token | Size | Weight | Line Height | Letter Spacing | Use |
-|---|---|---|---|---|---|
-| `{typography.display-xl}` | 72px | 700 | 1.05 | -2.5px | Homepage h1 ("The leading database for AI") |
-| `{typography.display-lg}` | 56px | 700 | 1.1 | -2px | Section heads |
-| `{typography.display-md}` | 40px | 700 | 1.15 | -1.5px | Sub-section heads, CTA-band heads |
-| `{typography.display-sm}` | 32px | 700 | 1.2 | -1px | Card titles, pricing tier prices |
-| `{typography.title-lg}` | 24px | 700 | 1.3 | -0.3px | Pricing plan names, larger feature titles |
-| `{typography.title-md}` | 18px | 600 | 1.4 | 0 | Card titles, intro paragraphs |
-| `{typography.title-sm}` | 16px | 600 | 1.4 | 0 | Small card titles, list labels |
-| `{typography.stat-display}` | 56px | 700 | 1.0 | -1.5px | Stat callouts ("779+", "47k+") — ALWAYS yellow |
-| `{typography.body-md}` | 16px | 400 | 1.55 | 0 | Default running-text |
-| `{typography.body-sm}` | 14px | 400 | 1.55 | 0 | Footer body, fine-print |
-| `{typography.caption}` | 13px | 500 | 1.4 | 0 | Badge labels, captions |
-| `{typography.caption-uppercase}` | 12px | 600 | 1.4 | 1.5px | Section labels, "NEW" badges |
-| `{typography.code}` | 14px | 400 | 1.55 | 0 | Code blocks — JetBrains Mono |
-| `{typography.button}` | 14px | 600 | 1.0 | 0 | Standard button labels |
-| `{typography.nav-link}` | 14px | 500 | 1.4 | 0 | Top-nav menu items |
+| Token | Size | Weight | Line Height | Use |
+|---|---:|---:|---:|---|
+| `{typography.page-title}` | 32px | 650-700 | 1.15 | Page headings and marketing H1 on compact pages. |
+| `{typography.section-title}` | 22px | 650 | 1.25 | Dashboard sections and settings groups. |
+| `{typography.card-title}` | 14px | 650 | 1.35 | Metric tile labels, form group titles, table panel titles. |
+| `{typography.body}` | 16px | 400 | 1.6 | Long-form body and explanatory copy. |
+| `{typography.body-sm}` | 14px | 400 | 1.55 | Secondary body text, helper copy, empty states. |
+| `{typography.caption}` | 12px | 500 | 1.4 | Metadata, timestamps, badges, compact labels. |
+| `{typography.caption-uppercase}` | 11px | 650 | 1.35 | Sparse section labels and status eyebrows. |
+| `{typography.amount-lg}` | 32px | 700 | 1.05 | Dashboard totals and large currency values. |
+| `{typography.amount-md}` | 18px | 650 | 1.2 | Transaction row amounts and compact summaries. |
+| `{typography.table}` | 14px | 400-600 | 1.45 | Transaction tables and dense lists. |
+| `{typography.button}` | 14px | 650 | 1.0 | Button labels. |
+| `{typography.code}` | 13px | 400 | 1.55 | Token prefixes, webhook examples, and diagnostics. |
 
-### Principles
-Display weights stay at 700 across all sizes. Negative letter-spacing (-1 to -2.5px) is essential — Inter at weight 700 without negative tracking reads as too wide / Apple-marketing. The tightened tracking gives ClickHouse the precise, engineered feel.
+### Type Principles
 
-Body and labels stay at weights 400 / 500 / 600. The hierarchy is built on size + weight, not on family contrast.
-
-### Note on Font Substitutes
-Inter is open-source and the documented choice. **Söhne** is a close commercial alternative if licensed. **Geist** is another modern alternative.
+- Use tabular numbers for amounts, totals, dates, and counts where layout stability matters.
+- Keep letter spacing at `0` for body, amounts, and table text.
+- Uppercase labels are allowed only for compact metadata; use sparingly.
+- Prefer wrapping important merchant/category text over truncating it. If truncation is unavoidable, expose the full value through a title or detail view.
 
 ## Layout
 
-### Spacing System
-- **Base unit:** 4px.
-- **Tokens:** `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
-- **Section padding:** `{spacing.section}` (96px) between major bands.
-- **Card internal padding:** `{spacing.xl}` (32px) for feature cards, pricing tiers; `{spacing.lg}` (24px) for code-window cards and event cards.
+### Spacing
 
-### Grid & Container
-- **Max content width:** ~1280px centered.
-- **Editorial body:** Single 12-column grid; hero often uses 7/5 split (h1 left, code mockup right).
-- **Feature card grids:** 3-up at desktop, 2-up at tablet, 1-up at mobile.
-- **Pricing grid:** 3-4 up at desktop, 1-up at mobile.
+Use a 4px base scale with predictable product density:
 
-### Whitespace Philosophy
-ClickHouse uses dense, slightly-compressed whitespace appropriate for a developer-tooling brand — generous enough to read editorially, tight enough to feel "engineering-grade" rather than "marketing-soft." Section rhythm at 96px is standard; card internal padding stays at 32px for feature cards.
+| Token | Value | Use |
+|---|---:|---|
+| `{spacing.xs}` | 4px | Icon/text nudges and dense inline gaps. |
+| `{spacing.sm}` | 8px | Related controls, badge spacing. |
+| `{spacing.md}` | 12px | Compact groups and table-cell rhythm. |
+| `{spacing.lg}` | 16px | Default component padding and form spacing. |
+| `{spacing.xl}` | 24px | Card padding and page subsection gaps. |
+| `{spacing.2xl}` | 32px | Page header gaps and major panel separation. |
+| `{spacing.3xl}` | 48px | Marketing section rhythm and large empty states. |
 
-## Elevation & Depth
+### Grid And Containers
+
+- Authenticated app screens use the existing left navigation shell with a max content width appropriate for tables and charts.
+- Dashboard screens should use responsive grids that prioritize metric cards first, then charts, then review queues.
+- Transaction screens should favor table/list density on desktop and stacked review cards on narrow mobile.
+- Settings and token-management screens should use narrower content widths so destructive actions remain deliberate.
+
+## Elevation, Shape, And Texture
+
+TrackCrow should feel layered, not glossy.
 
 | Level | Treatment | Use |
 |---|---|---|
-| Flat | No shadow, no border | Body sections, top nav, hero |
-| Soft hairline | 1px `{colors.hairline}` border | Code-window cards, content cards |
-| Surface card | `{colors.surface-card}` background — no shadow | Feature cards, pricing tiers, event cards |
-| Yellow band | `{colors.primary}` background — no shadow | Full-bleed yellow CTA cards / bands |
+| Canvas | `{colors.background}` with subtle ledger-grid texture | Page background. |
+| Muted panel | `{colors.muted}` with border | Sidebar and low-emphasis bands. |
+| Card | `{colors.card}` with `1px` border | Metric tiles, tables, forms, empty states. |
+| Popover | `{colors.popover}` with stronger border and soft shadow | Menus, dialogs, sheets. |
+| Alert | Semantic tinted surface plus border | Review, error, success, and info messages. |
 
-The system uses no drop shadows. Depth comes from the contrast between black canvas and `{colors.surface-card}` (a barely-lighter-than-canvas tone) — the contrast is subtle, more like an "engineering-grade dim panel" than an "elevated card."
-
-### Decorative Depth
-- Code-window cards carry their own internal product chrome — line numbers, syntax highlighting, status bars at the bottom — adding visual density without external shadows.
-- The yellow-on-black contrast does most of the elevation work for CTAs.
-
-## Shapes
-
-### Border Radius Scale
+Radius scale:
 
 | Token | Value | Use |
-|---|---|---|
-| `{rounded.xs}` | 4px | Reserved for badge accents |
-| `{rounded.sm}` | 6px | Small inline buttons |
-| `{rounded.md}` | 8px | Standard CTA buttons, text inputs |
-| `{rounded.lg}` | 12px | Content cards, code-window cards, pricing tiers |
-| `{rounded.pill}` | 9999px | Badge pills |
-| `{rounded.full}` | 9999px / 50% | Avatars, icon buttons |
+|---|---:|---|
+| `{rounded.sm}` | 6px | Badges, compact chips. |
+| `{rounded.md}` | 8px | Buttons, inputs, nav items. |
+| `{rounded.lg}` | 12px | Cards, dialogs, popovers. |
+| `{rounded.full}` | 9999px | Avatars and pills. |
+
+Avoid heavy glow, neon borders, glassmorphism, decorative blobs, and marketing-style oversized cards. Texture should be subtle: a low-opacity ledger grid is acceptable because it reinforces the finance workspace without competing with data.
 
 ## Components
 
-### Top Navigation
+### App Shell
 
-**`top-nav`** — Black nav bar pinned to top. 64px tall, `{colors.canvas}` background. Carries the ClickHouse logo + wordmark at left, primary horizontal menu (Product, Use Cases, Pricing, Resources, Customers) center-left, right-side cluster with "Sign in" + "Get Started" `{component.button-primary}` (yellow). Menu items in `{typography.nav-link}` (Inter 14px / 500).
+**`app-shell`** is the authenticated workspace. The sidebar uses `{colors.muted}` or a muted tint over the background, selected navigation uses ledger green text or a card-backed active state, and the header stays compact. The shell should make financial data feel private and stable.
+
+Navigation order should reflect workflow priority:
+
+1. Dashboard
+2. Transactions
+3. Categories
+4. Recipients
+5. Settings
 
 ### Buttons
 
-**`button-primary`** — The signature yellow CTA. Background `{colors.primary}` (#faff69), text `{colors.on-primary}` (black), type `{typography.button}` (Inter 14px / 600), padding 12px × 20px, height 40px, rounded `{rounded.md}` (8px). The yellow + black combination is iconic.
+**`button-primary`** uses `{colors.primary}` with `{colors.primary-foreground}`. Use for one primary action per screen, such as adding a transaction, saving a correction, or creating a device token.
 
-**`button-secondary`** — Dark surface card button. Background `{colors.surface-card}`, text `{colors.on-dark}`, same shape as primary.
+**`button-secondary`** uses `{colors.secondary}` and a border. Use for sign out, cancel, filter toggles, and lower-emphasis actions.
 
-**`button-text-link`** — Inline text button, no background. Used for "Sign in" and inline link CTAs.
+**`button-ghost`** is transparent until hover/focus. Use inside navigation, compact toolbars, and icon-only controls.
 
-**`text-link`** — Inline body links in `{colors.primary}` (yellow on dark). Underlined.
+**Destructive actions** should not reuse the primary button. Use destructive color and a confirmation step for delete, reset, revoke, or irreversible import cleanup.
 
-**`button-icon-circular`** — 36 × 36 circular icon button on dark.
+### Cards And Panels
 
-### Cards & Containers
+**`metric-tile`** shows one financial total, count, or trend. Amounts use tabular numbers. The label is subdued; the number is high contrast; trend state uses text plus icon, not color alone.
 
-**`hero-band`** — Black-canvas hero with 7-5 grid: h1 + sub-headline + button row on the left, code-window or product mockup on the right. Vertical padding `{spacing.section}` (96px).
+**`dashboard-chart-panel`** contains analytics such as spending by period or category. Chart color must not be the only carrier of meaning; labels, legends, and tooltips must remain readable.
 
-**`hero-stat-card`** — Yellow stat-display numbers ("779+", "47k+") inline on the canvas. No card surface — just yellow text in `{typography.stat-display}` (56px / 700).
+**`transaction-table-panel`** frames the transaction list. It supports scanning by amount, date, recipient, category, and source. Rows should have clear hover/focus states without shifting layout.
 
-**`feature-card-yellow`** — Full-bleed yellow card ("Built for every modern data challenge"). Background `{colors.primary}`, text `{colors.on-yellow}` (black), rounded `{rounded.lg}` (12px), padding `{spacing.xl}` (32px). The yellow card IS the visual emphasis.
+**`review-queue-panel`** highlights imported transactions that need attention. Use amber sparingly for status badges, borders, or icons.
 
-**`feature-card-dark`** — Standard dark feature card. Background `{colors.surface-card}`, text `{colors.on-dark}`, rounded `{rounded.lg}`, padding `{spacing.xl}` (32px).
+**`settings-panel`** groups account, device token, and import configuration controls. Sensitive values such as token prefixes use mono text and clear copy/revoke affordances.
 
-**`code-window-card`** — Dark card showing a SQL code block. Background `{colors.surface-card}`, code in JetBrains Mono with syntax highlighting, rounded `{rounded.lg}`, padding `{spacing.lg}` (24px). Often the hero's right-side artifact on developer-focused pages.
+### Transaction Review
 
-**`product-mockup-card`** — Card showing actual ClickHouse product UI (query editor, dashboard, monitoring panel). Same shape as `{component.feature-card-dark}` but with embedded product chrome inside.
+Transaction review is the core product loop:
 
-**`pricing-tier-card`** — Standard tier card. Background `{colors.surface-card}`, rounded `{rounded.lg}`, padding `{spacing.xl}` (32px).
+- Show recipient, amount, date, source, category, and subcategory in a stable order.
+- SMS-sourced records should expose source/status metadata without making the UI feel like a log viewer.
+- Category suggestions should look provisional until accepted.
+- Uncategorized and uncertain transactions use amber review treatment.
+- Manual edits should clearly distinguish editable fields from derived or historical metadata.
 
-**`pricing-tier-card-featured`** — The featured tier flips to `{colors.primary}` (yellow). The yellow surface IS the featured signal.
+### SMS Import States
 
-**`stat-callout`** — Inline yellow stat numbers ("779+", "2.8k+", "47k+"). Transparent background, text `{colors.primary}`, type `{typography.stat-display}`. Used as a flat layout block, not a card with surface.
+Use a consistent status model:
 
-**`events-card`** — Used on /company/events. Dark card with event title, date in `{typography.caption-uppercase}`, location, and a "Register" CTA. Rounded `{rounded.lg}`, padding `{spacing.lg}`.
+| State | Visual Role |
+|---|---|
+| Imported | Normal card/list treatment with source metadata. |
+| Needs review | Amber badge or left border plus clear next action. |
+| Parse failed | Destructive alert with the recovery path. |
+| Duplicate or ignored | Muted info treatment. |
+| Token revoked/expired | Destructive state in settings and import feedback. |
 
-**`customer-logo-strip`** — Horizontal monochrome customer-logo strip. Background `{colors.canvas}`, logos in `{colors.muted}`, vertical padding `{spacing.xl}` (32px).
+Do not expose raw SMS bodies by default in list views. If raw content is shown, keep it inside a deliberate detail or diagnostics area.
 
-### Inputs & Forms
+### Categories And Filters
 
-**`text-input`** — Dark text input. Background `{colors.surface-card}`, text `{colors.on-dark}`, rounded `{rounded.md}` (8px), padding 10px × 14px, height 40px.
+Category chips are compact and readable. Active filters should be visibly selected using card/primary treatment, not only color. Category-management views should separate default categories, user edits, and destructive reset actions.
 
-**`text-input-focused`** — Border thickens to `{colors.primary}` (yellow) for emphasis.
+### Empty, Loading, And Error States
 
-### Tags / Badges
-
-**`badge-pill`** — Small dark pill label. Background `{colors.surface-card}`, text `{colors.on-dark}`, type `{typography.caption}`, rounded `{rounded.pill}`.
-
-**`badge-yellow`** — Yellow pill for "NEW", "GET STARTED" emphasis. Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.caption-uppercase}`, rounded `{rounded.pill}`.
-
-### Tab / Filter
-
-**`category-tab`** + **`category-tab-active`** — Dark tab navigation. Inactive: transparent + muted text. Active: surface-card background + on-dark text. Padding 8px × 14px, rounded `{rounded.md}`.
-
-### CTA / Footer
-
-**`cta-band-yellow`** — A pre-footer "Deploy your way" CTA band. Full yellow fill, black type, rounded `{rounded.lg}`, padding 64px. Carries an h2 in `{typography.display-md}` and a CTA — usually a black-button on the yellow surface.
-
-**`footer`** — Black footer that closes every page. Background `{colors.canvas}`, text `{colors.muted}`. 4-column link list at desktop covering Product / Use Cases / Resources / Company. Vertical padding 64px. The ClickHouse wordmark sits at the top in `{colors.on-dark}`.
-
-## Do's and Don'ts
-
-### Do
-- Anchor every page on the black canvas. The yellow + black pairing is the brand voltage.
-- Reserve `{colors.primary}` (yellow) for primary CTAs, stat-callout numbers, and full-bleed yellow CTA bands. The yellow's scarcity at the element level + abundance at the band level is what makes it powerful.
-- Use Inter at weight 700 for every display headline, with -1 to -2.5px letter-spacing.
-- Show actual SQL code blocks inside `{component.code-window-card}` — ClickHouse is a database; show the query, don't paint marketing illustrations of queries.
-- Use `{component.stat-callout}` numbers to establish credibility (community size, contributors, performance benchmarks). The yellow stat numbers are signature.
-- Anchor every band with `{spacing.section}` (96px) vertical rhythm.
-
-### Don't
-- Don't introduce a second brand color. ClickHouse is monochromatic + yellow.
-- Don't bold display weight beyond 700 or use weight 500 for headlines. The hierarchy depends on size, not on weight gradation.
-- Don't use yellow for body text or large surface fills outside of intentional yellow cards.
-- Don't use rounded buttons / pills outside of small badges. The standard button radius is 8px (md).
-- Don't repeat the same surface mode in two consecutive bands. Black canvas → dark feature card → yellow CTA card → black canvas → code-window card.
-- Don't replace SQL code mockups with abstract illustrations. The code IS the marketing voltage.
-- Don't add hover state styling beyond what the system already encodes.
+- Empty states should name the missing data and provide one clear next action.
+- Loading states should use skeletons inside the final layout footprint.
+- Error states should explain the cause at user level and provide retry, edit, or navigation recovery.
+- Full-page spinners should be avoided for normal authenticated product loading.
 
 ## Responsive Behavior
 
-### Breakpoints
+| Breakpoint | Behavior |
+|---|---|
+| Mobile `< 768px` | Sidebar becomes a drawer. Transaction tables become stacked review cards. Filters collapse into compact controls. |
+| Tablet `768-1024px` | Dashboard grids reduce columns. Tables keep key columns and move secondary metadata into row details. |
+| Desktop `>= 1024px` | Persistent sidebar, dense tables, multi-column dashboard. |
+| Wide `> 1440px` | Content remains constrained enough for scanning; do not stretch text-heavy panels edge to edge. |
 
-| Name | Width | Key Changes |
-|---|---|---|
-| Mobile | < 768px | Hamburger nav; hero h1 72→36px; code-window-card stacks below; feature grids 1-up; pricing 1-up |
-| Tablet | 768–1024px | Top nav tightens; feature cards 2-up; pricing 2-up |
-| Desktop | 1024–1440px | Full top-nav; 3-up feature cards; 3-4 up pricing tiers |
-| Wide | > 1440px | Same as desktop with more breathing room; max content 1280px |
+Touch targets should be at least 40px in current primitives and preferably 44px when practical for new controls.
 
-### Touch Targets
-- `{component.button-primary}` at minimum 40 × 40px.
-- `{component.button-icon-circular}` at exactly 36 × 36 — slightly under WCAG 44, visually centered.
-- `{component.text-input}` height is 40px.
+## Do And Do Not
 
-### Collapsing Strategy
-- Top nav collapses to hamburger at < 768px.
-- Hero 7-5 grid → single-column on mobile.
-- Feature card grids reduce columns rather than scaling.
-- Code-window cards retain font-size; horizontal scroll inside the card on mobile.
-- Pricing tier cards collapse 4 → 2 → 1; featured tier yellow stays distinct.
+### Do
 
-### Image Behavior
-- Code blocks inside dark mockups stay at fixed font-size; horizontal scroll on mobile rather than wrapping.
-- Customer logos in monochrome strip retain native widths; row wraps on mobile.
+- Build around transaction review, SMS import confidence, category hygiene, and dashboard insight.
+- Keep raw color values in token definitions and use semantic classes in components.
+- Use tabular numbers for currency, dates, counts, and percentages.
+- Use amber only when user review or attention is required.
+- Keep destructive actions visually distinct and confirmed.
+- Preserve visible focus states for every interactive control.
 
-## Iteration Guide
+### Do Not
 
-1. Focus on ONE component at a time. Reference its YAML key (`{component.code-window-card}`, `{component.pricing-tier-card-featured}`).
-2. Variants of an existing component (`-active`, `-disabled`, `-focused`) live as separate entries.
-3. Use `{token.refs}` everywhere — never inline hex.
-4. Never document hover. Default and Active/Pressed states only.
-5. Display headlines stay Inter 700 with negative letter-spacing. Body stays Inter 400.
-6. The yellow + black pairing is the brand contract. Don't soften with secondary accents.
-7. When in doubt about emphasis: bigger Inter 700 before adding color.
+- Do not copy database-tooling, crypto-dashboard, or neon developer-brand patterns.
+- Do not use pure black plus highlighter-yellow as the brand system.
+- Do not turn the landing page into a generic SaaS hero before the product workspace is stable.
+- Do not use color alone to communicate success, warning, or error.
+- Do not hide privacy-sensitive SMS or token data in casual decorative UI.
+- Do not introduce light mode or a theme toggle until the light token set is intentionally designed.
+
+## Implementation Path
+
+This document defines visual direction. Implementation should continue through:
+
+```txt
+design.md
+  -> semantic tokens
+  -> src/app/globals.css
+  -> src/components/ui primitives
+  -> shared product components
+  -> feature screens
+```
+
+For the current pass, update only the design source, semantic CSS token values, and primitive styles that still encode the copied yellow system.
 
 ## Known Gaps
 
-- The exact yellow hex (#faff69) was sampled from the screenshot; ClickHouse may publish an official brand color slightly differently.
-- Inter weight axis values beyond 400 / 500 / 600 / 700 are not formalized — only the static weights observed are documented.
-- Animation and transition timings (code typewriter effects, stat counter animations) are not in scope.
-- Form validation states beyond `{component.text-input-focused}` are not extracted.
-- The actual ClickHouse Cloud product surface (query console, monitoring dashboards, table browser) shares some tokens with the marketing site but adds many product-specific components that are out of scope.
-- The customer logo strip's exact opacity / treatment varies — the muted gray is approximate.
+- Light mode is intentionally deferred.
+- Full chart palette and categorical color mapping are not yet formalized.
+- A dedicated table density system may be added after transaction and category screens stabilize.
+- Marketing page art direction is secondary to authenticated product workflow and can be refined later.

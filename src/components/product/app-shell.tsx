@@ -43,8 +43,8 @@ export function AppShell({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="hidden border-r border-border bg-muted/55 lg:block">
+    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[248px_1fr]">
+      <aside className="hidden border-r border-border bg-muted/40 lg:block">
         <ShellSidebar pathname={pathname} />
       </aside>
 
@@ -118,7 +118,7 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-10 lg:py-8">
+        <main className="mx-auto w-full max-w-[1360px] px-4 py-6 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>
@@ -128,12 +128,12 @@ export function AppShell({
 
 function ShellSidebar({ pathname }: { pathname: string }) {
   return (
-    <div className="sticky top-0 flex h-screen flex-col p-5">
+    <div className="sticky top-0 flex h-screen flex-col p-4">
       <div className="border-b border-border pb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+        <p className="text-[11px] font-semibold uppercase text-primary">
           TrackCrow
         </p>
-        <p className="mt-3 text-xl font-semibold leading-none text-foreground/92">
+        <p className="mt-3 text-lg font-semibold leading-none text-foreground/88">
           Spend ops
         </p>
       </div>
@@ -163,7 +163,7 @@ function ShellNav({
             className={cn(
               "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
-                ? "bg-card/95 text-foreground"
+                ? "bg-card/85 text-foreground"
                 : "hover:bg-secondary/80 hover:text-foreground"
             )}
           >
