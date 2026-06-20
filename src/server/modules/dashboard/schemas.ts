@@ -13,5 +13,5 @@ export const dashboardRangeQuerySchema = z.object({
 });
 
 export const spendingByPeriodQuerySchema = dashboardRangeQuerySchema.extend({
-  granularity: z.enum(["day", "month"]).optional(),
+  granularity: z.enum(["day", "week", "month", "year"]).optional(),
 });

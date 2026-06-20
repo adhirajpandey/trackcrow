@@ -30,6 +30,28 @@ function buildRawMessageDateFilter(input: { startDate?: Date; endDate?: Date }) 
   };
 }
 
+function getPeriodKey(date: Date, granularity: NonNullable<SpendingByPeriodInput["granularity"]>) {
+  if (granularity === "day") {
+    return date.toISOString().slice(0, 10);
+  }
+
+  if (granularity === "week") {
+    const day = date.getUTCDay();
+    const daysSinceMonday = (day + 6) % 7;
+    const monday = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    );
+    monday.setUTCDate(monday.getUTCDate() - daysSinceMonday);
+    return monday.toISOString().slice(0, 10);
+  }
+
+  if (granularity === "year") {
+    return String(date.getUTCFullYear());
+  }
+
+  return date.toISOString().slice(0, 7);
+}
+
 export async function getDashboardSummary(
   input: DashboardRangeInput
 ): Promise<
@@ -142,7 +164,7 @@ export async function getSpendingByPeriod(
     "INTERNAL_ERROR"
   >
 > {
-  const granularity = input.granularity === "day" ? "day" : "month";
+  const granularity = input.granularity ?? "month";
   const where = {
     userUuid: input.userUuid,
     ...buildDateFilter(input),
@@ -160,10 +182,7 @@ export async function getSpendingByPeriod(
 
     const groups = new Map<string, { totalSpend: number; transactionCount: number }>();
     for (const txn of transactions) {
-      const period =
-        granularity === "day"
-          ? txn.timestamp.toISOString().slice(0, 10)
-          : txn.timestamp.toISOString().slice(0, 7);
+      const period = getPeriodKey(txn.timestamp, granularity);
       const current = groups.get(period) ?? { totalSpend: 0, transactionCount: 0 };
       current.totalSpend += Number(txn.amount);
       current.transactionCount += 1;
@@ -212,6 +231,29 @@ export async function getImportHealth(
   } catch (error) {
     logger.error("getImportHealth - Failed", error as Error, {
       userUuid: input.userUuid,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function getLargeTransactionCount(
+  input: DashboardRangeInput & { minimumAmount: number }
+): Promise<ServiceResult<number, "INTERNAL_ERROR">> {
+  const where = {
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
+    amount: {
+      gte: input.minimumAmount,
+    },
+  };
+
+  try {
+    const count = await prisma.transaction.count({ where });
+    return ok(count);
+  } catch (error) {
+    logger.error("getLargeTransactionCount - Failed", error as Error, {
+      userUuid: input.userUuid,
+      minimumAmount: input.minimumAmount,
     });
     return fail("INTERNAL_ERROR");
   }

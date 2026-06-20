@@ -5,5 +5,5 @@ export type DashboardRangeInput = {
 };
 
 export type SpendingByPeriodInput = DashboardRangeInput & {
-  granularity?: "day" | "month";
+  granularity?: "day" | "week" | "month" | "year";
 };

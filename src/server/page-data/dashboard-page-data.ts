@@ -1,20 +1,17 @@
 import "server-only";
 
-import { z } from "zod";
-
+import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
+import type { DashboardGranularity, DashboardRangeValue } from "@/features/dashboard/query-state";
+import { getDashboardRangeState } from "@/features/dashboard/query-state";
 import { requirePageSessionUser } from "@/server/auth/session";
 import {
   getDashboardSummary,
   getImportHealth,
+  getLargeTransactionCount,
   getRecentLargeTransactions,
   getSpendingByCategory,
   getSpendingByPeriod,
 } from "@/server/modules/dashboard/service";
-
-const dashboardPageSearchSchema = z.object({
-  startDate: z.string().trim().min(1).nullable(),
-  endDate: z.string().trim().min(1).nullable(),
-});
 
 export type DashboardSummaryDto = {
   totalSpend: number;
@@ -54,6 +51,13 @@ export type DashboardRecentTransactionDto = {
 export type DashboardPageData = {
   status: "ready" | "error";
   message: string | null;
+  range: {
+    value: DashboardRangeValue;
+    label: string;
+    startDate: string | null;
+    endDate: string | null;
+    granularity: DashboardGranularity;
+  };
   rangeLabel: string;
   user: {
     name: string | null;
@@ -62,12 +66,17 @@ export type DashboardPageData = {
   };
   summary: DashboardSummaryDto;
   importHealth: DashboardImportHealthDto;
+  largeTransactionCount: number;
   spendingByCategory: DashboardCategorySpendDto[];
   spendingByPeriod: DashboardPeriodSpendDto[];
   recentLargeTransactions: DashboardRecentTransactionDto[];
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;
+type DashboardPageOptions = {
+  persistedRange?: string | null;
+  now?: Date;
+};
 
 const emptySummary: DashboardSummaryDto = {
   totalSpend: 0,
@@ -83,51 +92,20 @@ const emptyImportHealth: DashboardImportHealthDto = {
   unparseableCount: 0,
 };
 
-function firstParam(value: string | string[] | undefined) {
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
-
-  return value ?? null;
-}
-
-function parseDateInput(value: string | null) {
-  if (!value) {
-    return undefined;
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-function buildRangeLabel(input: { startDate: string | null; endDate: string | null }) {
-  if (input.startDate && input.endDate) {
-    return `${input.startDate} to ${input.endDate}`;
-  }
-
-  if (input.startDate) {
-    return `From ${input.startDate}`;
-  }
-
-  if (input.endDate) {
-    return `Until ${input.endDate}`;
-  }
-
-  return "All time";
-}
-
 function emptyDashboardData(
   user: DashboardPageData["user"],
-  rangeLabel: string,
+  range: DashboardPageData["range"],
   message: string
 ): DashboardPageData {
   return {
     status: "error",
     message,
-    rangeLabel,
+    range,
+    rangeLabel: range.label,
     user,
     summary: emptySummary,
     importHealth: emptyImportHealth,
+    largeTransactionCount: 0,
     spendingByCategory: [],
     spendingByPeriod: [],
     recentLargeTransactions: [],
@@ -135,61 +113,76 @@ function emptyDashboardData(
 }
 
 export async function getDashboardPageData(
-  searchParams: SearchParams
+  searchParams: SearchParams,
+  options: DashboardPageOptions = {}
 ): Promise<DashboardPageData> {
   const sessionUser = await requirePageSessionUser();
-  const parsedSearch = dashboardPageSearchSchema.safeParse({
-    startDate: firstParam(searchParams.startDate),
-    endDate: firstParam(searchParams.endDate),
+  const rangeState = getDashboardRangeState({
+    searchParams,
+    persistedRange: options.persistedRange,
+    now: options.now,
   });
-  const normalizedSearch = parsedSearch.success
-    ? parsedSearch.data
-    : { startDate: null, endDate: null };
-  const rangeLabel = buildRangeLabel(normalizedSearch);
+  const range = {
+    value: rangeState.range,
+    label: rangeState.label,
+    startDate: rangeState.startDate,
+    endDate: rangeState.endDate,
+    granularity: rangeState.granularity,
+  };
   const user = {
     name: sessionUser.name,
     email: sessionUser.email,
     image: sessionUser.image,
   };
-  const dateRange = {
-    startDate: parseDateInput(normalizedSearch.startDate),
-    endDate: parseDateInput(normalizedSearch.endDate),
-  };
   const rangeInput = {
     userUuid: sessionUser.userUuid,
-    ...dateRange,
+    startDate: rangeState.serviceStartDate,
+    endDate: rangeState.serviceEndDate,
   };
 
-  const [
-    summary,
-    spendingByCategory,
-    spendingByPeriod,
-    importHealth,
-    recentLargeTransactions,
-  ] = await Promise.all([
-    getDashboardSummary(rangeInput),
-    getSpendingByCategory(rangeInput),
-    getSpendingByPeriod({
+  const [summary, spendingByCategory, importHealth, largeTransactionCount, recentLargeTransactions] =
+    await Promise.all([
+      getDashboardSummary(rangeInput),
+      getSpendingByCategory(rangeInput),
+      getImportHealth(rangeInput),
+      getLargeTransactionCount({
+        ...rangeInput,
+        minimumAmount: LARGE_TRANSACTION_THRESHOLD,
+      }),
+      getRecentLargeTransactions({
+        ...rangeInput,
+        take: 5,
+      }),
+    ]);
+
+  let spendingByPeriod = await getSpendingByPeriod({
+    ...rangeInput,
+    granularity: rangeState.granularity,
+  });
+
+  if (
+    rangeState.range === "all-time" &&
+    spendingByPeriod.ok &&
+    spendingByPeriod.data.length > 36
+  ) {
+    spendingByPeriod = await getSpendingByPeriod({
       ...rangeInput,
-      granularity: "month",
-    }),
-    getImportHealth(rangeInput),
-    getRecentLargeTransactions({
-      ...rangeInput,
-      take: 5,
-    }),
-  ]);
+      granularity: "year",
+    });
+    range.granularity = "year";
+  }
 
   if (
     !summary.ok ||
     !spendingByCategory.ok ||
     !spendingByPeriod.ok ||
     !importHealth.ok ||
+    !largeTransactionCount.ok ||
     !recentLargeTransactions.ok
   ) {
     return emptyDashboardData(
       user,
-      rangeLabel,
+      range,
       "Dashboard data is temporarily unavailable. Try again in a moment."
     );
   }
@@ -197,10 +190,12 @@ export async function getDashboardPageData(
   return {
     status: "ready",
     message: null,
-    rangeLabel,
+    range,
+    rangeLabel: range.label,
     user,
     summary: summary.data,
     importHealth: importHealth.data,
+    largeTransactionCount: largeTransactionCount.data,
     spendingByCategory: spendingByCategory.data,
     spendingByPeriod: spendingByPeriod.data,
     recentLargeTransactions: recentLargeTransactions.data,

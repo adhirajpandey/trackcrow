@@ -6,11 +6,15 @@ jest.mock("@/lib/prisma-rewrite", () => ({
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    rawMessage: {
+      count: jest.fn(),
+    },
   }),
 }));
 
 import {
   getDashboardSummary,
+  getLargeTransactionCount,
   getSpendingByCategory,
   getSpendingByPeriod,
 } from "./service";
@@ -75,7 +79,7 @@ describe("dashboard service", () => {
     });
   });
 
-  it("groups spending by month and day using ISO periods", async () => {
+  it("groups spending by month, day, week, and year using ISO periods", async () => {
     mockPrisma.transaction.findMany.mockResolvedValueOnce([
       { amount: 100, timestamp: new Date("2026-06-01T10:00:00.000Z") },
       { amount: 75, timestamp: new Date("2026-06-20T10:00:00.000Z") },
@@ -96,6 +100,54 @@ describe("dashboard service", () => {
     ).resolves.toEqual({
       ok: true,
       data: [{ period: "2026-06-01", totalSpend: 175, transactionCount: 2 }],
+    });
+
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      { amount: 100, timestamp: new Date("2026-06-03T10:00:00.000Z") },
+      { amount: 75, timestamp: new Date("2026-06-07T12:00:00.000Z") },
+    ]);
+    await expect(
+      getSpendingByPeriod({ userUuid: "user-1", granularity: "week" })
+    ).resolves.toEqual({
+      ok: true,
+      data: [{ period: "2026-06-01", totalSpend: 175, transactionCount: 2 }],
+    });
+
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      { amount: 100, timestamp: new Date("2025-06-01T10:00:00.000Z") },
+      { amount: 75, timestamp: new Date("2026-06-01T12:00:00.000Z") },
+    ]);
+    await expect(
+      getSpendingByPeriod({ userUuid: "user-1", granularity: "year" })
+    ).resolves.toEqual({
+      ok: true,
+      data: [
+        { period: "2025", totalSpend: 100, transactionCount: 1 },
+        { period: "2026", totalSpend: 75, transactionCount: 1 },
+      ],
+    });
+  });
+
+  it("counts large transactions using the provided threshold", async () => {
+    mockPrisma.transaction.count.mockResolvedValueOnce(4);
+
+    await expect(
+      getLargeTransactionCount({
+        userUuid: "user-1",
+        minimumAmount: 10000,
+      })
+    ).resolves.toEqual({
+      ok: true,
+      data: 4,
+    });
+
+    expect(mockPrisma.transaction.count).toHaveBeenCalledWith({
+      where: {
+        userUuid: "user-1",
+        amount: {
+          gte: 10000,
+        },
+      },
     });
   });
 });

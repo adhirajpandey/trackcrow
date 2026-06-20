@@ -1,35 +1,56 @@
+import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 import type {
   DashboardCategorySpendDto,
   DashboardImportHealthDto,
+  DashboardPageData,
   DashboardPeriodSpendDto,
   DashboardSummaryDto,
 } from "@/server/page-data/dashboard-page-data";
 
-const fullCurrencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
+const rupeeSymbol = "\u20b9";
+const TOP_CATEGORY_EXCLUSIONS = new Set([
+  "uncategorized",
+  "transfers",
+  "internal transfers",
+]);
+
+const numberFormatter = new Intl.NumberFormat("en-IN");
+const fullNumberFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-const numberFormatter = new Intl.NumberFormat("en-IN");
-
 export function formatPeriodLabel(period: string) {
-  if (!/^\d{4}-\d{2}$/.test(period)) {
-    return { month: period, year: null as string | null };
+  if (/^\d{4}$/.test(period)) {
+    return { primary: period, secondary: null as string | null };
   }
 
-  const [year, month] = period.split("-");
-  const date = new Date(Number(year), Number(month) - 1, 1);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+    const date = new Date(`${period}T00:00:00.000Z`);
+    return {
+      primary: new Intl.DateTimeFormat("en-IN", {
+        day: "2-digit",
+        month: "short",
+      }).format(date),
+      secondary: String(date.getUTCFullYear()),
+    };
+  }
 
-  return {
-    month: new Intl.DateTimeFormat("en-IN", { month: "short" }).format(date),
-    year,
-  };
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    const [year, month] = period.split("-");
+    const date = new Date(Number(year), Number(month) - 1, 1);
+
+    return {
+      primary: new Intl.DateTimeFormat("en-IN", { month: "short" }).format(date),
+      secondary: year,
+    };
+  }
+
+  return { primary: period, secondary: null as string | null };
 }
 
 export function formatPeriod(period: string) {
   const label = formatPeriodLabel(period);
-  return label.year ? `${label.month} ${label.year}` : label.month;
+  return label.secondary ? `${label.primary} ${label.secondary}` : label.primary;
 }
 
 export function getPeriodLabelStep(periodCount: number) {
@@ -71,26 +92,43 @@ export function getAveragePeriodSpend(periods: DashboardPeriodSpendDto[]) {
   return total / periods.length;
 }
 
-function getNiceTickCeiling(maxValue: number) {
-  if (maxValue <= 0) {
+function getNiceStep(targetStep: number) {
+  if (targetStep <= 0) {
     return 0;
   }
 
-  const magnitude = 10 ** Math.floor(Math.log10(maxValue));
-  const normalized = maxValue / magnitude;
-  const ceiling = normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
-  return ceiling * magnitude;
+  const magnitude = 10 ** Math.floor(Math.log10(targetStep));
+  const normalized = targetStep / magnitude;
+
+  if (normalized <= 1) {
+    return magnitude;
+  }
+
+  if (normalized <= 2) {
+    return 2 * magnitude;
+  }
+
+  if (normalized <= 2.5) {
+    return 2.5 * magnitude;
+  }
+
+  if (normalized <= 5) {
+    return 5 * magnitude;
+  }
+
+  return 10 * magnitude;
 }
 
 export function buildChartTicks(maxValue: number) {
-  const ceiling = getNiceTickCeiling(maxValue);
-  if (ceiling <= 0) {
+  if (maxValue <= 0) {
     return [];
   }
 
-  return [0.33, 0.66, 1].map((ratio) => ({
-    ratio,
-    value: Math.round(ceiling * ratio),
+  const step = getNiceStep(maxValue / 3);
+  const topValue = step * 3;
+  return [0, step, step * 2, topValue].map((value) => ({
+    ratio: topValue === 0 ? 0 : value / topValue,
+    value,
   }));
 }
 
@@ -102,11 +140,15 @@ export function getCategoryShare(itemTotal: number, totalSpend: number) {
   return Math.round((itemTotal / totalSpend) * 100);
 }
 
+function isEligibleTopCategory(category: string) {
+  return !TOP_CATEGORY_EXCLUSIONS.has(category.trim().toLowerCase());
+}
+
 export function getTopCategoryInsight(
   categories: DashboardCategorySpendDto[],
   totalSpend: number
 ) {
-  const topCategory = categories[0];
+  const topCategory = categories.find((category) => isEligibleTopCategory(category.category));
   if (!topCategory) {
     return null;
   }
@@ -118,7 +160,9 @@ export function getTopCategoryInsight(
 }
 
 export function formatCurrency(value: number) {
-  return fullCurrencyFormatter.format(value);
+  return `${value < 0 ? "-" : ""}${rupeeSymbol}${fullNumberFormatter.format(
+    Math.abs(value)
+  )}`;
 }
 
 export function formatCompactCurrency(value: number) {
@@ -126,14 +170,14 @@ export function formatCompactCurrency(value: number) {
   const sign = value < 0 ? "-" : "";
 
   if (absolute >= 100000) {
-    return `${sign}₹${trimTrailingZeros(absolute / 100000, 2)}L`;
+    return `${sign}${rupeeSymbol}${trimTrailingZeros(absolute / 100000, 2)}L`;
   }
 
   if (absolute >= 1000) {
-    return `${sign}₹${trimTrailingZeros(absolute / 1000, 1)}K`;
+    return `${sign}${rupeeSymbol}${trimTrailingZeros(absolute / 1000, 1)}K`;
   }
 
-  return `${sign}${fullCurrencyFormatter.format(absolute)}`;
+  return `${sign}${rupeeSymbol}${fullNumberFormatter.format(absolute)}`;
 }
 
 export function formatNumber(value: number) {
@@ -155,63 +199,130 @@ function trimTrailingZeros(value: number, fractionDigits: number) {
     .replace(/(\.\d*[1-9])0+$/, "$1");
 }
 
-export function buildTransactionsHref(params: Record<string, string | number | null>) {
+type LinkParamValue = string | number | null | undefined;
+
+function setParam(params: URLSearchParams, key: string, value: LinkParamValue) {
+  if (value !== null && value !== undefined && value !== "") {
+    params.set(key, String(value));
+  }
+}
+
+export function getRangeParams(range: DashboardPageData["range"]) {
+  return {
+    startDate: range.startDate,
+    endDate: range.endDate,
+  };
+}
+
+export function buildTransactionsHref(params: Record<string, LinkParamValue>) {
   const searchParams = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {
-    if (value !== null && value !== "") {
-      searchParams.set(key, String(value));
-    }
+    setParam(searchParams, key, value);
   }
 
   const query = searchParams.toString();
   return query ? `/transactions?${query}` : "/transactions";
 }
 
-export function buildReviewItems(input: {
+export function buildReviewQueueHref(range: DashboardPageData["range"]) {
+  return buildTransactionsHref({
+    ...getRangeParams(range),
+    review: "queue",
+  });
+}
+
+export function buildImportsReviewHref(range: DashboardPageData["range"]) {
+  const searchParams = new URLSearchParams();
+  setParam(searchParams, "startDate", range.startDate);
+  setParam(searchParams, "endDate", range.endDate);
+  const query = searchParams.toString();
+  return query ? `/imports/review?${query}` : "/imports/review";
+}
+
+function parseDateOnly(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatDateOnly(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getMonthEnd(period: string) {
+  const [year, month] = period.split("-").map(Number);
+  return formatDateOnly(new Date(Date.UTC(year, month, 0)));
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+export function getPeriodBounds(
+  period: string,
+  granularity: DashboardPageData["range"]["granularity"]
+) {
+  if (granularity === "day") {
+    return { startDate: period, endDate: period };
+  }
+
+  if (granularity === "week") {
+    const start = parseDateOnly(period);
+    return {
+      startDate: period,
+      endDate: formatDateOnly(addDays(start, 6)),
+    };
+  }
+
+  if (granularity === "year") {
+    return { startDate: `${period}-01-01`, endDate: `${period}-12-31` };
+  }
+
+  return { startDate: `${period}-01`, endDate: getMonthEnd(period) };
+}
+
+export function buildPeriodTransactionsHref(
+  period: string,
+  granularity: DashboardPageData["range"]["granularity"]
+) {
+  return buildTransactionsHref(getPeriodBounds(period, granularity));
+}
+
+export function buildReviewQueueCard(input: {
   summary: DashboardSummaryDto;
   importHealth: DashboardImportHealthDto;
+  largeTransactionCount: number;
+  range: DashboardPageData["range"];
 }) {
-  const totalImports =
-    input.importHealth.parsedCount +
-    input.importHealth.failedCount +
-    input.importHealth.unparseableCount;
-  const uncategorizedShare = getCategoryShare(
-    input.summary.uncategorizedCount,
-    input.summary.transactionCount
-  );
   const importIssueCount =
     input.importHealth.failedCount + input.importHealth.unparseableCount;
+  const hasItems =
+    input.summary.uncategorizedCount > 0 ||
+    importIssueCount > 0 ||
+    input.largeTransactionCount > 0;
 
-  return [
-    {
-      key: "uncategorized",
-      label: "Uncategorized transactions",
-      value: input.summary.uncategorizedCount,
-      helper: `${uncategorizedShare}% of transactions need a category`,
-      href: buildTransactionsHref({ status: "uncategorized" }),
-      tone: input.summary.uncategorizedCount > 0 ? "attention" : "neutral",
-    },
-    {
-      key: "imports",
-      label: "Import issues",
-      value: importIssueCount,
-      helper:
-        totalImports > 0
-          ? `${formatNumber(input.importHealth.failedCount)} failed, ${formatNumber(
-              input.importHealth.unparseableCount
-            )} unparseable`
-          : "No SMS imports in this range",
-      href: "/imports/review",
-      tone: importIssueCount > 0 ? "danger" : "neutral",
-    },
-    {
-      key: "large",
-      label: "Large transactions",
-      value: input.summary.transactionCount > 0 ? "Review" : "None",
-      helper: "Check the highest value transactions in this range",
-      href: buildTransactionsHref({ sort: "amount_desc" }),
-      tone: "info",
-    },
-  ] as const;
+  return {
+    title: "Review queue",
+    href: buildReviewQueueHref(input.range),
+    action: hasItems ? "Review" : "View transactions",
+    hasItems,
+    lines: hasItems
+      ? [
+          `${formatNumber(input.summary.uncategorizedCount)} need category`,
+          `${formatNumber(importIssueCount)} imports need review`,
+          input.largeTransactionCount > 0
+            ? `${formatNumber(input.largeTransactionCount)} large spends over ${formatCurrency(
+                LARGE_TRANSACTION_THRESHOLD
+              )}`
+            : `No large spends`,
+        ]
+      : ["All caught up", "No items need review"],
+    helper:
+      hasItems || input.largeTransactionCount > 0
+        ? null
+        : `Nothing over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)} in this period.`,
+    thresholdLabel: formatCurrency(LARGE_TRANSACTION_THRESHOLD),
+  };
 }
