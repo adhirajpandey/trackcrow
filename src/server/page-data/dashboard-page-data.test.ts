@@ -132,6 +132,13 @@ describe("getDashboardPageData", () => {
       },
       importHealth: { parsedCount: 8, failedCount: 1, unparseableCount: 2 },
       largeTransactionCount: 1,
+      importIssueCount: 3,
+      sectionStatus: {
+        transactions: "ready",
+        categories: "incomplete",
+        imports: "attention",
+        comparison: "ready",
+      },
       comparison: {
         rangeLabel: "2026-05-02 to 2026-05-31",
         summary: {
@@ -272,11 +279,55 @@ describe("getDashboardPageData", () => {
       },
       importHealth: { parsedCount: 0, failedCount: 0, unparseableCount: 0 },
       largeTransactionCount: 0,
+      importIssueCount: 0,
+      sectionStatus: {
+        transactions: "error",
+        categories: "error",
+        imports: "error",
+        comparison: "unavailable",
+      },
       comparison: null,
       spendingByCategory: [],
       spendingByPeriod: [],
       recentLargeTransactions: [],
       recentTransactions: [],
+    });
+  });
+
+  it("derives empty and unavailable section states when data is sparse", async () => {
+    mockGetDashboardSummary.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        totalSpend: 0,
+        transactionCount: 0,
+        categorizedCount: 0,
+        uncategorizedCount: 0,
+        averageSpend: 0,
+      },
+    });
+    mockGetImportHealth.mockResolvedValueOnce({
+      ok: true,
+      data: { parsedCount: 0, failedCount: 0, unparseableCount: 0 },
+    });
+    mockGetSpendingByCategory.mockResolvedValueOnce({
+      ok: true,
+      data: [],
+    });
+    mockGetSpendingByPeriod.mockResolvedValueOnce({
+      ok: true,
+      data: [],
+    });
+
+    await expect(
+      getDashboardPageData({}, { now: new Date("2026-06-21T10:00:00.000Z") })
+    ).resolves.toMatchObject({
+      importIssueCount: 0,
+      sectionStatus: {
+        transactions: "empty",
+        categories: "empty",
+        imports: "empty",
+        comparison: "ready",
+      },
     });
   });
 });

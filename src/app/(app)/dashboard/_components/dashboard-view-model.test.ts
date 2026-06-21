@@ -1,6 +1,8 @@
 import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 
 import {
+  buildChartBuckets,
+  buildChartTooltip,
   buildRecentTransactionMeta,
   buildRecentTransactionsSummary,
   buildDashboardInsights,
@@ -10,6 +12,8 @@ import {
   buildPeriodTransactionsHref,
   buildReviewQueueCard,
   buildTransactionsHref,
+  buildUncategorizedTransactionsHref,
+  buildWhatChangedSummary,
   formatCompactCurrency,
   formatComparisonDelta,
   formatCurrency,
@@ -142,8 +146,9 @@ describe("dashboard view model", () => {
 
   it("formats INR values with Indian grouping and compact lakh scale", () => {
     expect(formatCurrency(1882624)).toBe("\u20b918,82,624");
-    expect(formatCompactCurrency(1882624)).toBe("\u20b918.83L");
-    expect(formatCompactCurrency(76800)).toBe("\u20b976.8K");
+    expect(formatCompactCurrency(1882624, { style: "kpi" })).toBe("\u20b918.8L");
+    expect(formatCompactCurrency(76800, { style: "chart" })).toBe("\u20b977K");
+    expect(formatCompactCurrency(300000, { style: "kpi" })).toBe("\u20b93.0L");
     expect(formatCompactCurrency(598)).toBe("\u20b9598");
   });
 
@@ -186,7 +191,7 @@ describe("dashboard view model", () => {
     ).toEqual({
       timestampLabel: "18 Jun",
       isSameDay: false,
-      categoryLabel: "No category",
+      categoryLabel: "Uncategorized",
       needsCategory: true,
     });
   });
@@ -221,20 +226,31 @@ describe("dashboard view model", () => {
         largeTransactionCount: 3,
       })
     ).toMatchObject({
-      title: "Review queue",
-      action: "Review",
+      title: "Needs review",
+      action: "Open review tasks",
       hasItems: true,
       totalReviewCount: 9,
-      badges: [
-        { label: "Needs category", count: 3, tone: "attention" },
-        { label: "Import issues", count: 3, tone: "warning" },
-        { label: "Large spends", count: 3, tone: "info" },
+      tasks: [
+        {
+          label: "Need category",
+          count: 3,
+          tone: "attention",
+          href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
+        },
+        {
+          label: "Import issues",
+          count: 3,
+          tone: "warning",
+          href: "/imports/review?startDate=2026-06-01&endDate=2026-06-21",
+        },
+        {
+          label: "Large transactions",
+          count: 3,
+          tone: "info",
+          href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=large&sortBy=amount&sortOrder=desc",
+        },
       ],
-      lines: [
-        "3 need category",
-        "3 imports need review",
-        `3 large spends over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)}`,
-      ],
+      helper: "9 review items across categories, imports, and large spends.",
     });
   });
 
@@ -255,9 +271,16 @@ describe("dashboard view model", () => {
     ).toMatchObject({
       action: "View transactions",
       hasItems: false,
-      lines: ["All caught up", "No items need review"],
-      helper: `Nothing over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)} in this period.`,
+      helper: `No open review items. Nothing over ${formatCurrency(
+        LARGE_TRANSACTION_THRESHOLD
+      )} in this period.`,
     });
+  });
+
+  it("builds uncategorized drilldown links", () => {
+    expect(buildUncategorizedTransactionsHref(range)).toBe(
+      "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized"
+    );
   });
 
   it("builds chart bucket transaction links", () => {
@@ -314,39 +337,117 @@ describe("dashboard view model", () => {
             { category: "Food", totalSpend: 700, transactionCount: 2 },
           ],
         },
-        periods: [
-          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-        ],
         categories: [
           { category: "Travel", totalSpend: 900, transactionCount: 2 },
           { category: "Food", totalSpend: 600, transactionCount: 2 },
         ],
-        importHealth: { parsedCount: 8, failedCount: 1, unparseableCount: 1 },
-        largeTransactionCount: 2,
+        importIssueCount: 2,
+        range,
+        sectionStatus: {
+          transactions: "ready",
+          categories: "incomplete",
+          imports: "attention",
+          comparison: "ready",
+        },
       })
     ).toEqual([
       {
-        label: "Trend",
-        value: "+50% vs previous period",
-        helper: "Compared with 2026-05-01 to 2026-05-31",
+        label: "Uncategorized",
+        value: "1 need category",
+        helper: "Open uncategorized transactions for this range.",
+        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
+        tone: "attention",
       },
       {
-        label: "Spike",
-        value: "02 Jun 2026 at \u20b91.1K",
-        helper: "3 transactions in the peak bucket",
+        label: "Category leader",
+        value: "Travel",
+        helper: "60% of spending \u00b7 \u20b9900",
+        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
+        tone: "neutral",
+      },
+      {
+        label: "Import health",
+        value: "2 issues flagged",
+        helper: "Failed and unparseable messages waiting in review.",
+        href: "/imports/review?startDate=2026-06-01&endDate=2026-06-21",
+        tone: "attention",
       },
       {
         label: "Category shift",
         value: "Food to Travel",
-        helper: "60% of selected spending",
-      },
-      {
-        label: "Review pressure",
-        value: "5 items need review",
-        helper: "1 uncategorized, 2 import issues",
+        helper: "Compared with 2026-05-01 to 2026-05-31",
+        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
+        tone: "neutral",
       },
     ]);
+  });
+
+  it("builds a compact what-changed summary", () => {
+    expect(
+      buildWhatChangedSummary({
+        summary: {
+          totalSpend: 1500,
+          transactionCount: 4,
+          categorizedCount: 3,
+          uncategorizedCount: 1,
+          averageSpend: 375,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 1000,
+            transactionCount: 3,
+            categorizedCount: 3,
+            uncategorizedCount: 0,
+            averageSpend: 333,
+          },
+          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
+        },
+      })
+    ).toEqual({
+      title: "What changed?",
+      value: "+50% vs previous period",
+      helper: "Up by \u20b9500 compared with 2026-05-01 to 2026-05-31.",
+    });
+  });
+
+  it("builds chart tooltip payloads and buckets", () => {
+    expect(
+      buildChartTooltip({
+        period: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+        averagePeriodSpend: 750,
+        peakPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+        latestPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+      })
+    ).toEqual({
+      title: "02 Jun 2026",
+      amountLabel: "\u20b91,100",
+      transactionLabel: "3 transactions",
+      comparisonLabel: "Peak bucket in this range",
+    });
+
+    expect(
+      buildChartBuckets({
+        periods: [
+          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+        ],
+        peakPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+        latestPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+        averagePeriodSpend: 750,
+        chartMax: 1200,
+        periodLabelStep: 1,
+        granularity: "day",
+      })[0]
+    ).toMatchObject({
+      href: "/transactions?startDate=2026-06-01&endDate=2026-06-01",
+      showLabel: true,
+      tooltip: {
+        title: "01 Jun 2026",
+        amountLabel: "\u20b9400",
+        transactionLabel: "1 transactions",
+      },
+    });
   });
 
   it("builds top-card comparisons from previous-period data", () => {

@@ -5,6 +5,7 @@ import type {
   DashboardImportHealthDto,
   DashboardPageData,
   DashboardPeriodSpendDto,
+  DashboardSectionStatus,
   DashboardSummaryDto,
 } from "@/server/page-data/dashboard-page-data";
 
@@ -45,6 +46,57 @@ const timeFormatter = new Intl.DateTimeFormat("en-IN", {
   minute: "2-digit",
   hour12: true,
 });
+
+export type ReviewTaskVm = {
+  label: string;
+  count: number;
+  tone: "attention" | "warning" | "info";
+  href: string;
+  helper: string;
+};
+
+export type ReviewQueueCardVm = {
+  title: string;
+  href: string;
+  action: string;
+  hasItems: boolean;
+  totalReviewCount: number;
+  helper: string;
+  tasks: ReviewTaskVm[];
+};
+
+export type DashboardInsightVm = {
+  label: string;
+  value: string;
+  helper: string;
+  href: string | null;
+  tone: "neutral" | "attention" | "info";
+};
+
+export type DashboardChangeSummaryVm = {
+  title: string;
+  value: string;
+  helper: string;
+};
+
+export type DashboardChartTooltipVm = {
+  title: string;
+  amountLabel: string;
+  transactionLabel: string;
+  comparisonLabel: string | null;
+};
+
+export type DashboardChartBucketVm = {
+  period: string;
+  href: string;
+  height: number;
+  isPeak: boolean;
+  isLatest: boolean;
+  label: ReturnType<typeof formatPeriodLabel>;
+  showLabel: boolean;
+  tooltip: DashboardChartTooltipVm;
+  ariaLabel: string;
+};
 
 export const quickDashboardRanges: Array<{
   value: DashboardRangeValue;
@@ -269,16 +321,38 @@ export function formatCurrency(value: number) {
   )}`;
 }
 
-export function formatCompactCurrency(value: number) {
+export function formatCompactCurrency(
+  value: number,
+  options: {
+    style?: "kpi" | "chart" | "summary";
+  } = {}
+) {
   const absolute = Math.abs(value);
   const sign = value < 0 ? "-" : "";
+  const style = options.style ?? "summary";
+  const fractionDigits = style === "kpi" ? 1 : 0;
+
+  if (absolute >= 10000000) {
+    return `${sign}${rupeeSymbol}${formatCompactNumber(
+      absolute / 10000000,
+      fractionDigits
+    )}Cr`;
+  }
 
   if (absolute >= 100000) {
-    return `${sign}${rupeeSymbol}${trimTrailingZeros(absolute / 100000, 2)}L`;
+    return `${sign}${rupeeSymbol}${formatCompactNumber(
+      absolute / 100000,
+      fractionDigits
+    )}L`;
   }
 
   if (absolute >= 1000) {
-    return `${sign}${rupeeSymbol}${trimTrailingZeros(absolute / 1000, 1)}K`;
+    const thousandsFractionDigits =
+      style === "chart" ? 0 : absolute >= 10000 ? 0 : fractionDigits;
+    return `${sign}${rupeeSymbol}${formatCompactNumber(
+      absolute / 1000,
+      thousandsFractionDigits
+    )}K`;
   }
 
   return `${sign}${rupeeSymbol}${fullNumberFormatter.format(absolute)}`;
@@ -312,7 +386,7 @@ export function buildRecentTransactionMeta(
   return {
     timestampLabel: isSameDay ? timeFormatter.format(date) : shortDateFormatter.format(date),
     isSameDay,
-    categoryLabel: category ?? "No category",
+    categoryLabel: category ?? "Uncategorized",
     needsCategory: !category,
   };
 }
@@ -330,11 +404,11 @@ export function buildRecentTransactionsSummary(input: {
   return `${recentLabel} \u00b7 ${reviewLabel}`;
 }
 
-function trimTrailingZeros(value: number, fractionDigits: number) {
-  return value
-    .toFixed(fractionDigits)
-    .replace(/\.0+$/, "")
-    .replace(/(\.\d*[1-9])0+$/, "$1");
+function formatCompactNumber(value: number, fractionDigits: number) {
+  return value.toLocaleString("en-IN", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
 }
 
 type LinkParamValue = string | number | null | undefined;
@@ -376,6 +450,22 @@ export function buildImportsReviewHref(range: DashboardPageData["range"]) {
   setParam(searchParams, "endDate", range.endDate);
   const query = searchParams.toString();
   return query ? `/imports/review?${query}` : "/imports/review";
+}
+
+export function buildLargeTransactionsHref(range: DashboardPageData["range"]) {
+  return buildTransactionsHref({
+    ...getRangeParams(range),
+    review: "large",
+    sortBy: "amount",
+    sortOrder: "desc",
+  });
+}
+
+export function buildUncategorizedTransactionsHref(range: DashboardPageData["range"]) {
+  return buildTransactionsHref({
+    ...getRangeParams(range),
+    status: "uncategorized",
+  });
 }
 
 function parseDateOnly(value: string) {
@@ -433,7 +523,7 @@ export function buildReviewQueueCard(input: {
   importHealth: DashboardImportHealthDto;
   largeTransactionCount: number;
   range: DashboardPageData["range"];
-}) {
+}): ReviewQueueCardVm {
   const importIssueCount =
     input.importHealth.failedCount + input.importHealth.unparseableCount;
   const totalReviewCount =
@@ -442,47 +532,42 @@ export function buildReviewQueueCard(input: {
     input.summary.uncategorizedCount > 0 ||
     importIssueCount > 0 ||
     input.largeTransactionCount > 0;
-  const badges = [
+  const tasks: ReviewTaskVm[] = [
     {
-      label: "Needs category",
+      label: "Need category",
       count: input.summary.uncategorizedCount,
-      tone: "attention" as const,
+      tone: "attention",
+      href: buildUncategorizedTransactionsHref(input.range),
+      helper: "Transactions that still need a category.",
     },
     {
       label: "Import issues",
       count: importIssueCount,
-      tone: "warning" as const,
+      tone: "warning",
+      href: buildImportsReviewHref(input.range),
+      helper: "Failed or unparseable messages that need review.",
     },
     {
-      label: "Large spends",
+      label: "Large transactions",
       count: input.largeTransactionCount,
-      tone: "info" as const,
+      tone: "info",
+      href: buildLargeTransactionsHref(input.range),
+      helper: `Transactions over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)}.`,
     },
   ];
 
   return {
-    title: "Review queue",
+    title: "Needs review",
     href: buildReviewQueueHref(input.range),
-    action: hasItems ? "Review" : "View transactions",
+    action: hasItems ? "Open review tasks" : "View transactions",
     hasItems,
     totalReviewCount,
-    badges,
-    lines: hasItems
-      ? [
-          `${formatNumber(input.summary.uncategorizedCount)} need category`,
-          `${formatNumber(importIssueCount)} imports need review`,
-          input.largeTransactionCount > 0
-            ? `${formatNumber(input.largeTransactionCount)} large spends over ${formatCurrency(
-                LARGE_TRANSACTION_THRESHOLD
-              )}`
-            : `No large spends`,
-        ]
-      : ["All caught up", "No items need review"],
-    helper:
-      hasItems || input.largeTransactionCount > 0
-        ? null
-        : `Nothing over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)} in this period.`,
-    thresholdLabel: formatCurrency(LARGE_TRANSACTION_THRESHOLD),
+    tasks,
+    helper: hasItems
+      ? `${formatNumber(totalReviewCount)} review items across categories, imports, and large spends.`
+      : `No open review items. Nothing over ${formatCurrency(
+          LARGE_TRANSACTION_THRESHOLD
+        )} in this period.`,
   };
 }
 
@@ -518,17 +603,108 @@ export function buildMetricComparisons(input: {
   };
 }
 
+export function buildWhatChangedSummary(input: {
+  summary: DashboardSummaryDto;
+  comparison: DashboardPageData["comparison"];
+}) : DashboardChangeSummaryVm {
+  if (!input.comparison) {
+    return {
+      title: "What changed?",
+      value: "No previous period yet",
+      helper: "Add more history to compare this range with the previous one.",
+    };
+  }
+
+  const delta = formatComparisonDelta(
+    input.summary.totalSpend,
+    input.comparison.summary.totalSpend
+  );
+  const amountDelta = input.summary.totalSpend - input.comparison.summary.totalSpend;
+  const direction = amountDelta === 0 ? "No spend change" : amountDelta > 0 ? "Up by" : "Down by";
+
+  return {
+    title: "What changed?",
+    value: delta,
+    helper: `${direction} ${formatCurrency(Math.abs(amountDelta))} compared with ${input.comparison.rangeLabel}.`,
+  };
+}
+
+export function buildChartTooltip(input: {
+  period: DashboardPeriodSpendDto;
+  averagePeriodSpend: number;
+  peakPeriod: DashboardPeriodSpendDto | null;
+  latestPeriod: DashboardPeriodSpendDto | null;
+}): DashboardChartTooltipVm {
+  const averageDelta = input.period.totalSpend - input.averagePeriodSpend;
+  let comparisonLabel: string | null = null;
+
+  if (input.peakPeriod?.period === input.period.period) {
+    comparisonLabel = "Peak bucket in this range";
+  } else if (input.latestPeriod?.period === input.period.period) {
+    comparisonLabel = "Latest bucket in this range";
+  } else if (input.averagePeriodSpend > 0) {
+    comparisonLabel =
+      averageDelta >= 0
+        ? `${formatCurrency(Math.abs(averageDelta))} above the period average`
+        : `${formatCurrency(Math.abs(averageDelta))} below the period average`;
+  }
+
+  return {
+    title: formatPeriod(input.period.period),
+    amountLabel: formatCurrency(input.period.totalSpend),
+    transactionLabel: `${formatNumber(input.period.transactionCount)} transactions`,
+    comparisonLabel,
+  };
+}
+
+export function buildChartBuckets(input: {
+  periods: DashboardPeriodSpendDto[];
+  peakPeriod: DashboardPeriodSpendDto | null;
+  latestPeriod: DashboardPeriodSpendDto | null;
+  averagePeriodSpend: number;
+  chartMax: number;
+  periodLabelStep: number;
+  granularity: DashboardPageData["range"]["granularity"];
+}): DashboardChartBucketVm[] {
+  return input.periods.map((item, index) => {
+    const label = formatPeriodLabel(item.period);
+    const isPeak = input.peakPeriod?.period === item.period;
+    const isLatest = input.latestPeriod?.period === item.period;
+    const showLabel =
+      index === 0 ||
+      index === input.periods.length - 1 ||
+      index % input.periodLabelStep === 0;
+
+    const tooltip = buildChartTooltip({
+      period: item,
+      averagePeriodSpend: input.averagePeriodSpend,
+      peakPeriod: input.peakPeriod,
+      latestPeriod: input.latestPeriod,
+    });
+
+    return {
+      period: item.period,
+      href: buildPeriodTransactionsHref(item.period, input.granularity),
+      height:
+        input.chartMax > 0 ? Math.max(6, (item.totalSpend / input.chartMax) * 100) : 6,
+      isPeak,
+      isLatest,
+      label,
+      showLabel,
+      tooltip,
+      ariaLabel: `${tooltip.title}: ${tooltip.amountLabel}, ${tooltip.transactionLabel}`,
+    };
+  });
+}
+
 export function buildDashboardInsights(input: {
   summary: DashboardSummaryDto;
   comparison: DashboardPageData["comparison"];
-  periods: DashboardPeriodSpendDto[];
   categories: DashboardCategorySpendDto[];
-  importHealth: DashboardImportHealthDto;
-  largeTransactionCount: number;
-}) {
-  const averagePeriodSpend = getAveragePeriodSpend(input.periods);
-  const latestPeriod = input.periods[input.periods.length - 1] ?? null;
-  const peakPeriod = getPeakPeriod(input.periods);
+  importIssueCount: number;
+  range: DashboardPageData["range"];
+  sectionStatus: DashboardSectionStatus;
+}) : DashboardInsightVm[] {
   const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
   const previousTopCategory = input.comparison
     ? getTopCategoryInsight(
@@ -536,57 +712,72 @@ export function buildDashboardInsights(input: {
         input.comparison.summary.totalSpend
       )
     : null;
-  const importIssueCount =
-    input.importHealth.failedCount + input.importHealth.unparseableCount;
-  const reviewCount =
-    input.summary.uncategorizedCount + importIssueCount + input.largeTransactionCount;
 
-  return [
-    {
-      label: "Trend",
-      value: input.comparison
-        ? formatComparisonDelta(
-            input.summary.totalSpend,
-            input.comparison.summary.totalSpend
-          )
-        : latestPeriod && averagePeriodSpend > 0
-          ? `${formatCompactCurrency(latestPeriod.totalSpend)} latest vs ${formatCompactCurrency(
-              averagePeriodSpend
-            )} average`
-          : "No trend yet",
-      helper: input.comparison
-        ? `Compared with ${input.comparison.rangeLabel}`
-        : "Add more history for comparisons",
-    },
-    {
-      label: "Spike",
-      value: peakPeriod
-        ? `${formatPeriod(peakPeriod.period)} at ${formatCompactCurrency(peakPeriod.totalSpend)}`
-        : "No spike yet",
-      helper: peakPeriod
-        ? `${formatNumber(peakPeriod.transactionCount)} transactions in the peak bucket`
-        : "No spending buckets in this range",
-    },
-    {
-      label: "Category shift",
-      value: topCategory
-        ? previousTopCategory && previousTopCategory.category !== topCategory.category
-          ? `${previousTopCategory.category} to ${topCategory.category}`
-          : `${topCategory.category} leads`
-        : "No category signal",
-      helper: topCategory
-        ? `${topCategory.share}% of selected spending`
-        : "Categorize spending to unlock category insights",
-    },
-    {
-      label: "Review pressure",
-      value: reviewCount > 0 ? `${formatNumber(reviewCount)} items need review` : "All clear",
-      helper:
-        reviewCount > 0
-          ? `${formatNumber(input.summary.uncategorizedCount)} uncategorized, ${formatNumber(
-              importIssueCount
-            )} import issues`
-          : "No uncategorized, import, or large-spend review items",
-    },
-  ];
+  const insights: DashboardInsightVm[] = [];
+
+  if (input.summary.uncategorizedCount > 0) {
+    insights.push({
+      label: "Uncategorized",
+      value: `${formatNumber(input.summary.uncategorizedCount)} need category`,
+      helper: "Open uncategorized transactions for this range.",
+      href: buildUncategorizedTransactionsHref(input.range),
+      tone: "attention",
+    });
+  }
+
+  insights.push({
+    label: "Category leader",
+    value: topCategory ? topCategory.category : "Not ready yet",
+    helper: topCategory
+      ? `${topCategory.share}% of spending \u00b7 ${formatCurrency(topCategory.totalSpend)}`
+      : input.sectionStatus.categories === "incomplete"
+        ? "Categorize more transactions to sharpen this view."
+        : "No categorized spending in this range.",
+    href: topCategory
+      ? buildTransactionsHref({
+          ...getRangeParams(input.range),
+          category: topCategory.category,
+        })
+      : null,
+    tone: "neutral",
+  });
+
+  insights.push({
+    label: "Import health",
+    value:
+      input.importIssueCount > 0
+        ? `${formatNumber(input.importIssueCount)} issues flagged`
+        : input.sectionStatus.imports === "empty"
+          ? "No imports yet"
+          : "All imports parsed",
+    helper:
+      input.importIssueCount > 0
+        ? "Failed and unparseable messages waiting in review."
+        : input.sectionStatus.imports === "empty"
+          ? "Import messages to populate dashboard coverage."
+          : "No import review items in this range.",
+    href: buildImportsReviewHref(input.range),
+    tone: input.importIssueCount > 0 ? "attention" : "info",
+  });
+
+  insights.push({
+    label: "Category shift",
+    value: topCategory
+      ? previousTopCategory && previousTopCategory.category !== topCategory.category
+        ? `${previousTopCategory.category} to ${topCategory.category}`
+        : `${topCategory.category} leads`
+      : "No category signal",
+    helper: input.comparison
+      ? `Compared with ${input.comparison.rangeLabel}`
+      : "No previous period available for category comparison.",
+    href: topCategory
+      ? buildTransactionsHref({
+          ...getRangeParams(input.range),
+          category: topCategory.category,
+        })
+      : null,
+    tone: "neutral",
+  });
+
+  return insights;
 }

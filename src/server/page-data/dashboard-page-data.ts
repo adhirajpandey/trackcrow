@@ -43,6 +43,13 @@ export type DashboardImportHealthDto = {
   unparseableCount: number;
 };
 
+export type DashboardSectionStatus = {
+  transactions: "ready" | "empty" | "error";
+  categories: "ready" | "empty" | "incomplete" | "error";
+  imports: "ready" | "empty" | "attention" | "error";
+  comparison: "ready" | "unavailable";
+};
+
 export type DashboardRecentTransactionDto = {
   uuid: string;
   recipient: string;
@@ -71,6 +78,8 @@ export type DashboardPageData = {
   summary: DashboardSummaryDto;
   importHealth: DashboardImportHealthDto;
   largeTransactionCount: number;
+  importIssueCount: number;
+  sectionStatus: DashboardSectionStatus;
   comparison: {
     rangeLabel: string;
     summary: DashboardSummaryDto;
@@ -102,6 +111,46 @@ const emptyImportHealth: DashboardImportHealthDto = {
   unparseableCount: 0,
 };
 
+const emptySectionStatus: DashboardSectionStatus = {
+  transactions: "error",
+  categories: "error",
+  imports: "error",
+  comparison: "unavailable",
+};
+
+function getDashboardSectionStatus(input: {
+  summary: DashboardSummaryDto;
+  importHealth: DashboardImportHealthDto;
+  hasComparison: boolean;
+}): DashboardSectionStatus {
+  const importCount =
+    input.importHealth.parsedCount +
+    input.importHealth.failedCount +
+    input.importHealth.unparseableCount;
+  const importIssueCount =
+    input.importHealth.failedCount + input.importHealth.unparseableCount;
+  const hasTransactions = input.summary.transactionCount > 0;
+  const hasCategorizedTransactions = input.summary.categorizedCount > 0;
+
+  return {
+    transactions: hasTransactions ? "ready" : "empty",
+    categories: !hasTransactions
+      ? "empty"
+      : input.summary.uncategorizedCount > 0
+        ? "incomplete"
+        : hasCategorizedTransactions
+          ? "ready"
+          : "empty",
+    imports:
+      importCount === 0
+        ? "empty"
+        : importIssueCount > 0
+          ? "attention"
+          : "ready",
+    comparison: input.hasComparison ? "ready" : "unavailable",
+  };
+}
+
 function emptyDashboardData(
   user: DashboardPageData["user"],
   range: DashboardPageData["range"],
@@ -116,6 +165,8 @@ function emptyDashboardData(
     summary: emptySummary,
     importHealth: emptyImportHealth,
     largeTransactionCount: 0,
+    importIssueCount: 0,
+    sectionStatus: emptySectionStatus,
     comparison: null,
     spendingByCategory: [],
     spendingByPeriod: [],
@@ -232,6 +283,13 @@ export async function getDashboardPageData(
     }
   }
 
+  const importIssueCount = importHealth.data.failedCount + importHealth.data.unparseableCount;
+  const sectionStatus = getDashboardSectionStatus({
+    summary: summary.data,
+    importHealth: importHealth.data,
+    hasComparison: Boolean(comparison),
+  });
+
   return {
     status: "ready",
     message: null,
@@ -241,6 +299,8 @@ export async function getDashboardPageData(
     summary: summary.data,
     importHealth: importHealth.data,
     largeTransactionCount: largeTransactionCount.data,
+    importIssueCount,
+    sectionStatus,
     comparison,
     spendingByCategory: spendingByCategory.data,
     spendingByPeriod: spendingByPeriod.data,

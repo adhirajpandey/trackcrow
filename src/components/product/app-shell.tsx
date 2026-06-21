@@ -63,10 +63,10 @@ export function AppShell({
               <Menu className="h-5 w-5" />
             </Button>
             <div className="lg:hidden">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
                 TrackCrow
               </p>
-              <p className="text-sm text-secondary-foreground">Spend ops</p>
+              <p className="text-base font-semibold text-foreground">Spend ops</p>
             </div>
           </div>
 
@@ -75,7 +75,7 @@ export function AppShell({
               <p className="max-w-48 truncate text-sm font-semibold">
                 {user.name ?? "TrackCrow user"}
               </p>
-              <p className="max-w-48 truncate text-xs text-muted-foreground">
+              <p className="max-w-56 truncate text-sm text-muted-foreground">
                 {user.email ?? "Signed in"}
               </p>
             </div>
@@ -131,13 +131,16 @@ export function AppShell({
 
 function ShellSidebar({ pathname }: { pathname: string }) {
   return (
-    <div className="sticky top-0 flex h-screen flex-col p-4">
-      <div className="border-b border-border pb-5">
-        <p className="text-[11px] font-semibold uppercase text-primary">
+    <div className="sticky top-0 flex h-screen flex-col p-5">
+      <div className="rounded-2xl border border-border/70 bg-card/65 px-4 py-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
           TrackCrow
         </p>
-        <p className="mt-3 text-lg font-semibold leading-none text-foreground">
+        <p className="mt-4 text-2xl font-semibold leading-none text-foreground">
           Spend ops
+        </p>
+        <p className="mt-2 text-sm leading-5 text-secondary-foreground">
+          Review imports, track spend, and catch spikes early.
         </p>
       </div>
       <ShellNav pathname={pathname} />
