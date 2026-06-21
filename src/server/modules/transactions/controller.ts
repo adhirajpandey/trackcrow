@@ -6,6 +6,7 @@ import {
   createTransactionSchema,
   listTransactionsQuerySchema,
   transactionIdParamsSchema,
+  updateTransactionCategorySchema,
   updateTransactionSchema,
 } from "./schemas";
 import {
@@ -14,6 +15,7 @@ import {
   getTransactionById,
   listTransactions,
   suggestTransactionCategory,
+  updateTransactionCategory,
   updateTransaction,
 } from "./service";
 
@@ -158,6 +160,39 @@ export async function patchTransaction(
     userUuid: sessionData.userUuid,
     ...parsed.data,
     source: TransactionSource.MANUAL,
+  });
+  const data = unwrapOrResponse(result);
+  return data instanceof Response ? data : jsonOk(data);
+}
+
+export async function patchTransactionCategory(
+  request: Request,
+  context: RouteContext
+) {
+  const sessionData = await requireUserUuid();
+  if (sessionData instanceof Response) {
+    return sessionData;
+  }
+
+  const transactionId = await parseTransactionId(context);
+  if (transactionId instanceof Response) {
+    return transactionId;
+  }
+
+  const json = await parseJsonBody(request);
+  if (json instanceof Response) {
+    return json;
+  }
+
+  const parsed = updateTransactionCategorySchema.safeParse(json);
+  if (!parsed.success) {
+    return jsonError("Invalid request", 400, { issues: parsed.error.issues });
+  }
+
+  const result = await updateTransactionCategory({
+    transactionId,
+    userUuid: sessionData.userUuid,
+    categoryId: parsed.data.categoryId ?? null,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);

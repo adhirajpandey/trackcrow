@@ -31,6 +31,7 @@ import {
   getTransactionById,
   listTransactions,
   suggestTransactionCategory,
+  updateTransactionCategory,
   updateTransaction,
 } from "./service";
 
@@ -228,6 +229,71 @@ describe("transaction service", () => {
     await expect(
       deleteTransaction({ userUuid: "user-1", transactionId: 99 })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
+  });
+
+  it("updates only the transaction category and clears subcategory on change", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 1, categoryId: 10 });
+    mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 11 });
+    mockPrisma.transaction.update.mockResolvedValueOnce({
+      id: 1,
+      categoryId: 11,
+      subcategoryId: null,
+      category: { name: "Shopping" },
+      subcategory: null,
+    });
+
+    await expect(
+      updateTransactionCategory({
+        userUuid: "user-1",
+        transactionId: 1,
+        categoryId: 11,
+      })
+    ).resolves.toEqual({
+      ok: true,
+      data: {
+        id: 1,
+        categoryId: 11,
+        category: "Shopping",
+        subcategoryId: null,
+        subcategory: null,
+      },
+    });
+
+    expect(mockPrisma.transaction.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { categoryId: 11, subcategoryId: null },
+      include: {
+        category: { select: { name: true } },
+        subcategory: { select: { name: true } },
+      },
+    });
+  });
+
+  it("validates ownership for transaction category updates", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      updateTransactionCategory({
+        userUuid: "user-1",
+        transactionId: 9,
+        categoryId: 11,
+      })
+    ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
+
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 1, categoryId: null });
+    mockPrisma.category.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      updateTransactionCategory({
+        userUuid: "user-1",
+        transactionId: 1,
+        categoryId: 77,
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: "VALIDATION_ERROR",
+      details: [{ path: ["categoryId"], message: "Unknown category" }],
+    });
   });
 
   it("suggests the most frequent category and subcategory with deterministic ties", async () => {

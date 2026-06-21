@@ -75,6 +75,12 @@ export type TransactionUpdateInput = TransactionWriteInput & {
   transactionId: number;
 };
 
+export type TransactionCategoryUpdateInput = {
+  userUuid: string;
+  transactionId: number;
+  categoryId: number | null;
+};
+
 export type TransactionLookupInput = {
   userUuid: string;
   transactionId: number;
@@ -96,6 +102,16 @@ export type TransactionCreateResult = ServiceResult<
 >;
 export type TransactionUpdateResult = ServiceResult<
   { id: number },
+  "NOT_FOUND" | "VALIDATION_ERROR" | "INTERNAL_ERROR"
+>;
+export type TransactionCategoryUpdateResult = ServiceResult<
+  {
+    id: number;
+    categoryId: number | null;
+    category: string | null;
+    subcategoryId: number | null;
+    subcategory: string | null;
+  },
   "NOT_FOUND" | "VALIDATION_ERROR" | "INTERNAL_ERROR"
 >;
 export type TransactionDeleteResult = ServiceResult<

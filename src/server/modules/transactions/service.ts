@@ -6,6 +6,8 @@ import { fail, ok } from "@/server/shared/result";
 
 import type {
   ListTransactionsInput,
+  TransactionCategoryUpdateInput,
+  TransactionCategoryUpdateResult,
   TransactionCreateResult,
   TransactionDeleteResult,
   TransactionDto,
@@ -415,6 +417,53 @@ export async function updateTransaction(
     logger.error("updateTransaction - Failed to update transaction", error as Error, {
       userUuid: input.userUuid,
       transactionId: input.transactionId,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function updateTransactionCategory(
+  input: TransactionCategoryUpdateInput
+): Promise<TransactionCategoryUpdateResult> {
+  try {
+    const existing = await prisma.transaction.findFirst({
+      where: { id: input.transactionId, userUuid: input.userUuid },
+      select: { id: true, categoryId: true },
+    });
+    if (!existing) {
+      return fail("NOT_FOUND");
+    }
+
+    const hasCategory = await ensureOwnedCategory(input.userUuid, input.categoryId);
+    if (!hasCategory) {
+      return fail("VALIDATION_ERROR", [{ path: ["categoryId"], message: "Unknown category" }]);
+    }
+
+    const updated = await prisma.transaction.update({
+      where: { id: input.transactionId },
+      data: {
+        categoryId: input.categoryId,
+        subcategoryId:
+          input.categoryId == null || existing.categoryId !== input.categoryId ? null : undefined,
+      },
+      include: {
+        category: { select: { name: true } },
+        subcategory: { select: { name: true } },
+      },
+    });
+
+    return ok({
+      id: updated.id,
+      categoryId: updated.categoryId,
+      category: updated.category?.name ?? null,
+      subcategoryId: updated.subcategoryId,
+      subcategory: updated.subcategory?.name ?? null,
+    });
+  } catch (error) {
+    logger.error("updateTransactionCategory - Failed to update transaction category", error as Error, {
+      userUuid: input.userUuid,
+      transactionId: input.transactionId,
+      categoryId: input.categoryId,
     });
     return fail("INTERNAL_ERROR");
   }
