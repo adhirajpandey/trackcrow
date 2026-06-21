@@ -2,12 +2,16 @@ import "server-only";
 
 import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 import type { DashboardGranularity, DashboardRangeValue } from "@/features/dashboard/query-state";
-import { getDashboardRangeState } from "@/features/dashboard/query-state";
+import {
+  getDashboardRangeState,
+  getPreviousDashboardRangeState,
+} from "@/features/dashboard/query-state";
 import { requirePageSessionUser } from "@/server/auth/session";
 import {
   getDashboardSummary,
   getImportHealth,
   getLargeTransactionCount,
+  getRecentTransactions,
   getRecentLargeTransactions,
   getSpendingByCategory,
   getSpendingByPeriod,
@@ -67,9 +71,15 @@ export type DashboardPageData = {
   summary: DashboardSummaryDto;
   importHealth: DashboardImportHealthDto;
   largeTransactionCount: number;
+  comparison: {
+    rangeLabel: string;
+    summary: DashboardSummaryDto;
+    spendingByCategory: DashboardCategorySpendDto[];
+  } | null;
   spendingByCategory: DashboardCategorySpendDto[];
   spendingByPeriod: DashboardPeriodSpendDto[];
   recentLargeTransactions: DashboardRecentTransactionDto[];
+  recentTransactions: DashboardRecentTransactionDto[];
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -106,9 +116,11 @@ function emptyDashboardData(
     summary: emptySummary,
     importHealth: emptyImportHealth,
     largeTransactionCount: 0,
+    comparison: null,
     spendingByCategory: [],
     spendingByPeriod: [],
     recentLargeTransactions: [],
+    recentTransactions: [],
   };
 }
 
@@ -129,6 +141,7 @@ export async function getDashboardPageData(
     endDate: rangeState.endDate,
     granularity: rangeState.granularity,
   };
+  const previousRange = getPreviousDashboardRangeState(rangeState);
   const user = {
     name: sessionUser.name,
     email: sessionUser.email,
@@ -140,8 +153,14 @@ export async function getDashboardPageData(
     endDate: rangeState.serviceEndDate,
   };
 
-  const [summary, spendingByCategory, importHealth, largeTransactionCount, recentLargeTransactions] =
-    await Promise.all([
+  const [
+    summary,
+    spendingByCategory,
+    importHealth,
+    largeTransactionCount,
+    recentLargeTransactions,
+    recentTransactions,
+  ] = await Promise.all([
       getDashboardSummary(rangeInput),
       getSpendingByCategory(rangeInput),
       getImportHealth(rangeInput),
@@ -152,6 +171,10 @@ export async function getDashboardPageData(
       getRecentLargeTransactions({
         ...rangeInput,
         take: 5,
+      }),
+      getRecentTransactions({
+        ...rangeInput,
+        take: 10,
       }),
     ]);
 
@@ -178,13 +201,35 @@ export async function getDashboardPageData(
     !spendingByPeriod.ok ||
     !importHealth.ok ||
     !largeTransactionCount.ok ||
-    !recentLargeTransactions.ok
+    !recentLargeTransactions.ok ||
+    !recentTransactions.ok
   ) {
     return emptyDashboardData(
       user,
       range,
       "Dashboard data is temporarily unavailable. Try again in a moment."
     );
+  }
+
+  let comparison: DashboardPageData["comparison"] = null;
+  if (previousRange) {
+    const previousRangeInput = {
+      userUuid: sessionUser.userUuid,
+      startDate: previousRange.serviceStartDate,
+      endDate: previousRange.serviceEndDate,
+    };
+    const [previousSummary, previousSpendingByCategory] = await Promise.all([
+      getDashboardSummary(previousRangeInput),
+      getSpendingByCategory(previousRangeInput),
+    ]);
+
+    if (previousSummary.ok && previousSpendingByCategory.ok) {
+      comparison = {
+        rangeLabel: previousRange.label,
+        summary: previousSummary.data,
+        spendingByCategory: previousSpendingByCategory.data,
+      };
+    }
   }
 
   return {
@@ -196,8 +241,10 @@ export async function getDashboardPageData(
     summary: summary.data,
     importHealth: importHealth.data,
     largeTransactionCount: largeTransactionCount.data,
+    comparison,
     spendingByCategory: spendingByCategory.data,
     spendingByPeriod: spendingByPeriod.data,
     recentLargeTransactions: recentLargeTransactions.data,
+    recentTransactions: recentTransactions.data,
   };
 }

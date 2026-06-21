@@ -15,6 +15,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
 import {
   getDashboardSummary,
   getLargeTransactionCount,
+  getRecentTransactions,
   getSpendingByCategory,
   getSpendingByPeriod,
 } from "./service";
@@ -147,6 +148,81 @@ describe("dashboard service", () => {
         amount: {
           gte: 10000,
         },
+      },
+    });
+  });
+
+  it("lists recent transactions by newest timestamp with range filters and take", async () => {
+    const startDate = new Date("2026-06-01T00:00:00.000Z");
+    const endDate = new Date("2026-06-30T23:59:59.000Z");
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      {
+        uuid: "txn-2",
+        amount: 900,
+        timestamp: new Date("2026-06-20T10:00:00.000Z"),
+        source: "SMS",
+        recipientName: null,
+        recipientRaw: "Fresh Mart",
+        recipient: { displayName: "Fresh Mart" },
+        category: { name: "Food" },
+      },
+      {
+        uuid: "txn-1",
+        amount: 2500,
+        timestamp: new Date("2026-06-18T10:00:00.000Z"),
+        source: "EMAIL",
+        recipientName: "Power bill",
+        recipientRaw: "POWER BILL",
+        recipient: { displayName: "Utility" },
+        category: null,
+      },
+    ]);
+
+    await expect(
+      getRecentTransactions({
+        userUuid: "user-1",
+        startDate,
+        endDate,
+        take: 10,
+      })
+    ).resolves.toEqual({
+      ok: true,
+      data: [
+        {
+          uuid: "txn-2",
+          recipient: "Fresh Mart",
+          category: "Food",
+          amount: 900,
+          timestamp: "2026-06-20T10:00:00.000Z",
+          source: "SMS",
+        },
+        {
+          uuid: "txn-1",
+          recipient: "Power bill",
+          category: null,
+          amount: 2500,
+          timestamp: "2026-06-18T10:00:00.000Z",
+          source: "EMAIL",
+        },
+      ],
+    });
+
+    expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith({
+      where: {
+        userUuid: "user-1",
+        timestamp: { gte: startDate, lte: endDate },
+      },
+      orderBy: { timestamp: "desc" },
+      take: 10,
+      select: {
+        uuid: true,
+        amount: true,
+        timestamp: true,
+        source: true,
+        recipientName: true,
+        recipientRaw: true,
+        recipient: { select: { displayName: true } },
+        category: { select: { name: true } },
       },
     });
   });

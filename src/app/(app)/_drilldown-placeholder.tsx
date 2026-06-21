@@ -26,10 +26,7 @@ export function DrilldownPlaceholderPage({
   return (
     <div className="space-y-6">
       <section className="border-b border-border pb-6">
-        <p className="text-[11px] font-semibold uppercase text-primary">Workspace</p>
-        <h1 className="mt-4 text-[32px] font-bold leading-tight text-foreground">
-          {title}
-        </h1>
+        <h1 className="text-[32px] font-bold leading-tight text-foreground">{title}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
           {description}
         </p>

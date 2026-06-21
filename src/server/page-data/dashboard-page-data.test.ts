@@ -6,6 +6,7 @@ jest.mock("@/server/modules/dashboard/service", () => ({
   getDashboardSummary: jest.fn(),
   getImportHealth: jest.fn(),
   getLargeTransactionCount: jest.fn(),
+  getRecentTransactions: jest.fn(),
   getRecentLargeTransactions: jest.fn(),
   getSpendingByCategory: jest.fn(),
   getSpendingByPeriod: jest.fn(),
@@ -16,6 +17,7 @@ import {
   getDashboardSummary,
   getImportHealth,
   getLargeTransactionCount,
+  getRecentTransactions,
   getRecentLargeTransactions,
   getSpendingByCategory,
   getSpendingByPeriod,
@@ -27,6 +29,7 @@ const mockRequirePageSessionUser = jest.mocked(requirePageSessionUser);
 const mockGetDashboardSummary = jest.mocked(getDashboardSummary);
 const mockGetImportHealth = jest.mocked(getImportHealth);
 const mockGetLargeTransactionCount = jest.mocked(getLargeTransactionCount);
+const mockGetRecentTransactions = jest.mocked(getRecentTransactions);
 const mockGetRecentLargeTransactions = jest.mocked(getRecentLargeTransactions);
 const mockGetSpendingByCategory = jest.mocked(getSpendingByCategory);
 const mockGetSpendingByPeriod = jest.mocked(getSpendingByPeriod);
@@ -67,6 +70,19 @@ describe("getDashboardPageData", () => {
           category: "Essentials",
           amount: 20000,
           timestamp: "2026-06-15T00:00:00.000Z",
+          source: "SMS",
+        },
+      ],
+    });
+    mockGetRecentTransactions.mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          uuid: "txn-2",
+          recipient: "Grocer",
+          category: "Food",
+          amount: 500,
+          timestamp: "2026-06-20T00:00:00.000Z",
           source: "SMS",
         },
       ],
@@ -116,12 +132,38 @@ describe("getDashboardPageData", () => {
       },
       importHealth: { parsedCount: 8, failedCount: 1, unparseableCount: 2 },
       largeTransactionCount: 1,
+      comparison: {
+        rangeLabel: "2026-05-02 to 2026-05-31",
+        summary: {
+          totalSpend: 300,
+          transactionCount: 2,
+          categorizedCount: 1,
+          uncategorizedCount: 1,
+          averageSpend: 150,
+        },
+        spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+      },
       spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+      recentTransactions: [
+        {
+          uuid: "txn-2",
+          recipient: "Grocer",
+          category: "Food",
+          amount: 500,
+          timestamp: "2026-06-20T00:00:00.000Z",
+          source: "SMS",
+        },
+      ],
     });
     expect(mockGetDashboardSummary).toHaveBeenCalledWith({
       userUuid: "user-1",
       startDate: new Date("2026-05-31T18:30:00.000Z"),
       endDate: new Date("2026-06-30T18:29:59.999Z"),
+    });
+    expect(mockGetDashboardSummary).toHaveBeenCalledWith({
+      userUuid: "user-1",
+      startDate: new Date("2026-05-01T18:30:00.000Z"),
+      endDate: new Date("2026-05-31T18:29:59.999Z"),
     });
     expect(mockGetSpendingByPeriod).toHaveBeenCalledWith({
       userUuid: "user-1",
@@ -134,6 +176,12 @@ describe("getDashboardPageData", () => {
       startDate: new Date("2026-05-31T18:30:00.000Z"),
       endDate: new Date("2026-06-30T18:29:59.999Z"),
       minimumAmount: 10000,
+    });
+    expect(mockGetRecentTransactions).toHaveBeenCalledWith({
+      userUuid: "user-1",
+      startDate: new Date("2026-05-31T18:30:00.000Z"),
+      endDate: new Date("2026-06-30T18:29:59.999Z"),
+      take: 10,
     });
   });
 
@@ -192,6 +240,7 @@ describe("getDashboardPageData", () => {
 
     await expect(getDashboardPageData({ range: "all-time" })).resolves.toMatchObject({
       range: { value: "all-time", granularity: "year" },
+      comparison: null,
       spendingByPeriod: [{ period: "2024", totalSpend: 3700, transactionCount: 37 }],
     });
   });
@@ -223,9 +272,11 @@ describe("getDashboardPageData", () => {
       },
       importHealth: { parsedCount: 0, failedCount: 0, unparseableCount: 0 },
       largeTransactionCount: 0,
+      comparison: null,
       spendingByCategory: [],
       spendingByPeriod: [],
       recentLargeTransactions: [],
+      recentTransactions: [],
     });
   });
 });

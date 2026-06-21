@@ -58,14 +58,15 @@ export function AppShell({
               className="lg:hidden"
               onClick={() => setIsOpen(true)}
               aria-label="Open navigation"
+              title="Open navigation"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="lg:hidden">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                 TrackCrow
               </p>
-              <p className="text-sm text-muted-foreground">Product workspace</p>
+              <p className="text-sm text-secondary-foreground">Spend ops</p>
             </div>
           </div>
 
@@ -83,6 +84,7 @@ export function AppShell({
               variant="secondary"
               size="icon"
               aria-label="Sign out"
+              title="Sign out"
               onClick={() => void signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="h-4 w-4" />
@@ -108,6 +110,7 @@ export function AppShell({
                   variant="ghost"
                   size="icon"
                   aria-label="Close navigation"
+                  title="Close navigation"
                   onClick={() => setIsOpen(false)}
                 >
                   <X className="h-5 w-5" />
@@ -118,7 +121,7 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-[1360px] px-4 py-6 lg:px-8 lg:py-8">
+        <main className="mx-auto w-full max-w-[1560px] px-4 py-6 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>
@@ -133,7 +136,7 @@ function ShellSidebar({ pathname }: { pathname: string }) {
         <p className="text-[11px] font-semibold uppercase text-primary">
           TrackCrow
         </p>
-        <p className="mt-3 text-lg font-semibold leading-none text-foreground/88">
+        <p className="mt-3 text-lg font-semibold leading-none text-foreground">
           Spend ops
         </p>
       </div>
@@ -161,14 +164,14 @@ function ShellNav({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex min-h-11 items-center gap-3 rounded-md border border-transparent px-3 text-sm font-semibold text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
-                ? "bg-card/85 text-foreground"
-                : "hover:bg-secondary/80 hover:text-foreground"
+                ? "border-primary/40 bg-primary/10 text-foreground shadow-[inset_3px_0_0_var(--primary)]"
+                : "hover:border-border hover:bg-secondary/80 hover:text-foreground"
             )}
           >
-            <Icon className="h-4 w-4" />
-            {item.label}
+            <Icon className={cn("h-4 w-4", active && "text-primary")} />
+            <span className="flex-1">{item.label}</span>
           </Link>
         );
       })}

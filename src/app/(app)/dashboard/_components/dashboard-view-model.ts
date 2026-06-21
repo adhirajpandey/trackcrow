@@ -1,4 +1,5 @@
 import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
+import type { DashboardRangeValue } from "@/features/dashboard/query-state";
 import type {
   DashboardCategorySpendDto,
   DashboardImportHealthDto,
@@ -18,6 +19,78 @@ const numberFormatter = new Intl.NumberFormat("en-IN");
 const fullNumberFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
+const dashboardDayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const monthYearFormatter = new Intl.DateTimeFormat("en-IN", {
+  month: "short",
+  year: "numeric",
+});
+const dayMonthYearFormatter = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+const shortDateFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "short",
+});
+const timeFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+export const quickDashboardRanges: Array<{
+  value: DashboardRangeValue;
+  label: string;
+}> = [
+  { value: "last-30-days", label: "30D" },
+  { value: "last-90-days", label: "90D" },
+  { value: "this-year", label: "YTD" },
+  { value: "last-12-months", label: "12M" },
+];
+
+export const secondaryDashboardRanges: Array<{
+  value: DashboardRangeValue;
+  label: string;
+}> = [
+  { value: "this-month", label: "This month" },
+  { value: "last-month", label: "Last month" },
+  { value: "last-3-months", label: "Last 3 months" },
+  { value: "last-6-months", label: "Last 6 months" },
+  { value: "all-time", label: "All time" },
+  { value: "custom", label: "Custom range" },
+];
+
+export const chartLegendItems = [
+  { label: "Normal", className: "bg-primary" },
+  { label: "Peak", className: "bg-accent" },
+  { label: "Latest", className: "bg-info" },
+];
+
+export function formatComparisonDelta(current: number, previous: number | null | undefined) {
+  if (previous === null || previous === undefined) {
+    return "No previous data";
+  }
+
+  if (previous <= 0) {
+    return current > 0 ? "New activity" : "No previous data";
+  }
+
+  const change = ((current - previous) / previous) * 100;
+  const rounded = Math.round(Math.abs(change));
+  if (rounded === 0) {
+    return "Flat vs previous period";
+  }
+
+  return `${change > 0 ? "+" : "-"}${rounded}% vs previous period`;
+}
 
 export function formatPeriodLabel(period: string) {
   if (/^\d{4}$/.test(period)) {
@@ -51,6 +124,37 @@ export function formatPeriodLabel(period: string) {
 export function formatPeriod(period: string) {
   const label = formatPeriodLabel(period);
   return label.secondary ? `${label.primary} ${label.secondary}` : label.primary;
+}
+
+function parseDateOnlyForDisplay(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function isMonthFirst(value: string) {
+  return value.endsWith("-01");
+}
+
+export function formatDashboardRangeLabel(range: DashboardPageData["range"]) {
+  if (range.value === "all-time" || !range.startDate || !range.endDate) {
+    return range.label;
+  }
+
+  const start = parseDateOnlyForDisplay(range.startDate);
+  const end = parseDateOnlyForDisplay(range.endDate);
+  const formatMonthRange =
+    range.granularity === "month" ||
+    range.granularity === "year" ||
+    (isMonthFirst(range.startDate) &&
+      ["last-3-months", "last-6-months", "last-12-months", "this-year"].includes(
+        range.value
+      ));
+
+  if (formatMonthRange) {
+    return `${monthYearFormatter.format(start)} - ${monthYearFormatter.format(end)}`;
+  }
+
+  return `${dayMonthYearFormatter.format(start)} - ${dayMonthYearFormatter.format(end)}`;
 }
 
 export function getPeriodLabelStep(periodCount: number) {
@@ -192,6 +296,40 @@ export function formatShortDate(value: string) {
   }).format(new Date(value));
 }
 
+function getDashboardDayKey(value: Date) {
+  return dashboardDayKeyFormatter.format(value);
+}
+
+export function buildRecentTransactionMeta(
+  category: string | null,
+  timestamp: string,
+  options: { now?: Date } = {}
+) {
+  const date = new Date(timestamp);
+  const now = options.now ?? new Date();
+  const isSameDay = getDashboardDayKey(date) === getDashboardDayKey(now);
+
+  return {
+    timestampLabel: isSameDay ? timeFormatter.format(date) : shortDateFormatter.format(date),
+    isSameDay,
+    categoryLabel: category ?? "No category",
+    needsCategory: !category,
+  };
+}
+
+export function buildRecentTransactionsSummary(input: {
+  transactionCount: number;
+  uncategorizedCount: number;
+}) {
+  const recentLabel = `${formatNumber(input.transactionCount)} recent`;
+  const reviewLabel =
+    input.uncategorizedCount > 0
+      ? `${formatNumber(input.uncategorizedCount)} need category`
+      : "All categorized";
+
+  return `${recentLabel} \u00b7 ${reviewLabel}`;
+}
+
 function trimTrailingZeros(value: number, fractionDigits: number) {
   return value
     .toFixed(fractionDigits)
@@ -298,16 +436,37 @@ export function buildReviewQueueCard(input: {
 }) {
   const importIssueCount =
     input.importHealth.failedCount + input.importHealth.unparseableCount;
+  const totalReviewCount =
+    input.summary.uncategorizedCount + importIssueCount + input.largeTransactionCount;
   const hasItems =
     input.summary.uncategorizedCount > 0 ||
     importIssueCount > 0 ||
     input.largeTransactionCount > 0;
+  const badges = [
+    {
+      label: "Needs category",
+      count: input.summary.uncategorizedCount,
+      tone: "attention" as const,
+    },
+    {
+      label: "Import issues",
+      count: importIssueCount,
+      tone: "warning" as const,
+    },
+    {
+      label: "Large spends",
+      count: input.largeTransactionCount,
+      tone: "info" as const,
+    },
+  ];
 
   return {
     title: "Review queue",
     href: buildReviewQueueHref(input.range),
     action: hasItems ? "Review" : "View transactions",
     hasItems,
+    totalReviewCount,
+    badges,
     lines: hasItems
       ? [
           `${formatNumber(input.summary.uncategorizedCount)} need category`,
@@ -325,4 +484,109 @@ export function buildReviewQueueCard(input: {
         : `Nothing over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)} in this period.`,
     thresholdLabel: formatCurrency(LARGE_TRANSACTION_THRESHOLD),
   };
+}
+
+export function buildMetricComparisons(input: {
+  summary: DashboardSummaryDto;
+  comparison: DashboardPageData["comparison"];
+  categories: DashboardCategorySpendDto[];
+}) {
+  const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
+  const previousTopCategory = input.comparison
+    ? getTopCategoryInsight(
+        input.comparison.spendingByCategory,
+        input.comparison.summary.totalSpend
+      )
+    : null;
+
+  return {
+    totalSpend: formatComparisonDelta(
+      input.summary.totalSpend,
+      input.comparison?.summary.totalSpend
+    ),
+    averageSpend: formatComparisonDelta(
+      input.summary.averageSpend,
+      input.comparison?.summary.averageSpend
+    ),
+    biggestCategory: topCategory
+      ? previousTopCategory
+        ? previousTopCategory.category === topCategory.category
+          ? "Stable vs previous period"
+          : `${previousTopCategory.category} to ${topCategory.category}`
+        : "No previous data"
+      : "No category signal",
+  };
+}
+
+export function buildDashboardInsights(input: {
+  summary: DashboardSummaryDto;
+  comparison: DashboardPageData["comparison"];
+  periods: DashboardPeriodSpendDto[];
+  categories: DashboardCategorySpendDto[];
+  importHealth: DashboardImportHealthDto;
+  largeTransactionCount: number;
+}) {
+  const averagePeriodSpend = getAveragePeriodSpend(input.periods);
+  const latestPeriod = input.periods[input.periods.length - 1] ?? null;
+  const peakPeriod = getPeakPeriod(input.periods);
+  const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
+  const previousTopCategory = input.comparison
+    ? getTopCategoryInsight(
+        input.comparison.spendingByCategory,
+        input.comparison.summary.totalSpend
+      )
+    : null;
+  const importIssueCount =
+    input.importHealth.failedCount + input.importHealth.unparseableCount;
+  const reviewCount =
+    input.summary.uncategorizedCount + importIssueCount + input.largeTransactionCount;
+
+  return [
+    {
+      label: "Trend",
+      value: input.comparison
+        ? formatComparisonDelta(
+            input.summary.totalSpend,
+            input.comparison.summary.totalSpend
+          )
+        : latestPeriod && averagePeriodSpend > 0
+          ? `${formatCompactCurrency(latestPeriod.totalSpend)} latest vs ${formatCompactCurrency(
+              averagePeriodSpend
+            )} average`
+          : "No trend yet",
+      helper: input.comparison
+        ? `Compared with ${input.comparison.rangeLabel}`
+        : "Add more history for comparisons",
+    },
+    {
+      label: "Spike",
+      value: peakPeriod
+        ? `${formatPeriod(peakPeriod.period)} at ${formatCompactCurrency(peakPeriod.totalSpend)}`
+        : "No spike yet",
+      helper: peakPeriod
+        ? `${formatNumber(peakPeriod.transactionCount)} transactions in the peak bucket`
+        : "No spending buckets in this range",
+    },
+    {
+      label: "Category shift",
+      value: topCategory
+        ? previousTopCategory && previousTopCategory.category !== topCategory.category
+          ? `${previousTopCategory.category} to ${topCategory.category}`
+          : `${topCategory.category} leads`
+        : "No category signal",
+      helper: topCategory
+        ? `${topCategory.share}% of selected spending`
+        : "Categorize spending to unlock category insights",
+    },
+    {
+      label: "Review pressure",
+      value: reviewCount > 0 ? `${formatNumber(reviewCount)} items need review` : "All clear",
+      helper:
+        reviewCount > 0
+          ? `${formatNumber(input.summary.uncategorizedCount)} uncategorized, ${formatNumber(
+              importIssueCount
+            )} import issues`
+          : "No uncategorized, import, or large-spend review items",
+    },
+  ];
 }

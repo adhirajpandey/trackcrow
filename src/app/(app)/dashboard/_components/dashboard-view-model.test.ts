@@ -1,13 +1,19 @@
 import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 
 import {
+  buildRecentTransactionMeta,
+  buildRecentTransactionsSummary,
+  buildDashboardInsights,
+  buildMetricComparisons,
   buildChartTicks,
   buildImportsReviewHref,
   buildPeriodTransactionsHref,
   buildReviewQueueCard,
   buildTransactionsHref,
   formatCompactCurrency,
+  formatComparisonDelta,
   formatCurrency,
+  formatDashboardRangeLabel,
   formatPeriodLabel,
   getAveragePeriodSpend,
   getCategoryShare,
@@ -75,6 +81,36 @@ describe("dashboard view model", () => {
     expect(formatPeriodLabel("2025")).toEqual({ primary: "2025", secondary: null });
   });
 
+  it("formats selected dashboard date ranges for display", () => {
+    expect(
+      formatDashboardRangeLabel({
+        value: "last-12-months",
+        label: "Last 12 months",
+        startDate: "2025-07-01",
+        endDate: "2026-06-21",
+        granularity: "month",
+      })
+    ).toBe("Jul 2025 - Jun 2026");
+    expect(
+      formatDashboardRangeLabel({
+        value: "last-30-days",
+        label: "Last 30 days",
+        startDate: "2026-05-23",
+        endDate: "2026-06-21",
+        granularity: "day",
+      })
+    ).toBe("23 May 2026 - 21 Jun 2026");
+    expect(
+      formatDashboardRangeLabel({
+        value: "all-time",
+        label: "All time",
+        startDate: null,
+        endDate: null,
+        granularity: "year",
+      })
+    ).toBe("All time");
+  });
+
   it("excludes uncategorized and transfer-style categories from biggest category", () => {
     expect(
       getTopCategoryInsight(
@@ -111,6 +147,13 @@ describe("dashboard view model", () => {
     expect(formatCompactCurrency(598)).toBe("\u20b9598");
   });
 
+  it("formats comparison deltas for metric cards", () => {
+    expect(formatComparisonDelta(1500, 1000)).toBe("+50% vs previous period");
+    expect(formatComparisonDelta(900, 1000)).toBe("-10% vs previous period");
+    expect(formatComparisonDelta(0, 0)).toBe("No previous data");
+    expect(formatComparisonDelta(500, null)).toBe("No previous data");
+  });
+
   it("builds dashboard drilldown links", () => {
     expect(
       buildTransactionsHref({
@@ -123,6 +166,44 @@ describe("dashboard view model", () => {
     expect(buildImportsReviewHref(range)).toBe(
       "/imports/review?startDate=2026-06-01&endDate=2026-06-21"
     );
+  });
+
+  it("builds recent transaction metadata without repeated uncategorized text", () => {
+    expect(
+      buildRecentTransactionMeta("Food", "2026-06-20T06:15:00.000Z", {
+        now: new Date("2026-06-20T12:00:00.000Z"),
+      })
+    ).toEqual({
+      timestampLabel: "11:45 am",
+      isSameDay: true,
+      categoryLabel: "Food",
+      needsCategory: false,
+    });
+    expect(
+      buildRecentTransactionMeta(null, "2026-06-18T00:00:00.000Z", {
+        now: new Date("2026-06-20T12:00:00.000Z"),
+      })
+    ).toEqual({
+      timestampLabel: "18 Jun",
+      isSameDay: false,
+      categoryLabel: "No category",
+      needsCategory: true,
+    });
+  });
+
+  it("builds the recent transaction section summary", () => {
+    expect(
+      buildRecentTransactionsSummary({
+        transactionCount: 10,
+        uncategorizedCount: 8,
+      })
+    ).toBe("10 recent \u00b7 8 need category");
+    expect(
+      buildRecentTransactionsSummary({
+        transactionCount: 4,
+        uncategorizedCount: 0,
+      })
+    ).toBe("4 recent \u00b7 All categorized");
   });
 
   it("derives compact review queue copy with the shared threshold", () => {
@@ -143,6 +224,12 @@ describe("dashboard view model", () => {
       title: "Review queue",
       action: "Review",
       hasItems: true,
+      totalReviewCount: 9,
+      badges: [
+        { label: "Needs category", count: 3, tone: "attention" },
+        { label: "Import issues", count: 3, tone: "warning" },
+        { label: "Large spends", count: 3, tone: "info" },
+      ],
       lines: [
         "3 need category",
         "3 imports need review",
@@ -202,5 +289,93 @@ describe("dashboard view model", () => {
         { period: "2025-02", totalSpend: 300, transactionCount: 2 },
       ])
     ).toBe(200);
+  });
+
+  it("builds dashboard insights from current and comparison data", () => {
+    expect(
+      buildDashboardInsights({
+        summary: {
+          totalSpend: 1500,
+          transactionCount: 4,
+          categorizedCount: 3,
+          uncategorizedCount: 1,
+          averageSpend: 375,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 1000,
+            transactionCount: 3,
+            categorizedCount: 3,
+            uncategorizedCount: 0,
+            averageSpend: 333,
+          },
+          spendingByCategory: [
+            { category: "Food", totalSpend: 700, transactionCount: 2 },
+          ],
+        },
+        periods: [
+          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+        ],
+        categories: [
+          { category: "Travel", totalSpend: 900, transactionCount: 2 },
+          { category: "Food", totalSpend: 600, transactionCount: 2 },
+        ],
+        importHealth: { parsedCount: 8, failedCount: 1, unparseableCount: 1 },
+        largeTransactionCount: 2,
+      })
+    ).toEqual([
+      {
+        label: "Trend",
+        value: "+50% vs previous period",
+        helper: "Compared with 2026-05-01 to 2026-05-31",
+      },
+      {
+        label: "Spike",
+        value: "02 Jun 2026 at \u20b91.1K",
+        helper: "3 transactions in the peak bucket",
+      },
+      {
+        label: "Category shift",
+        value: "Food to Travel",
+        helper: "60% of selected spending",
+      },
+      {
+        label: "Review pressure",
+        value: "5 items need review",
+        helper: "1 uncategorized, 2 import issues",
+      },
+    ]);
+  });
+
+  it("builds top-card comparisons from previous-period data", () => {
+    expect(
+      buildMetricComparisons({
+        summary: {
+          totalSpend: 1500,
+          transactionCount: 4,
+          categorizedCount: 3,
+          uncategorizedCount: 1,
+          averageSpend: 375,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 1000,
+            transactionCount: 3,
+            categorizedCount: 3,
+            uncategorizedCount: 0,
+            averageSpend: 300,
+          },
+          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
+        },
+        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2 }],
+      })
+    ).toEqual({
+      totalSpend: "+50% vs previous period",
+      averageSpend: "+25% vs previous period",
+      biggestCategory: "Food to Travel",
+    });
   });
 });

@@ -316,3 +316,61 @@ export async function getRecentLargeTransactions(
     return fail("INTERNAL_ERROR");
   }
 }
+
+export async function getRecentTransactions(
+  input: DashboardRangeInput & { take?: number }
+): Promise<
+  ServiceResult<
+    Array<{
+      uuid: string;
+      recipient: string;
+      category: string | null;
+      amount: number;
+      timestamp: string;
+      source: string;
+    }>,
+    "INTERNAL_ERROR"
+  >
+> {
+  const where = {
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
+  };
+
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where,
+      orderBy: { timestamp: "desc" },
+      take: input.take ?? 10,
+      select: {
+        uuid: true,
+        amount: true,
+        timestamp: true,
+        source: true,
+        recipientName: true,
+        recipientRaw: true,
+        recipient: { select: { displayName: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    return ok(
+      transactions.map((transaction) => ({
+        uuid: transaction.uuid,
+        recipient:
+          transaction.recipientName ??
+          transaction.recipient?.displayName ??
+          transaction.recipientRaw,
+        category: transaction.category?.name ?? null,
+        amount: Number(transaction.amount),
+        timestamp: transaction.timestamp.toISOString(),
+        source: transaction.source,
+      }))
+    );
+  } catch (error) {
+    logger.error("getRecentTransactions - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}

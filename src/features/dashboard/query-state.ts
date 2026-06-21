@@ -1,5 +1,7 @@
 export const dashboardRangeValues = [
   "this-month",
+  "last-30-days",
+  "last-90-days",
   "last-month",
   "last-3-months",
   "last-6-months",
@@ -25,6 +27,14 @@ export type DashboardRangeState = {
   serviceStartDate?: Date;
   serviceEndDate?: Date;
   granularity: DashboardGranularity;
+};
+
+export type DashboardComparisonRangeState = {
+  label: string;
+  startDate: string;
+  endDate: string;
+  serviceStartDate: Date;
+  serviceEndDate: Date;
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -173,6 +183,18 @@ export function getDashboardRangeState(input: {
     return buildRange("last-month", start, end, "Last month", "day");
   }
 
+  if (range === "last-30-days" || range === "last-90-days") {
+    const days = range === "last-30-days" ? 30 : 90;
+    const start = addDays(current, -(days - 1));
+    return buildRange(
+      range,
+      start,
+      current,
+      range === "last-30-days" ? "Last 30 days" : "Last 90 days",
+      range === "last-30-days" ? "day" : "week"
+    );
+  }
+
   if (range === "last-3-months" || range === "last-6-months") {
     const months = range === "last-3-months" ? 3 : 6;
     const startMonth = addMonths(current.year, current.monthIndex, -(months - 1));
@@ -214,6 +236,38 @@ export function getDashboardRangeState(input: {
     "This month",
     "day"
   );
+}
+
+export function getPreviousDashboardRangeState(
+  range: DashboardRangeState
+): DashboardComparisonRangeState | null {
+  if (range.range === "all-time" || !range.startDate || !range.endDate) {
+    return null;
+  }
+
+  const start = parseDateOnly(range.startDate);
+  const end = parseDateOnly(range.endDate);
+  if (!start || !end) {
+    return null;
+  }
+
+  const dayCount = daysBetween(range.startDate, range.endDate);
+  const previousEnd = addDays(start, -1);
+  const previousStart = addDays(start, -dayCount);
+  const startDate = formatDateOnly(
+    previousStart.year,
+    previousStart.monthIndex,
+    previousStart.day
+  );
+  const endDate = formatDateOnly(previousEnd.year, previousEnd.monthIndex, previousEnd.day);
+
+  return {
+    label: `${startDate} to ${endDate}`,
+    startDate,
+    endDate,
+    serviceStartDate: startOfIstDay(previousStart),
+    serviceEndDate: endOfIstDay(previousEnd),
+  };
 }
 
 export function buildDashboardHref(input: DashboardRangeState) {
