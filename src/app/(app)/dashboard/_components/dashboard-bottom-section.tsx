@@ -6,11 +6,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
+  ArrowUpRight,
   Check,
   ChevronDown,
   ChevronRight,
   LoaderCircle,
-  X,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,21 +19,18 @@ import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import {
-  type DashboardCategoryFilterValue,
   buildCategoryQuickTagOptions,
-  buildRecentTransactionsApiHref,
   dashboardTableLayouts,
   getCategoryTriggerLabel,
-  mapTransactionListToDashboardItems,
 } from "./dashboard-bottom-section-model";
 import {
   dashboardAttentionPanelClassName,
   dashboardFooterLinkClassName,
+  dashboardFooterSecondaryLinkClassName,
   dashboardFooterStackClassName,
   dashboardInnerTableClassName,
   dashboardPanelClassName,
   dashboardPrimaryActionClassName,
-  dashboardSmallActionClassName,
   dashboardTableHeaderClassName,
   dashboardTableRowClassName,
   dashboardTableTallRowClassName,
@@ -61,13 +58,9 @@ export function DashboardBottomSection({
   topCategory: string | null;
 }) {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] =
-    useState<DashboardCategoryFilterValue>("all");
   const [recentTransactions, setRecentTransactions] = useState(
     data.recentTransactions.slice(0, 6)
   );
-  const [isLoadingRecentTransactions, setIsLoadingRecentTransactions] = useState(false);
-  const [recentTransactionsError, setRecentTransactionsError] = useState<string | null>(null);
   const [pendingTransactionId, setPendingTransactionId] = useState<number | null>(null);
   const [assignmentErrorTransactionId, setAssignmentErrorTransactionId] = useState<
     number | null
@@ -78,8 +71,6 @@ export function DashboardBottomSection({
   const categoryMenuRef = useRef<HTMLDivElement | null>(null);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const quickTagOptions = buildCategoryQuickTagOptions(data.categoryOptions);
-  const rangeParams = getRangeParams(data.range);
-  const hasActiveRecentFilters = selectedCategory !== "all";
   const knownCategories = getKnownSpendingCategories(data.spendingByCategory);
   const knownSpendTotal = getKnownSpendTotal(data.spendingByCategory);
   const maxKnownCategorySpend = Math.max(
@@ -93,61 +84,8 @@ export function DashboardBottomSection({
   });
 
   useEffect(() => {
-    if (!hasActiveRecentFilters) {
-      setRecentTransactions(data.recentTransactions.slice(0, 6));
-      setRecentTransactionsError(null);
-      setIsLoadingRecentTransactions(false);
-      return;
-    }
-
-    let isCancelled = false;
-
-    async function loadRecentTransactions() {
-      setIsLoadingRecentTransactions(true);
-      setRecentTransactionsError(null);
-
-      try {
-        const response = await fetch(
-          buildRecentTransactionsApiHref({
-            startDate: data.range.startDate,
-            endDate: data.range.endDate,
-            query: "",
-            category: selectedCategory,
-          }),
-          { method: "GET", credentials: "same-origin" }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to load recent transactions");
-        }
-
-        const payload = await response.json();
-        if (!isCancelled) {
-          setRecentTransactions(mapTransactionListToDashboardItems(payload));
-        }
-      } catch {
-        if (!isCancelled) {
-          setRecentTransactionsError("Recent transactions could not be updated.");
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingRecentTransactions(false);
-        }
-      }
-    }
-
-    void loadRecentTransactions();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    data.range.endDate,
-    data.range.startDate,
-    data.recentTransactions,
-    hasActiveRecentFilters,
-    selectedCategory,
-  ]);
+    setRecentTransactions(data.recentTransactions.slice(0, 6));
+  }, [data.recentTransactions]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -191,10 +129,6 @@ export function DashboardBottomSection({
           return [transaction];
         }
 
-        if (selectedCategory === "uncategorized") {
-          return [];
-        }
-
         return [{ ...transaction, category: nextCategoryName }];
       })
     );
@@ -229,13 +163,6 @@ export function DashboardBottomSection({
     uncategorizedCount: recentTransactions.filter((transaction) => !transaction.category).length,
   });
 
-  const categoryDrilldownHref =
-    selectedCategory === "all"
-      ? buildTransactionsHref(rangeParams)
-      : selectedCategory === "uncategorized"
-        ? buildTransactionsHref({ ...rangeParams, status: "uncategorized" })
-        : buildTransactionsHref({ ...rangeParams, category: selectedCategory });
-
   return (
     <section className="space-y-3">
       <section className="grid items-stretch gap-3 xl:grid-cols-3">
@@ -245,14 +172,7 @@ export function DashboardBottomSection({
           maxCategorySpend={maxKnownCategorySpend}
           topCategory={topCategory}
           sectionStatus={data.sectionStatus.categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          drilldownHref={categoryDrilldownHref}
           uncategorizedCategory={uncategorizedCategory}
-          uncategorizedHref={buildTransactionsHref({
-            ...rangeParams,
-            status: "uncategorized",
-          })}
         />
         <FrequentRecipientsPanel
           recipients={frequentRecipientRows}
@@ -260,7 +180,6 @@ export function DashboardBottomSection({
         />
         <LargestTransactionsPanel
           transactions={data.recentLargeTransactions}
-          range={data.range}
           displayRange={displayRange}
         />
       </section>
@@ -271,8 +190,7 @@ export function DashboardBottomSection({
           range={data.range}
           transactionStatus={data.sectionStatus.transactions}
           summary={recentSummary}
-          isLoading={isLoadingRecentTransactions || isRefreshing}
-          errorMessage={recentTransactionsError}
+          isLoading={isRefreshing}
           quickTagOptions={quickTagOptions}
           pendingTransactionId={pendingTransactionId}
           assignmentErrorTransactionId={assignmentErrorTransactionId}
@@ -284,8 +202,6 @@ export function DashboardBottomSection({
             )
           }
           categoryMenuRef={categoryMenuRef}
-          selectedCategory={selectedCategory}
-          onClearCategoryFilter={() => setSelectedCategory("all")}
           displayRange={displayRange}
         />
       </section>
@@ -297,19 +213,49 @@ function AlignedPanelHeader({
   title,
   description,
   trailing,
+  href,
+  hrefLabel,
 }: {
   title: string;
   description: string;
   trailing?: ReactNode;
+  href?: string;
+  hrefLabel?: string;
 }) {
-  return (
-    <CardHeader className="pb-3">
-      <div className="space-y-1.5">
-        <CardTitle className="text-[1.1rem] font-semibold normal-case tracking-normal text-foreground">
-          {title}
+  const content = (
+    <>
+      <div className="min-w-0 space-y-1.5">
+        <CardTitle className="text-[1.1rem] font-semibold normal-case tracking-normal text-foreground transition-colors group-hover:text-primary group-focus-visible:text-primary">
+          <span className="decoration-primary/80 underline-offset-4 transition-[text-decoration-color] group-hover:underline group-focus-visible:underline">
+            {title}
+          </span>
         </CardTitle>
         <p className="min-h-[28px] text-sm leading-5 text-secondary-foreground">{description}</p>
       </div>
+      <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-secondary-foreground transition-colors group-hover:text-primary group-focus-visible:text-primary" />
+    </>
+  );
+
+  return (
+    <CardHeader className="pb-3">
+      {href ? (
+        <Link
+          href={href}
+          aria-label={hrefLabel ?? `Open ${title}`}
+          className="group -mx-2 flex cursor-pointer items-start justify-between gap-3 rounded-[8px] px-2 py-1.5 transition-colors hover:bg-background/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {content}
+        </Link>
+      ) : (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle className="text-[1.1rem] font-semibold normal-case tracking-normal text-foreground">
+              {title}
+            </CardTitle>
+            <p className="min-h-[28px] text-sm leading-5 text-secondary-foreground">{description}</p>
+          </div>
+        </div>
+      )}
       {trailing ? <div className="mt-2">{trailing}</div> : null}
     </CardHeader>
   );
@@ -321,43 +267,21 @@ function SpendingByCategoryPanel({
   maxCategorySpend,
   topCategory,
   sectionStatus,
-  selectedCategory,
-  onSelectCategory,
-  drilldownHref,
   uncategorizedCategory,
-  uncategorizedHref,
 }: {
   categories: DashboardPageData["spendingByCategory"];
   categorizedSpendTotal: number;
   maxCategorySpend: number;
   topCategory: string | null;
   sectionStatus: DashboardPageData["sectionStatus"]["categories"];
-  selectedCategory: DashboardCategoryFilterValue;
-  onSelectCategory: (value: DashboardCategoryFilterValue) => void;
-  drilldownHref: string;
   uncategorizedCategory: DashboardPageData["spendingByCategory"][number] | null;
-  uncategorizedHref: string;
 }) {
   return (
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
         title="Where your money went"
         description="Known categories only"
-        trailing={
-          selectedCategory !== "all" ? (
-            <button
-              type="button"
-              onClick={() => onSelectCategory("all")}
-              className={cn(
-                dashboardSmallActionClassName,
-                "gap-2 border border-border/50 bg-background/18 text-foreground transition-colors hover:bg-secondary/18"
-              )}
-            >
-              Clear filter
-              <X className="h-3.5 w-3.5" />
-            </button>
-          ) : null
-        }
+        href="/categories"
       />
       <CardContent className="flex flex-1 flex-col">
         {categories.length === 0 ? (
@@ -379,18 +303,15 @@ function SpendingByCategoryPanel({
                 {categories.slice(0, 5).map((item, index) => {
                   const share = getCategoryShare(item.totalSpend, categorizedSpendTotal);
                   const isTop = item.category === topCategory;
-                  const isActive = selectedCategory === item.category;
 
                   return (
-                    <button
+                    <Link
                       key={item.category}
-                      type="button"
-                      onClick={() => onSelectCategory(item.category)}
+                      href={buildCategoryPageHref(item.category)}
                       className={cn(
                         dashboardTableRowClassName,
-                        "w-full items-center text-left",
-                        index > 0 && "border-t border-border/40",
-                        isActive && "bg-secondary/20"
+                        "cursor-pointer items-center text-left",
+                        index > 0 && "border-t border-border/40"
                       )}
                       style={{
                         gridTemplateColumns: dashboardTableLayouts.spendingByCategory.template,
@@ -423,7 +344,7 @@ function SpendingByCategoryPanel({
                       <span className="text-right font-medium text-secondary-foreground">
                         {share}%
                       </span>
-                    </button>
+                    </Link>
                   );
                 })}
               </div>
@@ -439,10 +360,10 @@ function SpendingByCategoryPanel({
                     </p>
                   </div>
                   <Link
-                    href={uncategorizedHref}
+                    href={buildCategoryPageHref(uncategorizedCategory.category)}
                     className={cn(
                       dashboardPrimaryActionClassName,
-                      "border border-accent/35 bg-accent text-accent-foreground transition-colors hover:brightness-105"
+                      "cursor-pointer border border-accent/35 bg-accent text-accent-foreground transition-colors hover:brightness-105"
                     )}
                   >
                     Review
@@ -452,18 +373,6 @@ function SpendingByCategoryPanel({
             ) : null}
           </div>
         )}
-        <FooterActions>
-          <PanelFooterLink
-            href={drilldownHref}
-            label={
-              selectedCategory === "all"
-                ? "View all activity"
-                : selectedCategory === "uncategorized"
-                  ? "Open uncategorized transactions"
-                  : "Open filtered transactions"
-            }
-          />
-        </FooterActions>
       </CardContent>
     </Card>
   );
@@ -481,6 +390,7 @@ function FrequentRecipientsPanel({
       <AlignedPanelHeader
         title="Frequent recipients"
         description={`Most repeated recipients in ${displayRange}.`}
+        href="/recipients"
       />
       <CardContent className="flex flex-1 flex-col">
         {recipients.length === 0 ? (
@@ -497,7 +407,7 @@ function FrequentRecipientsPanel({
                   href={recipient.href}
                   className={cn(
                     dashboardTableRowClassName,
-                    "items-center",
+                    "cursor-pointer items-center",
                     index > 0 && "border-t border-border/40"
                   )}
                   style={{
@@ -524,9 +434,6 @@ function FrequentRecipientsPanel({
             </div>
           </div>
         )}
-        <FooterActions>
-          <PanelFooterLink href="/recipients" label="View all recipients" />
-        </FooterActions>
       </CardContent>
     </Card>
   );
@@ -534,11 +441,9 @@ function FrequentRecipientsPanel({
 
 function LargestTransactionsPanel({
   transactions,
-  range,
   displayRange,
 }: {
   transactions: DashboardPageData["recentLargeTransactions"];
-  range: DashboardPageData["range"];
   displayRange: string;
 }) {
   return (
@@ -546,6 +451,7 @@ function LargestTransactionsPanel({
       <AlignedPanelHeader
         title="Largest transactions"
         description={`Highest-value transactions inside ${displayRange}.`}
+        href="/transactions"
       />
       <CardContent className="flex flex-1 flex-col">
         {transactions.length === 0 ? (
@@ -562,7 +468,7 @@ function LargestTransactionsPanel({
                   href={buildTransactionsHref({ transaction: transaction.uuid })}
                   className={cn(
                     dashboardTableRowClassName,
-                    "items-start",
+                    "cursor-pointer items-start",
                     index > 0 && "border-t border-border/40"
                   )}
                   style={{
@@ -586,17 +492,6 @@ function LargestTransactionsPanel({
             </div>
           </div>
         )}
-        <FooterActions>
-          <PanelFooterLink
-            href={buildTransactionsHref({
-              ...getRangeParams(range),
-              review: "large",
-              sortBy: "amount",
-              sortOrder: "desc",
-            })}
-            label="View all transactions"
-          />
-        </FooterActions>
       </CardContent>
     </Card>
   );
@@ -608,7 +503,6 @@ function RecentTransactionsPanel({
   transactionStatus,
   summary,
   isLoading,
-  errorMessage,
   quickTagOptions,
   pendingTransactionId,
   assignmentErrorTransactionId,
@@ -616,8 +510,6 @@ function RecentTransactionsPanel({
   openCategoryMenuTransactionId,
   onToggleCategoryMenu,
   categoryMenuRef,
-  selectedCategory,
-  onClearCategoryFilter,
   displayRange,
 }: {
   transactions: DashboardPageData["recentTransactions"];
@@ -625,7 +517,6 @@ function RecentTransactionsPanel({
   transactionStatus: DashboardPageData["sectionStatus"]["transactions"];
   summary: string;
   isLoading: boolean;
-  errorMessage: string | null;
   quickTagOptions: Array<{ id: number; label: string }>;
   pendingTransactionId: number | null;
   assignmentErrorTransactionId: number | null;
@@ -633,8 +524,6 @@ function RecentTransactionsPanel({
   openCategoryMenuTransactionId: number | null;
   onToggleCategoryMenu: (transactionId: number) => void;
   categoryMenuRef: RefObject<HTMLDivElement | null>;
-  selectedCategory: DashboardCategoryFilterValue;
-  onClearCategoryFilter: () => void;
   displayRange: string;
 }) {
   return (
@@ -650,24 +539,13 @@ function RecentTransactionsPanel({
         }
       />
       <CardContent className="flex flex-1 flex-col">
-        {errorMessage ? (
-          <div className="mb-3 rounded-[8px] border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-foreground">
-            {errorMessage}
-          </div>
-        ) : null}
         {transactions.length === 0 ? (
           <EmptyPanel
-            title={
-              selectedCategory !== "all"
-                ? "No recent transactions match this filter."
-                : "No recent transactions in this period."
-            }
+            title="No recent transactions in this period."
             helper={
-              selectedCategory !== "all"
-                ? "Clear the category filter or search to broaden the activity list."
-                : transactionStatus === "empty"
-                  ? "Import or add transactions to populate recent activity."
-                  : undefined
+              transactionStatus === "empty"
+                ? "Import or add transactions to populate recent activity."
+                : undefined
             }
           />
         ) : (
@@ -790,18 +668,10 @@ function RecentTransactionsPanel({
           </div>
         )}
         <FooterActions>
-          {selectedCategory !== "all" ? (
-            <button
-              type="button"
-              onClick={onClearCategoryFilter}
-              className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-border/50 bg-background/16 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/18"
-            >
-              Clear category filter
-            </button>
-          ) : null}
           <PanelFooterLink
             href={buildTransactionsHref(getRangeParams(range))}
             label="View all activity"
+            className={dashboardFooterSecondaryLinkClassName}
           />
         </FooterActions>
       </CardContent>
@@ -839,11 +709,19 @@ function TableHeader({
   );
 }
 
-function PanelFooterLink({ href, label }: { href: string; label: string }) {
+function PanelFooterLink({
+  href,
+  label,
+  className,
+}: {
+  href: string;
+  label: string;
+  className?: string;
+}) {
   return (
     <Link
       href={href}
-      className={dashboardFooterLinkClassName}
+      className={cn(className ?? dashboardFooterLinkClassName, "cursor-pointer")}
     >
       {label}
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -853,6 +731,11 @@ function PanelFooterLink({ href, label }: { href: string; label: string }) {
 
 function FooterActions({ children }: { children: ReactNode }) {
   return <div className={dashboardFooterStackClassName}>{children}</div>;
+}
+
+function buildCategoryPageHref(category: string) {
+  const params = new URLSearchParams({ category });
+  return `/categories?${params.toString()}`;
 }
 
 function EmptyPanel({

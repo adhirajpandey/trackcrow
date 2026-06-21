@@ -19,6 +19,9 @@ export const dashboardTableTallRowClassName =
 export const dashboardFooterLinkClassName =
   "inline-flex min-h-9 w-full items-center justify-between rounded-[8px] border border-border/50 bg-background/16 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+export const dashboardFooterSecondaryLinkClassName =
+  "inline-flex min-h-9 w-full cursor-pointer items-center justify-between rounded-[8px] border border-border/38 bg-transparent px-4 text-sm font-semibold text-secondary-foreground/92 transition-colors hover:border-border/60 hover:bg-background/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export const dashboardFooterStackClassName = "mt-4 flex flex-col gap-3";
 
 export const dashboardSmallActionClassName =

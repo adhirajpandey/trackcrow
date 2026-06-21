@@ -521,6 +521,7 @@ function RightRail({
         <RailHeader
           icon={<ReceiptText className="h-4 w-4 text-info" />}
           label="Rule suggestions"
+          href="/categories"
         />
         <p className="mt-2 text-sm text-secondary-foreground">
           {suggestedRules.length > 0
@@ -539,22 +540,40 @@ function RightRail({
             ))}
           </div>
         ) : null}
-        <Link
-          href="/categories"
-          className={cn(
-            dashboardPrimaryActionClassName,
-            "mt-4 w-full justify-between border border-border/55 bg-background/18 text-foreground transition-colors hover:bg-secondary/22"
-          )}
-        >
-          View all suggestions
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </Link>
       </div>
     </div>
   );
 }
 
-function RailHeader({ icon, label }: { icon: ReactNode; label: string }) {
+function RailHeader({
+  icon,
+  label,
+  href,
+}: {
+  icon: ReactNode;
+  label: string;
+  href?: string;
+}) {
+  if (href) {
+    return (
+      <Link
+        href={href}
+        aria-label={`Open ${label}`}
+        className={cn(
+          "group -mx-2 flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-background/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="underline-offset-4 group-hover:underline group-focus-visible:underline">
+            {label}
+          </span>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground group-focus-visible:text-foreground" />
+      </Link>
+    );
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 text-sm font-medium text-secondary-foreground">
       <div className="flex items-center gap-2">

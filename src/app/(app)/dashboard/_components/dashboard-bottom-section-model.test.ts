@@ -7,7 +7,10 @@ import {
   getCategoryTriggerLabel,
   mapTransactionListToDashboardItems,
 } from "./dashboard-bottom-section-model";
-import { dashboardFooterStackClassName } from "./dashboard-style";
+import {
+  dashboardFooterSecondaryLinkClassName,
+  dashboardFooterStackClassName,
+} from "./dashboard-style";
 
 describe("dashboard bottom section model", () => {
   it("builds filtered recent-transactions API URLs", () => {
@@ -118,5 +121,11 @@ describe("dashboard bottom section model", () => {
 
   it("defines a shared footer spacing stack for dashboard footer links", () => {
     expect(dashboardFooterStackClassName).toBe("mt-4 flex flex-col gap-3");
+  });
+
+  it("defines a quieter secondary footer link treatment for recent transactions", () => {
+    expect(dashboardFooterSecondaryLinkClassName).toContain("cursor-pointer");
+    expect(dashboardFooterSecondaryLinkClassName).toContain("bg-transparent");
+    expect(dashboardFooterSecondaryLinkClassName).toContain("text-secondary-foreground/92");
   });
 });
