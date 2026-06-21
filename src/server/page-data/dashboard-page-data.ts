@@ -8,6 +8,7 @@ import {
 } from "@/features/dashboard/query-state";
 import { requirePageSessionUser } from "@/server/auth/session";
 import {
+  getFrequentRecipients,
   getDashboardSummary,
   getImportHealth,
   getLargeTransactionCount,
@@ -59,6 +60,12 @@ export type DashboardRecentTransactionDto = {
   source: string;
 };
 
+export type DashboardFrequentRecipientDto = {
+  recipient: string;
+  paymentCount: number;
+  totalAmount: number;
+};
+
 export type DashboardPageData = {
   status: "ready" | "error";
   message: string | null;
@@ -87,6 +94,7 @@ export type DashboardPageData = {
   } | null;
   spendingByCategory: DashboardCategorySpendDto[];
   spendingByPeriod: DashboardPeriodSpendDto[];
+  frequentRecipients: DashboardFrequentRecipientDto[];
   recentLargeTransactions: DashboardRecentTransactionDto[];
   recentTransactions: DashboardRecentTransactionDto[];
 };
@@ -170,6 +178,7 @@ function emptyDashboardData(
     comparison: null,
     spendingByCategory: [],
     spendingByPeriod: [],
+    frequentRecipients: [],
     recentLargeTransactions: [],
     recentTransactions: [],
   };
@@ -209,6 +218,7 @@ export async function getDashboardPageData(
     spendingByCategory,
     importHealth,
     largeTransactionCount,
+    frequentRecipients,
     recentLargeTransactions,
     recentTransactions,
   ] = await Promise.all([
@@ -218,6 +228,10 @@ export async function getDashboardPageData(
       getLargeTransactionCount({
         ...rangeInput,
         minimumAmount: LARGE_TRANSACTION_THRESHOLD,
+      }),
+      getFrequentRecipients({
+        ...rangeInput,
+        take: 5,
       }),
       getRecentLargeTransactions({
         ...rangeInput,
@@ -252,6 +266,7 @@ export async function getDashboardPageData(
     !spendingByPeriod.ok ||
     !importHealth.ok ||
     !largeTransactionCount.ok ||
+    !frequentRecipients.ok ||
     !recentLargeTransactions.ok ||
     !recentTransactions.ok
   ) {
@@ -304,6 +319,7 @@ export async function getDashboardPageData(
     comparison,
     spendingByCategory: spendingByCategory.data,
     spendingByPeriod: spendingByPeriod.data,
+    frequentRecipients: frequentRecipients.data,
     recentLargeTransactions: recentLargeTransactions.data,
     recentTransactions: recentTransactions.data,
   };

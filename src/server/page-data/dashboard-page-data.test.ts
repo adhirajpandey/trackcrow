@@ -3,6 +3,7 @@ jest.mock("@/server/auth/session", () => ({
 }));
 
 jest.mock("@/server/modules/dashboard/service", () => ({
+  getFrequentRecipients: jest.fn(),
   getDashboardSummary: jest.fn(),
   getImportHealth: jest.fn(),
   getLargeTransactionCount: jest.fn(),
@@ -14,6 +15,7 @@ jest.mock("@/server/modules/dashboard/service", () => ({
 
 import { requirePageSessionUser } from "@/server/auth/session";
 import {
+  getFrequentRecipients,
   getDashboardSummary,
   getImportHealth,
   getLargeTransactionCount,
@@ -27,6 +29,7 @@ import { getDashboardPageData } from "./dashboard-page-data";
 
 const mockRequirePageSessionUser = jest.mocked(requirePageSessionUser);
 const mockGetDashboardSummary = jest.mocked(getDashboardSummary);
+const mockGetFrequentRecipients = jest.mocked(getFrequentRecipients);
 const mockGetImportHealth = jest.mocked(getImportHealth);
 const mockGetLargeTransactionCount = jest.mocked(getLargeTransactionCount);
 const mockGetRecentTransactions = jest.mocked(getRecentTransactions);
@@ -60,6 +63,16 @@ describe("getDashboardPageData", () => {
     mockGetLargeTransactionCount.mockResolvedValue({
       ok: true,
       data: 1,
+    });
+    mockGetFrequentRecipients.mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          recipient: "Grocer",
+          paymentCount: 3,
+          totalAmount: 1800,
+        },
+      ],
     });
     mockGetRecentLargeTransactions.mockResolvedValue({
       ok: true,
@@ -151,6 +164,13 @@ describe("getDashboardPageData", () => {
         spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
       },
       spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+      frequentRecipients: [
+        {
+          recipient: "Grocer",
+          paymentCount: 3,
+          totalAmount: 1800,
+        },
+      ],
       recentTransactions: [
         {
           uuid: "txn-2",
@@ -183,6 +203,12 @@ describe("getDashboardPageData", () => {
       startDate: new Date("2026-05-31T18:30:00.000Z"),
       endDate: new Date("2026-06-30T18:29:59.999Z"),
       minimumAmount: 10000,
+    });
+    expect(mockGetFrequentRecipients).toHaveBeenCalledWith({
+      userUuid: "user-1",
+      startDate: new Date("2026-05-31T18:30:00.000Z"),
+      endDate: new Date("2026-06-30T18:29:59.999Z"),
+      take: 5,
     });
     expect(mockGetRecentTransactions).toHaveBeenCalledWith({
       userUuid: "user-1",
@@ -289,6 +315,7 @@ describe("getDashboardPageData", () => {
       comparison: null,
       spendingByCategory: [],
       spendingByPeriod: [],
+      frequentRecipients: [],
       recentLargeTransactions: [],
       recentTransactions: [],
     });

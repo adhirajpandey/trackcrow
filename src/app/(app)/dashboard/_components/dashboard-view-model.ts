@@ -73,6 +73,19 @@ export type DashboardInsightVm = {
   tone: "neutral" | "attention" | "info";
 };
 
+export type DashboardRightRailCardVm = {
+  label: string;
+  value: string;
+  helper: string;
+  href: string | null;
+  tone: "neutral" | "attention" | "info";
+};
+
+export type DashboardSuggestedRuleVm = {
+  recipient: string;
+  action: string;
+};
+
 export type DashboardChangeSummaryVm = {
   title: string;
   value: string;
@@ -402,6 +415,14 @@ export function buildRecentTransactionsSummary(input: {
       : "All categorized";
 
   return `${recentLabel} \u00b7 ${reviewLabel}`;
+}
+
+export function getUncategorizedShare(uncategorizedCount: number, transactionCount: number) {
+  if (transactionCount <= 0 || uncategorizedCount <= 0) {
+    return 0;
+  }
+
+  return Math.round((uncategorizedCount / transactionCount) * 100);
 }
 
 function formatCompactNumber(value: number, fractionDigits: number) {
@@ -780,4 +801,56 @@ export function buildDashboardInsights(input: {
   });
 
   return insights;
+}
+
+export function buildBiggestChangeCard(input: {
+  summary: DashboardSummaryDto;
+  comparison: DashboardPageData["comparison"];
+  categories: DashboardCategorySpendDto[];
+  range: DashboardPageData["range"];
+}): DashboardRightRailCardVm {
+  const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
+  const previousTopCategory = input.comparison
+    ? getTopCategoryInsight(
+        input.comparison.spendingByCategory,
+        input.comparison.summary.totalSpend
+      )
+    : null;
+
+  if (!topCategory) {
+    return {
+      label: "Biggest change",
+      value: "No category signal",
+      helper: "Categorize more spending to surface the clearest shift.",
+      href: null,
+      tone: "neutral",
+    };
+  }
+
+  const value =
+    previousTopCategory && previousTopCategory.category !== topCategory.category
+      ? `${topCategory.category} up ${formatCurrency(topCategory.totalSpend)}`
+      : `${topCategory.category} leads`;
+
+  return {
+    label: "Biggest change",
+    value,
+    helper: input.comparison
+      ? `Compared with ${input.comparison.rangeLabel}`
+      : "No previous period available for comparison.",
+    href: buildTransactionsHref({
+      ...getRangeParams(input.range),
+      category: topCategory.category,
+    }),
+    tone: "neutral",
+  };
+}
+
+export function buildSuggestedRules(input: {
+  recipients: DashboardPageData["frequentRecipients"];
+}): DashboardSuggestedRuleVm[] {
+  return input.recipients.slice(0, 2).map((recipient) => ({
+    recipient: recipient.recipient,
+    action: "Create rule",
+  }));
 }

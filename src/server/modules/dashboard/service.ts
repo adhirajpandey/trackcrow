@@ -374,3 +374,63 @@ export async function getRecentTransactions(
     return fail("INTERNAL_ERROR");
   }
 }
+
+export async function getFrequentRecipients(
+  input: DashboardRangeInput & { take?: number }
+): Promise<
+  ServiceResult<
+    Array<{
+      recipient: string;
+      paymentCount: number;
+      totalAmount: number;
+    }>,
+    "INTERNAL_ERROR"
+  >
+> {
+  const where = {
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
+  };
+
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where,
+      select: {
+        amount: true,
+        recipientName: true,
+        recipientRaw: true,
+        recipient: { select: { displayName: true } },
+      },
+    });
+
+    const groups = new Map<string, { paymentCount: number; totalAmount: number }>();
+    for (const transaction of transactions) {
+      const recipient =
+        transaction.recipientName ??
+        transaction.recipient?.displayName ??
+        transaction.recipientRaw;
+      const current = groups.get(recipient) ?? { paymentCount: 0, totalAmount: 0 };
+      current.paymentCount += 1;
+      current.totalAmount += Number(transaction.amount);
+      groups.set(recipient, current);
+    }
+
+    return ok(
+      [...groups.entries()]
+        .map(([recipient, data]) => ({ recipient, ...data }))
+        .sort((left, right) => {
+          if (right.paymentCount !== left.paymentCount) {
+            return right.paymentCount - left.paymentCount;
+          }
+
+          return right.totalAmount - left.totalAmount;
+        })
+        .slice(0, input.take ?? 5)
+    );
+  } catch (error) {
+    logger.error("getFrequentRecipients - Failed", error as Error, {
+      userUuid: input.userUuid,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}

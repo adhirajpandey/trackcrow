@@ -79,7 +79,7 @@ export function DashboardTimeframePicker({
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      <div className="flex rounded-md border border-border/70 bg-muted/40 p-1">
+      <div className="flex rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] p-1">
         {quickDashboardRanges.map((range) => {
           const active = selectedRange === range.value;
 
@@ -93,10 +93,10 @@ export function DashboardTimeframePicker({
                 setSelectedRange(range.value);
                 navigate(range.value);
               }}
-              className={`min-h-8 rounded-sm px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`min-h-8 rounded-[6px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 active
                   ? "bg-primary text-primary-foreground"
-                  : "text-secondary-foreground hover:bg-secondary/80 hover:text-foreground"
+                  : "text-secondary-foreground hover:bg-secondary/45 hover:text-foreground"
               }`}
             >
               {range.label}
@@ -110,7 +110,7 @@ export function DashboardTimeframePicker({
           aria-haspopup="menu"
           aria-expanded={isOpen}
           onClick={() => setIsOpen((current) => !current)}
-          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border/60 bg-muted/26 px-3 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/55 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-9 items-center gap-2 rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <CalendarRange className="h-4 w-4" aria-hidden="true" />
           More ranges
@@ -123,7 +123,7 @@ export function DashboardTimeframePicker({
         {isOpen ? (
           <div
             role="menu"
-            className="absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[220px] rounded-md border border-border bg-popover p-2 shadow-2xl shadow-background/40"
+            className="absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[220px] rounded-[8px] border border-border/80 bg-popover p-2 shadow-2xl shadow-background/50"
           >
             {secondaryDashboardRanges.map((range) => {
               const active = secondaryRangeValue === range.value;
@@ -142,8 +142,8 @@ export function DashboardTimeframePicker({
                   }}
                   className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     active
-                      ? "bg-secondary text-foreground"
-                      : "text-secondary-foreground hover:bg-secondary/75 hover:text-foreground"
+                      ? "bg-secondary/75 text-foreground"
+                      : "text-secondary-foreground hover:bg-secondary/55 hover:text-foreground"
                   }`}
                 >
                   <span>{range.label}</span>
@@ -173,7 +173,7 @@ export function DashboardTimeframePicker({
             type="date"
             value={customStartDate}
             onChange={(event) => setCustomStartDate(event.target.value)}
-            className="min-h-9 rounded-md border border-input bg-muted/26 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-9 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <label className="sr-only" htmlFor="dashboard-end-date">
             End date
@@ -183,12 +183,12 @@ export function DashboardTimeframePicker({
             type="date"
             value={customEndDate}
             onChange={(event) => setCustomEndDate(event.target.value)}
-            className="min-h-9 rounded-md border border-input bg-muted/26 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-9 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <button
             type="submit"
             disabled={!customStartDate || !customEndDate}
-            className="min-h-9 rounded-md border border-primary/40 bg-primary/15 px-3 text-sm font-semibold text-primary transition-colors hover:border-primary disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-9 rounded-[8px] border border-primary/40 bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Apply
           </button>

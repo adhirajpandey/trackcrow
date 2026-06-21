@@ -14,6 +14,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
 
 import {
   getDashboardSummary,
+  getFrequentRecipients,
   getLargeTransactionCount,
   getRecentTransactions,
   getSpendingByCategory,
@@ -224,6 +225,50 @@ describe("dashboard service", () => {
         recipient: { select: { displayName: true } },
         category: { select: { name: true } },
       },
+    });
+  });
+
+  it("groups frequent recipients by payment count and total amount", async () => {
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      {
+        amount: 900,
+        recipientName: null,
+        recipientRaw: "Fresh Mart",
+        recipient: { displayName: "Fresh Mart" },
+      },
+      {
+        amount: 250,
+        recipientName: "Power bill",
+        recipientRaw: "POWER BILL",
+        recipient: { displayName: "Utility" },
+      },
+      {
+        amount: 600,
+        recipientName: null,
+        recipientRaw: "Fresh Mart",
+        recipient: { displayName: "Fresh Mart" },
+      },
+    ]);
+
+    await expect(
+      getFrequentRecipients({
+        userUuid: "user-1",
+        take: 5,
+      })
+    ).resolves.toEqual({
+      ok: true,
+      data: [
+        {
+          recipient: "Fresh Mart",
+          paymentCount: 2,
+          totalAmount: 1500,
+        },
+        {
+          recipient: "Power bill",
+          paymentCount: 1,
+          totalAmount: 250,
+        },
+      ],
     });
   });
 });

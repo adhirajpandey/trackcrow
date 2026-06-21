@@ -1,12 +1,14 @@
 import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 
 import {
+  buildBiggestChangeCard,
   buildChartBuckets,
   buildChartTooltip,
   buildRecentTransactionMeta,
   buildRecentTransactionsSummary,
   buildDashboardInsights,
   buildMetricComparisons,
+  buildSuggestedRules,
   buildChartTicks,
   buildImportsReviewHref,
   buildPeriodTransactionsHref,
@@ -25,6 +27,7 @@ import {
   getPeriodBounds,
   getPeriodLabelStep,
   getTopCategoryInsight,
+  getUncategorizedShare,
 } from "./dashboard-view-model";
 
 const range = {
@@ -209,6 +212,11 @@ describe("dashboard view model", () => {
         uncategorizedCount: 0,
       })
     ).toBe("4 recent \u00b7 All categorized");
+  });
+
+  it("derives uncategorized share for the alert strip", () => {
+    expect(getUncategorizedShare(7, 9)).toBe(78);
+    expect(getUncategorizedShare(0, 9)).toBe(0);
   });
 
   it("derives compact review queue copy with the shared threshold", () => {
@@ -409,6 +417,53 @@ describe("dashboard view model", () => {
       value: "+50% vs previous period",
       helper: "Up by \u20b9500 compared with 2026-05-01 to 2026-05-31.",
     });
+  });
+
+  it("builds the biggest-change rail card", () => {
+    expect(
+      buildBiggestChangeCard({
+        summary: {
+          totalSpend: 1500,
+          transactionCount: 4,
+          categorizedCount: 3,
+          uncategorizedCount: 1,
+          averageSpend: 375,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 1000,
+            transactionCount: 3,
+            categorizedCount: 3,
+            uncategorizedCount: 0,
+            averageSpend: 333,
+          },
+          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
+        },
+        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2 }],
+        range,
+      })
+    ).toEqual({
+      label: "Biggest change",
+      value: "Travel up \u20b9900",
+      helper: "Compared with 2026-05-01 to 2026-05-31",
+      href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
+      tone: "neutral",
+    });
+  });
+
+  it("builds lightweight suggested rules from frequent recipients", () => {
+    expect(
+      buildSuggestedRules({
+        recipients: [
+          { recipient: "B ten cafe sec 56", paymentCount: 5, totalAmount: 2450 },
+          { recipient: "Hamanthi Devi", paymentCount: 4, totalAmount: 1600 },
+        ],
+      })
+    ).toEqual([
+      { recipient: "B ten cafe sec 56", action: "Create rule" },
+      { recipient: "Hamanthi Devi", action: "Create rule" },
+    ]);
   });
 
   it("builds chart tooltip payloads and buckets", () => {

@@ -4,9 +4,13 @@ import {
   AlertCircle,
   ArrowRight,
   BarChart3,
+  Calendar,
   CheckCircle2,
+  ChevronRight,
   Clock3,
   Sparkles,
+  TriangleAlert,
+  Wand2,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +19,14 @@ import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import { DashboardTimeframePicker } from "./dashboard-timeframe-picker";
 import {
+  buildBiggestChangeCard,
   buildChartBuckets,
   buildChartTicks,
-  buildDashboardInsights,
   buildMetricComparisons,
   buildRecentTransactionMeta,
   buildRecentTransactionsSummary,
   buildReviewQueueCard,
+  buildSuggestedRules,
   buildTransactionsHref,
   buildWhatChangedSummary,
   chartLegendItems,
@@ -37,7 +42,11 @@ import {
   getPeriodLabelStep,
   getRangeParams,
   getTopCategoryInsight,
+  getUncategorizedShare,
 } from "./dashboard-view-model";
+
+const panelClassName =
+  "overflow-hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] shadow-[0_8px_24px_rgba(0,0,0,0.16)]";
 
 export function DashboardPageView({ data }: { data: DashboardPageData }) {
   const hasTransactions = data.summary.transactionCount > 0;
@@ -64,13 +73,11 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     largeTransactionCount: data.largeTransactionCount,
     range: data.range,
   });
-  const insights = buildDashboardInsights({
+  const biggestChange = buildBiggestChangeCard({
     summary: data.summary,
     comparison: data.comparison,
     categories: data.spendingByCategory,
-    importIssueCount: data.importIssueCount,
     range: data.range,
-    sectionStatus: data.sectionStatus,
   });
   const metricComparisons = buildMetricComparisons({
     summary: data.summary,
@@ -91,45 +98,54 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     periodLabelStep,
     granularity: data.range.granularity,
   });
+  const uncategorizedShare = getUncategorizedShare(
+    data.summary.uncategorizedCount,
+    data.summary.transactionCount
+  );
+  const suggestedRules = buildSuggestedRules({
+    recipients: data.frequentRecipients,
+  });
 
   return (
-    <div className="space-y-5">
-      <section className="border-b border-border/70 pb-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
-                Spend operations
-              </p>
-              <h1 className="mt-2 max-w-2xl text-[34px] font-bold leading-tight text-foreground lg:text-[42px]">
-                Dashboard
-              </h1>
-              <p className="mt-2 text-sm font-semibold text-secondary-foreground lg:text-[15px]">
-                {displayRange}
-              </p>
-            </div>
-            <p className="max-w-2xl text-[15px] leading-6 text-secondary-foreground">
-              Track spending, spot spikes, and clear review items.
-            </p>
+    <div className="space-y-3.5">
+      <section className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1.5">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-primary/85">
+            Spend operations
+          </p>
+          <h1 className="text-[34px] font-semibold leading-none text-foreground lg:text-[42px]">
+            Dashboard
+          </h1>
+          <div className="flex items-center gap-2 text-sm text-secondary-foreground">
+            <span className="font-medium text-foreground">{displayRange}</span>
+            <Calendar className="h-3.5 w-3.5 text-secondary-foreground/80" />
           </div>
-          <div className="shrink-0 self-start">
-            <DashboardTimeframePicker
-              value={data.range.value}
-              startDate={data.range.startDate}
-              endDate={data.range.endDate}
-            />
-          </div>
+        </div>
+        <div className="shrink-0">
+          <DashboardTimeframePicker
+            value={data.range.value}
+            startDate={data.range.startDate}
+            endDate={data.range.endDate}
+          />
         </div>
       </section>
 
       {data.status === "error" ? (
-        <section className="rounded-2xl border border-destructive/55 bg-destructive/10 p-4 text-sm text-foreground">
+        <section className="rounded-[8px] border border-destructive/45 bg-destructive/10 px-4 py-3 text-sm text-foreground">
           {data.message}
         </section>
       ) : null}
 
+      {reviewQueue.hasItems ? (
+        <ReviewAlertBar
+          uncategorizedShare={uncategorizedShare}
+          reviewHref={reviewQueue.href}
+          uncategorizedCount={data.summary.uncategorizedCount}
+        />
+      ) : null}
+
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-        <MetricLink
+        <MetricCard
           href={buildTransactionsHref(rangeParams)}
           label="Total spent"
           value={formatCompactCurrency(data.summary.totalSpend, { style: "kpi" })}
@@ -139,7 +155,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           comparison={metricComparisons.totalSpend}
           tone="primary"
         />
-        <MetricLink
+        <MetricCard
           href={buildTransactionsHref(rangeParams)}
           label="Average spend"
           value={formatCompactCurrency(data.summary.averageSpend, { style: "kpi" })}
@@ -147,7 +163,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           comparison={metricComparisons.averageSpend}
           tone="secondary"
         />
-        <MetricLink
+        <MetricCard
           href={
             topCategoryInsight
               ? buildTransactionsHref({
@@ -156,22 +172,24 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
                 })
               : "/categories"
           }
-          label="Biggest category"
-          value={topCategoryInsight?.category ?? "Not ready yet"}
+          label="Top categorized spend"
+          value={
+            topCategoryInsight
+              ? formatCurrency(topCategoryInsight.totalSpend)
+              : "Not ready yet"
+          }
           helper={
             topCategoryInsight
-              ? `${topCategoryInsight.share}% of spending \u00b7 ${formatCurrency(
-                  topCategoryInsight.totalSpend
-                )}`
+              ? `${topCategoryInsight.category} · ${topCategoryInsight.share}% of categorized spend`
               : "Categorize spending to reveal the leading category."
           }
-          comparison={metricComparisons.biggestCategory}
-          tone="insight"
+          comparison={topCategoryInsight?.category ?? "No category signal"}
+          tone="secondary"
         />
-        <ReviewQueueCard card={reviewQueue} />
+        <ReviewQueueHero card={reviewQueue} />
       </section>
 
-      <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.72fr)]">
+      <section className="grid gap-3 2xl:grid-cols-[minmax(0,1.58fr)_minmax(320px,0.72fr)]">
         <SpendingTrendPanel
           periods={data.spendingByPeriod}
           peakPeriod={peakPeriod}
@@ -183,11 +201,21 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           hasTransactions={hasTransactions}
           changeSummary={changeSummary}
           comparisonStatus={data.sectionStatus.comparison}
+          trendHref={buildTransactionsHref(rangeParams)}
         />
-        <InsightsPanel insights={insights} />
+        <RightRail
+          needsCategoryCount={data.summary.uncategorizedCount}
+          needsCategoryAmount={data.spendingByCategory.find((item) => item.category === "Uncategorized")?.totalSpend ?? 0}
+          needsCategoryHref={buildTransactionsHref({
+            ...rangeParams,
+            status: "uncategorized",
+          })}
+          biggestChange={biggestChange}
+          suggestedRules={suggestedRules}
+        />
       </section>
 
-      <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
+      <section className="grid gap-3 xl:grid-cols-4">
         <SpendingByCategoryPanel
           categories={data.spendingByCategory}
           totalSpend={data.summary.totalSpend}
@@ -196,71 +224,52 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           range={data.range}
           sectionStatus={data.sectionStatus.categories}
         />
+        <FrequentRecipientsPanel recipients={data.frequentRecipients} />
         <LargestTransactionsPanel
           transactions={data.recentLargeTransactions}
           range={data.range}
         />
+        <RecentTransactionsPanel
+          transactions={data.recentTransactions}
+          range={data.range}
+          transactionStatus={data.sectionStatus.transactions}
+        />
       </section>
-
-      <RecentTransactionsPanel
-        transactions={data.recentTransactions}
-        range={data.range}
-        transactionStatus={data.sectionStatus.transactions}
-      />
     </div>
   );
 }
 
-function ReviewQueueCard({
-  card,
+function ReviewAlertBar({
+  uncategorizedShare,
+  reviewHref,
+  uncategorizedCount,
 }: {
-  card: ReturnType<typeof buildReviewQueueCard>;
+  uncategorizedShare: number;
+  reviewHref: string;
+  uncategorizedCount: number;
 }) {
   return (
-    <Card className="min-h-[148px] overflow-hidden border-border/70 bg-card/95 shadow-[0_10px_30px_rgba(0,0,0,0.12)]">
-      <CardHeader className="space-y-3 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-card-foreground">{card.title}</p>
-            <p className="mt-1 text-sm text-secondary-foreground">
-              {card.hasItems
-                ? `${formatNumber(card.totalReviewCount)} open items`
-                : "No open review items"}
-            </p>
-          </div>
-          {card.hasItems ? (
-            <Clock3 className="h-5 w-5 text-accent" aria-hidden="true" />
-          ) : (
-            <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden="true" />
-          )}
-        </div>
-        <p className="text-sm leading-5 text-secondary-foreground">{card.helper}</p>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {card.tasks.map((task) => (
-          <Link
-            key={task.label}
-            href={task.href}
-            className="group flex items-center justify-between gap-3 rounded-xl bg-muted/26 px-3 py-3 transition-colors hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-foreground">{task.count} {task.label.toLowerCase()}</span>
-              <span className="mt-1 block text-sm text-secondary-foreground">
-                {task.helper}
-              </span>
-            </span>
-            <span className="flex items-center gap-2">
-              <Badge tone={task.tone}>{formatNumber(task.count)}</Badge>
-              <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </Link>
-        ))}
-      </CardContent>
-    </Card>
+    <section className="flex flex-col gap-2 rounded-[8px] border border-accent/18 bg-[linear-gradient(90deg,rgba(242,184,75,0.10),rgba(242,184,75,0.05))] px-4 py-2.5 text-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-3">
+        <TriangleAlert className="h-4 w-4 shrink-0 text-accent" />
+        <p className="text-secondary-foreground">
+          <span className="font-semibold text-foreground">
+            {uncategorizedShare}% of this period is uncategorized.
+          </span>{" "}
+          Categorize these transactions to unlock better insights.
+        </p>
+      </div>
+      <Link
+        href={reviewHref}
+        className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-[8px] border border-accent/35 bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {uncategorizedCount > 0 ? "Review uncategorized" : "Open review items"}
+      </Link>
+    </section>
   );
 }
 
-function MetricLink({
+function MetricCard({
   href,
   label,
   value,
@@ -273,91 +282,155 @@ function MetricLink({
   value: string;
   helper: string;
   comparison: string;
-  tone: "primary" | "secondary" | "insight";
+  tone: "primary" | "secondary";
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "group min-h-[148px] rounded-2xl border bg-card px-4 py-4 transition-colors hover:bg-secondary/28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        tone === "primary" && "border-primary/28 bg-primary/5",
-        tone === "secondary" && "border-border/70",
-        tone === "insight" && "border-border/55 bg-card/90"
+        panelClassName,
+        "group min-h-[132px] px-4 py-4 transition-colors hover:border-primary/18 hover:bg-[linear-gradient(180deg,rgba(14,25,19,0.98),rgba(10,17,14,0.98))]",
+        tone === "primary" && "border-primary/16"
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-semibold text-secondary-foreground">{label}</p>
-        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        <p className="text-sm font-medium text-secondary-foreground">{label}</p>
+        <span className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-primary/12 bg-primary/6 text-primary/85">
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </span>
       </div>
       <p
         className={cn(
-          "mt-4 break-words font-semibold leading-tight tabular-nums",
-          tone === "primary" && "text-[2rem] text-primary",
-          tone === "secondary" && "text-[2rem] text-foreground",
-          tone === "insight" && "text-[1.75rem] text-foreground"
+          "mt-4 break-words text-[1.55rem] font-semibold leading-tight tabular-nums",
+          tone === "primary" ? "text-primary" : "text-foreground"
         )}
       >
         {value}
       </p>
-      <p
-        className={cn(
-          "mt-2 text-sm font-semibold",
-          comparison.startsWith("+")
-            ? "text-info"
-            : comparison.startsWith("-")
-              ? "text-accent"
-              : "text-secondary-foreground/90"
-        )}
-      >
-        {comparison}
-      </p>
+      <p className="mt-2 text-sm font-semibold text-secondary-foreground">{comparison}</p>
       <p className="mt-2 text-sm leading-5 text-secondary-foreground">{helper}</p>
     </Link>
   );
 }
 
-function InsightsPanel({
-  insights,
+function ReviewQueueHero({
+  card,
 }: {
-  insights: ReturnType<typeof buildDashboardInsights>;
+  card: ReturnType<typeof buildReviewQueueCard>;
+}) {
+  const needsCategoryTask = card.tasks.find((task) => task.label === "Need category");
+  const largeTransactionsTask = card.tasks.find((task) => task.label === "Large transactions");
+
+  return (
+    <Card className={cn(panelClassName, "min-h-[132px] border-accent/14")}>
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-secondary-foreground">Review queue</p>
+            <p className="mt-3 text-[1.6rem] font-semibold leading-none text-accent">
+              {formatNumber(card.totalReviewCount)}
+              <span className="ml-1.5 text-base text-foreground">open items</span>
+            </p>
+          </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-accent/22 bg-accent/10 text-accent">
+            {card.hasItems ? <Clock3 className="h-4.5 w-4.5" /> : <CheckCircle2 className="h-4.5 w-4.5" />}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className="text-sm leading-5 text-secondary-foreground">
+          {needsCategoryTask?.count ?? 0} need category · {largeTransactionsTask?.count ?? 0} large transactions
+        </p>
+        <Link
+          href={card.hasItems ? card.href : buildTransactionsHref({})}
+          className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-[8px] border border-accent/35 bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {card.hasItems ? "Start review" : "View transactions"}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RightRail({
+  needsCategoryCount,
+  needsCategoryAmount,
+  needsCategoryHref,
+  biggestChange,
+  suggestedRules,
+}: {
+  needsCategoryCount: number;
+  needsCategoryAmount: number;
+  needsCategoryHref: string;
+  biggestChange: ReturnType<typeof buildBiggestChangeCard>;
+  suggestedRules: ReturnType<typeof buildSuggestedRules>;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-1">
-      {insights.map((insight) => {
-        const className = cn(
-          "rounded-2xl px-4 py-4 transition-colors",
-          insight.href
-            ? "bg-muted/24 hover:bg-muted/38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            : "bg-muted/18",
-          insight.tone === "attention" && "bg-accent/8",
-          insight.tone === "info" && "bg-info/8"
-        );
+    <div className="grid gap-3">
+      <Link
+        href={needsCategoryHref}
+        className={cn(
+          panelClassName,
+          "group px-4 py-4 transition-colors hover:border-accent/25",
+          "bg-[linear-gradient(180deg,rgba(33,28,12,0.66),rgba(18,18,12,0.94))]"
+        )}
+      >
+        <RailHeader icon={<TriangleAlert className="h-4 w-4 text-accent" />} label="Needs category" />
+        <p className="mt-2 text-[1.05rem] font-semibold text-foreground">
+          {formatNumber(needsCategoryCount)} transactions still need a category.
+        </p>
+        <p className="mt-1 text-sm text-secondary-foreground">
+          {formatCurrency(needsCategoryAmount)} ({formatNumber(needsCategoryCount)} transactions)
+        </p>
+      </Link>
 
-        const content = (
-          <>
-            <div className="flex items-center gap-2 text-sm font-semibold text-secondary-foreground">
-              <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-              {insight.label}
-            </div>
-            <p className="mt-3 text-base font-semibold leading-6 text-foreground">
-              {insight.value}
-            </p>
-            <p className="mt-1 text-sm leading-5 text-secondary-foreground">
-              {insight.helper}
-            </p>
-          </>
-        );
+      <Link
+        href={biggestChange.href ?? "#"}
+        className={cn(panelClassName, "group px-4 py-4 transition-colors hover:border-primary/18")}
+      >
+        <RailHeader icon={<Sparkles className="h-4 w-4 text-primary" />} label={biggestChange.label} />
+        <p className="mt-2 text-[1.05rem] font-semibold text-primary">{biggestChange.value}</p>
+        <p className="mt-1 text-sm text-secondary-foreground">{biggestChange.helper}</p>
+      </Link>
 
-        return insight.href ? (
-          <Link key={insight.label} href={insight.href} className={className}>
-            {content}
-          </Link>
-        ) : (
-          <div key={insight.label} className={className}>
-            {content}
+      <div className={cn(panelClassName, "px-4 py-4")}>
+        <RailHeader icon={<Wand2 className="h-4 w-4 text-info" />} label="Suggested rules" />
+        <p className="mt-2 text-sm text-secondary-foreground">
+          {suggestedRules.length > 0
+            ? `${suggestedRules.length} suggestions based on repeated payees.`
+            : "Suggestions appear once repeated payees emerge in this period."}
+        </p>
+        {suggestedRules.length > 0 ? (
+          <div className="mt-3 space-y-2 text-sm">
+            {suggestedRules.map((rule) => (
+              <div key={rule.recipient} className="flex items-center justify-between gap-3">
+                <span className="truncate text-foreground">{rule.recipient}</span>
+                <span className="shrink-0 text-primary">{rule.action}</span>
+              </div>
+            ))}
           </div>
-        );
-      })}
+        ) : null}
+        <Link
+          href="/categories"
+          className="mt-4 inline-flex min-h-9 w-full items-center justify-between rounded-[8px] border border-border/55 bg-background/18 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/22 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          View all suggestions
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function RailHeader({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm font-medium text-secondary-foreground">
+      <div className="flex items-center gap-2">
+        {icon}
+        {label}
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </div>
   );
 }
@@ -372,7 +445,6 @@ function SpendingTrendPanel({
   chartBuckets,
   hasTransactions,
   changeSummary,
-  comparisonStatus,
 }: {
   periods: DashboardPageData["spendingByPeriod"];
   peakPeriod: DashboardPageData["spendingByPeriod"][number] | null;
@@ -383,69 +455,56 @@ function SpendingTrendPanel({
   chartBuckets: ReturnType<typeof buildChartBuckets>;
   hasTransactions: boolean;
   changeSummary: ReturnType<typeof buildWhatChangedSummary>;
-  comparisonStatus: DashboardPageData["sectionStatus"]["comparison"];
 }) {
+  const legendByLabel = new Map(chartLegendItems.map((item) => [item.label, item.className]));
+
   return (
-    <Card className="min-w-0 overflow-hidden border-border/70 bg-card">
-      <CardHeader className="space-y-4 pb-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-3">
-            <div>
-              <CardTitle className="text-sm font-semibold normal-case tracking-normal">
-                Spending trend
-              </CardTitle>
-              <p className="mt-1 text-sm leading-5 text-secondary-foreground">
-                Compare spending across this period and open any bucket for details.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-4">
-              {chartLegendItems.map((item) => (
-                <span
-                  key={item.label}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-secondary-foreground"
-                >
-                  <span className={cn("h-2.5 w-2.5 rounded-sm", item.className)} />
-                  {item.label}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[360px]">
-            <SummaryChip label="Peak">
-              {peakPeriod
-                ? `${formatPeriod(peakPeriod.period)} \u00b7 ${formatCompactCurrency(
-                    peakPeriod.totalSpend,
-                    { style: "chart" }
-                  )}`
-                : "No data"}
-            </SummaryChip>
-            <SummaryChip label="Latest">
-              {latestPeriod
-                ? `${formatPeriod(latestPeriod.period)} \u00b7 ${formatCompactCurrency(
-                    latestPeriod.totalSpend,
-                    { style: "chart" }
-                  )}`
-                : "No data"}
-            </SummaryChip>
-            <SummaryChip label="Average">
-              {formatCompactCurrency(averagePeriodSpend, { style: "chart" })}
-            </SummaryChip>
-            <SummaryChip label={changeSummary.title}>
-              {changeSummary.value}
-            </SummaryChip>
-          </div>
-        </div>
-        <div className="rounded-2xl bg-muted/18 px-4 py-3">
-          <p className="text-sm font-semibold text-foreground">{changeSummary.title}</p>
-          <p className="mt-1 text-sm text-secondary-foreground">{changeSummary.helper}</p>
-          {comparisonStatus === "unavailable" ? (
-            <p className="mt-2 text-sm text-secondary-foreground/80">
-              Previous-period comparison will appear once this range has enough history.
+    <Card className={panelClassName}>
+      <CardHeader className="space-y-3 pb-2">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <CardTitle className="text-[1rem] font-semibold normal-case tracking-normal text-foreground">
+              Spending trend
+            </CardTitle>
+            <p className="mt-1 text-sm leading-5 text-secondary-foreground">
+              Compare spending across this period and open any bucket for details.
             </p>
-          ) : null}
+          </div>
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:min-w-[386px] xl:grid-cols-4">
+            <SummaryChip
+              label="Average"
+              value={formatCompactCurrency(averagePeriodSpend, { style: "chart" })}
+              tone="primary"
+              dotClassName={legendByLabel.get("Normal")}
+            />
+            <SummaryChip
+              label="Peak"
+              value={
+                peakPeriod
+                  ? formatCompactCurrency(peakPeriod.totalSpend, { style: "chart" })
+                  : "No data"
+              }
+              helper={peakPeriod ? formatPeriod(peakPeriod.period) : undefined}
+              tone="accent"
+              dotClassName={legendByLabel.get("Peak")}
+            />
+            <SummaryChip
+              label="Latest"
+              value={
+                latestPeriod
+                  ? formatCompactCurrency(latestPeriod.totalSpend, { style: "chart" })
+                  : "No data"
+              }
+              helper={latestPeriod ? formatPeriod(latestPeriod.period) : undefined}
+              tone="info"
+              dotClassName={legendByLabel.get("Latest")}
+            />
+            <SummaryChip label="What changed?" value={changeSummary.value} />
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="min-w-0">
+
+      <CardContent>
         {!hasTransactions || periods.length === 0 ? (
           <EmptyPanel
             icon={<BarChart3 className="h-5 w-5" />}
@@ -453,90 +512,92 @@ function SpendingTrendPanel({
             helper="Try a different timeframe or import transactions."
           />
         ) : (
-          <div className="grid h-[340px] min-w-0 grid-cols-[4.9rem_minmax(0,1fr)] gap-3 rounded-2xl bg-muted/16 p-3">
-            <div className="relative h-full pb-12 pt-2">
-              {chartTicks.map((tick) => (
-                <div
-                  key={`${tick.ratio}-${tick.value}`}
-                  className="absolute right-0 translate-y-1/2 text-right text-sm font-semibold text-secondary-foreground tabular-nums"
-                  style={{ bottom: `calc(3rem + ${tick.ratio * 100}% - ${tick.ratio * 3}rem)` }}
-                >
-                  {formatCompactCurrency(tick.value, { style: "chart" })}
-                </div>
-              ))}
-            </div>
-            <div className="relative min-w-0 pb-12 pt-2">
-              {chartTicks.map((tick) => (
-                <div
-                  key={`grid-${tick.ratio}-${tick.value}`}
-                  className="pointer-events-none absolute inset-x-0 border-t border-border/45"
-                  style={{ bottom: `calc(3rem + ${tick.ratio * 100}% - ${tick.ratio * 3}rem)` }}
-                />
-              ))}
-              {averagePeriodSpend > 0 && chartMax > 0 ? (
-                <div
-                  className="pointer-events-none absolute inset-x-0 border-t border-dashed border-info/55"
-                  style={{
-                    bottom: `calc(3rem + ${(averagePeriodSpend / chartMax) * 100}% - ${
-                      (averagePeriodSpend / chartMax) * 3
-                    }rem)`,
-                  }}
-                />
-              ) : null}
-              <div
-                className="grid h-full min-w-0 items-end gap-2"
-                style={{
-                  gridTemplateColumns: `repeat(${Math.max(chartBuckets.length, 1)}, minmax(0, 1fr))`,
-                }}
-              >
-                {chartBuckets.map((bucket) => (
-                  <Link
-                    key={bucket.period}
-                    href={bucket.href}
-                    className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-                    aria-label={bucket.ariaLabel}
+          <div className="rounded-[8px] border border-border/35 bg-[linear-gradient(180deg,rgba(10,17,14,0.62),rgba(8,13,11,0.76))] px-3 py-2.5">
+            <div className="grid h-[248px] min-w-0 grid-cols-[3.4rem_minmax(0,1fr)] gap-2.5">
+              <div className="relative h-full pb-7 pt-1.5">
+                {chartTicks.map((tick) => (
+                  <div
+                    key={`${tick.ratio}-${tick.value}`}
+                    className="absolute right-0 translate-y-1/2 text-right text-[11px] font-medium text-secondary-foreground/80 tabular-nums"
+                    style={{ bottom: `calc(2rem + ${tick.ratio * 100}% - ${tick.ratio * 2}rem)` }}
                   >
-                    <span className="pointer-events-none absolute bottom-[calc(3rem+100%)] z-10 hidden w-44 -translate-y-2 rounded-xl border border-border bg-popover px-3 py-2 text-center text-sm text-popover-foreground shadow-lg group-hover:block group-focus-visible:block">
-                      {bucket.tooltip.title}
-                      <span className="mt-1 block font-semibold tabular-nums">
-                        {bucket.tooltip.amountLabel}
-                      </span>
-                      <span className="mt-1 block text-secondary-foreground">
-                        {bucket.tooltip.transactionLabel}
-                      </span>
-                      {bucket.tooltip.comparisonLabel ? (
-                        <span className="mt-1 block text-secondary-foreground">
-                          {bucket.tooltip.comparisonLabel}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="flex h-[calc(100%-3rem)] w-full items-end rounded-md bg-secondary/55 px-0.5 pb-0.5">
-                      <span
-                        className={cn(
-                          "w-full rounded-md transition-[background-color,filter,transform] duration-150 group-hover:-translate-y-1 group-hover:brightness-110 group-focus-visible:-translate-y-1 group-focus-visible:brightness-110",
-                          bucket.isPeak && "bg-accent shadow-[0_0_16px_rgba(242,184,75,0.24)]",
-                          bucket.isLatest && !bucket.isPeak && "bg-info",
-                          !bucket.isPeak && !bucket.isLatest && "bg-primary/85 group-hover:bg-primary"
-                        )}
-                        style={{
-                          height: `${bucket.height}%`,
-                        }}
-                      />
-                    </span>
-                    <span className="flex h-10 items-start justify-center text-center text-sm font-semibold leading-tight text-secondary-foreground">
-                      {bucket.showLabel ? (
-                        <span>
-                          <span className="block">{bucket.label.primary}</span>
-                          {bucket.label.secondary ? (
-                            <span className="block text-xs text-secondary-foreground/75">
-                              {bucket.label.secondary}
-                            </span>
-                          ) : null}
-                        </span>
-                      ) : null}
-                    </span>
-                  </Link>
+                    {formatCompactCurrency(tick.value, { style: "chart" })}
+                  </div>
                 ))}
+              </div>
+
+              <div className="relative min-w-0 pb-7 pt-1.5">
+                {chartTicks.map((tick) => (
+                  <div
+                    key={`grid-${tick.ratio}-${tick.value}`}
+                    className="pointer-events-none absolute inset-x-0 border-t border-border/14"
+                    style={{ bottom: `calc(2rem + ${tick.ratio * 100}% - ${tick.ratio * 2}rem)` }}
+                  />
+                ))}
+                {averagePeriodSpend > 0 && chartMax > 0 ? (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 border-t border-dashed border-primary/22"
+                    style={{
+                      bottom: `calc(2rem + ${(averagePeriodSpend / chartMax) * 100}% - ${
+                        (averagePeriodSpend / chartMax) * 2
+                      }rem)`,
+                    }}
+                  />
+                ) : null}
+
+                <div
+                  className="grid h-full min-w-0 items-end gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${Math.max(chartBuckets.length, 1)}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {chartBuckets.map((bucket) => (
+                    <Link
+                      key={bucket.period}
+                      href={bucket.href}
+                      className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                      aria-label={bucket.ariaLabel}
+                    >
+                      <span className="pointer-events-none absolute bottom-[calc(2rem+100%)] z-10 hidden w-44 -translate-y-2 rounded-[8px] border border-border/70 bg-popover px-3 py-2 text-center text-sm text-popover-foreground shadow-lg group-hover:block group-focus-visible:block">
+                        {bucket.tooltip.title}
+                        <span className="mt-1 block font-semibold tabular-nums">
+                          {bucket.tooltip.amountLabel}
+                        </span>
+                        <span className="mt-1 block text-secondary-foreground">
+                          {bucket.tooltip.transactionLabel}
+                        </span>
+                        {bucket.tooltip.comparisonLabel ? (
+                          <span className="mt-1 block text-secondary-foreground">
+                            {bucket.tooltip.comparisonLabel}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="flex h-[calc(100%-2rem)] w-full items-end rounded-[3px] bg-secondary/10 px-[1px] pb-[1px]">
+                        <span
+                          className={cn(
+                            "w-full rounded-[2px] transition-[background-color,filter,transform] duration-150 group-hover:-translate-y-0.5 group-hover:brightness-110 group-focus-visible:-translate-y-0.5 group-focus-visible:brightness-110",
+                            bucket.isPeak && "bg-accent",
+                            bucket.isLatest && !bucket.isPeak && "bg-info",
+                            !bucket.isPeak && !bucket.isLatest && "bg-primary/90"
+                          )}
+                          style={{ height: `${bucket.height}%` }}
+                        />
+                      </span>
+                      <span className="flex h-6 items-start justify-center text-center text-[10px] font-medium leading-tight text-secondary-foreground/85">
+                        {bucket.showLabel ? (
+                          <span>
+                            <span className="block">{bucket.label.primary}</span>
+                            {bucket.label.secondary ? (
+                              <span className="block text-[9px] text-secondary-foreground/70">
+                                {bucket.label.secondary}
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : null}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -548,18 +609,57 @@ function SpendingTrendPanel({
 
 function SummaryChip({
   label,
-  children,
+  value,
+  helper,
+  tone = "neutral",
+  dotClassName,
 }: {
   label: string;
-  children: string;
+  value: string;
+  helper?: string;
+  tone?: "neutral" | "primary" | "accent" | "info";
+  dotClassName?: string;
 }) {
   return (
-    <div className="rounded-xl bg-muted/24 px-3 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-secondary-foreground/80">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">{children}</p>
+    <div
+      className={cn(
+        "rounded-[8px] border border-border/35 bg-background/14 px-3 py-2",
+        tone === "primary" && "border-primary/16",
+        tone === "accent" && "border-accent/16",
+        tone === "info" && "border-info/16"
+      )}
+    >
+      <div className="flex items-center gap-2">
+        {dotClassName ? <span className={cn("h-2.5 w-2.5 rounded-full", dotClassName)} /> : null}
+        <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-secondary-foreground/75">
+          {label}
+        </p>
+      </div>
+      <p className="mt-1 text-[13px] font-semibold text-foreground tabular-nums">{value}</p>
+      {helper ? <p className="mt-0.5 text-[10px] text-secondary-foreground/85">{helper}</p> : null}
     </div>
+  );
+}
+
+function AlignedPanelHeader({
+  title,
+  description,
+  trailing,
+}: {
+  title: string;
+  description: string;
+  trailing?: ReactNode;
+}) {
+  return (
+    <CardHeader className="pb-3">
+      <div className="min-h-[52px] space-y-1.5">
+        <CardTitle className="text-[1.1rem] font-semibold normal-case tracking-normal text-foreground">
+          {title}
+        </CardTitle>
+        <p className="text-sm leading-5 text-secondary-foreground">{description}</p>
+      </div>
+      {trailing ? <div className="mt-2">{trailing}</div> : null}
+    </CardHeader>
   );
 }
 
@@ -581,14 +681,12 @@ function SpendingByCategoryPanel({
   const rangeParams = getRangeParams(range);
 
   return (
-    <Card className="min-w-0 border-border/70">
-      <CardHeader>
-        <CardTitle className="normal-case tracking-normal">Where your money went</CardTitle>
-        <p className="mt-2 text-sm leading-5 text-secondary-foreground">
-          Category totals stay exact here so you can scan real spend without mixed notation.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card className={panelClassName}>
+      <AlignedPanelHeader
+        title="Where your money went"
+        description="Category totals stay stable so you can scan and spend."
+      />
+      <CardContent>
         {categories.length === 0 ? (
           <EmptyPanel
             title={
@@ -603,57 +701,115 @@ function SpendingByCategoryPanel({
             }
           />
         ) : (
-          categories.map((item) => {
-            const share = getCategoryShare(item.totalSpend, totalSpend);
-            const isTop = item.category === topCategory;
-            const isUncategorized = item.category === "Uncategorized";
+          <div className="overflow-hidden rounded-[8px] border border-border/50 bg-background/14">
+            <TableHeader
+              columns={["Category", "Amount", "% of spend"]}
+              template="minmax(0,1.35fr) 108px 76px"
+            />
+            {categories.slice(0, 5).map((item, index) => {
+              const share = getCategoryShare(item.totalSpend, totalSpend);
+              const isTop = item.category === topCategory;
+              const isUncategorized = item.category === "Uncategorized";
 
-            return (
-              <Link
-                key={item.category}
-                href={buildTransactionsHref({
-                  ...rangeParams,
-                  category: isUncategorized ? null : item.category,
-                  status: isUncategorized ? "uncategorized" : null,
-                })}
-                className={cn(
-                  "group block rounded-2xl bg-muted/18 p-3 transition-colors hover:bg-secondary/42 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isTop && "bg-primary/6",
-                  isUncategorized && "bg-accent/8"
-                )}
-              >
-                <div className="flex items-start justify-between gap-4">
+              return (
+                <Link
+                  key={item.category}
+                  href={buildTransactionsHref({
+                    ...rangeParams,
+                    category: isUncategorized ? null : item.category,
+                    status: isUncategorized ? "uncategorized" : null,
+                  })}
+                  className={cn(
+                    "grid grid-cols-[minmax(0,1.35fr)_108px_76px] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    index > 0 && "border-t border-border/40"
+                  )}
+                >
                   <div className="min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-card-foreground">
-                        {item.category}
-                      </p>
-                      {isTop ? <Badge tone="primary">Largest</Badge> : null}
-                      {isUncategorized ? <Badge tone="attention">Needs category</Badge> : null}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full",
+                          isUncategorized ? "bg-accent" : isTop ? "bg-primary" : "bg-primary/65"
+                        )}
+                      />
+                      <span className="truncate font-medium text-foreground">{item.category}</span>
                     </div>
-                    <p className="mt-1 text-sm text-secondary-foreground">
-                      {formatNumber(item.transactionCount)} transactions {"\u00b7"} {share}% of spending
-                    </p>
+                    <div className="mt-2 h-1.5 rounded-full bg-secondary/20">
+                      <div
+                        className={cn(
+                          "h-1.5 rounded-full",
+                          isUncategorized ? "bg-accent" : "bg-primary"
+                        )}
+                        style={{
+                          width: `${Math.max(4, (item.totalSpend / maxCategorySpend) * 100)}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-sm font-semibold text-foreground tabular-nums">
+                  <span className="text-right font-medium tabular-nums text-foreground">
                     {formatCurrency(item.totalSpend)}
                   </span>
-                </div>
-                <div className="mt-3 h-2 rounded-full bg-secondary">
-                  <div
-                    className={cn(
-                      "h-2 rounded-full",
-                      isUncategorized ? "bg-accent" : "bg-primary"
-                    )}
-                    style={{
-                      width: `${Math.max(4, (item.totalSpend / maxCategorySpend) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </Link>
-            );
-          })
+                  <span className="text-right font-medium text-secondary-foreground">
+                    {share}%
+                  </span>
+                </Link>
+              );
+            })}
+            <div className="grid grid-cols-[minmax(0,1.35fr)_108px_76px] items-center gap-3 border-t border-border/40 px-4 py-3 text-sm font-semibold">
+              <span className="text-foreground">Total</span>
+              <span className="text-right tabular-nums text-foreground">
+                {formatCurrency(totalSpend)}
+              </span>
+              <span className="text-right text-secondary-foreground">100%</span>
+            </div>
+          </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FrequentRecipientsPanel({
+  recipients,
+}: {
+  recipients: DashboardPageData["frequentRecipients"];
+}) {
+  return (
+    <Card className={panelClassName}>
+      <AlignedPanelHeader
+        title="Frequent payees"
+        description="Your most frequent recipients this period."
+      />
+      <CardContent>
+        {recipients.length === 0 ? (
+          <EmptyPanel title="No repeated payees in this period." />
+        ) : (
+          <div className="overflow-hidden rounded-[8px] border border-border/50 bg-background/14">
+            <TableHeader
+              columns={["Payee", "Payments", "Amount"]}
+              template="minmax(0,1.35fr) 72px 92px"
+            />
+            {recipients.map((recipient, index) => (
+              <Link
+                key={recipient.recipient}
+                href="/recipients"
+                className={cn(
+                  "grid grid-cols-[minmax(0,1.35fr)_72px_92px] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  index > 0 && "border-t border-border/40"
+                )}
+              >
+                <span className="truncate font-medium text-foreground">{recipient.recipient}</span>
+                <span className="text-right text-secondary-foreground">
+                  {recipient.paymentCount}
+                </span>
+                <span className="text-right font-medium tabular-nums text-foreground">
+                  {formatCurrency(recipient.totalAmount)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+        <PanelFooterLink href="/recipients" label="View all recipients" />
       </CardContent>
     </Card>
   );
@@ -667,52 +823,54 @@ function LargestTransactionsPanel({
   range: DashboardPageData["range"];
 }) {
   return (
-    <Card className="border-border/70">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="normal-case tracking-normal">Largest transactions</CardTitle>
-            <p className="mt-2 text-sm leading-5 text-secondary-foreground">
-              Highest-value transactions in this period.
-            </p>
-          </div>
-          <Link
-            href={buildTransactionsHref({
-              ...getRangeParams(range),
-              review: "large",
-              sortBy: "amount",
-              sortOrder: "desc",
-            })}
-            className="inline-flex min-h-9 shrink-0 items-center rounded-xl bg-secondary/70 px-3 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            View all
-          </Link>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
+    <Card className={panelClassName}>
+      <AlignedPanelHeader
+        title="Largest transactions"
+        description="High-value transactions in this period."
+      />
+      <CardContent>
         {transactions.length === 0 ? (
           <EmptyPanel title="No large transactions in this period." />
         ) : (
-          transactions.map((transaction) => (
-            <Link
-              key={transaction.uuid}
-              href={buildTransactionsHref({ transaction: transaction.uuid })}
-              className="group flex items-start justify-between gap-3 rounded-2xl bg-muted/18 px-3 py-3 transition-colors hover:bg-secondary/42 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-foreground">
-                  {transaction.recipient}
+          <div className="overflow-hidden rounded-[8px] border border-border/50 bg-background/14">
+            <TableHeader
+              columns={["Merchant", "Date", "Amount"]}
+              template="minmax(0,1.35fr) 76px 88px"
+            />
+            {transactions.map((transaction, index) => (
+              <Link
+                key={transaction.uuid}
+                href={buildTransactionsHref({ transaction: transaction.uuid })}
+                className={cn(
+                  "grid grid-cols-[minmax(0,1.35fr)_76px_88px] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  index > 0 && "border-t border-border/40"
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">{transaction.recipient}</p>
+                  <p className="mt-0.5 truncate text-xs text-secondary-foreground">
+                    {transaction.category ?? "Uncategorized"}
+                  </p>
+                </div>
+                <span className="text-right text-secondary-foreground">
+                  {formatShortDate(transaction.timestamp)}
                 </span>
-                <span className="mt-1 block truncate text-sm text-secondary-foreground">
-                  {formatShortDate(transaction.timestamp)} {"\u00b7"} {transaction.category ?? "Uncategorized"}
+                <span className="text-right font-medium tabular-nums text-foreground">
+                  {formatCurrency(transaction.amount)}
                 </span>
-              </span>
-              <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-foreground">
-                {formatCurrency(transaction.amount)}
-              </span>
-            </Link>
-          ))
+              </Link>
+            ))}
+          </div>
         )}
+        <PanelFooterLink
+          href={buildTransactionsHref({
+            ...getRangeParams(range),
+            review: "large",
+            sortBy: "amount",
+            sortOrder: "desc",
+          })}
+          label="View all transactions"
+        />
       </CardContent>
     </Card>
   );
@@ -733,24 +891,14 @@ function RecentTransactionsPanel({
   });
 
   return (
-    <Card className="border-border/70">
-      <CardHeader className="space-y-2 pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="normal-case tracking-normal">Recent transactions</CardTitle>
-            <p className="mt-2 text-sm leading-5 text-secondary-foreground">
-              Latest activity in this period.
-            </p>
-            <p className="mt-2 text-sm font-medium text-secondary-foreground">{summary}</p>
-          </div>
-          <Link
-            href={buildTransactionsHref(getRangeParams(range))}
-            className="inline-flex min-h-9 shrink-0 items-center rounded-xl bg-secondary/70 px-3 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            View all
-          </Link>
-        </div>
-      </CardHeader>
+    <Card className={panelClassName}>
+      <AlignedPanelHeader
+        title="Recent transactions"
+        description="Latest activity in this period."
+        trailing={
+          <p className="text-sm font-medium text-secondary-foreground">{summary}</p>
+        }
+      />
       <CardContent>
         {transactions.length === 0 ? (
           <EmptyPanel
@@ -762,8 +910,12 @@ function RecentTransactionsPanel({
             }
           />
         ) : (
-          <div className="overflow-hidden rounded-2xl bg-muted/14">
-            {transactions.map((transaction, index) => {
+          <div className="overflow-hidden rounded-[8px] border border-border/50 bg-background/14">
+            <TableHeader
+              columns={["Merchant", "Date", "Amount"]}
+              template="minmax(0,1.35fr) 76px 88px"
+            />
+            {transactions.slice(0, 6).map((transaction, index) => {
               const meta = buildRecentTransactionMeta(
                 transaction.category,
                 transaction.timestamp
@@ -774,24 +926,20 @@ function RecentTransactionsPanel({
                   key={transaction.uuid}
                   href={buildTransactionsHref({ transaction: transaction.uuid })}
                   className={cn(
-                    "group grid grid-cols-[minmax(0,1fr)_112px] items-center gap-4 px-4 py-3 transition-colors hover:bg-secondary/42 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                    index > 0 && "border-t border-border/55"
+                    "grid grid-cols-[minmax(0,1.35fr)_76px_88px] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    index > 0 && "border-t border-border/40"
                   )}
                 >
-                  <span className="min-w-0">
-                    <span className="flex min-w-0 items-baseline gap-2">
-                      <span className="truncate text-sm font-semibold text-foreground">
-                        {transaction.recipient}
-                      </span>
-                      <span className="shrink-0 text-sm text-secondary-foreground">
-                        {meta.timestampLabel}
-                      </span>
-                    </span>
-                    <span className="mt-1 block truncate text-sm text-secondary-foreground">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">{transaction.recipient}</p>
+                    <p className="mt-0.5 truncate text-xs text-secondary-foreground">
                       {meta.categoryLabel}
-                    </span>
+                    </p>
+                  </div>
+                  <span className="text-right text-secondary-foreground">
+                    {meta.timestampLabel}
                   </span>
-                  <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-foreground">
+                  <span className="text-right font-medium tabular-nums text-foreground">
                     {formatCurrency(transaction.amount)}
                   </span>
                 </Link>
@@ -799,30 +947,45 @@ function RecentTransactionsPanel({
             })}
           </div>
         )}
+        <PanelFooterLink
+          href={buildTransactionsHref(getRangeParams(range))}
+          label="View all activity"
+        />
       </CardContent>
     </Card>
   );
 }
 
-function Badge({
-  children,
-  tone,
+function TableHeader({
+  columns,
+  template,
 }: {
-  children: string;
-  tone: "primary" | "attention" | "warning" | "info";
+  columns: [string, string, string];
+  template: string;
 }) {
   return (
-    <span
-      className={cn(
-        "rounded-full px-2.5 py-1 text-[11px] font-semibold",
-        tone === "primary" && "bg-primary/15 text-primary",
-        tone === "attention" && "bg-accent/15 text-accent",
-        tone === "warning" && "bg-destructive/15 text-destructive",
-        tone === "info" && "bg-info/15 text-info"
-      )}
+    <div
+      className="grid gap-3 border-b border-border/40 bg-background/16 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75"
+      style={{ gridTemplateColumns: template }}
     >
-      {children}
-    </span>
+      {columns.map((column, index) => (
+        <span key={column} className={cn(index > 0 && "text-right")}>
+          {column}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function PanelFooterLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="mt-4 inline-flex min-h-9 w-full items-center justify-between rounded-[8px] border border-border/50 bg-background/16 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {label}
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
   );
 }
 
@@ -836,14 +999,14 @@ function EmptyPanel({
   helper?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border bg-muted/28 p-4">
+    <div className="rounded-[8px] border border-dashed border-border/50 bg-background/16 p-4">
       <div className="flex items-start gap-3">
         {icon ? (
-          <div className="rounded-xl border border-border bg-secondary p-2 text-primary">
+          <div className="rounded-[8px] border border-border/60 bg-secondary/24 p-2 text-primary">
             {icon}
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-secondary p-2 text-accent">
+          <div className="rounded-[8px] border border-border/60 bg-secondary/24 p-2 text-accent">
             <AlertCircle className="h-5 w-5" />
           </div>
         )}
