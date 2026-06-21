@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
+import { formatRecipientDisplayLabel } from "@/common/recipient-display";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
 import type { DashboardRangeInput, SpendingByPeriodInput } from "./types";
@@ -264,6 +265,7 @@ export async function getRecentLargeTransactions(
 ): Promise<
   ServiceResult<
     Array<{
+      id: number;
       uuid: string;
       recipient: string;
       category: string | null;
@@ -285,6 +287,7 @@ export async function getRecentLargeTransactions(
       orderBy: [{ amount: "desc" }, { timestamp: "desc" }],
       take: input.take ?? 5,
       select: {
+        id: true,
         uuid: true,
         amount: true,
         timestamp: true,
@@ -298,11 +301,14 @@ export async function getRecentLargeTransactions(
 
     return ok(
       transactions.map((transaction) => ({
+        id: transaction.id,
         uuid: transaction.uuid,
-        recipient:
-          transaction.recipientName ??
-          transaction.recipient?.displayName ??
-          transaction.recipientRaw,
+        recipient: formatRecipientDisplayLabel({
+          recipientName: transaction.recipientName,
+          recipientDisplayName: transaction.recipient?.displayName,
+          recipientRaw: transaction.recipientRaw,
+          fallbackLabel: "Unknown merchant",
+        }),
         category: transaction.category?.name ?? null,
         amount: Number(transaction.amount),
         timestamp: transaction.timestamp.toISOString(),
@@ -322,6 +328,7 @@ export async function getRecentTransactions(
 ): Promise<
   ServiceResult<
     Array<{
+      id: number;
       uuid: string;
       recipient: string;
       category: string | null;
@@ -343,6 +350,7 @@ export async function getRecentTransactions(
       orderBy: { timestamp: "desc" },
       take: input.take ?? 10,
       select: {
+        id: true,
         uuid: true,
         amount: true,
         timestamp: true,
@@ -356,11 +364,14 @@ export async function getRecentTransactions(
 
     return ok(
       transactions.map((transaction) => ({
+        id: transaction.id,
         uuid: transaction.uuid,
-        recipient:
-          transaction.recipientName ??
-          transaction.recipient?.displayName ??
-          transaction.recipientRaw,
+        recipient: formatRecipientDisplayLabel({
+          recipientName: transaction.recipientName,
+          recipientDisplayName: transaction.recipient?.displayName,
+          recipientRaw: transaction.recipientRaw,
+          fallbackLabel: "Unknown merchant",
+        }),
         category: transaction.category?.name ?? null,
         amount: Number(transaction.amount),
         timestamp: transaction.timestamp.toISOString(),
@@ -406,9 +417,12 @@ export async function getFrequentRecipients(
     const groups = new Map<string, { paymentCount: number; totalAmount: number }>();
     for (const transaction of transactions) {
       const recipient =
-        transaction.recipientName ??
-        transaction.recipient?.displayName ??
-        transaction.recipientRaw;
+        formatRecipientDisplayLabel({
+          recipientName: transaction.recipientName,
+          recipientDisplayName: transaction.recipient?.displayName,
+          recipientRaw: transaction.recipientRaw,
+          fallbackLabel: "Unknown payee",
+        });
       const current = groups.get(recipient) ?? { paymentCount: 0, totalAmount: 0 };
       current.paymentCount += 1;
       current.totalAmount += Number(transaction.amount);

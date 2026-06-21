@@ -158,16 +158,18 @@ describe("dashboard service", () => {
     const endDate = new Date("2026-06-30T23:59:59.000Z");
     mockPrisma.transaction.findMany.mockResolvedValueOnce([
       {
+        id: 2,
         uuid: "txn-2",
         amount: 900,
         timestamp: new Date("2026-06-20T10:00:00.000Z"),
         source: "SMS",
         recipientName: null,
-        recipientRaw: "Fresh Mart",
-        recipient: { displayName: "Fresh Mart" },
+        recipientRaw: "vivek.pandey5@oksbi",
+        recipient: { displayName: "vivek.pandey5@oksbi" },
         category: { name: "Food" },
       },
       {
+        id: 1,
         uuid: "txn-1",
         amount: 2500,
         timestamp: new Date("2026-06-18T10:00:00.000Z"),
@@ -190,16 +192,18 @@ describe("dashboard service", () => {
       ok: true,
       data: [
         {
+          id: 2,
           uuid: "txn-2",
-          recipient: "Fresh Mart",
+          recipient: "Vivek Pandey",
           category: "Food",
           amount: 900,
           timestamp: "2026-06-20T10:00:00.000Z",
           source: "SMS",
         },
         {
+          id: 1,
           uuid: "txn-1",
-          recipient: "Power bill",
+          recipient: "Power Bill",
           category: null,
           amount: 2500,
           timestamp: "2026-06-18T10:00:00.000Z",
@@ -216,6 +220,7 @@ describe("dashboard service", () => {
       orderBy: { timestamp: "desc" },
       take: 10,
       select: {
+        id: true,
         uuid: true,
         amount: true,
         timestamp: true,
@@ -233,8 +238,8 @@ describe("dashboard service", () => {
       {
         amount: 900,
         recipientName: null,
-        recipientRaw: "Fresh Mart",
-        recipient: { displayName: "Fresh Mart" },
+        recipientRaw: "vivek.pandey5@oksbi",
+        recipient: { displayName: "vivek.pandey5@oksbi" },
       },
       {
         amount: 250,
@@ -245,8 +250,8 @@ describe("dashboard service", () => {
       {
         amount: 600,
         recipientName: null,
-        recipientRaw: "Fresh Mart",
-        recipient: { displayName: "Fresh Mart" },
+        recipientRaw: "vivek.pandey5@oksbi",
+        recipient: { displayName: "vivek.pandey5@oksbi" },
       },
     ]);
 
@@ -259,12 +264,12 @@ describe("dashboard service", () => {
       ok: true,
       data: [
         {
-          recipient: "Fresh Mart",
+          recipient: "Vivek Pandey",
           paymentCount: 2,
           totalAmount: 1500,
         },
         {
-          recipient: "Power bill",
+          recipient: "Power Bill",
           paymentCount: 1,
           totalAmount: 250,
         },

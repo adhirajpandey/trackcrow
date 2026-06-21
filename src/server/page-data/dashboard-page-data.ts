@@ -1,12 +1,15 @@
 import "server-only";
 
 import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
+import type { CategoryOption } from "@/common/types";
 import type { DashboardGranularity, DashboardRangeValue } from "@/features/dashboard/query-state";
 import {
   getDashboardRangeState,
   getPreviousDashboardRangeState,
 } from "@/features/dashboard/query-state";
 import { requirePageSessionUser } from "@/server/auth/session";
+import { toCategoryOption } from "@/server/modules/categories/helpers";
+import { listCategoriesForUser } from "@/server/modules/categories/service";
 import {
   getFrequentRecipients,
   getDashboardSummary,
@@ -52,6 +55,7 @@ export type DashboardSectionStatus = {
 };
 
 export type DashboardRecentTransactionDto = {
+  id: number;
   uuid: string;
   recipient: string;
   category: string | null;
@@ -95,6 +99,7 @@ export type DashboardPageData = {
   spendingByCategory: DashboardCategorySpendDto[];
   spendingByPeriod: DashboardPeriodSpendDto[];
   frequentRecipients: DashboardFrequentRecipientDto[];
+  categoryOptions: CategoryOption[];
   recentLargeTransactions: DashboardRecentTransactionDto[];
   recentTransactions: DashboardRecentTransactionDto[];
 };
@@ -179,6 +184,7 @@ function emptyDashboardData(
     spendingByCategory: [],
     spendingByPeriod: [],
     frequentRecipients: [],
+    categoryOptions: [],
     recentLargeTransactions: [],
     recentTransactions: [],
   };
@@ -219,6 +225,7 @@ export async function getDashboardPageData(
     importHealth,
     largeTransactionCount,
     frequentRecipients,
+    categories,
     recentLargeTransactions,
     recentTransactions,
   ] = await Promise.all([
@@ -232,6 +239,9 @@ export async function getDashboardPageData(
       getFrequentRecipients({
         ...rangeInput,
         take: 5,
+      }),
+      listCategoriesForUser({
+        userUuid: sessionUser.userUuid,
       }),
       getRecentLargeTransactions({
         ...rangeInput,
@@ -267,6 +277,7 @@ export async function getDashboardPageData(
     !importHealth.ok ||
     !largeTransactionCount.ok ||
     !frequentRecipients.ok ||
+    !categories.ok ||
     !recentLargeTransactions.ok ||
     !recentTransactions.ok
   ) {
@@ -320,6 +331,7 @@ export async function getDashboardPageData(
     spendingByCategory: spendingByCategory.data,
     spendingByPeriod: spendingByPeriod.data,
     frequentRecipients: frequentRecipients.data,
+    categoryOptions: categories.data.map(toCategoryOption),
     recentLargeTransactions: recentLargeTransactions.data,
     recentTransactions: recentTransactions.data,
   };

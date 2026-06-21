@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { AppPageHeader } from "@/components/product/app-page-header";
+
 function formatSearchParams(searchParams: Record<string, string | string[] | undefined>) {
   return Object.entries(searchParams).flatMap(([key, value]) => {
     if (Array.isArray(value)) {
@@ -99,15 +101,11 @@ export function DrilldownPlaceholderPage({
 
   return (
     <div className="space-y-6">
-      <section className="border-b border-border pb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
-          Dashboard drilldown
-        </p>
-        <h1 className="mt-2 text-[32px] font-bold leading-tight text-foreground">{title}</h1>
-        <p className="mt-3 max-w-2xl text-[15px] leading-6 text-muted-foreground">
-          {description}
-        </p>
-      </section>
+      <AppPageHeader
+        eyebrow="Dashboard drilldown"
+        title={title}
+        description={description}
+      />
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

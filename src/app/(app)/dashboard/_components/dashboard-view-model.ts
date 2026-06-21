@@ -13,7 +13,10 @@ const rupeeSymbol = "\u20b9";
 const TOP_CATEGORY_EXCLUSIONS = new Set([
   "uncategorized",
   "transfers",
+  "internal transfer",
   "internal transfers",
+  "refund",
+  "refunds",
 ]);
 
 const numberFormatter = new Intl.NumberFormat("en-IN");
@@ -34,11 +37,6 @@ const dayMonthYearFormatter = new Intl.DateTimeFormat("en-IN", {
   day: "2-digit",
   month: "short",
   year: "numeric",
-});
-const shortDateFormatter = new Intl.DateTimeFormat("en-IN", {
-  timeZone: "Asia/Kolkata",
-  day: "2-digit",
-  month: "short",
 });
 const timeFormatter = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -84,12 +82,31 @@ export type DashboardRightRailCardVm = {
 export type DashboardSuggestedRuleVm = {
   recipient: string;
   action: string;
+  href: string;
+  paymentCount: number;
+  totalAmount: number;
+};
+
+export type DashboardRecipientInsightVm = {
+  recipient: string;
+  paymentCount: number;
+  totalAmount: number;
+  action: "Create rule" | "Review";
+  href: string;
+  helper: string;
 };
 
 export type DashboardChangeSummaryVm = {
   title: string;
   value: string;
   helper: string;
+};
+
+type DashboardChangeSummarySignal = {
+  isSpikeDriven: boolean;
+  peakPeriod: DashboardPeriodSpendDto | null;
+  latestPeriod: DashboardPeriodSpendDto | null;
+  averagePeriodSpend: number;
 };
 
 export type DashboardChartTooltipVm = {
@@ -313,19 +330,54 @@ function isEligibleTopCategory(category: string) {
   return !TOP_CATEGORY_EXCLUSIONS.has(category.trim().toLowerCase());
 }
 
+export function getKnownSpendingCategories(categories: DashboardCategorySpendDto[]) {
+  return categories.filter((category) => isEligibleTopCategory(category.category));
+}
+
+export function getKnownSpendTotal(categories: DashboardCategorySpendDto[]) {
+  return getKnownSpendingCategories(categories).reduce(
+    (sum, category) => sum + category.totalSpend,
+    0
+  );
+}
+
 export function getTopCategoryInsight(
   categories: DashboardCategorySpendDto[],
-  totalSpend: number
+  categorizedSpendTotal: number
 ) {
-  const topCategory = categories.find((category) => isEligibleTopCategory(category.category));
+  const topCategory = getKnownSpendingCategories(categories)[0];
   if (!topCategory) {
     return null;
   }
 
   return {
     ...topCategory,
-    share: getCategoryShare(topCategory.totalSpend, totalSpend),
+    share: getCategoryShare(topCategory.totalSpend, categorizedSpendTotal),
   };
+}
+
+function isLowConfidenceRecipientLabel(label: string) {
+  return /^unknown (recipient|payee|merchant)$/i.test(label) || /^upi:/i.test(label);
+}
+
+function getRecipientReviewAction(input: {
+  recipient: string;
+  paymentCount: number;
+  totalAmount: number;
+}) {
+  if (
+    input.paymentCount >= 2 &&
+    !isLowConfidenceRecipientLabel(input.recipient) &&
+    input.totalAmount < LARGE_TRANSACTION_THRESHOLD
+  ) {
+    return "Create rule" as const;
+  }
+
+  return "Review" as const;
+}
+
+function getRecipientActionHref(action: "Create rule" | "Review") {
+  return action === "Create rule" ? "/categories" : "/recipients";
 }
 
 export function formatCurrency(value: number) {
@@ -395,9 +447,13 @@ export function buildRecentTransactionMeta(
   const date = new Date(timestamp);
   const now = options.now ?? new Date();
   const isSameDay = getDashboardDayKey(date) === getDashboardDayKey(now);
+  const dateLabel = formatShortDate(timestamp);
+  const timeLabel = timeFormatter.format(date);
 
   return {
-    timestampLabel: isSameDay ? timeFormatter.format(date) : shortDateFormatter.format(date),
+    timestampLabel: `${dateLabel} ${timeLabel}`,
+    dateLabel,
+    timeLabel,
     isSameDay,
     categoryLabel: category ?? "Uncategorized",
     needsCategory: !category,
@@ -543,16 +599,24 @@ export function buildReviewQueueCard(input: {
   summary: DashboardSummaryDto;
   importHealth: DashboardImportHealthDto;
   largeTransactionCount: number;
+  recipients?: DashboardPageData["frequentRecipients"];
   range: DashboardPageData["range"];
 }): ReviewQueueCardVm {
   const importIssueCount =
     input.importHealth.failedCount + input.importHealth.unparseableCount;
+  const repeatedRecipientMatchCount = (input.recipients ?? [])
+    .filter((recipient) => recipient.paymentCount >= 2)
+    .reduce((sum, recipient) => sum + recipient.paymentCount, 0);
   const totalReviewCount =
-    input.summary.uncategorizedCount + importIssueCount + input.largeTransactionCount;
+    input.summary.uncategorizedCount +
+    importIssueCount +
+    input.largeTransactionCount +
+    repeatedRecipientMatchCount;
   const hasItems =
     input.summary.uncategorizedCount > 0 ||
     importIssueCount > 0 ||
-    input.largeTransactionCount > 0;
+    input.largeTransactionCount > 0 ||
+    repeatedRecipientMatchCount > 0;
   const tasks: ReviewTaskVm[] = [
     {
       label: "Need category",
@@ -575,17 +639,24 @@ export function buildReviewQueueCard(input: {
       href: buildLargeTransactionsHref(input.range),
       helper: `Transactions over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)}.`,
     },
+    {
+      label: "Possible rule matches",
+      count: repeatedRecipientMatchCount,
+      tone: "info",
+      href: "/recipients",
+      helper: "Repeated recipients that could reduce future reviews.",
+    },
   ];
 
   return {
     title: "Needs review",
     href: buildReviewQueueHref(input.range),
-    action: hasItems ? "Open review tasks" : "View transactions",
+    action: hasItems ? "Review now" : "View transactions",
     hasItems,
     totalReviewCount,
     tasks,
     helper: hasItems
-      ? `${formatNumber(totalReviewCount)} review items across categories, imports, and large spends.`
+      ? `${formatNumber(totalReviewCount)} transactions need review`
       : `No open review items. Nothing over ${formatCurrency(
           LARGE_TRANSACTION_THRESHOLD
         )} in this period.`,
@@ -597,11 +668,14 @@ export function buildMetricComparisons(input: {
   comparison: DashboardPageData["comparison"];
   categories: DashboardCategorySpendDto[];
 }) {
-  const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
+  const topCategory = getTopCategoryInsight(
+    input.categories,
+    getKnownSpendTotal(input.categories)
+  );
   const previousTopCategory = input.comparison
     ? getTopCategoryInsight(
         input.comparison.spendingByCategory,
-        input.comparison.summary.totalSpend
+        getKnownSpendTotal(input.comparison.spendingByCategory)
       )
     : null;
 
@@ -627,10 +701,11 @@ export function buildMetricComparisons(input: {
 export function buildWhatChangedSummary(input: {
   summary: DashboardSummaryDto;
   comparison: DashboardPageData["comparison"];
+  periods: DashboardPeriodSpendDto[];
 }) : DashboardChangeSummaryVm {
   if (!input.comparison) {
     return {
-      title: "What changed?",
+      title: "Vs previous period",
       value: "No previous period yet",
       helper: "Add more history to compare this range with the previous one.",
     };
@@ -640,13 +715,86 @@ export function buildWhatChangedSummary(input: {
     input.summary.totalSpend,
     input.comparison.summary.totalSpend
   );
+  const previousTotalSpend = input.comparison.summary.totalSpend;
   const amountDelta = input.summary.totalSpend - input.comparison.summary.totalSpend;
-  const direction = amountDelta === 0 ? "No spend change" : amountDelta > 0 ? "Up by" : "Down by";
+  const summarySignal = getChangeSummarySignal(input.periods);
+
+  if (previousTotalSpend <= 0) {
+    return {
+      title: "Vs previous period",
+      value: delta,
+      helper:
+        input.summary.totalSpend > 0
+          ? `New spending activity compared with ${input.comparison.rangeLabel}.`
+          : `No spending activity in either period.`,
+    };
+  }
+
+  if (amountDelta === 0) {
+    return {
+      title: "Vs previous period",
+      value: delta,
+      helper: `Spend matched ${input.comparison.rangeLabel}.`,
+    };
+  }
+
+  if (amountDelta > 0 && summarySignal.isSpikeDriven) {
+    const averageLabel =
+      summarySignal.averagePeriodSpend > 0
+        ? formatCompactCurrency(summarySignal.averagePeriodSpend, { style: "chart" })
+        : null;
+    const latestLabel = summarySignal.latestPeriod
+      ? formatCompactCurrency(summarySignal.latestPeriod.totalSpend, { style: "chart" })
+      : null;
+    const peakDateLabel = summarySignal.peakPeriod
+      ? formatPeriod(summarySignal.peakPeriod.period)
+      : null;
+
+    return {
+      title: "Vs previous period",
+      value: "Up, driven by one spike",
+      helper:
+        latestLabel && averageLabel && peakDateLabel
+          ? `${delta} overall. Most of the lift came from ${peakDateLabel}; latest closed at ${latestLabel} vs ${averageLabel} average.`
+          : `${delta} overall, but the increase was concentrated in one bucket vs ${input.comparison.rangeLabel}.`,
+    };
+  }
 
   return {
-    title: "What changed?",
+    title: "Vs previous period",
     value: delta,
-    helper: `${direction} ${formatCurrency(Math.abs(amountDelta))} compared with ${input.comparison.rangeLabel}.`,
+    helper: `${amountDelta > 0 ? "Up by" : "Down by"} ${formatCurrency(
+      Math.abs(amountDelta)
+    )} compared with ${input.comparison.rangeLabel}.`,
+  };
+}
+
+function getChangeSummarySignal(
+  periods: DashboardPeriodSpendDto[]
+): DashboardChangeSummarySignal {
+  const peakPeriod = getPeakPeriod(periods);
+  const latestPeriod = periods[periods.length - 1] ?? null;
+  const averagePeriodSpend = getAveragePeriodSpend(periods);
+
+  if (!peakPeriod || !latestPeriod || averagePeriodSpend <= 0 || periods.length < 3) {
+    return {
+      isSpikeDriven: false,
+      peakPeriod,
+      latestPeriod,
+      averagePeriodSpend,
+    };
+  }
+
+  const isSpikeDriven =
+    peakPeriod.totalSpend >= averagePeriodSpend * 2.5 &&
+    latestPeriod.totalSpend <= averagePeriodSpend * 0.75 &&
+    latestPeriod.totalSpend <= peakPeriod.totalSpend * 0.4;
+
+  return {
+    isSpikeDriven,
+    peakPeriod,
+    latestPeriod,
+    averagePeriodSpend,
   };
 }
 
@@ -726,11 +874,14 @@ export function buildDashboardInsights(input: {
   range: DashboardPageData["range"];
   sectionStatus: DashboardSectionStatus;
 }) : DashboardInsightVm[] {
-  const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
+  const topCategory = getTopCategoryInsight(
+    input.categories,
+    getKnownSpendTotal(input.categories)
+  );
   const previousTopCategory = input.comparison
     ? getTopCategoryInsight(
         input.comparison.spendingByCategory,
-        input.comparison.summary.totalSpend
+        getKnownSpendTotal(input.comparison.spendingByCategory)
       )
     : null;
 
@@ -750,7 +901,7 @@ export function buildDashboardInsights(input: {
     label: "Category leader",
     value: topCategory ? topCategory.category : "Not ready yet",
     helper: topCategory
-      ? `${topCategory.share}% of spending \u00b7 ${formatCurrency(topCategory.totalSpend)}`
+      ? `${topCategory.share}% of categorized spend \u00b7 ${formatCurrency(topCategory.totalSpend)}`
       : input.sectionStatus.categories === "incomplete"
         ? "Categorize more transactions to sharpen this view."
         : "No categorized spending in this range.",
@@ -809,17 +960,20 @@ export function buildBiggestChangeCard(input: {
   categories: DashboardCategorySpendDto[];
   range: DashboardPageData["range"];
 }): DashboardRightRailCardVm {
-  const topCategory = getTopCategoryInsight(input.categories, input.summary.totalSpend);
+  const topCategory = getTopCategoryInsight(
+    input.categories,
+    getKnownSpendTotal(input.categories)
+  );
   const previousTopCategory = input.comparison
     ? getTopCategoryInsight(
         input.comparison.spendingByCategory,
-        input.comparison.summary.totalSpend
+        getKnownSpendTotal(input.comparison.spendingByCategory)
       )
     : null;
 
   if (!topCategory) {
     return {
-      label: "Biggest change",
+      label: "Category shift",
       value: "No category signal",
       helper: "Categorize more spending to surface the clearest shift.",
       href: null,
@@ -827,20 +981,51 @@ export function buildBiggestChangeCard(input: {
     };
   }
 
-  const value =
-    previousTopCategory && previousTopCategory.category !== topCategory.category
-      ? `${topCategory.category} up ${formatCurrency(topCategory.totalSpend)}`
-      : `${topCategory.category} leads`;
+  if (previousTopCategory && previousTopCategory.category !== topCategory.category) {
+    return {
+      label: "Category shift",
+      value: `${topCategory.category} is now your top known category`,
+      helper: input.comparison
+        ? `Compared with ${formatCompactRangeLabel(input.comparison.rangeLabel)}`
+        : "No previous period available for comparison.",
+      href: buildTransactionsHref({
+        ...getRangeParams(input.range),
+        category: topCategory.category,
+      }),
+      tone: "neutral",
+    };
+  }
+
+  const biggestMovement = getBiggestCategoryMovement(
+    input.categories,
+    input.comparison?.spendingByCategory ?? []
+  );
+  if (!biggestMovement) {
+    return {
+      label: "Category shift",
+      value: `${topCategory.category} is your top known category`,
+      helper: input.comparison
+        ? `Compared with ${formatCompactRangeLabel(input.comparison.rangeLabel)}`
+        : "No previous period available for comparison.",
+      href: buildTransactionsHref({
+        ...getRangeParams(input.range),
+        category: topCategory.category,
+      }),
+      tone: "neutral",
+    };
+  }
 
   return {
-    label: "Biggest change",
-    value,
+    label: "Biggest category movement",
+    value: `${biggestMovement.category} ${biggestMovement.delta >= 0 ? "+" : "-"}${formatCurrency(
+      Math.abs(biggestMovement.delta)
+    )}`,
     helper: input.comparison
-      ? `Compared with ${input.comparison.rangeLabel}`
+      ? `Compared with ${formatCompactRangeLabel(input.comparison.rangeLabel)}`
       : "No previous period available for comparison.",
     href: buildTransactionsHref({
       ...getRangeParams(input.range),
-      category: topCategory.category,
+      category: biggestMovement.category,
     }),
     tone: "neutral",
   };
@@ -849,8 +1034,104 @@ export function buildBiggestChangeCard(input: {
 export function buildSuggestedRules(input: {
   recipients: DashboardPageData["frequentRecipients"];
 }): DashboardSuggestedRuleVm[] {
-  return input.recipients.slice(0, 2).map((recipient) => ({
+  return input.recipients
+    .filter((recipient) => recipient.paymentCount >= 2)
+    .slice(0, 2)
+    .map((recipient) => {
+      const action = getRecipientReviewAction(recipient);
+      return {
+        recipient: recipient.recipient,
+        action,
+        href: getRecipientActionHref(action),
+        paymentCount: recipient.paymentCount,
+        totalAmount: recipient.totalAmount,
+      };
+    });
+}
+
+export function buildMostFrequentRecipient(input: {
+  recipients: DashboardPageData["frequentRecipients"];
+}): DashboardRecipientInsightVm | null {
+  const recipient = input.recipients.find((item) => item.paymentCount >= 2);
+  if (!recipient) {
+    return null;
+  }
+
+  const action = getRecipientReviewAction(recipient);
+  return {
     recipient: recipient.recipient,
-    action: "Create rule",
-  }));
+    paymentCount: recipient.paymentCount,
+    totalAmount: recipient.totalAmount,
+    action,
+    href: getRecipientActionHref(action),
+    helper:
+      action === "Create rule"
+        ? "Good candidate for a rule"
+        : "Review repeated payments",
+  };
+}
+
+export function buildFrequentRecipientRows(input: {
+  recipients: DashboardPageData["frequentRecipients"];
+}) {
+  return input.recipients.map((recipient) => {
+    const action = getRecipientReviewAction(recipient);
+
+    return {
+      ...recipient,
+      action,
+      href: getRecipientActionHref(action),
+    };
+  });
+}
+
+function formatCompactRangeLabel(rangeLabel: string) {
+  const [startDate, endDate] = rangeLabel.split(" to ");
+  if (!startDate || !endDate) {
+    return rangeLabel;
+  }
+
+  const start = parseDateOnlyForDisplay(startDate);
+  const end = parseDateOnlyForDisplay(endDate);
+  const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
+  const startLabel = new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+  }).format(start);
+  const endLabel = new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    ...(sameYear ? {} : { year: "numeric" as const }),
+  }).format(end);
+
+  return `${startLabel} - ${endLabel}`;
+}
+
+function getBiggestCategoryMovement(
+  currentCategories: DashboardCategorySpendDto[],
+  previousCategories: DashboardCategorySpendDto[]
+) {
+  const totals = new Map<string, number>();
+
+  for (const category of getKnownSpendingCategories(previousCategories)) {
+    totals.set(category.category, -category.totalSpend);
+  }
+
+  for (const category of getKnownSpendingCategories(currentCategories)) {
+    totals.set(category.category, (totals.get(category.category) ?? 0) + category.totalSpend);
+  }
+
+  let biggestMovement: { category: string; delta: number } | null = null;
+
+  for (const [category, delta] of totals.entries()) {
+    if (!biggestMovement || Math.abs(delta) > Math.abs(biggestMovement.delta)) {
+      biggestMovement = { category, delta };
+    }
+  }
+
+  if (!biggestMovement || biggestMovement.delta === 0) {
+    return null;
+  }
+
+  return biggestMovement;
 }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  ArrowRight,
   Bird,
   ClipboardList,
   FolderTree,
@@ -33,7 +32,6 @@ const navigation = [
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
   { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/recipients", label: "Recipients", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppShell({
@@ -47,8 +45,8 @@ export function AppShell({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(104,211,145,0.10),transparent_28%),linear-gradient(180deg,#08100c_0%,#09110d_36%,#0f1411_100%)] text-foreground lg:grid lg:grid-cols-[244px_1fr]">
-      <aside className="hidden border-r border-border/55 bg-[#08100d]/84 backdrop-blur-xl lg:block">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(104,211,145,0.10),transparent_28%),linear-gradient(180deg,#08100c_0%,#09110d_36%,#0f1411_100%)] text-foreground lg:grid lg:grid-cols-[276px_1fr]">
+      <aside className="hidden border-r border-border/55 bg-[#06100c]/88 backdrop-blur-xl lg:block">
         <ShellSidebar pathname={pathname} user={user} />
       </aside>
 
@@ -95,11 +93,8 @@ export function AppShell({
               aria-label="Close navigation"
               onClick={() => setIsOpen(false)}
             />
-            <aside className="absolute left-0 top-0 h-full w-72 border-r border-border/70 bg-[#09110d] p-5">
-              <div className="mb-8 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                  TrackCrow
-                </p>
+            <aside className="absolute left-0 top-0 h-full w-[276px] border-r border-border/70 bg-[#06100c]/96 px-4 py-5 backdrop-blur-xl">
+              <div className="mb-5 flex items-center justify-end">
                 <Button
                   type="button"
                   variant="ghost"
@@ -112,7 +107,11 @@ export function AppShell({
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <ShellSidebarContent pathname={pathname} onNavigate={() => setIsOpen(false)} />
+              <ShellSidebarContent
+                pathname={pathname}
+                user={user}
+                onNavigate={() => setIsOpen(false)}
+              />
             </aside>
           </div>
         ) : null}
@@ -133,12 +132,49 @@ function ShellSidebar({
   user: AppShellUser;
 }) {
   return (
-    <div className="sticky top-0 flex h-screen flex-col px-4 py-5">
-      <ShellSidebarContent pathname={pathname} />
-      <div className="mt-auto rounded-[8px] border border-border/50 bg-[linear-gradient(180deg,rgba(12,24,18,0.94),rgba(10,18,14,0.94))] p-3">
+    <div className="sticky top-0 h-screen px-4 py-5">
+      <div className="flex h-full flex-col">
+        <ShellSidebarContent pathname={pathname} user={user} />
+      </div>
+    </div>
+  );
+}
+
+function ShellSidebarContent({
+  pathname,
+  user,
+  onNavigate,
+}: {
+  pathname: string;
+  user: AppShellUser;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <div className="relative overflow-hidden rounded-[16px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
+        <div className="pointer-events-none absolute bottom-2 right-0 h-14 w-28 bg-[linear-gradient(180deg,transparent,rgba(104,211,145,0.14))] opacity-70 [mask-image:repeating-linear-gradient(180deg,transparent,transparent_3px,black_4px)]" />
+        <span className="pointer-events-none absolute right-4 top-4 h-1.5 w-1.5 rotate-45 bg-primary/70" />
+        <div className="relative flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/18 bg-primary/10">
+            <Bird className="h-4 w-4 text-primary" />
+          </div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.24em] text-primary">
+            TrackCrow
+          </p>
+        </div>
+        <p className="relative mt-5 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
+          Track. Review. Control.
+        </p>
+      </div>
+
+      <ShellNav pathname={pathname} onNavigate={onNavigate} />
+
+      <div className="mt-auto rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,20,16,0.96),rgba(8,16,13,0.96))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/18 bg-primary/10 text-sm font-semibold text-primary">
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,rgba(141,234,175,0.32),rgba(39,98,62,0.95))] text-sm font-semibold text-[#eef8f0] shadow-[0_10px_24px_rgba(13,39,25,0.45)]">
             {getInitials(user.name, user.email)}
+            <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-[#0c1511] bg-primary" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground">
@@ -148,67 +184,28 @@ function ShellSidebar({
               {user.email ?? "Signed in"}
             </p>
           </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <Link
+            href="/settings"
+            onClick={onNavigate}
+            className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-border/60 bg-black/10 px-3 text-sm font-medium text-secondary-foreground transition-colors hover:border-primary/18 hover:bg-secondary/24 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </Link>
           <Button
             type="button"
             variant="ghost"
-            size="icon"
             aria-label="Sign out"
             title="Sign out"
-            className="h-8 w-8 rounded-full border border-border/55 bg-background/28 text-secondary-foreground hover:bg-secondary/40"
+            className="min-h-10 whitespace-nowrap rounded-[10px] border border-border/60 bg-black/10 px-3 text-sm font-medium text-secondary-foreground hover:border-primary/18 hover:bg-secondary/24 hover:text-foreground"
             onClick={() => void signOut({ callbackUrl: "/login" })}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" />
+            Logout
           </Button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ShellSidebarContent({
-  pathname,
-  onNavigate,
-}: {
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  return (
-    <>
-      <div className="rounded-[8px] border border-border/50 bg-transparent px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Bird className="h-4.5 w-4.5 text-primary" />
-          <p className="text-[15px] font-semibold uppercase tracking-[0.05em] text-primary">
-            TrackCrow
-          </p>
-        </div>
-        <p className="mt-5 text-[26px] font-semibold leading-none text-foreground">
-          Spend ops
-        </p>
-        <p className="mt-3 max-w-[14rem] text-sm leading-6 text-secondary-foreground">
-          Track spending. Stay in control.
-        </p>
-      </div>
-
-      <ShellNav pathname={pathname} onNavigate={onNavigate} />
-
-      <div className="mt-7 rounded-[8px] border border-border/50 bg-[linear-gradient(180deg,rgba(12,24,18,0.94),rgba(10,18,14,0.94))] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-primary">Track smarter</p>
-            <p className="mt-3 text-sm leading-6 text-secondary-foreground">
-              Create rules to auto-categorize repeated payees and save time on reviews.
-            </p>
-          </div>
-          <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        </div>
-        <Link
-          href="/categories"
-          onClick={onNavigate}
-          className="mt-4 inline-flex min-h-9 w-full items-center justify-between rounded-[8px] border border-border/55 bg-background/24 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Create a rule
-          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-        </Link>
       </div>
     </>
   );
@@ -222,7 +219,7 @@ function ShellNav({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="mt-6 space-y-1.5">
+    <nav className="mt-5 space-y-1">
       {navigation.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -232,15 +229,32 @@ function ShellNav({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-10 items-center gap-3 rounded-[8px] border border-border/35 px-3.5 text-sm font-semibold text-secondary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "group relative flex min-h-11 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
-                ? "border-primary/24 bg-[linear-gradient(90deg,rgba(104,211,145,0.14),rgba(104,211,145,0.04))] text-foreground"
-                : "hover:border-border/45 hover:bg-secondary/24 hover:text-foreground"
+                ? "bg-[linear-gradient(180deg,rgba(104,211,145,0.18),rgba(104,211,145,0.08))] text-foreground"
+                : "text-muted-foreground hover:bg-white/2 hover:text-foreground"
             )}
           >
-            <Icon className={cn("h-[15px] w-[15px]", active && "text-primary")} />
+            <span
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
+                active
+                  ? "border-primary/20 bg-[#11271d] text-primary"
+                  : "border-white/8 bg-transparent text-muted-foreground group-hover:border-primary/12 group-hover:bg-primary/6 group-hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+            </span>
             <span className="flex-1">{item.label}</span>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-6 w-1 rounded-full transition-opacity",
+                active ? "bg-primary shadow-[0_0_12px_rgba(104,211,145,0.8)]" : "opacity-0"
+              )}
+            />
           </Link>
         );
       })}

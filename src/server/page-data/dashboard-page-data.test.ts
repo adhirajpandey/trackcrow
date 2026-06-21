@@ -13,7 +13,12 @@ jest.mock("@/server/modules/dashboard/service", () => ({
   getSpendingByPeriod: jest.fn(),
 }));
 
+jest.mock("@/server/modules/categories/service", () => ({
+  listCategoriesForUser: jest.fn(),
+}));
+
 import { requirePageSessionUser } from "@/server/auth/session";
+import { listCategoriesForUser } from "@/server/modules/categories/service";
 import {
   getFrequentRecipients,
   getDashboardSummary,
@@ -36,6 +41,7 @@ const mockGetRecentTransactions = jest.mocked(getRecentTransactions);
 const mockGetRecentLargeTransactions = jest.mocked(getRecentLargeTransactions);
 const mockGetSpendingByCategory = jest.mocked(getSpendingByCategory);
 const mockGetSpendingByPeriod = jest.mocked(getSpendingByPeriod);
+const mockListCategoriesForUser = jest.mocked(listCategoriesForUser);
 
 describe("getDashboardPageData", () => {
   beforeEach(() => {
@@ -78,6 +84,7 @@ describe("getDashboardPageData", () => {
       ok: true,
       data: [
         {
+          id: 1,
           uuid: "txn-1",
           recipient: "Rent",
           category: "Essentials",
@@ -91,6 +98,7 @@ describe("getDashboardPageData", () => {
       ok: true,
       data: [
         {
+          id: 2,
           uuid: "txn-2",
           recipient: "Grocer",
           category: "Food",
@@ -107,6 +115,17 @@ describe("getDashboardPageData", () => {
     mockGetSpendingByPeriod.mockResolvedValue({
       ok: true,
       data: [{ period: "2026-06-01", totalSpend: 300, transactionCount: 2 }],
+    });
+    mockListCategoriesForUser.mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          id: 9,
+          uuid: "cat-9",
+          name: "Food",
+          subcategories: [{ id: 10, uuid: "sub-10", name: "Lunch" }],
+        },
+      ],
     });
   });
 
@@ -164,6 +183,14 @@ describe("getDashboardPageData", () => {
         spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
       },
       spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+      categoryOptions: [
+        {
+          id: 9,
+          uuid: "cat-9",
+          name: "Food",
+          subcategories: [{ id: 10, uuid: "sub-10", name: "Lunch", categoryId: 9 }],
+        },
+      ],
       frequentRecipients: [
         {
           recipient: "Grocer",
@@ -173,6 +200,7 @@ describe("getDashboardPageData", () => {
       ],
       recentTransactions: [
         {
+          id: 2,
           uuid: "txn-2",
           recipient: "Grocer",
           category: "Food",
@@ -316,6 +344,7 @@ describe("getDashboardPageData", () => {
       spendingByCategory: [],
       spendingByPeriod: [],
       frequentRecipients: [],
+      categoryOptions: [],
       recentLargeTransactions: [],
       recentTransactions: [],
     });

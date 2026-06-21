@@ -3,17 +3,17 @@ import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 import {
   buildBiggestChangeCard,
   buildChartBuckets,
+  buildChartTicks,
   buildChartTooltip,
+  buildDashboardInsights,
+  buildImportsReviewHref,
+  buildMetricComparisons,
+  buildPeriodTransactionsHref,
   buildRecentTransactionMeta,
   buildRecentTransactionsSummary,
-  buildDashboardInsights,
-  buildMetricComparisons,
-  buildSuggestedRules,
-  buildChartTicks,
-  buildImportsReviewHref,
-  buildPeriodTransactionsHref,
   buildReviewQueueCard,
   buildTransactionsHref,
+  buildSuggestedRules,
   buildUncategorizedTransactionsHref,
   buildWhatChangedSummary,
   formatCompactCurrency,
@@ -182,7 +182,9 @@ describe("dashboard view model", () => {
         now: new Date("2026-06-20T12:00:00.000Z"),
       })
     ).toEqual({
-      timestampLabel: "11:45 am",
+      timestampLabel: "20 Jun 2026 11:45 am",
+      dateLabel: "20 Jun 2026",
+      timeLabel: "11:45 am",
       isSameDay: true,
       categoryLabel: "Food",
       needsCategory: false,
@@ -192,7 +194,9 @@ describe("dashboard view model", () => {
         now: new Date("2026-06-20T12:00:00.000Z"),
       })
     ).toEqual({
-      timestampLabel: "18 Jun",
+      timestampLabel: "18 Jun 2026 5:30 am",
+      dateLabel: "18 Jun 2026",
+      timeLabel: "5:30 am",
       isSameDay: false,
       categoryLabel: "Uncategorized",
       needsCategory: true,
@@ -235,7 +239,7 @@ describe("dashboard view model", () => {
       })
     ).toMatchObject({
       title: "Needs review",
-      action: "Open review tasks",
+      action: "Review now",
       hasItems: true,
       totalReviewCount: 9,
       tasks: [
@@ -257,8 +261,14 @@ describe("dashboard view model", () => {
           tone: "info",
           href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=large&sortBy=amount&sortOrder=desc",
         },
+        {
+          label: "Possible rule matches",
+          count: 0,
+          tone: "info",
+          href: "/recipients",
+        },
       ],
-      helper: "9 review items across categories, imports, and large spends.",
+      helper: "9 transactions need review",
     });
   });
 
@@ -369,7 +379,7 @@ describe("dashboard view model", () => {
       {
         label: "Category leader",
         value: "Travel",
-        helper: "60% of spending \u00b7 \u20b9900",
+        helper: "60% of categorized spend \u00b7 \u20b9900",
         href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
         tone: "neutral",
       },
@@ -390,7 +400,7 @@ describe("dashboard view model", () => {
     ]);
   });
 
-  it("builds a compact what-changed summary", () => {
+  it("builds a period-over-period summary for sustained increases", () => {
     expect(
       buildWhatChangedSummary({
         summary: {
@@ -411,11 +421,143 @@ describe("dashboard view model", () => {
           },
           spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
         },
+        periods: [
+          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 450, transactionCount: 1 },
+          { period: "2026-06-03", totalSpend: 650, transactionCount: 2 },
+        ],
       })
     ).toEqual({
-      title: "What changed?",
+      title: "Vs previous period",
       value: "+50% vs previous period",
       helper: "Up by \u20b9500 compared with 2026-05-01 to 2026-05-31.",
+    });
+  });
+
+  it("tempers the summary when one peak drives the increase", () => {
+    expect(
+      buildWhatChangedSummary({
+        summary: {
+          totalSpend: 1470,
+          transactionCount: 10,
+          categorizedCount: 9,
+          uncategorizedCount: 1,
+          averageSpend: 147,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 1000,
+            transactionCount: 8,
+            categorizedCount: 8,
+            uncategorizedCount: 0,
+            averageSpend: 125,
+          },
+          spendingByCategory: [{ category: "Food", totalSpend: 500, transactionCount: 3 }],
+        },
+        periods: [
+          { period: "2026-06-01", totalSpend: 80, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 120, transactionCount: 1 },
+          { period: "2026-06-03", totalSpend: 950, transactionCount: 4 },
+          { period: "2026-06-04", totalSpend: 160, transactionCount: 2 },
+          { period: "2026-06-05", totalSpend: 160, transactionCount: 2 },
+        ],
+      })
+    ).toEqual({
+      title: "Vs previous period",
+      value: "Up, driven by one spike",
+      helper:
+        "+47% vs previous period overall. Most of the lift came from 03 Jun 2026; latest closed at \u20b9160 vs \u20b9294 average.",
+    });
+  });
+
+  it("handles flat periods without awkward delta copy", () => {
+    expect(
+      buildWhatChangedSummary({
+        summary: {
+          totalSpend: 1000,
+          transactionCount: 4,
+          categorizedCount: 4,
+          uncategorizedCount: 0,
+          averageSpend: 250,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 1000,
+            transactionCount: 4,
+            categorizedCount: 4,
+            uncategorizedCount: 0,
+            averageSpend: 250,
+          },
+          spendingByCategory: [{ category: "Food", totalSpend: 600, transactionCount: 2 }],
+        },
+        periods: [
+          { period: "2026-06-01", totalSpend: 200, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 300, transactionCount: 1 },
+          { period: "2026-06-03", totalSpend: 500, transactionCount: 2 },
+        ],
+      })
+    ).toEqual({
+      title: "Vs previous period",
+      value: "Flat vs previous period",
+      helper: "Spend matched 2026-05-01 to 2026-05-31.",
+    });
+  });
+
+  it("keeps the no-previous-period fallback", () => {
+    expect(
+      buildWhatChangedSummary({
+        summary: {
+          totalSpend: 400,
+          transactionCount: 2,
+          categorizedCount: 2,
+          uncategorizedCount: 0,
+          averageSpend: 200,
+        },
+        comparison: null,
+        periods: [
+          { period: "2026-06-01", totalSpend: 150, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 250, transactionCount: 1 },
+        ],
+      })
+    ).toEqual({
+      title: "Vs previous period",
+      value: "No previous period yet",
+      helper: "Add more history to compare this range with the previous one.",
+    });
+  });
+
+  it("keeps the new-activity fallback when the previous period had no spend", () => {
+    expect(
+      buildWhatChangedSummary({
+        summary: {
+          totalSpend: 500,
+          transactionCount: 2,
+          categorizedCount: 2,
+          uncategorizedCount: 0,
+          averageSpend: 250,
+        },
+        comparison: {
+          rangeLabel: "2026-05-01 to 2026-05-31",
+          summary: {
+            totalSpend: 0,
+            transactionCount: 0,
+            categorizedCount: 0,
+            uncategorizedCount: 0,
+            averageSpend: 0,
+          },
+          spendingByCategory: [],
+        },
+        periods: [
+          { period: "2026-06-01", totalSpend: 200, transactionCount: 1 },
+          { period: "2026-06-02", totalSpend: 300, transactionCount: 1 },
+        ],
+      })
+    ).toEqual({
+      title: "Vs previous period",
+      value: "New activity",
+      helper: "New spending activity compared with 2026-05-01 to 2026-05-31.",
     });
   });
 
@@ -444,9 +586,9 @@ describe("dashboard view model", () => {
         range,
       })
     ).toEqual({
-      label: "Biggest change",
-      value: "Travel up \u20b9900",
-      helper: "Compared with 2026-05-01 to 2026-05-31",
+      label: "Category shift",
+      value: "Travel is now your top known category",
+      helper: "Compared with 01 May - 31 May",
       href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
       tone: "neutral",
     });
@@ -461,8 +603,20 @@ describe("dashboard view model", () => {
         ],
       })
     ).toEqual([
-      { recipient: "B ten cafe sec 56", action: "Create rule" },
-      { recipient: "Hamanthi Devi", action: "Create rule" },
+      {
+        recipient: "B ten cafe sec 56",
+        action: "Create rule",
+        href: "/categories",
+        paymentCount: 5,
+        totalAmount: 2450,
+      },
+      {
+        recipient: "Hamanthi Devi",
+        action: "Create rule",
+        href: "/categories",
+        paymentCount: 4,
+        totalAmount: 1600,
+      },
     ]);
   });
 
