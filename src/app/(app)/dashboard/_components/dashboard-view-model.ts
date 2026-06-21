@@ -473,14 +473,6 @@ export function buildRecentTransactionsSummary(input: {
   return `${recentLabel} \u00b7 ${reviewLabel}`;
 }
 
-export function getUncategorizedShare(uncategorizedCount: number, transactionCount: number) {
-  if (transactionCount <= 0 || uncategorizedCount <= 0) {
-    return 0;
-  }
-
-  return Math.round((uncategorizedCount / transactionCount) * 100);
-}
-
 function formatCompactNumber(value: number, fractionDigits: number) {
   return value.toLocaleString("en-IN", {
     minimumFractionDigits: fractionDigits,

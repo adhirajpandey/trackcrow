@@ -43,7 +43,6 @@ import {
   getPeriodLabelStep,
   getRangeParams,
   getTopCategoryInsight,
-  getUncategorizedShare,
 } from "./dashboard-view-model";
 import {
   dashboardMetricIconClassName,
@@ -118,10 +117,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     periodLabelStep,
     granularity: data.range.granularity,
   });
-  const uncategorizedShare = getUncategorizedShare(
-    data.summary.uncategorizedCount,
-    data.summary.transactionCount
-  );
   const suggestedRules = buildSuggestedRules({
     recipients: data.frequentRecipients,
   });
@@ -153,16 +148,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         <section className="rounded-[8px] border border-destructive/45 bg-destructive/10 px-4 py-3 text-sm text-foreground">
           {data.message}
         </section>
-      ) : null}
-
-      {reviewQueue.hasItems ? (
-        <ReviewAlertBar
-          uncategorizedShare={uncategorizedShare}
-          reviewHref={buildTransactionsHref({
-            ...rangeParams,
-            status: "uncategorized",
-          })}
-        />
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
@@ -242,38 +227,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         topCategory={topCategoryInsight?.category ?? null}
       />
     </div>
-  );
-}
-
-function ReviewAlertBar({
-  uncategorizedShare,
-  reviewHref,
-}: {
-  uncategorizedShare: number;
-  reviewHref: string;
-}) {
-  return (
-    <section className="flex flex-col gap-2 rounded-[8px] border border-accent/22 bg-[linear-gradient(90deg,rgba(242,184,75,0.12),rgba(242,184,75,0.06))] px-4 py-3 text-sm lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex items-center gap-3">
-        <TriangleAlert className="h-4 w-4 shrink-0 text-accent" />
-        <div>
-          <p className="font-semibold text-foreground">Insights are limited</p>
-          <p className="text-secondary-foreground">
-            {uncategorizedShare}% of this period is uncategorized. Review these
-            transactions to improve category totals, trends, and rules.
-          </p>
-        </div>
-      </div>
-      <Link
-        href={reviewHref}
-        className={cn(
-          dashboardSmallActionClassName,
-          "shrink-0 border border-accent/35 bg-accent px-4 font-semibold text-accent-foreground transition-colors hover:brightness-105"
-        )}
-      >
-        Review uncategorized
-      </Link>
-    </section>
   );
 }
 

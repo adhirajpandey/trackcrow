@@ -27,7 +27,6 @@ import {
   getPeriodBounds,
   getPeriodLabelStep,
   getTopCategoryInsight,
-  getUncategorizedShare,
 } from "./dashboard-view-model";
 
 const range = {
@@ -216,11 +215,6 @@ describe("dashboard view model", () => {
         uncategorizedCount: 0,
       })
     ).toBe("4 recent \u00b7 All categorized");
-  });
-
-  it("derives uncategorized share for the alert strip", () => {
-    expect(getUncategorizedShare(7, 9)).toBe(78);
-    expect(getUncategorizedShare(0, 9)).toBe(0);
   });
 
   it("derives compact review queue copy with the shared threshold", () => {
