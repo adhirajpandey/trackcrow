@@ -195,7 +195,7 @@ function ProfileCard({
             Free account
           </p>
           <p
-            className="mt-1.5 truncate text-[12px] leading-none text-[#a4b7ac]"
+            className="mt-1.5 truncate text-[12px] leading-[1.3] text-[#a4b7ac]"
             title={user.email ?? "Signed in"}
           >
             {user.email ?? "Signed in"}
