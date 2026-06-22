@@ -1,10 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  Bird,
   ClipboardList,
   FolderTree,
   Gauge,
@@ -26,6 +26,8 @@ type AppShellUser = {
   image: string | null;
 };
 
+const signOutCallbackUrl = "/login";
+
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: Gauge },
   { href: "/imports/review", label: "Review queue", icon: ClipboardList },
@@ -33,6 +35,10 @@ const navigation = [
   { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/recipients", label: "Recipients", icon: Users },
 ];
+
+function handleSignOut() {
+  return signOut({ callbackUrl: signOutCallbackUrl });
+}
 
 export function AppShell({
   user,
@@ -79,7 +85,7 @@ export function AppShell({
             aria-label="Sign out"
             title="Sign out"
             className="rounded-full border border-border/70 bg-background/30"
-            onClick={() => void signOut({ callbackUrl: "/login" })}
+            onClick={() => void handleSignOut()}
           >
             <LogOut className="h-4 w-4" />
           </Button>
@@ -155,14 +161,9 @@ function ShellSidebarContent({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
         <div className="pointer-events-none absolute bottom-2 right-0 h-14 w-28 bg-[linear-gradient(180deg,transparent,rgba(104,211,145,0.14))] opacity-70 [mask-image:repeating-linear-gradient(180deg,transparent,transparent_3px,black_4px)]" />
         <span className="pointer-events-none absolute right-4 top-4 h-1.5 w-1.5 rotate-45 bg-primary/70" />
-        <div className="relative flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/18 bg-primary/10">
-            <Bird className="h-4 w-4 text-primary" />
-          </div>
-          <p className="text-[13px] font-semibold uppercase tracking-[0.24em] text-primary">
-            TrackCrow
-          </p>
-        </div>
+        <p className="relative text-[13px] font-semibold uppercase tracking-[0.24em] text-primary">
+          TrackCrow
+        </p>
         <p className="relative mt-5 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
           Track. Review. Control.
         </p>
@@ -170,44 +171,60 @@ function ShellSidebarContent({
 
       <ShellNav pathname={pathname} onNavigate={onNavigate} />
 
-      <div className="mt-auto rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,20,16,0.96),rgba(8,16,13,0.96))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-        <div className="flex items-center gap-3">
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[radial-gradient(circle_at_top,rgba(141,234,175,0.32),rgba(39,98,62,0.95))] text-sm font-semibold text-[#eef8f0] shadow-[0_10px_24px_rgba(13,39,25,0.45)]">
-            {getInitials(user.name, user.email)}
-            <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-[#0c1511] bg-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {user.name ?? "TrackCrow user"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {user.email ?? "Signed in"}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
-          <Link
-            href="/settings"
-            onClick={onNavigate}
-            className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-border/60 bg-black/10 px-3 text-sm font-medium text-secondary-foreground transition-colors hover:border-primary/18 hover:bg-secondary/24 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      <ProfileCard user={user} onNavigate={onNavigate} />
+    </>
+  );
+}
+
+function ProfileCard({
+  user,
+  onNavigate,
+}: {
+  user: AppShellUser;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className="mt-auto rounded-[20px] border border-[#244030] bg-[linear-gradient(180deg,rgba(10,20,16,0.96),rgba(9,17,14,0.98))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <div className="flex items-center gap-3">
+        <UserAvatar user={user} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold leading-tight text-[#eef5f0]">
+            {user.name ?? "TrackCrow user"}
+          </p>
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6fcf97]">
+            Free account
+          </p>
+          <p
+            className="mt-1.5 truncate text-[12px] leading-none text-[#a4b7ac]"
+            title={user.email ?? "Signed in"}
           >
-            <Settings className="h-3.5 w-3.5" />
-            Settings
-          </Link>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label="Sign out"
-            title="Sign out"
-            className="min-h-10 whitespace-nowrap rounded-[10px] border border-border/60 bg-black/10 px-3 text-sm font-medium text-secondary-foreground hover:border-primary/18 hover:bg-secondary/24 hover:text-foreground"
-            onClick={() => void signOut({ callbackUrl: "/login" })}
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Logout
-          </Button>
+            {user.email ?? "Signed in"}
+          </p>
         </div>
       </div>
-    </>
+      <div className="mt-3.5 h-px bg-[linear-gradient(90deg,rgba(111,207,151,0.18),rgba(255,255,255,0.04),transparent)]" />
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className="inline-flex min-h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-[#2b4436] bg-[#0d1713]/52 px-3 text-sm font-medium text-[#d5e2da] transition-colors hover:border-primary/25 hover:bg-primary/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Settings className="h-3.5 w-3.5 text-primary" />
+          Settings
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Sign out"
+          title="Sign out"
+          className="min-h-9 cursor-pointer whitespace-nowrap rounded-[12px] border border-[#563333] bg-[#211111]/52 px-3 text-sm font-medium text-[#f49c9c] hover:border-[#cf4a4a]/55 hover:bg-[#361616] hover:text-[#ffd0d0] focus-visible:ring-[#cf4a4a]"
+          onClick={() => void handleSignOut()}
+        >
+          <LogOut className="h-3.5 w-3.5 text-[#ff9b9b]" />
+          Logout
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -271,4 +288,27 @@ function getInitials(name: string | null, email: string | null) {
   }
 
   return source.slice(0, 2).toUpperCase();
+}
+
+function UserAvatar({ user }: { user: AppShellUser }) {
+  const initials = getInitials(user.name, user.email);
+
+  return (
+    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#355541] bg-[linear-gradient(180deg,#214e35,#183726)] shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+      {user.image ? (
+        <Image
+          src={user.image}
+          alt={user.name ? `${user.name} profile photo` : "Profile photo"}
+          fill
+          sizes="40px"
+          className="rounded-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center rounded-full text-[16px] font-semibold tracking-[-0.05em] text-[#eff8f1]">
+          {initials}
+        </div>
+      )}
+      <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#0b1511] bg-[#67ef98]" />
+    </div>
+  );
 }

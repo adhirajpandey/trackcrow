@@ -18,6 +18,17 @@ declare module "next-auth" {
   }
 }
 
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: number;
+    uuid?: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+    subscription?: number;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -53,14 +64,25 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account }) {
-      if (account && user.email) {
+      const shouldHydrateFromDb =
+        Boolean(user?.email) ||
+        Boolean(token.email && (!token.uuid || !token.name || token.image == null));
+
+      if (shouldHydrateFromDb) {
+        const email = user?.email ?? token.email;
+
+        if (!email) {
+          return token;
+        }
+
         const dbUser = await prisma.user.findUnique({
-          where: { email: user.email },
+          where: { email },
           select: {
             id: true,
             uuid: true,
             email: true,
             name: true,
+            image: true,
             subscription: true,
           },
         });
@@ -70,18 +92,22 @@ export const authOptions: NextAuthOptions = {
           token.uuid = dbUser.uuid;
           token.email = dbUser.email;
           token.name = dbUser.name;
+          token.image = user?.image ?? dbUser.image ?? token.image ?? null;
           token.subscription = dbUser.subscription;
         }
+      } else if (account && user?.image) {
+        token.image = user.image;
       }
 
       return token;
     },
     async session({ session, token }) {
-      session.user.id = token.id as number | undefined;
-      session.user.uuid = token.uuid as string | undefined;
+      session.user.id = token.id;
+      session.user.uuid = token.uuid;
       session.user.email = token.email;
       session.user.name = token.name;
-      session.user.subscription = token.subscription as number | undefined;
+      session.user.image = token.image ?? null;
+      session.user.subscription = token.subscription;
       return session;
     },
   },
