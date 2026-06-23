@@ -28,8 +28,16 @@ __pycache__/
 /src/generated/prisma-rewrite
 *.tmp*
 
-# local docs
-/docs/
+# docs
+/docs/*
+!/docs/*.md
+!/docs/reviews/
+/docs/reviews/*
+!/docs/reviews/*.md
+!/docs/plans/
+/docs/plans/*
+!/docs/plans/frontend-trd.md
+!/docs/plans/rewrite-plan.md
 
 # local migration exports
 /scripts/data/

@@ -1,43 +1,22 @@
 # TrackCrow
 
-TrackCrow is a Next.js expense tracking app that turns SMS transaction messages into structured spending data, reviewable transactions, and dashboard summaries.
+TrackCrow is a Next.js expense tracking app that turns SMS transaction messages into structured spending data, manual transaction records, and dashboard summaries.
 
-## Current Architecture
+## Capabilities
 
-- `src/app/`: Next.js App Router pages, layouts, loading states, and API route handlers
-- `src/server/modules/`: backend domain modules split into `controller`, `service`, `schemas`, `types`, and tests
-- `src/components/`: shared UI and layout components, with primitives in `src/components/ui/`
-- `src/common/`: shared parsers, types, and utilities
-- `src/lib/`: auth, logging, internal API helpers, and Prisma client wiring
-- `prisma/`: PostgreSQL schema and migration history
-- `scripts/`: rewrite migration and environment utilities
+- Google sign-in with user bootstrap on first login
+- SMS transaction import through device tokens
+- Manual transaction creation and editing
+- Dashboard summaries, category breakdowns, and period-based spending views
+- User-owned categories, subcategories, and resolved recipients
 
-## Features
-
-- SMS import flow for transaction ingestion
-- Transaction review, editing, and manual add flows
-- Dashboard summaries, category breakdowns, and spending-by-period views
-- Category and subcategory management
-- Recipient and device-token APIs
-- Google OAuth sign-in with user bootstrap on first login
-
-## Tech Stack
-
-- Next.js 16, React 19, TypeScript
-- Tailwind CSS, Radix UI, Recharts, React Hook Form, Zod
-- PostgreSQL with Prisma
-- NextAuth.js with Google provider
-- Jest for unit tests
-
-## Development
-
-1. Install dependencies:
+## Quick Setup
 
 ```bash
 pnpm install
 ```
 
-2. Configure environment variables for at least:
+Required environment variables:
 
 ```bash
 DATABASE_URL=
@@ -46,11 +25,8 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 ```
 
-3. Generate/apply the database schema, then start the app:
-
 ```bash
 pnpm dlx prisma migrate deploy
-pnpm build
 pnpm dev
 ```
 
@@ -70,8 +46,11 @@ pnpm dlx prisma migrate deploy
 pnpm dlx prisma generate
 ```
 
-## Rewrite Notes
+## Architecture Snapshot
 
-- Prisma client output is generated into `src/generated/prisma-rewrite`.
-- The current backend shape routes `src/app/api/*` through `src/server/modules/*`.
-- Recent history shows an active rewrite/migration sequence: backend foundation, API boundary refactor, migration tooling, Prisma baseline reset, controller/service layering, and service-level test coverage.
+- `src/app/` contains App Router pages, layouts, and `/api/*` route entry points.
+- `src/server/modules/` contains controllers, services, schemas, types, and tests for backend domains.
+- `src/server/page-data/` contains server-only page read models.
+- `prisma/schema.prisma` defines the PostgreSQL data model.
+
+Canonical docs live in [docs/README.md](./docs/README.md). Historical rewrite and design artifacts live in `docs/plans/`.
