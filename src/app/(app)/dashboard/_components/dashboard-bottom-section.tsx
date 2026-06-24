@@ -191,6 +191,7 @@ export function DashboardBottomSection({
           transactionStatus={data.sectionStatus.transactions}
           summary={recentSummary}
           isLoading={isRefreshing}
+          onOpenTransaction={(transactionId) => router.push(`/transactions/${transactionId}`)}
           quickTagOptions={quickTagOptions}
           pendingTransactionId={pendingTransactionId}
           assignmentErrorTransactionId={assignmentErrorTransactionId}
@@ -503,6 +504,7 @@ function RecentTransactionsPanel({
   transactionStatus,
   summary,
   isLoading,
+  onOpenTransaction,
   quickTagOptions,
   pendingTransactionId,
   assignmentErrorTransactionId,
@@ -517,6 +519,7 @@ function RecentTransactionsPanel({
   transactionStatus: DashboardPageData["sectionStatus"]["transactions"];
   summary: string;
   isLoading: boolean;
+  onOpenTransaction: (transactionId: number) => void;
   quickTagOptions: Array<{ id: number; label: string }>;
   pendingTransactionId: number | null;
   assignmentErrorTransactionId: number | null;
@@ -566,9 +569,19 @@ function RecentTransactionsPanel({
                     key={transaction.uuid}
                     className={cn(
                       dashboardTableTallRowClassName,
-                      "items-start",
+                      dashboardTableRowClassName,
+                      "cursor-pointer items-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                       index > 0 && "border-t border-border/40"
                     )}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => onOpenTransaction(transaction.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onOpenTransaction(transaction.id);
+                      }
+                    }}
                     style={{
                       gridTemplateColumns: dashboardTableLayouts.recentTransactions.template,
                     }}
@@ -583,7 +596,8 @@ function RecentTransactionsPanel({
                     </div>
                     <div className="flex min-h-full min-w-0 items-center">
                       <Link
-                        href={buildTransactionsHref({ transaction: transaction.uuid })}
+                        href={`/transactions/${transaction.id}`}
+                        onClick={(event) => event.stopPropagation()}
                         className="block truncate pr-3 text-[15px] font-medium leading-6 text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {transaction.recipient}
@@ -602,7 +616,11 @@ function RecentTransactionsPanel({
                             <Button
                               type="button"
                               variant="secondary"
-                              onClick={() => onToggleCategoryMenu(transaction.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onToggleCategoryMenu(transaction.id);
+                              }}
+                              onKeyDown={(event) => event.stopPropagation()}
                               disabled={isPending}
                               aria-haspopup="listbox"
                               aria-expanded={isCategoryMenuOpen}
@@ -636,7 +654,11 @@ function RecentTransactionsPanel({
                                       type="button"
                                       role="option"
                                       aria-selected={transaction.category === option.label}
-                                      onClick={() => void onQuickTag(transaction.id, option.id)}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        void onQuickTag(transaction.id, option.id);
+                                      }}
+                                      onKeyDown={(event) => event.stopPropagation()}
                                       className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20"
                                     >
                                       <span className="truncate">{option.label}</span>

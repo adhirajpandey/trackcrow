@@ -29,6 +29,7 @@ type TransactionRecord = {
   currency: string;
   type: TransactionType;
   source: TransactionSource;
+  recipientId: number;
   recipientRaw: string;
   recipientName: string | null;
   reference: string | null;
@@ -56,6 +57,7 @@ function toTransactionDto(record: TransactionRecord): TransactionDto {
     currency: record.currency,
     type: record.type,
     source: record.source,
+    recipientId: record.recipientId,
     recipientRaw: record.recipientRaw,
     recipientName: record.recipientName,
     recipientDisplayName: record.recipient.displayName,

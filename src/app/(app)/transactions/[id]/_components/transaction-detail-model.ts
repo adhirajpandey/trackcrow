@@ -226,6 +226,21 @@ export function getTransactionDisplayRecipient(transaction: TransactionRecord) {
   });
 }
 
+export function getRecipientDetailHref(transaction: TransactionRecord) {
+  return `/recipients/${transaction.recipientId}`;
+}
+
+export function getTransactionGoogleMapsHref(locationRaw: string | null | undefined) {
+  const coordinates = parseTransactionCoordinates(locationRaw);
+  if (!coordinates) {
+    return null;
+  }
+
+  return `https://www.google.com/maps/search/${encodeURIComponent(
+    `${coordinates.latitude},${coordinates.longitude}`
+  )}`;
+}
+
 function toNullableTrimmedString(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
@@ -238,4 +253,33 @@ function toNullableInteger(value: string) {
 
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseTransactionCoordinates(locationRaw: string | null | undefined) {
+  const trimmed = locationRaw?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const match = trimmed.match(
+    /(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/
+  );
+  if (!match) {
+    return null;
+  }
+
+  const latitude = Number(match[1]);
+  const longitude = Number(match[2]);
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+
+  return { latitude: match[1], longitude: match[2] };
 }

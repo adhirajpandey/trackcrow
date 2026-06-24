@@ -30,6 +30,7 @@ describe("transactions queries", () => {
                 currency: "INR",
                 type: "UPI",
                 source: "MANUAL",
+                recipientId: 18,
                 recipientRaw: "ACME RENT",
                 recipientName: "Acme Rent",
                 recipientDisplayName: "Acme Rent",
@@ -122,6 +123,7 @@ describe("transactions queries", () => {
           currency: "INR",
           type: "UPI",
           source: "SMS",
+          recipientId: 30,
           recipientRaw: "742810776@kotakbank",
           recipientName: "Kotak Bank UPI",
           recipientDisplayName: "Kotak Bank UPI",
@@ -150,6 +152,7 @@ describe("transactions queries", () => {
       id: 42,
       uuid: "txn-42",
       source: "SMS",
+      recipientId: 30,
     });
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/transactions/42",

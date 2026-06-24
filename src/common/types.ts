@@ -44,6 +44,7 @@ export type TransactionRecord = {
   currency: string;
   type: TransactionType;
   source: TransactionSource;
+  recipientId: number;
   recipientRaw: string;
   recipientName: string | null;
   recipientDisplayName: string;

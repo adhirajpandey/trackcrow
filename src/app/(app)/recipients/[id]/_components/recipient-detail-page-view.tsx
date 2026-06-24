@@ -31,7 +31,7 @@ import {
 } from "./recipient-detail-model";
 
 const summaryValueClassName =
-  "mt-4 text-[2.25rem] font-semibold leading-none text-primary tabular-nums";
+  "mt-4 break-all text-[2.25rem] font-semibold leading-[0.95] text-primary tabular-nums";
 const badgeClassName =
   "inline-flex min-h-8 items-center rounded-[999px] border px-3 text-sm font-medium";
 
@@ -67,7 +67,7 @@ export function RecipientDetailPageView({
         description="Review a payee, inspect identifiers, and trace related transactions in the same ledger workspace."
         meta={
           <>
-            <span className="font-medium text-foreground">{data.displayName}</span>
+            <span className="break-all font-medium text-foreground">{data.displayName}</span>
             <span className="text-secondary-foreground">
               {data.transactionCount} transactions linked
             </span>
@@ -87,7 +87,7 @@ export function RecipientDetailPageView({
         <div className="space-y-3">
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
             <div className="grid gap-5 xl:grid-cols-[minmax(240px,0.95fr)_minmax(0,1fr)_minmax(0,0.85fr)]">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-secondary-foreground">
                   Recipient summary
                 </p>
@@ -376,9 +376,9 @@ export function RecipientDetailPageView({
 
 function SectionHeader({ title, description }: { title: string; description: string }) {
   return (
-    <div className="px-5 pt-5">
-      <h2 className="text-[1.05rem] font-semibold text-foreground">{title}</h2>
-      <p className="mt-2 text-sm text-secondary-foreground">{description}</p>
+    <div className="space-y-1.5 px-5 pb-4 pt-5">
+      <h2 className="text-[1.05rem] font-semibold leading-tight text-foreground">{title}</h2>
+      <p className="text-sm leading-5 text-secondary-foreground">{description}</p>
     </div>
   );
 }

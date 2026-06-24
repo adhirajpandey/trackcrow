@@ -135,27 +135,23 @@ export function RecipientsPageView({
             <div className="flex-1">
               {data.rows.length > 0 ? (
                 data.rows.map((row, index) => (
-                  <div
+                  <Link
                     key={row.uuid}
+                    href={`/recipients/${row.id}`}
                     className={cn(
                       dashboardTableRowClassName,
-                      "items-center",
+                      "cursor-pointer items-center focus-visible:outline-none",
                       index > 0 && "border-t border-border/40"
                     )}
                     style={{ gridTemplateColumns: tableTemplate }}
                   >
                     <div className="min-w-0">
-                      <Link
-                        href={`/recipients/${row.id}`}
-                        className="block rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <p className="truncate font-medium text-foreground transition-colors hover:text-primary">
-                          {row.displayName}
-                        </p>
-                        <p className="mt-1 text-xs text-secondary-foreground/85">
-                          {row.secondaryLabel}
-                        </p>
-                      </Link>
+                      <p className="truncate font-medium text-foreground transition-colors hover:text-primary">
+                        {row.displayName}
+                      </p>
+                      <p className="mt-1 text-xs text-secondary-foreground/85">
+                        {row.secondaryLabel}
+                      </p>
                     </div>
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       {row.identifierChips.map((identifier) => (
@@ -193,7 +189,7 @@ export function RecipientsPageView({
                         <span>{row.status === "active" ? "Active" : "No transactions"}</span>
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : data.emptyState !== "none" ? (
                 <EmptyState emptyState={data.emptyState} />

@@ -45,6 +45,7 @@ describe("dashboard bottom section model", () => {
           currency: "INR",
           type: "UPI",
           source: "SMS",
+          recipientId: 55,
           recipientRaw: "vivek.pandey5@oksbi",
           recipientName: null,
           recipientDisplayName: "vivek.pandey5@oksbi",

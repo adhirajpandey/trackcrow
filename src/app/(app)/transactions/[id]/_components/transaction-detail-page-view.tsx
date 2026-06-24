@@ -8,11 +8,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import {
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Check,
   CircleAlert,
   ChevronDown,
   Copy,
+  MapPinned,
   LoaderCircle,
   Save,
   Sparkles,
@@ -46,7 +48,9 @@ import {
   buildTransactionQuickChecks,
   formatTransactionAmount,
   formatTransactionDateTime,
+  getRecipientDetailHref,
   getSubcategoryOptions,
+  getTransactionGoogleMapsHref,
   getTransactionDisplayRecipient,
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
@@ -101,7 +105,9 @@ export function TransactionDetailPageView({
   const currentRecipientRaw = form.watch("recipientRaw");
   const currentRecipientName = form.watch("recipientName");
   const currentType = form.watch("type");
+  const currentLocationRaw = form.watch("locationRaw");
   const subcategoryOptions = getSubcategoryOptions(categories, selectedCategoryId);
+  const googleMapsHref = getTransactionGoogleMapsHref(currentLocationRaw);
 
   useEffect(() => {
     form.reset(mapTransactionToFormValues(transaction));
@@ -435,7 +441,15 @@ export function TransactionDetailPageView({
           </section>
 
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient</h2>
+              <Button asChild variant="secondary" className="min-w-[180px]">
+                <Link href={getRecipientDetailHref(transaction)}>
+                  View recipient
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field
                 label="Recipient display name"
@@ -494,7 +508,17 @@ export function TransactionDetailPageView({
                 <input className={fieldClassName} {...form.register("reference")} />
               </Field>
               <Field label="Location" error={form.formState.errors.locationRaw?.message}>
-                <input className={fieldClassName} {...form.register("locationRaw")} />
+                <div className="space-y-3">
+                  <input className={fieldClassName} {...form.register("locationRaw")} />
+                  {googleMapsHref ? (
+                    <Button asChild type="button" variant="secondary" className="min-w-[220px]">
+                      <a href={googleMapsHref} target="_blank" rel="noreferrer noopener">
+                        <MapPinned className="h-4 w-4" />
+                        Open in Google Maps
+                      </a>
+                    </Button>
+                  ) : null}
+                </div>
               </Field>
             </div>
 

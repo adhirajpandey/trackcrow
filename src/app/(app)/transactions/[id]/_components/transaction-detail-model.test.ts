@@ -3,6 +3,8 @@ import type { CategoryOption, TransactionRecord } from "@/common/types";
 import {
   applyTransactionSuggestion,
   buildTransactionQuickChecks,
+  getTransactionGoogleMapsHref,
+  getRecipientDetailHref,
   getSubcategoryOptions,
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
@@ -46,6 +48,7 @@ const transaction: TransactionRecord = {
   currency: "INR",
   type: "UPI",
   source: "SMS",
+  recipientId: 30,
   recipientRaw: "742810776@kotakbank",
   recipientName: "Kotak Bank UPI",
   recipientDisplayName: "Kotak Bank UPI",
@@ -121,6 +124,25 @@ describe("transaction detail model", () => {
       { id: "source", label: "Source recorded", status: "passed" },
       { id: "recipient", label: "Recipient linked", status: "passed" },
     ]);
+  });
+
+  it("builds the canonical recipient detail href from the linked recipient id", () => {
+    expect(getRecipientDetailHref(transaction)).toBe("/recipients/30");
+  });
+
+  it("builds a Google Maps search href from coordinate locations", () => {
+    expect(getTransactionGoogleMapsHref("28.4622314,77.0874603")).toBe(
+      "https://www.google.com/maps/search/28.4622314%2C77.0874603"
+    );
+    expect(getTransactionGoogleMapsHref(" 28.4622314, 77.0874603 ")).toBe(
+      "https://www.google.com/maps/search/28.4622314%2C77.0874603"
+    );
+  });
+
+  it("returns null for non-coordinate location strings", () => {
+    expect(getTransactionGoogleMapsHref("Bangalore office")).toBeNull();
+    expect(getTransactionGoogleMapsHref("120.000,77.0874603")).toBeNull();
+    expect(getTransactionGoogleMapsHref(null)).toBeNull();
   });
 
   it("applies suggestion names by matching category and subcategory options", () => {

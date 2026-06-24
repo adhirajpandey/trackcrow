@@ -52,6 +52,7 @@ function transactionRecord(overrides: Record<string, unknown> = {}) {
     currency: "INR",
     type: TransactionType.UPI,
     source: TransactionSource.MANUAL,
+    recipientId: 30,
     recipientRaw: "merchant@upi",
     recipientName: "Merchant",
     reference: null,
@@ -207,6 +208,41 @@ describe("transaction service", () => {
         take: 1,
       })
     );
+  });
+
+  it("includes recipientId in transaction DTOs for detail and list flows", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce(transactionRecord({ id: 7, recipientId: 44 }));
+
+    await expect(
+      getTransactionById({ userUuid: "user-1", transactionId: 7 })
+    ).resolves.toEqual({
+      ok: true,
+      data: expect.objectContaining({
+        id: 7,
+        recipientId: 44,
+      }),
+    });
+
+    const first = new Date("2026-06-01T00:00:00.000Z");
+    const last = new Date("2026-06-30T00:00:00.000Z");
+    mockPrisma.transaction.findFirst
+      .mockResolvedValueOnce({ timestamp: first })
+      .mockResolvedValueOnce({ timestamp: last });
+    mockPrisma.transaction.count.mockResolvedValueOnce(1);
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      transactionRecord({ id: 8, recipientId: 52 }),
+    ]);
+
+    await expect(
+      listTransactions({
+        userUuid: "user-1",
+      })
+    ).resolves.toEqual({
+      ok: true,
+      data: expect.objectContaining({
+        transactions: [expect.objectContaining({ id: 8, recipientId: 52 })],
+      }),
+    });
   });
 
   it("returns NOT_FOUND for cross-user get, update, and delete operations", async () => {
