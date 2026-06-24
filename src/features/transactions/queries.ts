@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import type { TransactionListResponse } from "@/common/types";
+import type { TransactionListResponse, TransactionRecord } from "@/common/types";
 import { apiGet } from "@/lib/api/client";
 
 import {
@@ -11,7 +11,11 @@ import {
   isSameTransactionsQuery,
 } from "./query-state";
 import { transactionsQueryKeys } from "./query-keys";
-import type { TransactionsApiQuery, TransactionsQueryResult } from "./types";
+import type {
+  TransactionDetailSuggestion,
+  TransactionsApiQuery,
+  TransactionsQueryResult,
+} from "./types";
 
 export async function getTransactionsQueryData(
   query: TransactionsApiQuery
@@ -24,6 +28,14 @@ export async function getTransactionsQueryData(
   return buildTransactionsQueryResult({
     transactions,
   });
+}
+
+export function getTransactionQueryData(transactionId: number) {
+  return apiGet<TransactionRecord>(`/api/transactions/${transactionId}`);
+}
+
+export function getTransactionSuggestionData(transactionId: number) {
+  return apiGet<TransactionDetailSuggestion>(`/api/transactions/${transactionId}/suggest`);
 }
 
 export function useTransactionsQuery(input: {
@@ -40,6 +52,18 @@ export function useTransactionsQuery(input: {
     queryFn: () => getTransactionsQueryData(input.query),
     initialData,
     placeholderData: keepPreviousData,
+    staleTime: 0,
+  });
+}
+
+export function useTransactionQuery(input: {
+  transactionId: number;
+  initialData: TransactionRecord;
+}) {
+  return useQuery({
+    queryKey: transactionsQueryKeys.detail(input.transactionId),
+    queryFn: () => getTransactionQueryData(input.transactionId),
+    initialData: input.initialData,
     staleTime: 0,
   });
 }

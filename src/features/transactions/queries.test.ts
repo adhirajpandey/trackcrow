@@ -1,7 +1,11 @@
 import { ApiClientError } from "@/lib/api/client";
 
 import { getTransactionsPageState, isSameTransactionsQuery } from "./query-state";
-import { getTransactionsQueryData } from "./queries";
+import {
+  getTransactionQueryData,
+  getTransactionSuggestionData,
+  getTransactionsQueryData,
+} from "./queries";
 
 describe("transactions queries", () => {
   const originalFetch = global.fetch;
@@ -57,22 +61,7 @@ describe("transactions queries", () => {
           }
         )
       )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify([
-            {
-              id: 12,
-              uuid: "cat-12",
-              name: "Housing",
-              subcategories: [],
-            },
-          ]),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        )
-      );
+      ;
 
     const state = getTransactionsPageState({
       range: "all-time",
@@ -120,6 +109,82 @@ describe("transactions queries", () => {
       status: 401,
       message: "Unauthorized",
     });
+  });
+
+  it("fetches one transaction detail through the browser API client", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 42,
+          uuid: "txn-42",
+          userUuid: "user-1",
+          amount: 1063,
+          currency: "INR",
+          type: "UPI",
+          source: "SMS",
+          recipientRaw: "742810776@kotakbank",
+          recipientName: "Kotak Bank UPI",
+          recipientDisplayName: "Kotak Bank UPI",
+          reference: null,
+          accountLabel: null,
+          remarks: null,
+          locationRaw: null,
+          timestamp: "2026-06-24T17:31:00.000Z",
+          createdAt: "2026-06-24T17:32:00.000Z",
+          updatedAt: "2026-06-24T17:35:00.000Z",
+          category: null,
+          subcategory: null,
+          categoryId: null,
+          subcategoryId: null,
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      )
+    );
+
+    const data = await getTransactionQueryData(42);
+
+    expect(data).toMatchObject({
+      id: 42,
+      uuid: "txn-42",
+      source: "SMS",
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/transactions/42",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
+  });
+
+  it("fetches transaction category suggestions by id", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          suggestedCategory: "Food",
+          suggestedSubCategory: "Dinner",
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }
+      )
+    );
+
+    await expect(getTransactionSuggestionData(42)).resolves.toEqual({
+      suggestedCategory: "Food",
+      suggestedSubCategory: "Dinner",
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/transactions/42/suggest",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
   });
 
   it("normalizes category ordering before comparing initial queries", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -157,13 +158,15 @@ export function TransactionsPageView({
             <div className="flex-1">
               {data.rows.length > 0 ? (
                 data.rows.map((row, index) => (
-                  <div
+                  <Link
                     key={row.uuid}
+                    href={`/transactions/${row.id}`}
                     className={cn(
                       dashboardTableTallRowClassName,
                       dashboardTableRowClassName,
-                      "items-center",
+                      "items-center focus-visible:outline-none",
                       index > 0 && "border-t border-border/40",
+                      "cursor-pointer",
                       row.isSelected &&
                         "bg-primary/10 ring-1 ring-inset ring-primary/30"
                     )}
@@ -196,7 +199,7 @@ export function TransactionsPageView({
                     <div className="font-medium uppercase tracking-[0.08em] text-secondary-foreground">
                       {row.source}
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <EmptyState />

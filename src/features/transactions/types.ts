@@ -81,6 +81,17 @@ export type TransactionsPageInitialData = {
   initialCategoriesData: CategoryOption[];
 };
 
+export type TransactionDetailSuggestion = {
+  suggestedCategory: string | null;
+  suggestedSubCategory: string | null;
+};
+
+export type TransactionDetailPageInitialData = {
+  transactionId: number;
+  initialTransactionData: TransactionRecord;
+  initialCategoriesData: CategoryOption[];
+};
+
 export type TransactionMutationInput = {
   amount: number;
   recipientRaw: string;
@@ -102,4 +113,18 @@ export type UpdateTransactionInput = TransactionMutationInput & {
 export type UpdateTransactionCategoryInput = {
   transactionId: number;
   categoryId?: number | null;
+};
+
+export type TransactionDetailFormValues = {
+  amount: string;
+  recipientRaw: string;
+  recipientName: string;
+  categoryId: string;
+  subcategoryId: string;
+  type: TransactionType;
+  timestamp: string;
+  reference: string;
+  accountLabel: string;
+  remarks: string;
+  locationRaw: string;
 };

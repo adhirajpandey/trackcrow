@@ -13,7 +13,7 @@ import type {
 
 type JsonBody = Record<string, unknown> | Array<unknown> | null;
 
-class InternalApiError extends Error {
+export class InternalApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -101,6 +101,10 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+export function isInternalApiError(error: unknown): error is InternalApiError {
+  return error instanceof InternalApiError;
 }
 
 export async function getCategories() {
