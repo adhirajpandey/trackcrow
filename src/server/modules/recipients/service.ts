@@ -3,7 +3,13 @@ import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
-import type { RecipientDto, RecipientLookupInput, ResolveRecipientInput } from "./types";
+import type {
+  RecipientDetailDto,
+  RecipientDetailTransactionDto,
+  RecipientDto,
+  RecipientLookupInput,
+  ResolveRecipientInput,
+} from "./types";
 
 function toRecipientDto(record: {
   id: number;
@@ -26,6 +32,75 @@ function toRecipientDto(record: {
     normalizedName: record.normalizedName,
     transactionCount: record._count.transactions,
     identifiers: record.identifiers,
+  };
+}
+
+function toRecipientDetailTransactionDto(record: {
+  id: number;
+  uuid: string;
+  amount: { toNumber(): number };
+  currency: string;
+  type: string;
+  source: string;
+  timestamp: Date;
+  categoryId: number | null;
+  subcategoryId: number | null;
+  category: { name: string } | null;
+  subcategory: { name: string } | null;
+}): RecipientDetailTransactionDto {
+  return {
+    id: record.id,
+    uuid: record.uuid,
+    amount: record.amount.toNumber(),
+    currency: record.currency,
+    type: record.type,
+    source: record.source,
+    timestamp: record.timestamp.toISOString(),
+    category: record.category?.name ?? null,
+    subcategory: record.subcategory?.name ?? null,
+    categoryId: record.categoryId,
+    subcategoryId: record.subcategoryId,
+  };
+}
+
+function toRecipientDetailDto(record: {
+  id: number;
+  uuid: string;
+  displayName: string;
+  normalizedName: string;
+  createdAt: Date;
+  updatedAt: Date;
+  identifiers: Array<{
+    id: number;
+    uuid: string;
+    kind: string;
+    value: string;
+    normalizedValue: string;
+  }>;
+  transactions: Array<{
+    id: number;
+    uuid: string;
+    amount: { toNumber(): number };
+    currency: string;
+    type: string;
+    source: string;
+    timestamp: Date;
+    categoryId: number | null;
+    subcategoryId: number | null;
+    category: { name: string } | null;
+    subcategory: { name: string } | null;
+  }>;
+}): RecipientDetailDto {
+  return {
+    id: record.id,
+    uuid: record.uuid,
+    displayName: record.displayName,
+    normalizedName: record.normalizedName,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+    transactionCount: record.transactions.length,
+    identifiers: record.identifiers,
+    linkedTransactions: record.transactions.map(toRecipientDetailTransactionDto),
   };
 }
 
@@ -113,6 +188,60 @@ export async function getRecipient(
     return ok(toRecipientDto(recipient));
   } catch (error) {
     logger.error("getRecipient - Failed to get recipient", error as Error, {
+      userUuid: input.userUuid,
+      recipientId: input.recipientId,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function getRecipientDetail(
+  input: RecipientLookupInput
+): Promise<ServiceResult<RecipientDetailDto, "NOT_FOUND" | "INTERNAL_ERROR">> {
+  try {
+    const recipient = await prisma.recipient.findFirst({
+      where: { id: input.recipientId, userUuid: input.userUuid },
+      include: {
+        identifiers: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            uuid: true,
+            kind: true,
+            value: true,
+            normalizedValue: true,
+          },
+        },
+        transactions: {
+          orderBy: { timestamp: "desc" },
+          select: {
+            id: true,
+            uuid: true,
+            amount: true,
+            currency: true,
+            type: true,
+            source: true,
+            timestamp: true,
+            categoryId: true,
+            subcategoryId: true,
+            category: {
+              select: { name: true },
+            },
+            subcategory: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!recipient) {
+      return fail("NOT_FOUND");
+    }
+
+    return ok(toRecipientDetailDto(recipient));
+  } catch (error) {
+    logger.error("getRecipientDetail - Failed to get recipient detail", error as Error, {
       userUuid: input.userUuid,
       recipientId: input.recipientId,
     });

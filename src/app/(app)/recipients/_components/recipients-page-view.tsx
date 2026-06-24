@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -144,10 +145,17 @@ export function RecipientsPageView({
                     style={{ gridTemplateColumns: tableTemplate }}
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{row.displayName}</p>
-                      <p className="mt-1 text-xs text-secondary-foreground/85">
-                        {row.secondaryLabel}
-                      </p>
+                      <Link
+                        href={`/recipients/${row.id}`}
+                        className="block rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <p className="truncate font-medium text-foreground transition-colors hover:text-primary">
+                          {row.displayName}
+                        </p>
+                        <p className="mt-1 text-xs text-secondary-foreground/85">
+                          {row.secondaryLabel}
+                        </p>
+                      </Link>
                     </div>
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       {row.identifierChips.map((identifier) => (

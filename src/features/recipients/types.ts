@@ -74,3 +74,69 @@ export type RecipientsPageInitialData = {
   initialRecipientsQuery: RecipientsApiQuery;
   initialRecipientsData: RecipientsQueryResult;
 };
+
+export type RecipientDetailIdentifierRow = {
+  id: string;
+  kindLabel: string;
+  value: string;
+  normalizedValue: string;
+};
+
+export type RecipientDetailCategoryRow = {
+  id: string;
+  category: string;
+  transactionCount: number;
+  totalAmount: number;
+};
+
+export type RecipientDetailTransactionRow = {
+  id: number;
+  uuid: string;
+  amount: number;
+  category: string | null;
+  source: string;
+  timestamp: string;
+};
+
+export type RecipientDetailMetadataItem = {
+  label: string;
+  value: string;
+  copyValue?: string;
+};
+
+export type RecipientDetailQuickCheck = {
+  id: string;
+  label: string;
+  status: "attention" | "passed";
+  badgeLabel: string;
+};
+
+export type RecipientDetailInsight = {
+  id: string;
+  label: string;
+  value: string;
+  tone?: "default" | "accent";
+};
+
+export type RecipientDetailPageData = {
+  recipientId: number;
+  displayName: string;
+  normalizedName: string;
+  transactionCount: number;
+  identifierCount: number;
+  totalSpent: number;
+  averagePayment: number;
+  lastPaidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  identifiers: RecipientDetailIdentifierRow[];
+  categoryRows: RecipientDetailCategoryRow[];
+  recentTransactions: RecipientDetailTransactionRow[];
+  metadata: RecipientDetailMetadataItem[];
+  quickChecks: RecipientDetailQuickCheck[];
+  insights: RecipientDetailInsight[];
+};
+
+export type RecipientDetailPageInitialData = {
+  initialRecipientDetailData: RecipientDetailPageData;
+};
