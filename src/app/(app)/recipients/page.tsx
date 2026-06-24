@@ -1,15 +1,13 @@
-import { DrilldownPlaceholderPage } from "../_drilldown-placeholder";
+import { getRecipientsPageData } from "@/server/page-data/recipients-page-data";
+
+import { RecipientsPageView } from "./_components/recipients-page-view";
 
 type RecipientsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function RecipientsPage({ searchParams }: RecipientsPageProps) {
-  return (
-    <DrilldownPlaceholderPage
-      title="Recipients"
-      description="Recipient review will land here as the workspace expands."
-      searchParams={await searchParams}
-    />
-  );
+  const data = await getRecipientsPageData(await searchParams);
+
+  return <RecipientsPageView {...data} />;
 }
