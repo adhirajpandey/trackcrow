@@ -1,5 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
@@ -9,8 +11,21 @@ import {
 } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { useCategoriesQuery } from "@/features/categories/queries";
+import {
+  buildTransactionsPageData,
+  getTransactionsPageState,
+  isSameTransactionsQuery,
+  type TransactionsSearchParams,
+} from "@/features/transactions/query-state";
+import { useTransactionsQuery } from "@/features/transactions/queries";
+import type {
+  TransactionsPageData,
+  TransactionsPageInitialData,
+} from "@/features/transactions/types";
+import { updateTransactionsUrl } from "@/features/transactions/url-state";
+import { getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
-import type { TransactionsPageData } from "@/server/page-data/transactions-page-data";
 import {
   dashboardInnerTableClassName,
   dashboardPanelClassName,
@@ -35,7 +50,51 @@ import { TransactionsFilterControls } from "./transactions-filter-controls";
 const tableTemplate =
   "minmax(160px,1.05fr) minmax(220px,1.4fr) 128px 180px 88px";
 
-export function TransactionsPageView({ data }: { data: TransactionsPageData }) {
+function toSearchParamsObject(searchParams: Pick<URLSearchParams, "keys" | "getAll">) {
+  const result: TransactionsSearchParams = {};
+
+  for (const key of searchParams.keys()) {
+    const values = searchParams.getAll(key);
+    result[key] = values.length > 1 ? values : (values[0] ?? undefined);
+  }
+
+  return result;
+}
+
+export function TransactionsPageView({
+  initialTransactionsQuery,
+  initialTransactionsData,
+  initialCategoriesData,
+}: TransactionsPageInitialData) {
+  const searchParams = useSearchParams();
+  const state = getTransactionsPageState(toSearchParamsObject(searchParams));
+  const transactionsQuery = useTransactionsQuery({
+    query: state.query,
+    initialQuery: initialTransactionsQuery,
+    initialData: initialTransactionsData,
+  });
+  const categoriesQuery = useCategoriesQuery({
+    initialData: initialCategoriesData,
+  });
+  const isInitialQuery = isSameTransactionsQuery(
+    state.query,
+    initialTransactionsQuery
+  );
+  const transactionsData =
+    transactionsQuery.data ?? (isInitialQuery ? initialTransactionsData : undefined);
+  const data = buildTransactionsPageData({
+    query: state.query,
+    view: state.view,
+    result: transactionsData ?? initialTransactionsData,
+    categories: categoriesQuery.data ?? initialCategoriesData,
+  });
+  const message = transactionsQuery.error
+    ? getApiClientErrorMessage(
+        transactionsQuery.error,
+        "Transactions are temporarily unavailable. Try again in a moment."
+      )
+    : data.message;
+  const status = transactionsQuery.error ? "error" : data.status;
   const categoryOptions = buildCategoryOptions(data.categories);
 
   return (
@@ -46,16 +105,16 @@ export function TransactionsPageView({ data }: { data: TransactionsPageData }) {
         description="Search, filter, and review all your transactions in one place."
       />
 
-      {data.message ? (
+      {message ? (
         <section
           className={cn(
             "rounded-[8px] border px-4 py-3 text-sm",
-            data.status === "error"
+            status === "error"
               ? "border-destructive/45 bg-destructive/10 text-foreground"
               : "border-border/50 bg-background/16 text-secondary-foreground"
           )}
         >
-          {data.message}
+          {message}
         </section>
       ) : null}
 
@@ -171,8 +230,9 @@ function SortHeader({
   align?: "left" | "right";
 }) {
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={() => updateTransactionsUrl(href, "push")}
       className={cn(
         "inline-flex items-center gap-2 transition-colors hover:text-foreground",
         align === "right" && "justify-end text-right"
@@ -184,7 +244,7 @@ function SortHeader({
       {direction === null ? (
         <ArrowUpDown className="h-3.5 w-3.5 text-secondary-foreground/55" />
       ) : null}
-    </Link>
+    </button>
   );
 }
 
@@ -210,9 +270,10 @@ function Pagination({ data }: { data: TransactionsPageData }) {
             ...
           </span>
         ) : (
-          <Link
+          <button
             key={item}
-            href={buildPageHref(data.filters, item)}
+            type="button"
+            onClick={() => updateTransactionsUrl(buildPageHref(data.filters, item), "push")}
             aria-current={item === data.pagination.page ? "page" : undefined}
             className={cn(
               "inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border px-3 text-sm font-medium transition-colors",
@@ -222,7 +283,7 @@ function Pagination({ data }: { data: TransactionsPageData }) {
             )}
           >
             {item}
-          </Link>
+          </button>
         )
       )}
 
@@ -263,13 +324,14 @@ function PageControl({
   }
 
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={() => updateTransactionsUrl(href, "push")}
       aria-label={ariaLabel}
       className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-foreground transition-colors hover:border-border/70 hover:bg-background/16"
     >
       {children}
-    </Link>
+    </button>
   );
 }
 

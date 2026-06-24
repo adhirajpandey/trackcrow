@@ -1,11 +1,13 @@
 import type { CategoryOption } from "@/common/types";
 import type { DashboardRangeValue } from "@/features/dashboard/query-state";
+import type {
+  TransactionsControlState,
+  TransactionsPageData,
+} from "@/features/transactions/types";
 import { formatDate, toDate } from "@/common/utils";
-import type { TransactionsPageData } from "@/server/page-data/transactions-page-data";
 import { formatCurrency } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 
 type LinkValue = string | number | null | undefined;
-type TransactionsFilters = TransactionsPageData["filters"];
 
 const timeFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kolkata",
@@ -19,10 +21,10 @@ function formatTime(value: string) {
 }
 
 function getBaseParams(
-  filters: TransactionsFilters,
+  filters: TransactionsControlState,
   overrides: Partial<
     Pick<
-      TransactionsFilters,
+      TransactionsControlState,
       | "q"
       | "range"
       | "startDate"
@@ -72,7 +74,7 @@ function toHref(params: URLSearchParams) {
 }
 
 export function buildPageHref(
-  filters: TransactionsFilters,
+  filters: TransactionsControlState,
   page: number
 ) {
   const params = getBaseParams(filters);
@@ -83,8 +85,8 @@ export function buildPageHref(
 }
 
 export function buildSortHref(
-  filters: TransactionsFilters,
-  sortBy: TransactionsFilters["sortBy"]
+  filters: TransactionsControlState,
+  sortBy: TransactionsControlState["sortBy"]
 ) {
   const params = getBaseParams(filters);
   params.set("page", "1");
@@ -99,9 +101,9 @@ export function buildSortHref(
   return toHref(params);
 }
 
-export function buildSearchHref(filters: TransactionsFilters, q: string) {
+export function buildSearchHref(filters: TransactionsControlState, q: string) {
   const params = getBaseParams(filters, {
-    q: q.trim() || null,
+    q: q.trim() || undefined,
   });
   params.set("page", "1");
   params.set("sortBy", filters.sortBy);
@@ -148,8 +150,8 @@ export function buildFooterSummary(pagination: TransactionsPageData["pagination"
 }
 
 export function getSortDirection(
-  filters: TransactionsFilters,
-  column: TransactionsFilters["sortBy"]
+  filters: TransactionsControlState,
+  column: TransactionsControlState["sortBy"]
 ) {
   return filters.sortBy === column ? filters.sortOrder : null;
 }
@@ -161,7 +163,7 @@ export function buildCategoryOptions(categories: CategoryOption[]) {
   }));
 }
 
-export function buildCategoryTriggerLabel(filters: TransactionsFilters) {
+export function buildCategoryTriggerLabel(filters: TransactionsControlState) {
   if (filters.categories.length === 0) {
     return "All categories";
   }
@@ -174,7 +176,7 @@ export function buildCategoryTriggerLabel(filters: TransactionsFilters) {
 }
 
 function buildCategoryHref(
-  filters: TransactionsFilters,
+  filters: TransactionsControlState,
   categories: string[]
 ) {
   const nextStatus =
@@ -193,12 +195,12 @@ function buildCategoryHref(
   return toHref(params);
 }
 
-export function buildClearCategoriesHref(filters: TransactionsFilters) {
+export function buildClearCategoriesHref(filters: TransactionsControlState) {
   return buildCategoryHref(filters, []);
 }
 
 export function buildToggleCategoryHref(
-  filters: TransactionsFilters,
+  filters: TransactionsControlState,
   category: string
 ) {
   const nextCategories = filters.categories.includes(category)
@@ -228,7 +230,7 @@ export function buildResetHref() {
   return toHref(params);
 }
 
-export function buildFilterFormHiddenParams(filters: TransactionsFilters) {
+export function buildFilterFormHiddenParams(filters: TransactionsControlState) {
   const hiddenParams: Array<{ name: string; value: LinkValue }> = [];
   hiddenParams.push({ name: "range", value: filters.range });
   hiddenParams.push({ name: "sortBy", value: filters.sortBy });
@@ -253,7 +255,7 @@ export function buildFilterFormHiddenParams(filters: TransactionsFilters) {
 }
 
 export function buildTransactionsRangeHref(
-  filters: TransactionsFilters,
+  filters: TransactionsControlState,
   range: DashboardRangeValue,
   startDate?: string,
   endDate?: string

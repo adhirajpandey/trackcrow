@@ -1,5 +1,5 @@
 export const dashboardQueryKeys = {
-  all: ["dashboard", "all"] as const,
+  all: ["dashboard"] as const,
   summary: (filters: { startDate: string | null; endDate: string | null }) =>
     ["dashboard", "summary", { filters }] as const,
   categorySpending: (filters: { startDate: string | null; endDate: string | null }) =>

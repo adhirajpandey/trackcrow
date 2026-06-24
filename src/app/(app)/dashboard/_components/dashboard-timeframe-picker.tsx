@@ -47,6 +47,7 @@ type TimeframePickerProps = {
   startDate: string | null;
   endDate: string | null;
   buildHref: (range: DashboardRangeValue, startDate?: string, endDate?: string) => string;
+  onNavigateHref?: (href: string) => void;
   persistSelection?: (range: DashboardRangeValue) => void;
   showQuickRanges?: boolean;
   showSelectedLabelInTrigger?: boolean;
@@ -66,6 +67,7 @@ export function TimeframePicker({
   startDate,
   endDate,
   buildHref,
+  onNavigateHref,
   persistSelection,
   showQuickRanges = true,
   showSelectedLabelInTrigger = false,
@@ -109,9 +111,14 @@ export function TimeframePicker({
   const navigate = useCallback(
     (range: DashboardRangeValue, nextStartDate?: string, nextEndDate?: string) => {
       persistSelection?.(range);
-      router.push(buildHref(range, nextStartDate, nextEndDate));
+      const href = buildHref(range, nextStartDate, nextEndDate);
+      if (onNavigateHref) {
+        onNavigateHref(href);
+        return;
+      }
+      router.push(href);
     },
-    [buildHref, persistSelection, router]
+    [buildHref, onNavigateHref, persistSelection, router]
   );
 
   useEffect(() => {

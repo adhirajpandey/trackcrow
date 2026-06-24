@@ -106,3 +106,15 @@ export function apiPatch<T>(
 export function apiDelete<T>(path: string, options?: ApiRequestOptions) {
   return apiRequest<T>("DELETE", path, options);
 }
+
+export function getApiClientErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiClientError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}

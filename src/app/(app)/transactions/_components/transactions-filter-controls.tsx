@@ -3,12 +3,11 @@
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
 
+import type { TransactionsControlState } from "@/features/transactions/types";
+import { updateTransactionsUrl } from "@/features/transactions/url-state";
 import { cn } from "@/lib/utils";
-import type { TransactionsPageData } from "@/server/page-data/transactions-page-data";
 
 import { TransactionsTimeframePicker } from "./transactions-timeframe-picker";
 import {
@@ -28,10 +27,9 @@ export function TransactionsFilterControls({
   filters,
   categoryOptions,
 }: {
-  filters: TransactionsPageData["filters"];
+  filters: TransactionsControlState;
   categoryOptions: CategoryMenuOption[];
 }) {
-  const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuPanelRef = useRef<HTMLDivElement | null>(null);
@@ -125,10 +123,7 @@ export function TransactionsFilterControls({
             const nextValue = event.target.value;
             searchTimeoutRef.current = window.setTimeout(() => {
               const nextHref = buildSearchHref(filters, nextValue);
-              const currentHref = `${window.location.pathname}${window.location.search}`;
-              if (nextHref !== currentHref) {
-                router.replace(nextHref);
-              }
+              updateTransactionsUrl(nextHref, "replace");
             }, 300);
           }}
           placeholder="Search recipient, remarks, amount..."
@@ -172,13 +167,19 @@ export function TransactionsFilterControls({
                     href={buildClearCategoriesHref(filters)}
                     label="All categories"
                     selected={filters.categories.length === 0}
-                    onSelect={() => setIsOpen(false)}
+                    onSelect={(href) => {
+                      setIsOpen(false);
+                      updateTransactionsUrl(href, "replace");
+                    }}
                   />
                   <CategoryOptionLink
                     href={buildToggleCategoryHref(filters, "Uncategorized")}
                     label="Uncategorized"
                     selected={filters.categories.includes("Uncategorized")}
-                    onSelect={() => setIsOpen(false)}
+                    onSelect={(href) => {
+                      setIsOpen(false);
+                      updateTransactionsUrl(href, "replace");
+                    }}
                   />
                   {categoryOptions.map((option) => (
                     <CategoryOptionLink
@@ -186,7 +187,10 @@ export function TransactionsFilterControls({
                       href={buildToggleCategoryHref(filters, option.value)}
                       label={option.label}
                       selected={filters.categories.includes(option.value)}
-                      onSelect={() => setIsOpen(false)}
+                      onSelect={(href) => {
+                        setIsOpen(false);
+                        updateTransactionsUrl(href, "replace");
+                      }}
                     />
                   ))}
                 </div>
@@ -197,12 +201,13 @@ export function TransactionsFilterControls({
       </div>
 
       <div className="flex items-center gap-2 xl:justify-end">
-        <Link
-          href={buildResetHref()}
+        <button
+          type="button"
+          onClick={() => updateTransactionsUrl(buildResetHref(), "replace")}
           className="inline-flex min-h-12 items-center justify-center rounded-[8px] border border-border/50 bg-background/10 px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:border-border/70 hover:text-foreground"
         >
           Reset
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -217,18 +222,18 @@ function CategoryOptionLink({
   href: string;
   label: string;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (href: string) => void;
 }) {
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
       role="option"
       aria-selected={selected}
-      onClick={onSelect}
+      onClick={() => onSelect(href)}
       className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20"
     >
       <span className="truncate">{label}</span>
       {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-    </Link>
+    </button>
   );
 }

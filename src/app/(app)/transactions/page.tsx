@@ -9,5 +9,5 @@ type TransactionsPageProps = {
 export default async function TransactionsPage({ searchParams }: TransactionsPageProps) {
   const data = await getTransactionsPageData(await searchParams);
 
-  return <TransactionsPageView data={data} />;
+  return <TransactionsPageView {...data} />;
 }

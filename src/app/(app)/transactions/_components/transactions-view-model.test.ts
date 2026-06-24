@@ -1,4 +1,4 @@
-import type { TransactionsPageData } from "@/server/page-data/transactions-page-data";
+import type { TransactionsControlState } from "@/features/transactions/types";
 
 import {
   buildCategoryTriggerLabel,
@@ -12,16 +12,17 @@ import {
   buildTransactionsRangeHref,
 } from "./transactions-view-model";
 
-const baseFilters: TransactionsPageData["filters"] = {
+const baseFilters: TransactionsControlState = {
   q: "rent",
-  range: "custom",
-  rangeLabel: "01 Jun 2026 - 21 Jun 2026",
   startDate: "2026-06-01",
   endDate: "2026-06-21",
   categories: ["Food"],
   page: 3,
+  pageSize: 10,
   sortBy: "amount",
   sortOrder: "asc",
+  range: "custom",
+  rangeLabel: "01 Jun 2026 - 21 Jun 2026",
   selectedTransactionUuid: "txn-12",
   review: "large",
   status: null,
@@ -65,7 +66,7 @@ describe("transactions view model", () => {
   });
 
   it("preserves repeated categories through sorting and reset page links", () => {
-    const multiCategoryFilters: TransactionsPageData["filters"] = {
+    const multiCategoryFilters: TransactionsControlState = {
       ...baseFilters,
       categories: ["Food", "Travel"],
       sortBy: "timestamp",
