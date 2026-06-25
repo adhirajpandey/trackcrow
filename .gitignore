@@ -41,6 +41,7 @@ __pycache__/
 
 # local migration exports
 /scripts/data/
+/scripts/outputs/
 
 # browser verification artifacts
 .playwright-mcp/
