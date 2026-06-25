@@ -99,7 +99,7 @@ export function AppShell({
               aria-label="Close navigation"
               onClick={() => setIsOpen(false)}
             />
-            <aside className="absolute left-0 top-0 h-full w-[276px] border-r border-border/70 bg-[#06100c]/96 px-4 py-5 backdrop-blur-xl">
+            <aside className="absolute left-0 top-0 flex h-full w-[276px] flex-col border-r border-border/70 bg-[#06100c]/96 px-4 py-5 backdrop-blur-xl">
               <div className="mb-5 flex items-center justify-end">
                 <Button
                   type="button"
@@ -113,11 +113,13 @@ export function AppShell({
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <ShellSidebarContent
-                pathname={pathname}
-                user={user}
-                onNavigate={() => setIsOpen(false)}
-              />
+              <div className="min-h-0 flex-1">
+                <ShellSidebarContent
+                  pathname={pathname}
+                  user={user}
+                  onNavigate={() => setIsOpen(false)}
+                />
+              </div>
             </aside>
           </div>
         ) : null}
@@ -139,7 +141,7 @@ function ShellSidebar({
 }) {
   return (
     <div className="sticky top-0 h-screen px-4 py-5">
-      <div className="flex h-full flex-col">
+      <div className="h-full">
         <ShellSidebarContent pathname={pathname} user={user} />
       </div>
     </div>
@@ -156,23 +158,45 @@ function ShellSidebarContent({
   onNavigate?: () => void;
 }) {
   return (
-    <>
-      <div className="relative overflow-hidden rounded-[16px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
-        <div className="pointer-events-none absolute bottom-2 right-0 h-14 w-28 bg-[linear-gradient(180deg,transparent,rgba(104,211,145,0.14))] opacity-70 [mask-image:repeating-linear-gradient(180deg,transparent,transparent_3px,black_4px)]" />
-        <span className="pointer-events-none absolute right-4 top-4 h-1.5 w-1.5 rotate-45 bg-primary/70" />
-        <p className="relative text-[13px] font-semibold uppercase tracking-[0.24em] text-primary">
-          TrackCrow
-        </p>
-        <p className="relative mt-5 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
-          Track. Review. Control.
-        </p>
+    <div className="flex h-full min-h-0 flex-col">
+      <SidebarBrand />
+
+      <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+        <ShellNav pathname={pathname} onNavigate={onNavigate} />
       </div>
 
-      <ShellNav pathname={pathname} onNavigate={onNavigate} />
+      <SidebarFooter user={user} onNavigate={onNavigate} />
+    </div>
+  );
+}
 
+function SidebarBrand() {
+  return (
+    <div className="relative overflow-hidden rounded-[16px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
+      <div className="pointer-events-none absolute bottom-2 right-0 h-14 w-28 bg-[linear-gradient(180deg,transparent,rgba(104,211,145,0.14))] opacity-70 [mask-image:repeating-linear-gradient(180deg,transparent,transparent_3px,black_4px)]" />
+      <span className="pointer-events-none absolute right-4 top-4 h-1.5 w-1.5 rotate-45 bg-primary/70" />
+      <p className="relative text-[13px] font-semibold uppercase tracking-[0.24em] text-primary">
+        TrackCrow
+      </p>
+      <p className="relative mt-5 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
+        Track. Review. Control.
+      </p>
+    </div>
+  );
+}
+
+function SidebarFooter({
+  user,
+  onNavigate,
+}: {
+  user: AppShellUser;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className="mt-4 border-t border-border/45 pt-4">
       <ProfileCard user={user} onNavigate={onNavigate} />
-    </>
+    </div>
   );
 }
 
@@ -184,7 +208,7 @@ function ProfileCard({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="mt-auto rounded-[20px] border border-[#244030] bg-[linear-gradient(180deg,rgba(10,20,16,0.96),rgba(9,17,14,0.98))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="rounded-[20px] border border-[#244030] bg-[linear-gradient(180deg,rgba(10,20,16,0.96),rgba(9,17,14,0.98))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="flex items-center gap-3">
         <UserAvatar user={user} />
         <div className="min-w-0 flex-1">
