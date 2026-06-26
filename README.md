@@ -1,26 +1,56 @@
 # TrackCrow
 
-A Next.js application for modern AI-powered expense tracking.
+TrackCrow is a Next.js expense tracking app that turns SMS transaction messages into structured spending data, manual transaction records, and dashboard summaries.
 
-## Features
+## Capabilities
 
-- **SMS Integration**: Automatically extracts and categorizes transactions from SMS notifications
-- **Smart Dashboard**: Visual analytics, spending insights, and categorical breakdowns with AI-powered suggestions
-- **Custom Categories**: Create personalized expense categories and manage transactions with manual entry options
+- Google sign-in with user bootstrap on first login
+- SMS transaction import through device tokens
+- Manual transaction creation and editing
+- Dashboard summaries, category breakdowns, and period-based spending views
+- User-owned categories, subcategories, and resolved recipients
 
-## Tech Stack
-
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **UI**: Radix UI, Tailwind CSS, Lucide Icons
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: NextAuth.js with Google OAuth
-- **Charts**: Recharts for data visualization
-- **Forms**: React Hook Form with Zod validation
-
-## Getting Started
+## Quick Setup
 
 ```bash
+pnpm install
+```
+
+Required environment variables:
+
+```bash
+DATABASE_URL=
+NEXTAUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+```
+
+```bash
+pnpm dlx prisma migrate deploy
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+Open `http://localhost:3000`.
+
+## Commands
+
+```bash
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm test
+pnpm test:unit
+pnpm dlx prisma migrate dev --name <change>
+pnpm dlx prisma migrate deploy
+pnpm dlx prisma generate
+```
+
+## Architecture Snapshot
+
+- `src/app/` contains App Router pages, layouts, and `/api/*` route entry points.
+- `src/server/modules/` contains controllers, services, schemas, types, and tests for backend domains.
+- `src/server/page-data/` contains server-only page read models.
+- `prisma/schema.prisma` defines the PostgreSQL data model.
+
+Canonical docs live in [docs/README.md](./docs/README.md). Historical rewrite and design artifacts live in `docs/plans/`.

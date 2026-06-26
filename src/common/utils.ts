@@ -67,13 +67,13 @@ export function formatCurrentMonthDayLabel(day: number): string {
   return formatDate(date);
 }
 
-import type { Transaction } from "@/common/schemas";
+import type { TransactionRecord } from "@/common/types";
 
 /**
  * Groups transactions into daily totals for the current month.
  * Returns compact data until the latest transaction day, or the full month if no transactions.
  */
-export function getDailySpendingForCurrentMonth(transactions: Transaction[]) {
+export function getDailySpendingForCurrentMonth(transactions: TransactionRecord[]) {
   const { year, month, daysInMonth } = getCurrentMonthMeta();
   const dailyTotals: { [day: number]: number } = {};
   for (let i = 1; i <= daysInMonth; i++) dailyTotals[i] = 0;
@@ -100,7 +100,7 @@ export function getDailySpendingForCurrentMonth(transactions: Transaction[]) {
  * Each entry's `cumulative` is the sum of all spending up to and including that day.
  */
 export function getCumulativeDailySpendingForCurrentMonth(
-  transactions: Transaction[],
+  transactions: TransactionRecord[],
 ) {
   const daily = getDailySpendingForCurrentMonth(transactions);
   let running = 0;
@@ -164,7 +164,7 @@ export interface CategoricalSpend {
   count: number;
 }
 
-export function getCategoricalSpends(transactions: Transaction[]): CategoricalSpend[] {
+export function getCategoricalSpends(transactions: TransactionRecord[]): CategoricalSpend[] {
   const categoryMap = new Map<
     string,
     { total: number; count: number }

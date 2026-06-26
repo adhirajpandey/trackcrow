@@ -1,25 +1,21 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypeScript from "eslint-config-next/typescript";
 
 const eslintConfig = [
-  // Your existing Next.js + TypeScript presets
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-
-  // Add ignores here
+  ...nextCoreWebVitals,
+  ...nextTypeScript,
   {
-    ignores: [".next", "node_modules", "dist", "coverage", "src/generated"],
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "dist/**",
+      "coverage/**",
+      "src/generated/**",
+    ],
   },
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "off", // Temporarily disable for diagnosis
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];

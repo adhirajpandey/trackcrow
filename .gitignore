@@ -22,8 +22,25 @@
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+__pycache__/
 
 /src/generated/prisma
+/src/generated/prisma-rewrite
+*.tmp*
 
-# local docs
-/docs/
+# docs
+/docs/*
+!/docs/*.md
+!/docs/reference/
+!/docs/reference/**
+!/docs/status/
+!/docs/status/**
+!/docs/history/
+!/docs/history/**
+!/docs/assets/
+!/docs/assets/**
+
+/scripts/outputs/
+
+# browser verification artifacts
+.playwright-mcp/
