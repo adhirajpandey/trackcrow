@@ -1,3 +1,5 @@
+> Historical artifact. This file preserves the migration-period rewrite plan and decision context. Use `docs/status/rewrite-status.md` for current state and `docs/reference/` for current implementation truth.
+
 # TrackCrow Rewrite Plan
 
 ## Status

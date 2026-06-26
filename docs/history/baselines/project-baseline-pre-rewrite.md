@@ -1,3 +1,5 @@
+> Historical artifact. This baseline reflects the pre-rewrite system shape and is preserved for context only. Use `docs/reference/` and `docs/status/` for current truth.
+
 # TrackCrow Project Baseline
 
 ## 1. Purpose and Scope

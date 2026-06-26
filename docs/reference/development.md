@@ -76,7 +76,7 @@ Typical workflow:
 
 ## Testing Conventions
 
-- Jest is configured through [jest.config.mjs](/home/adhiraj/projects/trackcrow/jest.config.mjs:1).
+- Jest is configured through [jest.config.mjs](/D:/projects/trackcrow/jest.config.mjs:1).
 - Test files live next to the code they exercise.
 - Current coverage is strongest in `src/common`, `src/server/modules`, and `src/server/page-data`.
 - `jest.setup.ts` installs `crypto` for tests and mocks the logger.
@@ -84,6 +84,6 @@ Typical workflow:
 ## Current Runtime Notes
 
 - authenticated app pages use a shared shell from `src/app/(app)/layout.tsx`
-- only dashboard and transactions currently have implemented page-data reads
-- categories, recipients, settings, and import review routes are placeholders during the frontend rewrite
+- implemented page-data reads currently back dashboard, transactions, transaction detail, recipients, and recipient detail routes
+- categories, settings, and import review still use placeholder pages
 - Next.js remote image loading is currently enabled for `lh3.googleusercontent.com`

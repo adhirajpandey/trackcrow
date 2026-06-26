@@ -1,3 +1,5 @@
+> Historical artifact. This audit captures a point-in-time code quality backlog and is preserved as review context, not as a current reference document.
+
 # Code Quality Baseline
 
 This document lists defects and maintainability risks found in the current codebase, with strict priority for long-term reliability.

@@ -49,12 +49,22 @@ Current product routes:
 
 - `/dashboard`
 - `/transactions`
+- `/transactions/[id]`
 - `/categories`
 - `/recipients`
+- `/recipients/[id]`
 - `/settings`
 - `/imports/review`
 
-Only `/dashboard` and `/transactions` currently have implemented page-data reads. The other authenticated routes are placeholder pages that preserve route shape during the frontend rewrite.
+Implemented page-data reads currently back:
+
+- `/dashboard`
+- `/transactions`
+- `/transactions/[id]`
+- `/recipients`
+- `/recipients/[id]`
+
+`/categories`, `/settings`, and `/imports/review` currently render drilldown placeholder pages while their dedicated management flows are still being built.
 
 ## Auth Boundary
 

@@ -1,3 +1,5 @@
+> Historical artifact. This review predates the current docs structure. It is preserved as context and is not the source of truth for current behavior.
+
 ## Code Review Report
 
 ### Summary
@@ -20,7 +22,7 @@ Severity: **CRITICAL**
 
 **Problem**  
 The SMS parser logs parse success/failure using `console.log`, including full unmatched SMS text.  
-Evidence: [sms-parser.ts:113](/home/adhiraj/projects/trackcrow/src/common/sms-parser.ts:113), [sms-parser.ts:128](/home/adhiraj/projects/trackcrow/src/common/sms-parser.ts:128)
+Evidence: [sms-parser.ts:113](/D:/projects/trackcrow/src/common/sms-parser.ts:113), [sms-parser.ts:128](/D:/projects/trackcrow/src/common/sms-parser.ts:128)
 
 **Why It Matters**  
 These messages contain sensitive financial details (merchant names, amounts, account/card fragments). This is a real security/privacy exposure in production logs.
@@ -35,7 +37,7 @@ Severity: **HIGH**
 
 **Problem**  
 `runRecordExpense` queries Prisma with `name: { equals: category }` before validating `category` shape/value. `category` can be `null` from `extractTransactionFields`.  
-Evidence: [record-expense.ts:30](/home/adhiraj/projects/trackcrow/src/app/crow-bot/tools/record-expense.ts:30), [record-expense.ts:85](/home/adhiraj/projects/trackcrow/src/app/crow-bot/tools/record-expense.ts:85)
+Evidence: [record-expense.ts:30](/D:/projects/trackcrow/src/app/crow-bot/tools/record-expense.ts:30), [record-expense.ts:85](/D:/projects/trackcrow/src/app/crow-bot/tools/record-expense.ts:85)
 
 **Why It Matters**  
 Invalid model output can cause an exception path instead of a clean validation error, producing unpredictable “tool failed” behavior and weaker reliability.
@@ -51,7 +53,7 @@ Severity: **HIGH**
 
 **Problem**  
 Orchestrator defaults `activeMode` to `'other'` when metadata is absent, and mode mismatch logic rejects intent unless allowed by `ALLOWED_BY_CONTEXT`. `'other'` has no allowed intents.  
-Evidence: [chat-orchestrator.ts:154](/home/adhiraj/projects/trackcrow/src/app/crow-bot/server/chat-orchestrator.ts:154), [intent-policy.ts:25](/home/adhiraj/projects/trackcrow/src/app/crow-bot/server/intent-policy.ts:25), [server-config.ts:16](/home/adhiraj/projects/trackcrow/src/app/crow-bot/config/server-config.ts:16)
+Evidence: [chat-orchestrator.ts:154](/D:/projects/trackcrow/src/app/crow-bot/server/chat-orchestrator.ts:154), [intent-policy.ts:25](/D:/projects/trackcrow/src/app/crow-bot/server/intent-policy.ts:25), [server-config.ts:16](/D:/projects/trackcrow/src/app/crow-bot/config/server-config.ts:16)
 
 **Why It Matters**  
 Server behavior is tightly coupled to a specific client metadata contract. Any client missing metadata (or malformed metadata) gets false mismatch responses, even for valid requests.
@@ -67,7 +69,7 @@ Severity: **MEDIUM**
 
 **Problem**  
 `listTransactions` directly does `new Date(startDateParam/endDateParam)` and injects into Prisma without validating `Invalid Date`.  
-Evidence: [transaction-service.ts:125](/home/adhiraj/projects/trackcrow/src/services/transactions/transaction-service.ts:125)
+Evidence: [transaction-service.ts:125](/D:/projects/trackcrow/src/services/transactions/transaction-service.ts:125)
 
 **Why It Matters**  
 Malformed user input turns into internal errors instead of deterministic client errors (400), reducing API contract clarity and debuggability.
@@ -82,7 +84,7 @@ Severity: **MEDIUM**
 
 **Problem**  
 `pnpm lint` currently fails (`next lint` resolves to invalid project dir with current Next version).  
-Evidence: [package.json:9](/home/adhiraj/projects/trackcrow/package.json:9) and runtime result from this review: `pnpm lint` exits non-zero.
+Evidence: [package.json:9](/D:/projects/trackcrow/package.json:9) and runtime result from this review: `pnpm lint` exits non-zero.
 
 **Why It Matters**  
 Your stated minimum quality gate is non-functional, so regressions can slip through without static checks.
@@ -97,7 +99,7 @@ Severity: **LOW**
 
 **Problem**  
 When session exists but user row is absent, route throws and falls into generic 500.  
-Evidence: [route.ts:26](/home/adhiraj/projects/trackcrow/src/app/api/user/self/route.ts:26)
+Evidence: [route.ts:26](/D:/projects/trackcrow/src/app/api/user/self/route.ts:26)
 
 **Why It Matters**  
 This is a domain-level not-found state, not an internal server failure. Incorrect status semantics make client behavior and incident triage harder.

@@ -31,13 +31,14 @@ __pycache__/
 # docs
 /docs/*
 !/docs/*.md
-!/docs/reviews/
-/docs/reviews/*
-!/docs/reviews/*.md
-!/docs/plans/
-/docs/plans/*
-!/docs/plans/frontend-trd.md
-!/docs/plans/rewrite-plan.md
+!/docs/reference/
+!/docs/reference/**
+!/docs/status/
+!/docs/status/**
+!/docs/history/
+!/docs/history/**
+!/docs/assets/
+!/docs/assets/**
 
 /scripts/outputs/
 
