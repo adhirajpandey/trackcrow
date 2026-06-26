@@ -39,8 +39,6 @@ __pycache__/
 !/docs/plans/frontend-trd.md
 !/docs/plans/rewrite-plan.md
 
-# local migration exports
-/scripts/data/
 /scripts/outputs/
 
 # browser verification artifacts
