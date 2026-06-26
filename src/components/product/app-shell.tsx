@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { BrandMark } from "@/components/product/brand-mark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ type AppShellUser = {
   image: string | null;
 };
 
-const signOutCallbackUrl = "/login";
+const signOutCallbackUrl = "/";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: Gauge },
@@ -70,6 +71,7 @@ export function AppShell({
             >
               <Menu className="h-5 w-5" />
             </Button>
+            <BrandMark size="compact" showText={false} />
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
                 TrackCrow
@@ -176,10 +178,12 @@ function SidebarBrand() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
       <div className="pointer-events-none absolute bottom-2 right-0 h-14 w-28 bg-[linear-gradient(180deg,transparent,rgba(104,211,145,0.14))] opacity-70 [mask-image:repeating-linear-gradient(180deg,transparent,transparent_3px,black_4px)]" />
       <span className="pointer-events-none absolute right-4 top-4 h-1.5 w-1.5 rotate-45 bg-primary/70" />
-      <p className="relative text-[13px] font-semibold uppercase tracking-[0.24em] text-primary">
-        TrackCrow
-      </p>
-      <p className="relative mt-5 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
+      <BrandMark
+        className="relative"
+        markClassName="h-16 w-16 rounded-[16px]"
+        textClassName="text-[13px]"
+      />
+      <p className="relative mt-4 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
         Track. Review. Control.
       </p>
     </div>
