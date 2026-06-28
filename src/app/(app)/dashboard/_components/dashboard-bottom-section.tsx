@@ -20,6 +20,7 @@ import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import {
   buildCategoryQuickTagOptions,
+  buildLargestTransactionHref,
   dashboardTableLayouts,
   getCategoryTriggerLabel,
 } from "./dashboard-bottom-section-model";
@@ -466,7 +467,7 @@ function LargestTransactionsPanel({
               {transactions.map((transaction, index) => (
                 <Link
                   key={transaction.uuid}
-                  href={buildTransactionsHref({ transaction: transaction.uuid })}
+                  href={buildLargestTransactionHref(transaction.id)}
                   className={cn(
                     dashboardTableRowClassName,
                     "cursor-pointer items-start",

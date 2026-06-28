@@ -93,6 +93,10 @@ export function buildCategoryQuickTagOptions(categories: CategoryOption[]) {
   }));
 }
 
+export function buildLargestTransactionHref(transactionId: number) {
+  return `/transactions/${transactionId}`;
+}
+
 export function getCategoryTriggerLabel(category: string | null) {
   return category ?? "Select category";
 }

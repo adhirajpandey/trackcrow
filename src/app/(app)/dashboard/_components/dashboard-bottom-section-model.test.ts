@@ -2,6 +2,7 @@ import type { TransactionListResponse } from "@/common/types";
 
 import {
   buildCategoryQuickTagOptions,
+  buildLargestTransactionHref,
   buildRecentTransactionsApiHref,
   dashboardTableLayouts,
   getCategoryTriggerLabel,
@@ -101,6 +102,10 @@ describe("dashboard bottom section model", () => {
   it("builds the category trigger label for labeled and unlabeled rows", () => {
     expect(getCategoryTriggerLabel(null)).toBe("Select category");
     expect(getCategoryTriggerLabel("Food")).toBe("Food");
+  });
+
+  it("builds a transaction detail href for largest transaction rows", () => {
+    expect(buildLargestTransactionHref(12)).toBe("/transactions/12");
   });
 
   it("defines consistent dashboard table layouts and alignment", () => {
