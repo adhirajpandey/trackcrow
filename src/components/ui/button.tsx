@@ -12,6 +12,8 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         secondary:
           "border border-border bg-secondary text-secondary-foreground hover:bg-card",
+        destructive:
+          "border border-destructive/45 bg-destructive/12 text-destructive hover:bg-destructive/18",
         ghost: "text-foreground hover:bg-secondary",
       },
       size: {
@@ -33,14 +35,10 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
     href?: string;
   };
 
-export function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  children,
-  ...props
-}: ButtonProps) {
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant, size, asChild = false, children, ...props },
+  ref
+) {
   if (asChild && React.isValidElement(children)) {
     const child = children as React.ReactElement<{
       className?: string;
@@ -60,12 +58,13 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     >
       {children}
     </button>
   );
-}
+});
 
-export { buttonVariants };
+export { Button, buttonVariants };

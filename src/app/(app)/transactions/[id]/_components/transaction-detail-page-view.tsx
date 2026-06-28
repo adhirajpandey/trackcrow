@@ -24,6 +24,17 @@ import { useRouter } from "next/navigation";
 
 import type { TransactionRecord } from "@/common/types";
 import { AppPageHeader } from "@/components/product/app-page-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
@@ -220,11 +231,6 @@ export function TransactionDetailPageView({
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm("Delete this transaction? This action cannot be undone.");
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteMutation.mutateAsync({ transactionId });
       router.push("/transactions");
@@ -575,20 +581,54 @@ export function TransactionDetailPageView({
             <p className="mt-3 text-sm leading-6 text-secondary-foreground">
               Deleting a transaction removes it from the ledger and clears any linked raw-message reference.
             </p>
-            <Button
-              type="button"
-              variant="secondary"
-              className="mt-4 w-full border-destructive/35 bg-destructive/10 text-destructive hover:bg-destructive/15"
-              disabled={deleteMutation.isPending}
-              onClick={() => void handleDelete()}
-            >
-              {deleteMutation.isPending ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              Delete transaction
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="mt-4 w-full"
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Delete transaction
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes TXN-{transaction.id} from the ledger and clears
+                    any linked raw-message reference. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel asChild>
+                    <Button type="button" variant="secondary">
+                      Cancel
+                    </Button>
+                  </AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => void handleDelete()}
+                    >
+                      {deleteMutation.isPending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      Delete transaction
+                    </Button>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </section>
         </aside>
       </div>
