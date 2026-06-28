@@ -126,12 +126,6 @@ export function TransactionsPageView({
         />
       </section>
 
-      {data.drilldownLabel ? (
-        <section className="rounded-[8px] border border-border/50 bg-background/12 px-4 py-3 text-sm text-secondary-foreground">
-          {data.drilldownLabel}
-        </section>
-      ) : null}
-
       <section className={cn(dashboardPanelClassName, "overflow-hidden")}>
         <div className="overflow-x-auto">
           <div className={cn(dashboardInnerTableClassName, "min-w-[860px]")}>
@@ -345,3 +339,4 @@ function EmptyState() {
     </div>
   );
 }
+

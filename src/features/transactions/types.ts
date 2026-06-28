@@ -42,7 +42,6 @@ export type TransactionsViewState = {
   selectedTransactionUuid: string | null;
   review: TransactionReview | null;
   status: TransactionStatus | null;
-  drilldownLabel: string | null;
 };
 
 export type TransactionsControlState = TransactionsApiQuery & {
@@ -72,7 +71,6 @@ export type TransactionsPageData = {
   categories: CategoryOption[];
   filters: TransactionsControlState;
   pagination: TransactionsPagination;
-  drilldownLabel: string | null;
 };
 
 export type TransactionsPageInitialData = {
@@ -128,3 +126,4 @@ export type TransactionDetailFormValues = {
   remarks: string;
   locationRaw: string;
 };
+

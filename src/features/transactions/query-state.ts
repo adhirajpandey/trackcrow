@@ -114,22 +114,6 @@ function getTransactionsRangeState(searchParams: TransactionsSearchParams) {
   });
 }
 
-function mapDrilldownLabel(searchParams: TransactionsSearchParams) {
-  const review = firstParam(searchParams.review);
-  if (review === "queue") {
-    return "Review queue drilldown";
-  }
-
-  if (review === "large") {
-    return "Large transactions drilldown";
-  }
-
-  if (firstParam(searchParams.status) === "uncategorized") {
-    return "Uncategorized transactions";
-  }
-
-  return null;
-}
 
 function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
   return {
@@ -192,7 +176,6 @@ export function getTransactionsPageState(
       selectedTransactionUuid,
       review,
       status,
-      drilldownLabel: mapDrilldownLabel(searchParams),
     },
   };
 }
@@ -312,6 +295,6 @@ export function buildTransactionsPageData(input: {
       pagination: input.result.pagination,
     }),
     pagination: input.result.pagination,
-    drilldownLabel: input.view.drilldownLabel,
   };
 }
+

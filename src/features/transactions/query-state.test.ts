@@ -59,7 +59,6 @@ describe("transactions query state", () => {
       selectedTransactionUuid: "txn-12",
       review: "large",
       status: "uncategorized",
-      drilldownLabel: "Large transactions drilldown",
     });
   });
 
@@ -124,3 +123,4 @@ describe("transactions query state", () => {
     expect(isSameTransactionsQuery(base, different)).toBe(false);
   });
 });
+
