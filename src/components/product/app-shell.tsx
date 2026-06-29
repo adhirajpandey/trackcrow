@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  ClipboardList,
-  FolderTree,
   Gauge,
   LogOut,
   Menu,
@@ -31,9 +29,7 @@ const signOutCallbackUrl = "/";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: Gauge },
-  { href: "/imports/review", label: "Review queue", icon: ClipboardList },
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
-  { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/recipients", label: "Recipients", icon: Users },
 ];
 

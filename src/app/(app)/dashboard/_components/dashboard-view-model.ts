@@ -376,8 +376,8 @@ function getRecipientReviewAction(input: {
   return "Review" as const;
 }
 
-function getRecipientActionHref(action: "Create rule" | "Review") {
-  return action === "Create rule" ? "/categories" : "/recipients";
+function getRecipientActionHref() {
+  return "/recipients";
 }
 
 export function formatCurrency(value: number) {
@@ -513,14 +513,6 @@ export function buildReviewQueueHref(range: DashboardPageData["range"]) {
   });
 }
 
-export function buildImportsReviewHref(range: DashboardPageData["range"]) {
-  const searchParams = new URLSearchParams();
-  setParam(searchParams, "startDate", range.startDate);
-  setParam(searchParams, "endDate", range.endDate);
-  const query = searchParams.toString();
-  return query ? `/imports/review?${query}` : "/imports/review";
-}
-
 export function buildLargeTransactionsHref(range: DashboardPageData["range"]) {
   return buildTransactionsHref({
     ...getRangeParams(range),
@@ -534,6 +526,13 @@ export function buildUncategorizedTransactionsHref(range: DashboardPageData["ran
   return buildTransactionsHref({
     ...getRangeParams(range),
     status: "uncategorized",
+  });
+}
+
+export function buildImportIssuesHref(range: DashboardPageData["range"]) {
+  return buildTransactionsHref({
+    ...getRangeParams(range),
+    review: "queue",
   });
 }
 
@@ -621,7 +620,7 @@ export function buildReviewQueueCard(input: {
       label: "Import issues",
       count: importIssueCount,
       tone: "warning",
-      href: buildImportsReviewHref(input.range),
+      href: buildImportIssuesHref(input.range),
       helper: "Failed or unparseable messages that need review.",
     },
     {
@@ -920,7 +919,7 @@ export function buildDashboardInsights(input: {
         : input.sectionStatus.imports === "empty"
           ? "Import messages to populate dashboard coverage."
           : "No import review items in this range.",
-    href: buildImportsReviewHref(input.range),
+    href: buildImportIssuesHref(input.range),
     tone: input.importIssueCount > 0 ? "attention" : "info",
   });
 
@@ -1034,7 +1033,7 @@ export function buildSuggestedRules(input: {
       return {
         recipient: recipient.recipient,
         action,
-        href: getRecipientActionHref(action),
+        href: getRecipientActionHref(),
         paymentCount: recipient.paymentCount,
         totalAmount: recipient.totalAmount,
       };
@@ -1055,7 +1054,7 @@ export function buildMostFrequentRecipient(input: {
     paymentCount: recipient.paymentCount,
     totalAmount: recipient.totalAmount,
     action,
-    href: getRecipientActionHref(action),
+    href: getRecipientActionHref(),
     helper:
       action === "Create rule"
         ? "Good candidate for a rule"
@@ -1072,7 +1071,7 @@ export function buildFrequentRecipientRows(input: {
     return {
       ...recipient,
       action,
-      href: getRecipientActionHref(action),
+      href: getRecipientActionHref(),
     };
   });
 }

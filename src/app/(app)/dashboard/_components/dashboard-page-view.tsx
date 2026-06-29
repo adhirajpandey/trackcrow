@@ -521,7 +521,7 @@ function RightRail({
         <RailHeader
           icon={<ReceiptText className="h-4 w-4 text-info" />}
           label="Rule suggestions"
-          href="/categories"
+          href="/recipients"
         />
         <p className="mt-2 text-sm text-secondary-foreground">
           {suggestedRules.length > 0

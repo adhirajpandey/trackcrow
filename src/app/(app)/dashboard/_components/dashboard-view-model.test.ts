@@ -6,7 +6,7 @@ import {
   buildChartTicks,
   buildChartTooltip,
   buildDashboardInsights,
-  buildImportsReviewHref,
+  buildImportIssuesHref,
   buildMetricComparisons,
   buildPeriodTransactionsHref,
   buildRecentTransactionMeta,
@@ -170,8 +170,8 @@ describe("dashboard view model", () => {
         status: null,
       })
     ).toBe("/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Food");
-    expect(buildImportsReviewHref(range)).toBe(
-      "/imports/review?startDate=2026-06-01&endDate=2026-06-21"
+    expect(buildImportIssuesHref(range)).toBe(
+      "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue"
     );
   });
 
@@ -247,7 +247,7 @@ describe("dashboard view model", () => {
           label: "Import issues",
           count: 3,
           tone: "warning",
-          href: "/imports/review?startDate=2026-06-01&endDate=2026-06-21",
+          href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue",
         },
         {
           label: "Large transactions",
@@ -381,7 +381,7 @@ describe("dashboard view model", () => {
         label: "Import health",
         value: "2 issues flagged",
         helper: "Failed and unparseable messages waiting in review.",
-        href: "/imports/review?startDate=2026-06-01&endDate=2026-06-21",
+        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue",
         tone: "attention",
       },
       {
@@ -600,14 +600,14 @@ describe("dashboard view model", () => {
       {
         recipient: "B ten cafe sec 56",
         action: "Create rule",
-        href: "/categories",
+        href: "/recipients",
         paymentCount: 5,
         totalAmount: 2450,
       },
       {
         recipient: "Hamanthi Devi",
         action: "Create rule",
-        href: "/categories",
+        href: "/recipients",
         paymentCount: 4,
         totalAmount: 1600,
       },

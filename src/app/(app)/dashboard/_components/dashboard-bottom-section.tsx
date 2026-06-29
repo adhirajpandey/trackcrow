@@ -290,7 +290,8 @@ function SpendingByCategoryPanel({
       <AlignedPanelHeader
         title="Where your money went"
         description="Known categories only"
-        href="/categories"
+        href="/transactions"
+        hrefLabel="Open transactions"
       />
       <CardContent className="flex flex-1 flex-col">
         {categories.length === 0 ? (
@@ -319,7 +320,9 @@ function SpendingByCategoryPanel({
                         "cursor-pointer hover:bg-secondary/18",
                         index > 0 && "border-t border-border/40"
                       )}
-                      onClick={() => router.push(buildCategoryPageHref(item.category))}
+                      onClick={() =>
+                        router.push(buildTransactionsHref({ category: item.category }))
+                      }
                     >
                       <TableCell className="py-4">
                         <div className="flex items-start gap-2">
@@ -330,7 +333,7 @@ function SpendingByCategoryPanel({
                             )}
                           />
                           <Link
-                            href={buildCategoryPageHref(item.category)}
+                            href={buildTransactionsHref({ category: item.category })}
                             className="break-words font-medium leading-5 text-foreground"
                             onClick={(event) => event.stopPropagation()}
                           >
@@ -369,7 +372,7 @@ function SpendingByCategoryPanel({
                     </p>
                   </div>
                   <Link
-                    href={buildCategoryPageHref(uncategorizedCategory.category)}
+                    href={buildTransactionsHref({ status: "uncategorized" })}
                     className={cn(
                       dashboardPrimaryActionClassName,
                       "cursor-pointer border border-accent/35 bg-accent text-accent-foreground transition-colors hover:brightness-105"
@@ -765,11 +768,6 @@ function PanelFooterLink({
 
 function FooterActions({ children }: { children: ReactNode }) {
   return <div className={dashboardFooterStackClassName}>{children}</div>;
-}
-
-function buildCategoryPageHref(category: string) {
-  const params = new URLSearchParams({ category });
-  return `/categories?${params.toString()}`;
 }
 
 function EmptyPanel({
