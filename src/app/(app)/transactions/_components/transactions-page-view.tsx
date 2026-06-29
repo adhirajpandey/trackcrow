@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import {
   buildTransactionsPageData,
@@ -179,6 +180,7 @@ export function TransactionsPageView({
       )
     : data.message;
   const status = transactionsQuery.error ? "error" : data.status;
+  const isRefreshing = transactionsQuery.isFetching && !transactionsQuery.isPending;
   const categoryOptions = buildCategoryOptions(data.categories);
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -231,7 +233,19 @@ export function TransactionsPageView({
         />
       </section>
 
-      <DataTableShell>
+      <DataTableShell
+        aria-busy={isRefreshing}
+        aria-live="polite"
+        className={cn("relative transition-opacity", isRefreshing && "opacity-95")}
+      >
+        {isRefreshing ? (
+          <>
+            <span className="sr-only">Refreshing transactions</span>
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1 overflow-hidden bg-primary/10">
+              <Skeleton className="h-full w-1/3 rounded-none bg-primary/45" />
+            </div>
+          </>
+        ) : null}
         {data.rows.length > 0 ? (
           <>
             <div className="grid gap-3 p-4 md:hidden">
