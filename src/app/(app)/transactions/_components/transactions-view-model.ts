@@ -79,6 +79,7 @@ export function buildPageHref(
 ) {
   const params = getBaseParams(filters);
   params.set("page", String(page));
+  params.set("size", String(filters.pageSize));
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
@@ -90,6 +91,7 @@ export function buildSortHref(
 ) {
   const params = getBaseParams(filters);
   params.set("page", "1");
+  params.set("size", String(filters.pageSize));
   if (filters.sortBy === sortBy) {
     params.set("sortBy", sortBy);
     params.set("sortOrder", filters.sortOrder === "asc" ? "desc" : "asc");
@@ -106,6 +108,7 @@ export function buildSearchHref(filters: TransactionsControlState, q: string) {
     q: q.trim() || undefined,
   });
   params.set("page", "1");
+  params.set("size", String(filters.pageSize));
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
@@ -190,6 +193,7 @@ function buildCategoryHref(
     status: nextStatus,
   });
   params.set("page", "1");
+  params.set("size", String(filters.pageSize));
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
@@ -225,6 +229,7 @@ export function formatTransactionAmount(amount: number) {
 export function buildResetHref() {
   const params = new URLSearchParams();
   params.set("range", "all-time");
+  params.set("size", "10");
   params.set("sortBy", "timestamp");
   params.set("sortOrder", "desc");
   return toHref(params);
@@ -233,6 +238,7 @@ export function buildResetHref() {
 export function buildFilterFormHiddenParams(filters: TransactionsControlState) {
   const hiddenParams: Array<{ name: string; value: LinkValue }> = [];
   hiddenParams.push({ name: "range", value: filters.range });
+  hiddenParams.push({ name: "size", value: filters.pageSize });
   hiddenParams.push({ name: "sortBy", value: filters.sortBy });
   hiddenParams.push({ name: "sortOrder", value: filters.sortOrder });
   if (filters.range === "custom") {
@@ -266,6 +272,7 @@ export function buildTransactionsRangeHref(
     endDate: range === "custom" ? endDate ?? null : null,
   });
   params.set("page", "1");
+  params.set("size", String(filters.pageSize));
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
 

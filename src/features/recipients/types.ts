@@ -12,10 +12,11 @@ export type RecipientListItemDto = {
   displayName: string;
   normalizedName: string;
   transactionCount: number;
+  totalAmount: number;
   identifiers: RecipientIdentifierDto[];
 };
 
-export type RecipientSortBy = "displayName" | "transactionCount";
+export type RecipientSortBy = "displayName" | "transactionCount" | "totalAmount";
 export type RecipientSortOrder = "asc" | "desc";
 
 export type RecipientsApiQuery = {
@@ -38,9 +39,8 @@ export type RecipientsPageRow = {
   id: number;
   uuid: string;
   displayName: string;
-  normalizedName: string;
   transactionCount: number;
-  status: "active" | "empty";
+  totalAmount: number;
   secondaryLabel: string;
   identifierChips: RecipientIdentifierChip[];
   overflowIdentifierCount: number;

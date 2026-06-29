@@ -1,17 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+} from "@tanstack/react-table";
+import { CalendarDays, ReceiptText, Tag } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { DataTableEmpty } from "@/components/product/data-table-empty";
+import { DataTablePagination } from "@/components/product/data-table-pagination";
+import { DataTableShell } from "@/components/product/data-table-shell";
+import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
+import { SortableTableHead } from "@/components/product/sortable-table-head";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import {
   buildTransactionsPageData,
@@ -21,19 +34,12 @@ import {
 } from "@/features/transactions/query-state";
 import { useTransactionsQuery } from "@/features/transactions/queries";
 import type {
-  TransactionsPageData,
   TransactionsPageInitialData,
+  TransactionsPageRow,
 } from "@/features/transactions/types";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
 import { getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
-import {
-  dashboardInnerTableClassName,
-  dashboardPanelClassName,
-  dashboardTableHeaderClassName,
-  dashboardTableRowClassName,
-  dashboardTableTallRowClassName,
-} from "@/app/(app)/dashboard/_components/dashboard-style";
 
 import {
   buildCategoryOptions,
@@ -48,8 +54,83 @@ import {
 } from "./transactions-view-model";
 import { TransactionsFilterControls } from "./transactions-filter-controls";
 
-const tableTemplate =
-  "minmax(160px,1.05fr) minmax(220px,1.4fr) 128px 180px 88px";
+type ColumnMeta = {
+  align?: "left" | "right";
+  sortable?: "timestamp" | "amount";
+  widthClassName?: string;
+};
+
+const columns: ColumnDef<TransactionsPageRow>[] = [
+  {
+    accessorKey: "timestamp",
+    meta: {
+      sortable: "timestamp",
+      widthClassName: "w-[20%]",
+    } satisfies ColumnMeta,
+    header: "Date & time",
+    cell: ({ row }) => (
+      <div className="min-w-0">
+        <p className="font-medium text-foreground">
+          {formatTransactionDateLabel(row.original.timestamp)}
+        </p>
+        <p className="mt-1 text-xs text-secondary-foreground/85">
+          {formatTransactionTimeLabel(row.original.timestamp)}
+        </p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "recipient",
+    meta: { widthClassName: "w-[30%]" } satisfies ColumnMeta,
+    header: "Recipient",
+    cell: ({ row }) => (
+      <div className="truncate font-medium text-foreground">{row.original.recipient}</div>
+    ),
+  },
+  {
+    accessorKey: "amount",
+    meta: {
+      sortable: "amount",
+      align: "right",
+      widthClassName: "w-[16%]",
+    } satisfies ColumnMeta,
+    header: "Amount",
+    cell: ({ row }) => (
+      <div className="text-right font-semibold tabular-nums text-foreground">
+        {formatTransactionAmount(row.original.amount)}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "category",
+    meta: { widthClassName: "w-[22%]" } satisfies ColumnMeta,
+    header: "Category",
+    cell: ({ row }) => (
+      <div className="min-w-0">
+        <span
+          className={cn(
+            "inline-flex min-h-8 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
+            row.original.category
+              ? "border-primary/20 bg-primary/10 text-primary"
+              : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
+          )}
+        >
+          <span className="truncate">{row.original.category ?? "Uncategorized"}</span>
+        </span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "source",
+    meta: { widthClassName: "w-[12%]" } satisfies ColumnMeta,
+    header: "Source",
+    cell: ({ row }) => (
+      <div className="font-medium uppercase tracking-[0.08em] text-secondary-foreground">
+        {row.original.source}
+      </div>
+    ),
+  },
+];
 
 function toSearchParamsObject(searchParams: Pick<URLSearchParams, "keys" | "getAll">) {
   const result: TransactionsSearchParams = {};
@@ -67,7 +148,9 @@ export function TransactionsPageView({
   initialTransactionsData,
   initialCategoriesData,
 }: TransactionsPageInitialData) {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const [drawerRow, setDrawerRow] = useState<TransactionsPageRow | null>(null);
   const state = getTransactionsPageState(toSearchParamsObject(searchParams));
   const transactionsQuery = useTransactionsQuery({
     query: state.query,
@@ -97,6 +180,28 @@ export function TransactionsPageView({
     : data.message;
   const status = transactionsQuery.error ? "error" : data.status;
   const categoryOptions = buildCategoryOptions(data.categories);
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    data: data.rows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    manualSorting: true,
+    pageCount: data.pagination.totalPages,
+    state: {
+      pagination: {
+        pageIndex: Math.max(0, data.pagination.page - 1),
+        pageSize: data.pagination.pageSize,
+      },
+      sorting: [
+        {
+          id: data.filters.sortBy,
+          desc: data.filters.sortOrder === "desc",
+        },
+      ],
+    },
+  });
+  const paginationItems = buildPaginationItems(data.pagination.page, data.pagination.totalPages);
 
   return (
     <div className="space-y-3.5">
@@ -119,224 +224,249 @@ export function TransactionsPageView({
         </section>
       ) : null}
 
-      <section className={cn(dashboardPanelClassName, "px-4 py-4 sm:px-5")}>
+      <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
         <TransactionsFilterControls
           filters={data.filters}
           categoryOptions={categoryOptions}
         />
       </section>
 
-      <section className={cn(dashboardPanelClassName, "overflow-hidden")}>
-        <div className="overflow-x-auto">
-          <div className={cn(dashboardInnerTableClassName, "min-w-[860px]")}>
-            <div
-              className={dashboardTableHeaderClassName}
-              style={{ gridTemplateColumns: tableTemplate }}
-            >
-              <SortHeader
-                label="Date & time"
-                href={buildSortHref(data.filters, "timestamp")}
-                direction={getSortDirection(data.filters, "timestamp")}
-              />
-              <span>Recipient</span>
-              <SortHeader
-                label="Amount"
-                href={buildSortHref(data.filters, "amount")}
-                direction={getSortDirection(data.filters, "amount")}
-                align="right"
-              />
-              <span>Category</span>
-              <span>Source</span>
-            </div>
-
-            <div className="flex-1">
-              {data.rows.length > 0 ? (
-                data.rows.map((row, index) => (
-                  <Link
-                    key={row.uuid}
-                    href={`/transactions/${row.id}`}
-                    className={cn(
-                      dashboardTableTallRowClassName,
-                      dashboardTableRowClassName,
-                      "items-center focus-visible:outline-none",
-                      index > 0 && "border-t border-border/40",
-                      "cursor-pointer",
-                      row.isSelected &&
-                        "bg-primary/10 ring-1 ring-inset ring-primary/30"
-                    )}
-                    style={{ gridTemplateColumns: tableTemplate }}
-                  >
+      <DataTableShell>
+        {data.rows.length > 0 ? (
+          <>
+            <div className="grid gap-3 p-4 md:hidden">
+              {data.rows.map((row) => (
+                <button
+                  key={row.uuid}
+                  type="button"
+                  onClick={() => setDrawerRow(row)}
+                  className={cn(
+                    "rounded-[8px] border border-border/45 bg-background/12 p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    row.isSelected && "ring-1 ring-inset ring-primary/30"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-foreground">
-                        {formatTransactionDateLabel(row.timestamp)}
+                      <p className="truncate text-base font-semibold text-foreground">
+                        {row.recipient}
                       </p>
-                      <p className="mt-1 text-xs text-secondary-foreground/85">
+                      <p className="mt-1 text-sm text-secondary-foreground">
+                        {formatTransactionDateLabel(row.timestamp)} at{" "}
                         {formatTransactionTimeLabel(row.timestamp)}
                       </p>
                     </div>
-                    <div className="truncate font-medium text-foreground">{row.recipient}</div>
-                    <div className="text-right font-semibold tabular-nums text-foreground">
+                    <span className="text-base font-semibold tabular-nums text-foreground">
                       {formatTransactionAmount(row.amount)}
-                    </div>
-                    <div className="min-w-0">
-                      <span
-                        className={cn(
-                          "inline-flex min-h-8 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
-                          row.category
-                            ? "border-primary/20 bg-primary/10 text-primary"
-                            : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
-                        )}
-                      >
-                        <span className="truncate">{row.category ?? "Uncategorized"}</span>
-                      </span>
-                    </div>
-                    <div className="font-medium uppercase tracking-[0.08em] text-secondary-foreground">
+                    </span>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <span
+                      className={cn(
+                        "inline-flex min-h-8 max-w-[68%] items-center rounded-[999px] border px-3 text-sm font-medium",
+                        row.category
+                          ? "border-primary/20 bg-primary/10 text-primary"
+                          : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
+                      )}
+                    >
+                      <span className="truncate">{row.category ?? "Uncategorized"}</span>
+                    </span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
                       {row.source}
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <EmptyState />
-              )}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
-          </div>
-        </div>
+
+            <div className="hidden md:block">
+              <Table className="min-w-[860px] table-fixed">
+                <TableHeader className="border-b border-border/40 bg-background/16">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                      {headerGroup.headers.map((header) => {
+                        const meta = header.column.columnDef.meta as ColumnMeta | undefined;
+                        const sortable = meta?.sortable;
+
+                        if (!sortable) {
+                          return (
+                            <TableHead
+                              key={header.id}
+                              className={cn(
+                                meta?.align === "right" && "text-right",
+                                meta?.widthClassName
+                              )}
+                            >
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                          );
+                        }
+
+                        return (
+                          <SortableTableHead
+                            key={header.id}
+                            label={String(header.column.columnDef.header)}
+                            direction={getSortDirection(data.filters, sortable)}
+                            align={meta?.align ?? "left"}
+                            className={meta?.widthClassName}
+                            onClick={() =>
+                              updateTransactionsUrl(buildSortHref(data.filters, sortable), "push")
+                            }
+                          />
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      tabIndex={0}
+                      role="link"
+                      className={cn(
+                        "group cursor-pointer",
+                        row.original.isSelected && "bg-primary/10"
+                      )}
+                      onClick={(event) => {
+                        if (isInteractiveTarget(event.target as HTMLElement)) {
+                          return;
+                        }
+                        router.push(`/transactions/${row.original.id}`);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          router.push(`/transactions/${row.original.id}`);
+                        }
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={cn(
+                              "py-4",
+                              meta?.align === "right" && "text-right",
+                              meta?.widthClassName
+                            )}
+                          >
+                            {cell.column.id === "recipient" ? (
+                              <Link
+                                href={`/transactions/${row.original.id}`}
+                                className="block rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </Link>
+                            ) : (
+                              flexRender(cell.column.columnDef.cell, cell.getContext())
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        ) : (
+          <DataTableEmpty title="No transactions matched the current filters." />
+        )}
 
         <div className="flex flex-col gap-4 border-t border-border/45 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-sm text-secondary-foreground">
-            {buildFooterSummary(data.pagination)}
-          </p>
+          <p className="text-sm text-secondary-foreground">{buildFooterSummary(data.pagination)}</p>
           {data.pagination.totalPages > 1 ? (
-            <Pagination data={data} />
+            <DataTablePagination
+              page={data.pagination.page}
+              totalPages={data.pagination.totalPages}
+              hasPrev={data.pagination.hasPrev}
+              hasNext={data.pagination.hasNext}
+              items={paginationItems}
+              buildPageHref={(page) => buildPageHref(data.filters, page)}
+              onNavigate={(href) => updateTransactionsUrl(href, "push")}
+            />
           ) : null}
         </div>
-      </section>
+      </DataTableShell>
+
+      <MobileRowDetailDrawer
+        open={drawerRow !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDrawerRow(null);
+          }
+        }}
+        title={drawerRow?.recipient ?? ""}
+        description={
+          drawerRow
+            ? `${formatTransactionDateLabel(drawerRow.timestamp)} at ${formatTransactionTimeLabel(
+                drawerRow.timestamp
+              )}`
+            : undefined
+        }
+        href={drawerRow ? `/transactions/${drawerRow.id}` : "/transactions"}
+        hrefLabel="Open transaction detail"
+      >
+        {drawerRow ? (
+          <div className="space-y-4 pb-3">
+            <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+                Amount
+              </p>
+              <p className="mt-2 text-[1.65rem] font-semibold leading-none tabular-nums text-foreground">
+                {formatTransactionAmount(drawerRow.amount)}
+              </p>
+            </div>
+            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 p-4">
+              <DetailMetric
+                icon={<CalendarDays className="h-4 w-4" />}
+                label="When"
+                value={`${formatTransactionDateLabel(drawerRow.timestamp)} ${formatTransactionTimeLabel(
+                  drawerRow.timestamp
+                )}`}
+              />
+              <DetailMetric
+                icon={<Tag className="h-4 w-4" />}
+                label="Category"
+                value={drawerRow.category ?? "Uncategorized"}
+              />
+              <DetailMetric
+                icon={<ReceiptText className="h-4 w-4" />}
+                label="Source"
+                value={drawerRow.source}
+              />
+            </div>
+          </div>
+        ) : null}
+      </MobileRowDetailDrawer>
     </div>
   );
 }
 
-function SortHeader({
+function DetailMetric({
+  icon,
   label,
-  href,
-  direction,
-  align = "left",
+  value,
 }: {
+  icon: ReactNode;
   label: string;
-  href: string;
-  direction: "asc" | "desc" | null;
-  align?: "left" | "right";
+  value: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => updateTransactionsUrl(href, "push")}
-      className={cn(
-        "inline-flex items-center gap-2 transition-colors hover:text-foreground",
-        align === "right" && "justify-end text-right"
-      )}
-    >
-      <span>{label}</span>
-      {direction === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : null}
-      {direction === "desc" ? <ArrowDown className="h-3.5 w-3.5" /> : null}
-      {direction === null ? (
-        <ArrowUpDown className="h-3.5 w-3.5 text-secondary-foreground/55" />
-      ) : null}
-    </button>
-  );
-}
-
-function Pagination({ data }: { data: TransactionsPageData }) {
-  const items = buildPaginationItems(data.pagination.page, data.pagination.totalPages);
-
-  return (
-    <nav className="flex items-center gap-2 self-end" aria-label="Pagination">
-      <PageControl
-        href={buildPageHref(data.filters, Math.max(1, data.pagination.page - 1))}
-        disabled={!data.pagination.hasPrev}
-        ariaLabel="Previous page"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </PageControl>
-
-      {items.map((item, index) =>
-        item === "ellipsis" ? (
-          <span
-            key={`ellipsis-${index}`}
-            className="inline-flex min-h-9 min-w-9 items-center justify-center text-sm text-secondary-foreground"
-          >
-            ...
-          </span>
-        ) : (
-          <button
-            key={item}
-            type="button"
-            onClick={() => updateTransactionsUrl(buildPageHref(data.filters, item), "push")}
-            aria-current={item === data.pagination.page ? "page" : undefined}
-            className={cn(
-              "inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border px-3 text-sm font-medium transition-colors",
-              item === data.pagination.page
-                ? "border-primary/35 bg-primary/14 text-primary"
-                : "border-border/45 bg-background/10 text-foreground hover:border-border/70 hover:bg-background/16"
-            )}
-          >
-            {item}
-          </button>
-        )
-      )}
-
-      <PageControl
-        href={buildPageHref(
-          data.filters,
-          Math.min(data.pagination.totalPages, data.pagination.page + 1)
-        )}
-        disabled={!data.pagination.hasNext}
-        ariaLabel="Next page"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </PageControl>
-    </nav>
-  );
-}
-
-function PageControl({
-  href,
-  disabled,
-  ariaLabel,
-  children,
-}: {
-  href: string;
-  disabled: boolean;
-  ariaLabel: string;
-  children: ReactNode;
-}) {
-  if (disabled) {
-    return (
-      <span
-        aria-disabled="true"
-        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/30 bg-background/8 text-secondary-foreground/45"
-      >
-        {children}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => updateTransactionsUrl(href, "push")}
-      aria-label={ariaLabel}
-      className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-foreground transition-colors hover:border-border/70 hover:bg-background/16"
-    >
-      {children}
-    </button>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="px-5 py-8 text-sm text-secondary-foreground">
-      No transactions matched the current filters.
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-secondary-foreground">
+        <span className="text-primary">{icon}</span>
+        <span className="text-sm">{label}</span>
+      </div>
+      <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
 }
 
+function isInteractiveTarget(target: HTMLElement) {
+  return Boolean(target.closest("a, button, input, select, textarea"));
+}

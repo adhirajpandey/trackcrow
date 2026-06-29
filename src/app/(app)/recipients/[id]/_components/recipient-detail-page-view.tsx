@@ -15,13 +15,19 @@ import {
 
 import { AppPageHeader } from "@/components/product/app-page-header";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { RecipientDetailPageInitialData } from "@/features/recipients/types";
 import { cn } from "@/lib/utils";
 import {
   dashboardInnerTableClassName,
   dashboardPanelClassName,
-  dashboardTableHeaderClassName,
-  dashboardTableRowClassName,
 } from "@/app/(app)/dashboard/_components/dashboard-style";
 
 import {
@@ -130,54 +136,47 @@ export function RecipientDetailPageView({
               description="Resolved identifiers retained for recipient matching."
             />
             <div className="overflow-x-auto px-5 pb-5">
-              <div className={cn(dashboardInnerTableClassName, "min-w-[620px]")}>
-                <div
-                  className={dashboardTableHeaderClassName}
-                  style={{ gridTemplateColumns: "160px minmax(220px,1fr) minmax(220px,1fr) 72px" }}
-                >
-                  <span>Kind</span>
-                  <span>Value</span>
-                  <span>Normalized</span>
-                  <span className="text-right">Copy</span>
-                </div>
-                <div className="flex-1">
+              <div className={dashboardInnerTableClassName}>
+                <Table className="min-w-[620px]">
+                  <TableHeader className="border-b border-border/40 bg-background/16">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Kind</TableHead>
+                      <TableHead>Value</TableHead>
+                      <TableHead>Normalized</TableHead>
+                      <TableHead className="text-right">Copy</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {data.identifiers.length > 0 ? (
-                    data.identifiers.map((identifier, index) => (
-                      <div
+                    data.identifiers.map((identifier) => (
+                      <TableRow
                         key={identifier.id}
-                        className={cn(
-                          dashboardTableRowClassName,
-                          "items-center",
-                          index > 0 && "border-t border-border/40"
-                        )}
-                        style={{
-                          gridTemplateColumns: "160px minmax(220px,1fr) minmax(220px,1fr) 72px",
-                        }}
                       >
-                        <div>
+                        <TableCell className="py-4">
                           <span className="inline-flex rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                             {identifier.kindLabel}
                           </span>
-                        </div>
-                        <span className="min-w-0 break-all font-medium text-foreground">
+                        </TableCell>
+                        <TableCell className="min-w-0 break-all py-4 font-medium text-foreground">
                           {identifier.value}
-                        </span>
-                        <span className="min-w-0 break-all text-secondary-foreground">
+                        </TableCell>
+                        <TableCell className="min-w-0 break-all py-4 text-secondary-foreground">
                           {identifier.normalizedValue}
-                        </span>
-                        <div className="flex justify-end">
+                        </TableCell>
+                        <TableCell className="py-4 text-right">
                           <CopyButton
                             label={`Copy ${identifier.kindLabel}`}
                             onClick={() => void handleCopy(identifier.value)}
                             copied={copiedValue === identifier.value}
                           />
-                        </div>
-                      </div>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
                     <EmptyPanelState label="No identifiers recorded for this recipient." />
                   )}
-                </div>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </section>
@@ -188,28 +187,22 @@ export function RecipientDetailPageView({
               description="Useful for spotting where this recipient usually lands in your ledger."
             />
             <div className="overflow-x-auto px-5 pb-5">
-              <div className={cn(dashboardInnerTableClassName, "min-w-[560px]")}>
-                <div
-                  className={dashboardTableHeaderClassName}
-                  style={{ gridTemplateColumns: "minmax(220px,1.2fr) 140px 160px" }}
-                >
-                  <span>Category</span>
-                  <span className="text-right">Transactions</span>
-                  <span className="text-right">Total amount</span>
-                </div>
-                <div className="flex-1">
+              <div className={dashboardInnerTableClassName}>
+                <Table className="min-w-[560px]">
+                  <TableHeader className="border-b border-border/40 bg-background/16">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Transactions</TableHead>
+                      <TableHead className="text-right">Total amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {data.categoryRows.length > 0 ? (
-                    data.categoryRows.map((row, index) => (
-                      <div
+                    data.categoryRows.map((row) => (
+                      <TableRow
                         key={row.id}
-                        className={cn(
-                          dashboardTableRowClassName,
-                          "items-center",
-                          index > 0 && "border-t border-border/40"
-                        )}
-                        style={{ gridTemplateColumns: "minmax(220px,1.2fr) 140px 160px" }}
                       >
-                        <div>
+                        <TableCell className="py-4">
                           <span
                             className={cn(
                               badgeClassName,
@@ -220,19 +213,20 @@ export function RecipientDetailPageView({
                           >
                             {row.category}
                           </span>
-                        </div>
-                        <span className="text-right font-medium tabular-nums text-foreground">
+                        </TableCell>
+                        <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                           {row.transactionCount}
-                        </span>
-                        <span className="text-right font-medium tabular-nums text-foreground">
+                        </TableCell>
+                        <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                           {formatRecipientTotal(row.totalAmount)}
-                        </span>
-                      </div>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
                     <EmptyPanelState label="No category activity recorded for this recipient." />
                   )}
-                </div>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </section>
@@ -243,40 +237,30 @@ export function RecipientDetailPageView({
               description="Newest linked payments for this recipient."
             />
             <div className="overflow-x-auto px-5 pb-5">
-              <div className={cn(dashboardInnerTableClassName, "min-w-[700px]")}>
-                <div
-                  className={dashboardTableHeaderClassName}
-                  style={{
-                    gridTemplateColumns: "160px 140px minmax(180px,1fr) 120px 120px",
-                  }}
-                >
-                  <span>Date</span>
-                  <span className="text-right">Amount</span>
-                  <span>Category</span>
-                  <span>Source</span>
-                  <span className="text-right">View</span>
-                </div>
-                <div className="flex-1">
+              <div className={dashboardInnerTableClassName}>
+                <Table className="min-w-[700px]">
+                  <TableHeader className="border-b border-border/40 bg-background/16">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead className="text-right">View</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {data.recentTransactions.length > 0 ? (
-                    data.recentTransactions.map((transaction, index) => (
-                      <div
+                    data.recentTransactions.map((transaction) => (
+                      <TableRow
                         key={transaction.uuid}
-                        className={cn(
-                          dashboardTableRowClassName,
-                          "items-center",
-                          index > 0 && "border-t border-border/40"
-                        )}
-                        style={{
-                          gridTemplateColumns: "160px 140px minmax(180px,1fr) 120px 120px",
-                        }}
                       >
-                        <span className="text-foreground">
+                        <TableCell className="py-4 text-foreground">
                           {formatRecipientDate(transaction.timestamp)}
-                        </span>
-                        <span className="text-right font-medium tabular-nums text-foreground">
+                        </TableCell>
+                        <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                           {formatRecipientTotal(transaction.amount)}
-                        </span>
-                        <div>
+                        </TableCell>
+                        <TableCell className="py-4">
                           <span
                             className={cn(
                               badgeClassName,
@@ -287,9 +271,11 @@ export function RecipientDetailPageView({
                           >
                             {transaction.category ?? "Uncategorized"}
                           </span>
-                        </div>
-                        <span className="text-secondary-foreground">{transaction.source}</span>
-                        <div className="flex justify-end">
+                        </TableCell>
+                        <TableCell className="py-4 text-secondary-foreground">
+                          {transaction.source}
+                        </TableCell>
+                        <TableCell className="py-4 text-right">
                           <Link
                             href={`/transactions/${transaction.id}`}
                             className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/85"
@@ -297,13 +283,14 @@ export function RecipientDetailPageView({
                             View
                             <ArrowRight className="h-4 w-4" />
                           </Link>
-                        </div>
-                      </div>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
                     <EmptyPanelState label="No linked transactions found for this recipient." />
                   )}
-                </div>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </section>

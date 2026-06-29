@@ -896,11 +896,52 @@ Do not create large global folders for feature-specific components.
 
 ## 18. Table Policy
 
-Transaction tables must be built as feature-specific tables first.
+TrackCrow table workspaces should use a shared foundation and feature-owned columns.
 
-A generic data table abstraction must not be introduced before at least two or three tables prove the same abstraction is needed.
+The current decision is to standardize tables now because transactions and recipients already repeat the same table shell, sorting, pagination, empty-state, and URL-state concerns.
 
-Transaction table ownership:
+Full data workspaces must use:
+
+* shadcn-style semantic table primitives from `src/components/ui/table.tsx`
+* TanStack Table for table state and rendering where the surface is sortable, pageable, selectable, or otherwise data-grid-like
+* TanStack Table manual server-side behavior for paginated API data
+* TanStack Query for client-side server-state refetches
+* URL search params for shareable state such as `q`, `page`, `size`, `sortBy`, `sortOrder`, and feature filters
+
+This table pass does not include new automated test work by default. Validation for the pass is manual product verification unless a touched area already requires a narrow regression test to stay shippable.
+
+The standard data flow is:
+
+```txt
+server page initial fetch
+  -> client table view
+  -> TanStack Query refetch
+  -> API route
+  -> same service
+```
+
+Transactions and recipients should converge on this shape. Recipients already uses server/API-backed search, sort, and pagination, so it is the first UI rewrite candidate for the shared table foundation.
+
+Recipient list columns for the current rewrite target are:
+
+* recipient
+* identifiers
+* transactions
+* total amount sent
+
+`normalizedName` and the current list `status` badge should not remain visible columns in the recipients workspace table. Supporting `total amount sent` requires the recipients backend list/query DTOs to expose an aggregate amount field for each row.
+
+Shared table code should stay small and composable:
+
+```txt
+src/components/product/data-table-shell.tsx
+src/components/product/data-table-pagination.tsx
+src/components/product/sortable-table-head.tsx
+src/components/product/data-table-empty.tsx
+src/components/product/data-table-loading.tsx
+```
+
+Feature-owned table code remains responsible for domain columns and row actions:
 
 ```txt
 transaction-table.tsx
@@ -909,7 +950,9 @@ transaction-filters.tsx
 use-transactions.ts
 ```
 
-Tables may own UI state such as:
+Equivalent recipient files may use recipient-specific names.
+
+Tables may own view-level UI state such as:
 
 * selected rows
 * column visibility
@@ -917,6 +960,15 @@ Tables may own UI state such as:
 * pagination controls
 
 Tables must not own backend business rules.
+
+Dashboard and detail-page mini tables should use the semantic table primitives without TanStack Table unless they become independently sortable, pageable, selectable, or data-grid-like.
+
+Deferred table scope:
+
+* bulk-selection bars until a real bulk workflow exists
+* column-visibility menus until optional columns create a real usability need
+* one magic global table component that owns domain columns, row actions, and backend rules
+* broad new automated table test coverage as a prerequisite for this pass
 
 ## 19. Landing Page Policy
 

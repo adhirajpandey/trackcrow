@@ -15,6 +15,14 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader as SemanticTableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
@@ -32,9 +40,6 @@ import {
   dashboardInnerTableClassName,
   dashboardPanelClassName,
   dashboardPrimaryActionClassName,
-  dashboardTableHeaderClassName,
-  dashboardTableRowClassName,
-  dashboardTableTallRowClassName,
 } from "./dashboard-style";
 import {
   buildFrequentRecipientRows,
@@ -278,6 +283,8 @@ function SpendingByCategoryPanel({
   sectionStatus: DashboardPageData["sectionStatus"]["categories"];
   uncategorizedCategory: DashboardPageData["spendingByCategory"][number] | null;
 }) {
+  const router = useRouter();
+
   return (
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
@@ -298,28 +305,23 @@ function SpendingByCategoryPanel({
         ) : (
           <div className="space-y-3">
             <div className={dashboardInnerTableClassName}>
-              <TableHeader
-                layout={dashboardTableLayouts.spendingByCategory}
-              />
-              <div className="flex-1">
+              <Table className="min-w-[520px]">
+                <TableHeader layout={dashboardTableLayouts.spendingByCategory} />
+                <TableBody>
                 {categories.slice(0, 5).map((item, index) => {
                   const share = getCategoryShare(item.totalSpend, categorizedSpendTotal);
                   const isTop = item.category === topCategory;
 
                   return (
-                    <Link
+                    <TableRow
                       key={item.category}
-                      href={buildCategoryPageHref(item.category)}
                       className={cn(
-                        dashboardTableRowClassName,
-                        "cursor-pointer items-center text-left",
+                        "cursor-pointer hover:bg-secondary/18",
                         index > 0 && "border-t border-border/40"
                       )}
-                      style={{
-                        gridTemplateColumns: dashboardTableLayouts.spendingByCategory.template,
-                      }}
+                      onClick={() => router.push(buildCategoryPageHref(item.category))}
                     >
-                      <div className="min-w-0">
+                      <TableCell className="py-4">
                         <div className="flex items-start gap-2">
                           <span
                             className={cn(
@@ -327,9 +329,13 @@ function SpendingByCategoryPanel({
                               isTop ? "bg-primary" : "bg-primary/65"
                             )}
                           />
-                          <span className="break-words font-medium leading-5 text-foreground">
+                          <Link
+                            href={buildCategoryPageHref(item.category)}
+                            className="break-words font-medium leading-5 text-foreground"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             {item.category}
-                          </span>
+                          </Link>
                         </div>
                         <div className="mt-2 h-1.5 rounded-full bg-secondary/20">
                           <div
@@ -339,17 +345,18 @@ function SpendingByCategoryPanel({
                             }}
                           />
                         </div>
-                      </div>
-                      <span className="text-right font-medium tabular-nums text-foreground">
+                      </TableCell>
+                      <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                         {formatCurrency(item.totalSpend)}
-                      </span>
-                      <span className="text-right font-medium text-secondary-foreground">
+                      </TableCell>
+                      <TableCell className="py-4 text-right font-medium text-secondary-foreground">
                         {share}%
-                      </span>
-                    </Link>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </div>
+                </TableBody>
+              </Table>
             </div>
             {uncategorizedCategory ? (
               <div className={cn(dashboardAttentionPanelClassName, "px-4 py-3")}>
@@ -387,6 +394,8 @@ function FrequentRecipientsPanel({
   recipients: ReturnType<typeof buildFrequentRecipientRows>;
   displayRange: string;
 }) {
+  const router = useRouter();
+
   return (
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
@@ -399,41 +408,45 @@ function FrequentRecipientsPanel({
           <EmptyPanel title="No repeated recipients in this period." />
         ) : (
           <div className={dashboardInnerTableClassName}>
-            <TableHeader
-              layout={dashboardTableLayouts.frequentRecipients}
-            />
-            <div className="flex-1">
+            <Table className="min-w-[560px]">
+              <TableHeader layout={dashboardTableLayouts.frequentRecipients} />
+              <TableBody>
               {recipients.map((recipient, index) => (
-                <Link
+                <TableRow
                   key={recipient.recipient}
-                  href={recipient.href}
                   className={cn(
-                    dashboardTableRowClassName,
-                    "cursor-pointer items-center",
+                    "cursor-pointer hover:bg-secondary/18",
                     index > 0 && "border-t border-border/40"
                   )}
-                  style={{
-                    gridTemplateColumns: dashboardTableLayouts.frequentRecipients.template,
-                  }}
+                  onClick={() => router.push(recipient.href)}
                 >
-                  <span className="truncate font-medium text-foreground">{recipient.recipient}</span>
-                  <span className="text-right text-secondary-foreground">
+                  <TableCell className="py-4 font-medium text-foreground">
+                    <Link
+                      href={recipient.href}
+                      className="truncate"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {recipient.recipient}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="py-4 text-right text-secondary-foreground">
                     {recipient.paymentCount}
-                  </span>
-                  <span className="text-right font-medium tabular-nums text-foreground">
+                  </TableCell>
+                  <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                     {formatCurrency(recipient.totalAmount)}
-                  </span>
-                  <span
+                  </TableCell>
+                  <TableCell
                     className={cn(
-                      "text-right font-semibold",
+                      "py-4 text-right font-semibold",
                       recipient.action === "Create rule" ? "text-primary" : "text-accent"
                     )}
                   >
                     {recipient.action}
-                  </span>
-                </Link>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>
@@ -448,6 +461,8 @@ function LargestTransactionsPanel({
   transactions: DashboardPageData["recentLargeTransactions"];
   displayRange: string;
 }) {
+  const router = useRouter();
+
   return (
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
@@ -460,38 +475,40 @@ function LargestTransactionsPanel({
           <EmptyPanel title="No large transactions in this period." />
         ) : (
           <div className={dashboardInnerTableClassName}>
-            <TableHeader
-              layout={dashboardTableLayouts.largestTransactions}
-            />
-            <div className="flex-1">
+            <Table className="min-w-[520px]">
+              <TableHeader layout={dashboardTableLayouts.largestTransactions} />
+              <TableBody>
               {transactions.map((transaction, index) => (
-                <Link
+                <TableRow
                   key={transaction.uuid}
-                  href={buildLargestTransactionHref(transaction.id)}
                   className={cn(
-                    dashboardTableRowClassName,
-                    "cursor-pointer items-start",
+                    "cursor-pointer hover:bg-secondary/18",
                     index > 0 && "border-t border-border/40"
                   )}
-                  style={{
-                    gridTemplateColumns: dashboardTableLayouts.largestTransactions.template,
-                  }}
+                  onClick={() => router.push(buildLargestTransactionHref(transaction.id))}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">{transaction.recipient}</p>
+                  <TableCell className="py-4">
+                    <Link
+                      href={buildLargestTransactionHref(transaction.id)}
+                      className="truncate font-medium text-foreground"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {transaction.recipient}
+                    </Link>
                     <p className="mt-0.5 truncate text-xs text-secondary-foreground">
                       {transaction.category ?? "Uncategorized"}
                     </p>
-                  </div>
-                  <span className="pt-0.5 text-secondary-foreground">
+                  </TableCell>
+                  <TableCell className="py-4 text-secondary-foreground">
                     {formatShortDate(transaction.timestamp)}
-                  </span>
-                  <span className="pt-0.5 text-right font-medium tabular-nums text-foreground">
+                  </TableCell>
+                  <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                     {formatCurrency(transaction.amount)}
-                  </span>
-                </Link>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>
@@ -554,10 +571,9 @@ function RecentTransactionsPanel({
           />
         ) : (
           <div className={dashboardInnerTableClassName}>
-            <TableHeader
-              layout={dashboardTableLayouts.recentTransactions}
-            />
-            <div className="flex-1">
+            <Table className="min-w-[860px]">
+              <TableHeader layout={dashboardTableLayouts.recentTransactions} />
+              <TableBody>
               {transactions.map((transaction, index) => {
                 const meta = buildRecentTransactionMeta(transaction.category, transaction.timestamp);
                 const isPending = pendingTransactionId === transaction.id;
@@ -566,11 +582,9 @@ function RecentTransactionsPanel({
                   openCategoryMenuTransactionId === transaction.id;
 
                 return (
-                  <div
+                  <TableRow
                     key={transaction.uuid}
                     className={cn(
-                      dashboardTableTallRowClassName,
-                      dashboardTableRowClassName,
                       "cursor-pointer items-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                       index > 0 && "border-t border-border/40"
                     )}
@@ -583,19 +597,16 @@ function RecentTransactionsPanel({
                         onOpenTransaction(transaction.id);
                       }
                     }}
-                    style={{
-                      gridTemplateColumns: dashboardTableLayouts.recentTransactions.template,
-                    }}
                   >
-                    <div className="flex min-h-full flex-col justify-center pr-2 text-secondary-foreground">
+                    <TableCell className="py-4 text-secondary-foreground">
                       <span className="block text-sm font-medium text-foreground">
                         {meta.dateLabel}
                       </span>
                       <span className="mt-1 block text-xs tracking-[0.01em] text-secondary-foreground/88">
                         {meta.timeLabel}
                       </span>
-                    </div>
-                    <div className="flex min-h-full min-w-0 items-center">
+                    </TableCell>
+                    <TableCell className="py-4">
                       <Link
                         href={`/transactions/${transaction.id}`}
                         onClick={(event) => event.stopPropagation()}
@@ -603,11 +614,11 @@ function RecentTransactionsPanel({
                       >
                         {transaction.recipient}
                       </Link>
-                    </div>
-                    <span className="flex min-h-full items-center justify-end pt-0.5 text-right font-semibold tabular-nums text-foreground">
+                    </TableCell>
+                    <TableCell className="py-4 text-right font-semibold tabular-nums text-foreground">
                       {formatCurrency(transaction.amount)}
-                    </span>
-                    <div className="flex min-h-full min-w-0 items-center">
+                    </TableCell>
+                    <TableCell className="py-4">
                       {meta.needsCategory ? (
                         <div className="w-full max-w-[220px] space-y-2">
                           <div
@@ -683,11 +694,12 @@ function RecentTransactionsPanel({
                           <span className="truncate">{meta.categoryLabel}</span>
                         </span>
                       )}
-                    </div>
-                  </div>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </div>
+              </TableBody>
+            </Table>
           </div>
         )}
         <FooterActions>
@@ -713,12 +725,10 @@ function TableHeader({
   };
 }) {
   return (
-    <div
-      className={dashboardTableHeaderClassName}
-      style={{ gridTemplateColumns: layout.template }}
-    >
+    <SemanticTableHeader className="border-b border-border/40 bg-background/16">
+      <TableRow className="hover:bg-transparent">
       {layout.columns.map((column, index) => (
-        <span
+        <TableHead
           key={column}
           className={cn(
             layout.rightAlignedColumns?.includes(index) && "text-right",
@@ -726,9 +736,10 @@ function TableHeader({
           )}
         >
           {column}
-        </span>
+        </TableHead>
       ))}
-    </div>
+      </TableRow>
+    </SemanticTableHeader>
   );
 }
 

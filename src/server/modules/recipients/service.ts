@@ -1,4 +1,4 @@
-import { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
+import { Prisma, RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
@@ -13,11 +13,17 @@ import type {
   ResolveRecipientInput,
 } from "./types";
 
+type RecipientAggregateSortRow = {
+  id: number;
+  totalAmount: Prisma.Decimal | number | string | null;
+};
+
 function toRecipientDto(record: {
   id: number;
   uuid: string;
   displayName: string;
   normalizedName: string;
+  totalAmount: number;
   identifiers: Array<{
     id: number;
     uuid: string;
@@ -33,6 +39,7 @@ function toRecipientDto(record: {
     displayName: record.displayName,
     normalizedName: record.normalizedName,
     transactionCount: record._count.transactions,
+    totalAmount: record.totalAmount,
     identifiers: record.identifiers,
   };
 }
@@ -180,10 +187,65 @@ export async function listRecipients(
   try {
     const total = await prisma.recipient.count({ where });
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+    const aggregateSortRows =
+      total > 0 && page <= totalPages && sortBy === "totalAmount"
+        ? await prisma.$queryRaw<RecipientAggregateSortRow[]>(Prisma.sql`
+            SELECT
+              r.id,
+              COALESCE(SUM(t.amount), 0) AS "totalAmount"
+            FROM "recipient" r
+            LEFT JOIN "transaction" t
+              ON t."recipient_id" = r.id
+              AND t."user_uuid" = r."user_uuid"
+            WHERE
+              r."user_uuid" = ${input.userUuid}
+              ${q
+                ? Prisma.sql`
+                    AND (
+                      r."displayName" ILIKE ${`%${q}%`}
+                      OR r."normalized_name" ILIKE ${`%${normalizedSearch}%`}
+                      OR EXISTS (
+                        SELECT 1
+                        FROM "recipient_identifier" ri
+                        WHERE ri."recipient_id" = r.id
+                          AND (
+                            ri.value ILIKE ${`%${q}%`}
+                            OR ri."normalized_value" ILIKE ${`%${normalizedSearch}%`}
+                            ${
+                              kindMatches.size > 0
+                                ? Prisma.sql`OR ri.kind IN (${Prisma.join(
+                                    [...kindMatches].map((kind) => Prisma.sql`${kind}`)
+                                  )})`
+                                : Prisma.empty
+                            }
+                          )
+                      )
+                    )
+                  `
+                : Prisma.empty}
+            GROUP BY r.id
+            ORDER BY
+              COALESCE(SUM(t.amount), 0) ${Prisma.raw(sortOrder.toUpperCase())},
+              r."displayName" ASC,
+              r.id ASC
+            OFFSET ${skip}
+            LIMIT ${pageSize}
+          `)
+        : [];
+    const aggregateTotalsByRecipientId = new Map(
+      aggregateSortRows.map((row) => [row.id, Number(row.totalAmount ?? 0)])
+    );
+    const aggregateSortedRecipientIds = aggregateSortRows.map((row) => row.id);
     const recipients =
       total > 0 && page <= totalPages
         ? await prisma.recipient.findMany({
-            where,
+            where:
+              sortBy === "totalAmount"
+                ? {
+                    userUuid: input.userUuid,
+                    id: { in: aggregateSortedRecipientIds },
+                  }
+                : where,
             include: {
               identifiers: {
                 orderBy: { createdAt: "asc" },
@@ -206,14 +268,51 @@ export async function listRecipients(
                     { displayName: "asc" },
                     { id: "asc" },
                   ]
-                : [{ displayName: sortOrder }, { id: "asc" }],
-            skip,
-            take: pageSize,
+                : sortBy === "displayName"
+                  ? [{ displayName: sortOrder }, { id: "asc" }]
+                  : undefined,
+            skip: sortBy === "totalAmount" ? undefined : skip,
+            take: sortBy === "totalAmount" ? undefined : pageSize,
           })
         : [];
+    const orderedRecipients =
+      sortBy === "totalAmount"
+        ? aggregateSortedRecipientIds
+            .map((recipientId) =>
+              recipients.find((recipient) => recipient.id === recipientId)
+            )
+            .filter((recipient): recipient is (typeof recipients)[number] => Boolean(recipient))
+        : recipients;
+
+    const totals =
+      orderedRecipients.length > 0 && sortBy !== "totalAmount"
+        ? await prisma.transaction.groupBy({
+            by: ["recipientId"],
+            where: {
+              userUuid: input.userUuid,
+              recipientId: {
+                in: orderedRecipients.map((recipient) => recipient.id),
+              },
+            },
+            _sum: {
+              amount: true,
+            },
+          })
+        : [];
+    const totalsByRecipientId = new Map(
+      totals.map((row) => [row.recipientId, row._sum.amount?.toNumber() ?? 0])
+    );
 
     return ok({
-      recipients: recipients.map(toRecipientDto),
+      recipients: orderedRecipients.map((recipient) =>
+        toRecipientDto({
+          ...recipient,
+          totalAmount:
+            aggregateTotalsByRecipientId.get(recipient.id) ??
+            totalsByRecipientId.get(recipient.id) ??
+            0,
+        })
+      ),
       page,
       pageSize,
       total,
@@ -256,7 +355,22 @@ export async function getRecipient(
       return fail("NOT_FOUND");
     }
 
-    return ok(toRecipientDto(recipient));
+    const totals = await prisma.transaction.aggregate({
+      where: {
+        userUuid: input.userUuid,
+        recipientId: recipient.id,
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return ok(
+      toRecipientDto({
+        ...recipient,
+        totalAmount: totals._sum.amount?.toNumber() ?? 0,
+      })
+    );
   } catch (error) {
     logger.error("getRecipient - Failed to get recipient", error as Error, {
       userUuid: input.userUuid,

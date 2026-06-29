@@ -6,6 +6,7 @@ export type RecipientDto = {
   displayName: string;
   normalizedName: string;
   transactionCount: number;
+  totalAmount: number;
   identifiers: Array<{
     id: number;
     uuid: string;
@@ -73,7 +74,7 @@ export type RecipientListInput = {
   page?: number;
   size?: number;
   q?: string;
-  sortBy?: "displayName" | "transactionCount";
+  sortBy?: "displayName" | "transactionCount" | "totalAmount";
   sortOrder?: "asc" | "desc";
 };
 

@@ -1,19 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  BadgeCheck,
-  ChevronLeft,
-  ChevronRight,
-  Users,
-} from "lucide-react";
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+} from "@tanstack/react-table";
+import { BadgeCheck, Hash, Users } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { DataTableEmpty } from "@/components/product/data-table-empty";
+import { DataTablePagination } from "@/components/product/data-table-pagination";
+import { DataTableShell } from "@/components/product/data-table-shell";
+import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
+import { SortableTableHead } from "@/components/product/sortable-table-head";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   getRecipientsPageState,
   isSameRecipientsQuery,
@@ -21,17 +32,12 @@ import {
 } from "@/features/recipients/query-state";
 import { useRecipientsQuery } from "@/features/recipients/queries";
 import type {
-  RecipientsPageData,
   RecipientsPageInitialData,
+  RecipientsPageRow,
 } from "@/features/recipients/types";
 import { getApiClientErrorMessage } from "@/lib/api/client";
+import { numberToINR } from "@/common/utils";
 import { cn } from "@/lib/utils";
-import {
-  dashboardInnerTableClassName,
-  dashboardPanelClassName,
-  dashboardTableHeaderClassName,
-  dashboardTableRowClassName,
-} from "@/app/(app)/dashboard/_components/dashboard-style";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
 
 import {
@@ -44,8 +50,84 @@ import {
 } from "./recipients-view-model";
 import { RecipientsFilterControls } from "./recipients-filter-controls";
 
-const tableTemplate =
-  "minmax(220px,1.45fr) minmax(220px,1.5fr) 140px minmax(180px,1fr) 136px";
+type ColumnMeta = {
+  align?: "left" | "right";
+  sortable?: "displayName" | "transactionCount" | "totalAmount";
+  widthClassName?: string;
+};
+
+const columns: ColumnDef<RecipientsPageRow>[] = [
+  {
+    accessorKey: "displayName",
+    meta: {
+      sortable: "displayName",
+      widthClassName: "w-[28%]",
+    } satisfies ColumnMeta,
+    header: "Recipient",
+    cell: ({ row }) => (
+      <div className="min-w-0">
+        <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
+          {row.original.displayName}
+        </p>
+        <p className="mt-1 text-xs text-secondary-foreground/85">
+          {row.original.secondaryLabel}
+        </p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "identifierChips",
+    meta: { widthClassName: "w-[40%]" } satisfies ColumnMeta,
+    header: "Identifiers",
+    cell: ({ row }) => (
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {row.original.identifierChips.map((identifier) => (
+          <span
+            key={identifier.id}
+            className="inline-flex max-w-full items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+            title={identifier.value}
+          >
+            <span className="shrink-0">{identifier.label}</span>
+            <span className="truncate text-primary/90">{identifier.value}</span>
+          </span>
+        ))}
+        {row.original.overflowIdentifierCount > 0 ? (
+          <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
+            +{row.original.overflowIdentifierCount} more
+          </span>
+        ) : null}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "transactionCount",
+    meta: {
+      sortable: "transactionCount",
+      align: "right",
+      widthClassName: "w-[14%]",
+    } satisfies ColumnMeta,
+    header: "Transactions",
+    cell: ({ row }) => (
+      <div className="text-right font-semibold tabular-nums text-foreground">
+        {row.original.transactionCount}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "totalAmount",
+    meta: {
+      sortable: "totalAmount",
+      align: "right",
+      widthClassName: "w-[18%]",
+    } satisfies ColumnMeta,
+    header: "Total sent",
+    cell: ({ row }) => (
+      <div className="text-right font-semibold tabular-nums text-foreground">
+        {numberToINR(row.original.totalAmount)}
+      </div>
+    ),
+  },
+];
 
 function toSearchParamsObject(searchParams: Pick<URLSearchParams, "keys" | "getAll">) {
   const result: RecipientsSearchParams = {};
@@ -62,7 +144,9 @@ export function RecipientsPageView({
   initialRecipientsQuery,
   initialRecipientsData,
 }: RecipientsPageInitialData) {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const [drawerRow, setDrawerRow] = useState<RecipientsPageRow | null>(null);
   const state = getRecipientsPageState(toSearchParamsObject(searchParams));
   const initialData = isSameRecipientsQuery(state.query, initialRecipientsQuery)
     ? initialRecipientsData
@@ -84,13 +168,37 @@ export function RecipientsPageView({
       )
     : data.message;
   const status = recipientsQuery.error ? "error" : data.status;
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    data: data.rows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    manualSorting: true,
+    pageCount: data.pagination.totalPages,
+    state: {
+      pagination: {
+        pageIndex: Math.max(0, data.pagination.page - 1),
+        pageSize: data.pagination.pageSize,
+      },
+      sorting: data.filters.sortBy
+        ? [
+            {
+              id: data.filters.sortBy,
+              desc: data.filters.sortOrder === "desc",
+            },
+          ]
+        : [],
+    },
+  });
+  const paginationItems = buildPaginationItems(data.pagination.page, data.pagination.totalPages);
 
   return (
     <div className="space-y-3.5">
       <AppPageHeader
         eyebrow="Recipient workspace"
         title="Recipients"
-        description="Review resolved payees, identifiers, and linked transaction counts."
+        description="Review resolved payees, identifiers, linked counts, and spend concentration."
       />
 
       {message ? (
@@ -106,249 +214,254 @@ export function RecipientsPageView({
         </section>
       ) : null}
 
-      <section className={cn(dashboardPanelClassName, "px-4 py-4 sm:px-5")}>
+      <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
         <RecipientsFilterControls filters={data.filters} />
       </section>
 
-      <section className={cn(dashboardPanelClassName, "overflow-hidden")}>
-        <div className="overflow-x-auto">
-          <div className={cn(dashboardInnerTableClassName, "min-w-[980px]")}>
-            <div
-              className={dashboardTableHeaderClassName}
-              style={{ gridTemplateColumns: tableTemplate }}
-            >
-              <SortHeader
-                label="Recipient"
-                href={buildSortHref(data.filters, "displayName")}
-                direction={getSortDirection(data.filters, "displayName")}
-              />
-              <span>Identifiers</span>
-              <SortHeader
-                label="Transactions"
-                href={buildSortHref(data.filters, "transactionCount")}
-                direction={getSortDirection(data.filters, "transactionCount")}
-                align="right"
-              />
-              <span>Normalized name</span>
-              <span>Status</span>
-            </div>
-
-            <div className="flex-1">
-              {data.rows.length > 0 ? (
-                data.rows.map((row, index) => (
-                  <Link
-                    key={row.uuid}
-                    href={`/recipients/${row.id}`}
-                    className={cn(
-                      dashboardTableRowClassName,
-                      "cursor-pointer items-center focus-visible:outline-none",
-                      index > 0 && "border-t border-border/40"
-                    )}
-                    style={{ gridTemplateColumns: tableTemplate }}
-                  >
+      <DataTableShell>
+        {data.rows.length > 0 ? (
+          <>
+            <div className="grid gap-3 p-4 md:hidden">
+              {data.rows.map((row) => (
+                <button
+                  key={row.uuid}
+                  type="button"
+                  onClick={() => setDrawerRow(row)}
+                  className="rounded-[8px] border border-border/45 bg-background/12 p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground transition-colors hover:text-primary">
+                      <p className="truncate text-base font-semibold text-foreground">
                         {row.displayName}
                       </p>
-                      <p className="mt-1 text-xs text-secondary-foreground/85">
-                        {row.secondaryLabel}
-                      </p>
+                      <p className="mt-1 text-sm text-secondary-foreground">{row.secondaryLabel}</p>
                     </div>
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      {row.identifierChips.map((identifier) => (
-                        <span
-                          key={identifier.id}
-                          className="inline-flex max-w-full items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                          title={identifier.value}
-                        >
-                          <span className="shrink-0">{identifier.label}</span>
-                          <span className="truncate text-primary/90">{identifier.value}</span>
-                        </span>
-                      ))}
-                      {row.overflowIdentifierCount > 0 ? (
-                        <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
-                          +{row.overflowIdentifierCount} more
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="text-right font-semibold tabular-nums text-foreground">
-                      {row.transactionCount}
-                    </div>
-                    <div className="truncate text-sm text-secondary-foreground">
-                      {row.normalizedName}
-                    </div>
-                    <div>
-                      <span
-                        className={cn(
-                          "inline-flex min-h-8 items-center gap-2 rounded-[999px] border px-3 text-sm font-medium",
-                          row.status === "active"
-                            ? "border-primary/20 bg-primary/10 text-primary"
-                            : "border-border/45 bg-background/12 text-secondary-foreground"
-                        )}
-                      >
-                        {row.status === "active" ? <BadgeCheck className="h-3.5 w-3.5" /> : null}
-                        <span>{row.status === "active" ? "Active" : "No transactions"}</span>
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              ) : data.emptyState !== "none" ? (
-                <EmptyState emptyState={data.emptyState} />
-              ) : (
-                <div className="px-5 py-8 text-sm text-secondary-foreground">
-                  Recipient data is unavailable right now.
-                </div>
-              )}
+                    <span className="inline-flex min-h-8 items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      <span>{row.transactionCount}</span>
+                    </span>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+                      Total sent
+                    </span>
+                    <span className="text-base font-semibold tabular-nums text-foreground">
+                      {numberToINR(row.totalAmount)}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
+
+            <div className="hidden md:block">
+              <Table className="min-w-[920px] table-fixed">
+                <TableHeader className="border-b border-border/40 bg-background/16">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                      {headerGroup.headers.map((header) => {
+                        const meta = header.column.columnDef.meta as ColumnMeta | undefined;
+                        const sortable = meta?.sortable;
+
+                        if (!sortable) {
+                          return (
+                            <TableHead
+                              key={header.id}
+                              className={cn(
+                                meta?.align === "right" && "text-right",
+                                meta?.widthClassName
+                              )}
+                            >
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                          );
+                        }
+
+                        return (
+                          <SortableTableHead
+                            key={header.id}
+                            label={String(header.column.columnDef.header)}
+                            direction={getSortDirection(data.filters, sortable)}
+                            align={meta?.align ?? "left"}
+                            className={meta?.widthClassName}
+                            onClick={() =>
+                              updateTransactionsUrl(buildSortHref(data.filters, sortable), "push")
+                            }
+                          />
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      tabIndex={0}
+                      role="link"
+                      className="group cursor-pointer"
+                      onClick={(event) => {
+                        if (isInteractiveTarget(event.target as HTMLElement)) {
+                          return;
+                        }
+                        router.push(`/recipients/${row.original.id}`);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          router.push(`/recipients/${row.original.id}`);
+                        }
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={cn(
+                              "py-4",
+                              meta?.align === "right" && "text-right",
+                              meta?.widthClassName
+                            )}
+                          >
+                            {cell.column.id === "displayName" ? (
+                              <Link
+                                href={`/recipients/${row.original.id}`}
+                                className="block rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </Link>
+                            ) : (
+                              flexRender(cell.column.columnDef.cell, cell.getContext())
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        ) : data.emptyState === "none" ? (
+          <div className="px-5 py-8 text-sm text-secondary-foreground">
+            Recipient data is unavailable right now.
           </div>
-        </div>
+        ) : (
+          <DataTableEmpty
+            icon={<Users className="h-5 w-5" />}
+            title={
+              data.emptyState === "empty"
+                ? "No recipients found yet."
+                : "No recipients matched the current filters."
+            }
+            helper={
+              data.emptyState === "empty"
+                ? "Recipients are created when transactions are added or imported."
+                : undefined
+            }
+          />
+        )}
 
         <div className="flex flex-col gap-4 border-t border-border/45 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-sm text-secondary-foreground">
-            {buildFooterSummary(data.pagination)}
-          </p>
-          {data.pagination.totalPages > 1 ? <Pagination data={data} /> : null}
+          <p className="text-sm text-secondary-foreground">{buildFooterSummary(data.pagination)}</p>
+          {data.pagination.totalPages > 1 ? (
+            <DataTablePagination
+              page={data.pagination.page}
+              totalPages={data.pagination.totalPages}
+              hasPrev={data.pagination.hasPrev}
+              hasNext={data.pagination.hasNext}
+              items={paginationItems}
+              buildPageHref={(page) => buildPageHref(data.filters, page)}
+              onNavigate={(href) => updateTransactionsUrl(href, "push")}
+            />
+          ) : null}
         </div>
-      </section>
+      </DataTableShell>
+
+      <MobileRowDetailDrawer
+        open={drawerRow !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDrawerRow(null);
+          }
+        }}
+        title={drawerRow?.displayName ?? ""}
+        description={
+          drawerRow
+            ? `${drawerRow.transactionCount} transactions linked`
+            : undefined
+        }
+        href={drawerRow ? `/recipients/${drawerRow.id}` : "/recipients"}
+        hrefLabel="Open recipient detail"
+      >
+        {drawerRow ? (
+          <div className="space-y-4 pb-3">
+            <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+                Total sent
+              </p>
+              <p className="mt-2 text-[1.65rem] font-semibold leading-none tabular-nums text-foreground">
+                {numberToINR(drawerRow.totalAmount)}
+              </p>
+            </div>
+            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 p-4">
+              <DetailMetric
+                icon={<Hash className="h-4 w-4" />}
+                label="Identifiers"
+                value={drawerRow.secondaryLabel}
+              />
+              <DetailMetric
+                icon={<BadgeCheck className="h-4 w-4" />}
+                label="Linked transactions"
+                value={String(drawerRow.transactionCount)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {drawerRow.identifierChips.map((identifier) => (
+                <span
+                  key={identifier.id}
+                  className="inline-flex max-w-full items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                >
+                  <span className="shrink-0">{identifier.label}</span>
+                  <span className="truncate text-primary/90">{identifier.value}</span>
+                </span>
+              ))}
+              {drawerRow.overflowIdentifierCount > 0 ? (
+                <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                  +{drawerRow.overflowIdentifierCount} more
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </MobileRowDetailDrawer>
     </div>
   );
 }
 
-function SortHeader({
+function DetailMetric({
+  icon,
   label,
-  href,
-  direction,
-  align = "left",
+  value,
 }: {
+  icon: ReactNode;
   label: string;
-  href: string;
-  direction: "asc" | "desc" | null;
-  align?: "left" | "right";
+  value: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => updateTransactionsUrl(href, "push")}
-      className={cn(
-        "inline-flex items-center gap-2 transition-colors hover:text-foreground",
-        align === "right" && "justify-end text-right"
-      )}
-    >
-      <span>{label}</span>
-      {direction === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : null}
-      {direction === "desc" ? <ArrowDown className="h-3.5 w-3.5" /> : null}
-      {direction === null ? (
-        <ArrowUpDown className="h-3.5 w-3.5 text-secondary-foreground/55" />
-      ) : null}
-    </button>
-  );
-}
-
-function Pagination({ data }: { data: RecipientsPageData }) {
-  const items = buildPaginationItems(data.pagination.page, data.pagination.totalPages);
-
-  return (
-    <nav className="flex items-center gap-2 self-end" aria-label="Pagination">
-      <PageControl
-        href={buildPageHref(data.filters, Math.max(1, data.pagination.page - 1))}
-        disabled={!data.pagination.hasPrev}
-        ariaLabel="Previous page"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </PageControl>
-
-      {items.map((item, index) =>
-        item === "ellipsis" ? (
-          <span
-            key={`ellipsis-${index}`}
-            className="inline-flex min-h-9 min-w-9 items-center justify-center text-sm text-secondary-foreground"
-          >
-            ...
-          </span>
-        ) : (
-          <button
-            key={item}
-            type="button"
-            onClick={() => updateTransactionsUrl(buildPageHref(data.filters, item), "push")}
-            aria-current={item === data.pagination.page ? "page" : undefined}
-            className={cn(
-              "inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border px-3 text-sm font-medium transition-colors",
-              item === data.pagination.page
-                ? "border-primary/35 bg-primary/14 text-primary"
-                : "border-border/45 bg-background/10 text-foreground hover:border-border/70 hover:bg-background/16"
-            )}
-          >
-            {item}
-          </button>
-        )
-      )}
-
-      <PageControl
-        href={buildPageHref(
-          data.filters,
-          Math.min(data.pagination.totalPages, data.pagination.page + 1)
-        )}
-        disabled={!data.pagination.hasNext}
-        ariaLabel="Next page"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </PageControl>
-    </nav>
-  );
-}
-
-function PageControl({
-  href,
-  disabled,
-  ariaLabel,
-  children,
-}: {
-  href: string;
-  disabled: boolean;
-  ariaLabel: string;
-  children: ReactNode;
-}) {
-  if (disabled) {
-    return (
-      <span
-        aria-disabled="true"
-        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/30 bg-background/8 text-secondary-foreground/45"
-      >
-        {children}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => updateTransactionsUrl(href, "push")}
-      aria-label={ariaLabel}
-      className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-foreground transition-colors hover:border-border/70 hover:bg-background/16"
-    >
-      {children}
-    </button>
-  );
-}
-
-function EmptyState({ emptyState }: { emptyState: RecipientsPageData["emptyState"] }) {
-  if (emptyState === "empty") {
-    return (
-      <div className="flex min-h-[220px] flex-col items-center justify-center px-5 py-8 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border/45 bg-background/12 text-secondary-foreground">
-          <Users className="h-5 w-5" />
-        </div>
-        <p className="mt-4 text-sm font-medium text-foreground">No recipients found yet.</p>
-        <p className="mt-2 max-w-md text-sm text-secondary-foreground">
-          Recipients are created when transactions are added or imported.
-        </p>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-secondary-foreground">
+        <span className="text-primary">{icon}</span>
+        <span className="text-sm">{label}</span>
       </div>
-    );
-  }
-
-  return (
-    <div className="px-5 py-8 text-sm text-secondary-foreground">
-      No recipients matched the current filters.
+      <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
+}
+
+function isInteractiveTarget(target: HTMLElement) {
+  return Boolean(target.closest("a, button, input, select, textarea"));
 }

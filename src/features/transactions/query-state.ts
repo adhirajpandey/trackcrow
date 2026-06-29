@@ -69,6 +69,15 @@ function parsePage(value: string | undefined) {
   return Math.floor(parsed);
 }
 
+function parsePageSize(value: string | undefined) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return transactionsPageSize;
+  }
+
+  return Math.min(100, Math.floor(parsed));
+}
+
 function parseSortBy(value: string | undefined): TransactionSortBy {
   return sortByOptions.has(value as TransactionSortBy)
     ? (value as TransactionSortBy)
@@ -166,7 +175,7 @@ export function getTransactionsPageState(
       endDate,
       categories: normalizeCategories(normalizedCategories),
       page,
-      pageSize: transactionsPageSize,
+      pageSize: parsePageSize(firstParam(searchParams.size)),
       sortBy,
       sortOrder,
     },

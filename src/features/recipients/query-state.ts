@@ -15,7 +15,11 @@ export type RecipientsPageState = {
 
 export const recipientsPageSize = 10;
 
-const sortByOptions = new Set<RecipientSortBy>(["displayName", "transactionCount"]);
+const sortByOptions = new Set<RecipientSortBy>([
+  "displayName",
+  "transactionCount",
+  "totalAmount",
+]);
 const sortOrderOptions = new Set<RecipientSortOrder>(["asc", "desc"]);
 
 function firstParam(value: string | string[] | undefined) {
@@ -29,6 +33,15 @@ function parsePage(value: string | undefined) {
   }
 
   return Math.floor(parsed);
+}
+
+function parsePageSize(value: string | undefined) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return recipientsPageSize;
+  }
+
+  return Math.min(100, Math.floor(parsed));
 }
 
 function parseSortBy(value: string | undefined): RecipientSortBy {
@@ -50,7 +63,7 @@ export function getRecipientsPageState(
     query: {
       q: firstParam(searchParams.q)?.trim() ?? "",
       page: parsePage(firstParam(searchParams.page)),
-      pageSize: recipientsPageSize,
+      pageSize: parsePageSize(firstParam(searchParams.size)),
       sortBy: parseSortBy(firstParam(searchParams.sortBy)),
       sortOrder: parseSortOrder(firstParam(searchParams.sortOrder)),
     },

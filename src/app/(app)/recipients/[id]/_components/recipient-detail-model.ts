@@ -9,17 +9,13 @@ function formatIdentifierKind(kind: string) {
     case "UPI_ID":
       return "UPI";
     case "CARD_MERCHANT":
-      return "Card";
+      return "CARD";
     case "BANK_ACCOUNT":
-      return "Bank";
+      return "BANK";
     case "PHONE":
-      return "Phone";
+      return "PHONE";
     default:
-      return kind
-        .toLowerCase()
-        .split("_")
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
+      return kind.replace(/_/g, " ").toUpperCase();
   }
 }
 

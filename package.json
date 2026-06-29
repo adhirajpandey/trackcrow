@@ -16,8 +16,10 @@
     "@prisma/client": "^6.19.2",
     "@prisma/extension-accelerate": "^3.0.1",
     "@radix-ui/react-alert-dialog": "^1.1.17",
+    "@radix-ui/react-dialog": "^1.1.17",
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
@@ -31,6 +33,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
+    "vaul": "^1.1.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -33,13 +33,14 @@ function normalizeIdentifierKind(kind: string) {
     case "CARD_MERCHANT":
       return "CARD";
     default:
-      return kind.replace(/_/g, " ");
+      return kind.replace(/_/g, " ").toUpperCase();
   }
 }
 
 export function buildPageHref(filters: RecipientsControlState, page: number) {
   const params = getBaseParams(filters);
   params.set("page", String(page));
+  params.set("size", String(filters.pageSize));
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
@@ -51,12 +52,16 @@ export function buildSortHref(
 ) {
   const params = getBaseParams(filters);
   params.set("page", "1");
+  params.set("size", String(filters.pageSize));
   if (filters.sortBy === sortBy) {
     params.set("sortBy", sortBy);
     params.set("sortOrder", filters.sortOrder === "asc" ? "desc" : "asc");
   } else {
     params.set("sortBy", sortBy);
-    params.set("sortOrder", sortBy === "transactionCount" ? "desc" : "asc");
+    params.set(
+      "sortOrder",
+      sortBy === "displayName" ? "asc" : "desc"
+    );
   }
 
   return toHref(params);
@@ -67,6 +72,7 @@ export function buildSearchHref(filters: RecipientsControlState, q: string) {
     q: q.trim() || undefined,
   });
   params.set("page", "1");
+  params.set("size", String(filters.pageSize));
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
@@ -74,6 +80,7 @@ export function buildSearchHref(filters: RecipientsControlState, q: string) {
 
 export function buildResetHref() {
   const params = new URLSearchParams();
+  params.set("size", "10");
   params.set("sortBy", "displayName");
   params.set("sortOrder", "asc");
   return toHref(params);
@@ -142,9 +149,8 @@ export function buildRecipientsPageData(input: {
         id: recipient.id,
         uuid: recipient.uuid,
         displayName: recipient.displayName,
-        normalizedName: recipient.normalizedName,
         transactionCount: recipient.transactionCount,
-        status: recipient.transactionCount > 0 ? "active" : "empty",
+        totalAmount: recipient.totalAmount,
         secondaryLabel:
           recipient.identifiers.length === 1
             ? "1 identifier"
