@@ -69,6 +69,7 @@ export function RecipientsPageView({
     : undefined;
   const recipientsQuery = useRecipientsQuery({
     query: state.query,
+    initialQuery: initialRecipientsQuery,
     initialData: initialData ?? initialRecipientsData,
   });
   const result = recipientsQuery.data ?? initialData ?? initialRecipientsData;

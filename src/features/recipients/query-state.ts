@@ -1,5 +1,7 @@
 import type {
+  RecipientListResponse,
   RecipientsApiQuery,
+  RecipientsPagination,
   RecipientsQueryResult,
   RecipientSortBy,
   RecipientSortOrder,
@@ -65,10 +67,58 @@ export function isSameRecipientsQuery(left: RecipientsApiQuery, right: Recipient
   );
 }
 
-export function buildRecipientsErrorQueryResult(message: string): RecipientsQueryResult {
+export function buildRecipientsApiSearchParams(query: RecipientsApiQuery) {
+  const params = new URLSearchParams();
+
+  if (query.q) {
+    params.set("q", query.q);
+  }
+
+  params.set("page", String(query.page));
+  params.set("size", String(query.pageSize));
+  params.set("sortBy", query.sortBy);
+  params.set("sortOrder", query.sortOrder);
+
+  return params;
+}
+
+function toRecipientsPagination(response: RecipientListResponse): RecipientsPagination {
+  return {
+    page: response.page,
+    pageSize: response.pageSize,
+    total: response.total,
+    totalPages: response.totalPages,
+    hasNext: response.hasNext,
+    hasPrev: response.hasPrev,
+  };
+}
+
+export function buildRecipientsQueryResult(input: {
+  recipients: RecipientListResponse;
+}): RecipientsQueryResult {
+  return {
+    status: "ready",
+    message: null,
+    recipients: input.recipients.recipients,
+    pagination: toRecipientsPagination(input.recipients),
+  };
+}
+
+export function buildRecipientsErrorQueryResult(
+  query: RecipientsApiQuery,
+  message: string
+): RecipientsQueryResult {
   return {
     status: "error",
     message,
     recipients: [],
+    pagination: {
+      page: 1,
+      pageSize: query.pageSize,
+      total: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false,
+    },
   };
 }

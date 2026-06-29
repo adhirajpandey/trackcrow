@@ -37,58 +37,6 @@ function normalizeIdentifierKind(kind: string) {
   }
 }
 
-function matchesRecipientSearch(
-  recipient: RecipientsQueryResult["recipients"][number],
-  search: string
-) {
-  const normalizedSearch = search.trim().toLowerCase();
-  if (!normalizedSearch) {
-    return true;
-  }
-
-  if (
-    recipient.displayName.toLowerCase().includes(normalizedSearch) ||
-    recipient.normalizedName.toLowerCase().includes(normalizedSearch)
-  ) {
-    return true;
-  }
-
-  return recipient.identifiers.some((identifier) => {
-    return (
-      identifier.value.toLowerCase().includes(normalizedSearch) ||
-      identifier.normalizedValue.toLowerCase().includes(normalizedSearch) ||
-      normalizeIdentifierKind(identifier.kind).toLowerCase().includes(normalizedSearch)
-    );
-  });
-}
-
-function compareRecipients(
-  left: RecipientsQueryResult["recipients"][number],
-  right: RecipientsQueryResult["recipients"][number],
-  filters: RecipientsControlState
-) {
-  if (filters.sortBy === "transactionCount") {
-    const countDelta = left.transactionCount - right.transactionCount;
-    if (countDelta !== 0) {
-      return filters.sortOrder === "asc" ? countDelta : -countDelta;
-    }
-  }
-
-  const nameDelta = left.displayName.localeCompare(right.displayName, undefined, {
-    sensitivity: "base",
-  });
-  if (nameDelta !== 0) {
-    if (filters.sortBy === "displayName") {
-      return filters.sortOrder === "asc" ? nameDelta : -nameDelta;
-    }
-
-    return nameDelta;
-  }
-
-  const secondaryCountDelta = left.transactionCount - right.transactionCount;
-  return filters.sortOrder === "asc" ? secondaryCountDelta : -secondaryCountDelta;
-}
-
 export function buildPageHref(filters: RecipientsControlState, page: number) {
   const params = getBaseParams(filters);
   params.set("page", String(page));
@@ -160,8 +108,8 @@ export function buildPaginationItems(currentPage: number, totalPages: number) {
 }
 
 export function buildFooterSummary(pagination: RecipientsPageData["pagination"]) {
-  if (pagination.total === 0) {
-    return "Showing 0 to 0 of 0 recipients";
+  if (pagination.total === 0 || pagination.page > pagination.totalPages) {
+    return `Showing 0 to 0 of ${pagination.total} recipients`;
   }
 
   const start = (pagination.page - 1) * pagination.pageSize + 1;
@@ -180,22 +128,10 @@ export function buildRecipientsPageData(input: {
   filters: RecipientsControlState;
   result: RecipientsQueryResult;
 }): RecipientsPageData {
-  const filteredRecipients = input.result.recipients
-    .filter((recipient) => matchesRecipientSearch(recipient, input.filters.q))
-    .sort((left, right) => compareRecipients(left, right, input.filters));
-  const total = filteredRecipients.length;
-  const totalPages = total === 0 ? 0 : Math.ceil(total / input.filters.pageSize);
-  const currentPage = totalPages === 0 ? 1 : Math.min(input.filters.page, totalPages);
-  const startIndex = (currentPage - 1) * input.filters.pageSize;
-  const visibleRecipients = filteredRecipients.slice(
-    startIndex,
-    startIndex + input.filters.pageSize
-  );
-
   return {
     status: input.result.status,
     message: input.result.message,
-    rows: visibleRecipients.map((recipient) => {
+    rows: input.result.recipients.map((recipient) => {
       const identifierChips = recipient.identifiers.slice(0, 2).map((identifier) => ({
         id: identifier.uuid,
         label: normalizeIdentifierKind(identifier.kind),
@@ -217,25 +153,15 @@ export function buildRecipientsPageData(input: {
         overflowIdentifierCount: Math.max(0, recipient.identifiers.length - identifierChips.length),
       };
     }),
-    filters: {
-      ...input.filters,
-      page: currentPage,
-    },
-    pagination: {
-      page: currentPage,
-      pageSize: input.filters.pageSize,
-      total,
-      totalPages,
-      hasNext: totalPages > 0 && currentPage < totalPages,
-      hasPrev: totalPages > 0 && currentPage > 1,
-    },
+    filters: input.filters,
+    pagination: input.result.pagination,
     emptyState:
       input.result.status === "error"
         ? "none"
-        : input.result.recipients.length === 0
-          ? "empty"
-          : filteredRecipients.length === 0
+        : input.result.pagination.total === 0
+          ? input.filters.q
             ? "filtered"
-            : "none",
+            : "empty"
+          : "none",
   };
 }

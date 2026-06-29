@@ -1,4 +1,7 @@
 import {
+  buildRecipientsApiSearchParams,
+  buildRecipientsErrorQueryResult,
+  buildRecipientsQueryResult,
   getRecipientsPageState,
   isSameRecipientsQuery,
   recipientsPageSize,
@@ -59,5 +62,66 @@ describe("recipients query state", () => {
 
     expect(isSameRecipientsQuery(base, same)).toBe(true);
     expect(isSameRecipientsQuery(base, different)).toBe(false);
+  });
+
+  it("builds recipient API params from the normalized query", () => {
+    const query = getRecipientsPageState({
+      q: "merchant",
+      page: "2",
+      sortBy: "transactionCount",
+      sortOrder: "desc",
+    }).query;
+
+    expect(buildRecipientsApiSearchParams(query).toString()).toBe(
+      "q=merchant&page=2&size=10&sortBy=transactionCount&sortOrder=desc"
+    );
+  });
+
+  it("maps paginated API data into the recipients query result", () => {
+    expect(
+      buildRecipientsQueryResult({
+        recipients: {
+          recipients: [],
+          page: 3,
+          pageSize: 10,
+          total: 41,
+          totalPages: 5,
+          hasNext: true,
+          hasPrev: true,
+        },
+      })
+    ).toEqual({
+      status: "ready",
+      message: null,
+      recipients: [],
+      pagination: {
+        page: 3,
+        pageSize: 10,
+        total: 41,
+        totalPages: 5,
+        hasNext: true,
+        hasPrev: true,
+      },
+    });
+  });
+
+  it("builds an error result with pagination defaults", () => {
+    const query = getRecipientsPageState({
+      page: "4",
+    }).query;
+
+    expect(buildRecipientsErrorQueryResult(query, "Nope")).toEqual({
+      status: "error",
+      message: "Nope",
+      recipients: [],
+      pagination: {
+        page: 1,
+        pageSize: recipientsPageSize,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
   });
 });

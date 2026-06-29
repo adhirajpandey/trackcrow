@@ -68,6 +68,14 @@ const baseResult: RecipientsQueryResult = {
       ],
     },
   ],
+  pagination: {
+    page: 2,
+    pageSize: 10,
+    total: 11,
+    totalPages: 2,
+    hasNext: false,
+    hasPrev: true,
+  },
 };
 
 describe("recipients view model", () => {
@@ -84,64 +92,67 @@ describe("recipients view model", () => {
     expect(buildResetHref()).toBe("/recipients?sortBy=displayName&sortOrder=asc");
   });
 
-  it("matches search against names and identifiers", () => {
-    expect(
-      buildRecipientsPageData({
-        filters: { ...baseFilters, q: "oksbi", page: 1 },
-        result: baseResult,
-      }).rows
-    ).toHaveLength(1);
-    expect(
-      buildRecipientsPageData({
-        filters: { ...baseFilters, q: "card", page: 1 },
-        result: baseResult,
-      }).rows[0]?.displayName
-    ).toBe("Luxmi Enterprises");
-  });
-
-  it("sorts by linked transaction count", () => {
-    const rows = buildRecipientsPageData({
-      filters: {
-        ...baseFilters,
-        q: "",
-        page: 1,
-        sortBy: "transactionCount",
-        sortOrder: "desc",
-      },
-      result: baseResult,
-    }).rows;
-
-    expect(rows.map((row) => row.displayName)).toEqual([
-      "Biraj Borah",
-      "Luxmi Enterprises",
-    ]);
-  });
-
-  it("builds pagination summary and collapses identifier overflow", () => {
+  it("maps paged rows and collapses identifier overflow", () => {
     const pageData = buildRecipientsPageData({
-      filters: { ...baseFilters, q: "", page: 1 },
-      result: {
-        ...baseResult,
-        recipients: Array.from({ length: 11 }, (_, index) => ({
-          ...baseResult.recipients[index === 0 ? 0 : 1],
-          id: index + 1,
-          uuid: `rcp-${index + 1}`,
-          displayName: index === 0 ? "Biraj Borah" : `Recipient ${index}`,
-          normalizedName: index === 0 ? "biraj borah" : `recipient ${index}`,
-        })),
-      },
+      filters: { ...baseFilters, q: "", page: 2 },
+      result: baseResult,
     });
 
     expect(pageData.rows[0]?.overflowIdentifierCount).toBe(1);
-    expect(buildFooterSummary(pageData.pagination)).toBe("Showing 1 to 10 of 11 recipients");
+    expect(pageData.pagination).toEqual(baseResult.pagination);
+    expect(buildFooterSummary(pageData.pagination)).toBe("Showing 11 to 11 of 11 recipients");
   });
 
-  it("returns the filtered empty state when search has no matches", () => {
+  it("returns the filtered empty state from API totals", () => {
     expect(
       buildRecipientsPageData({
         filters: { ...baseFilters, q: "missing", page: 1 },
-        result: baseResult,
+        result: {
+          ...baseResult,
+          recipients: [],
+          pagination: {
+            page: 1,
+            pageSize: 10,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        },
       }).emptyState
     ).toBe("filtered");
+  });
+
+  it("returns the empty state when there are no recipients at all", () => {
+    expect(
+      buildRecipientsPageData({
+        filters: { ...baseFilters, q: "", page: 1 },
+        result: {
+          ...baseResult,
+          recipients: [],
+          pagination: {
+            page: 1,
+            pageSize: 10,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        },
+      }).emptyState
+    ).toBe("empty");
+  });
+
+  it("shows zero-to-zero summary for out-of-range pages with no rows", () => {
+    expect(
+      buildFooterSummary({
+        page: 4,
+        pageSize: 10,
+        total: 11,
+        totalPages: 2,
+        hasNext: false,
+        hasPrev: true,
+      })
+    ).toBe("Showing 0 to 0 of 11 recipients");
   });
 });

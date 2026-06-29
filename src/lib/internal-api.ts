@@ -10,6 +10,7 @@ import type {
   TransactionSource,
   TransactionType,
 } from "@/common/types";
+import type { RecipientListResponse } from "@/features/recipients/types";
 
 type JsonBody = Record<string, unknown> | Array<unknown> | null;
 
@@ -113,6 +114,10 @@ export async function getCategories() {
 
 export async function getTransactions(pathnameQuery: string) {
   return internalApiRequest<TransactionListResponse>(`/api/transactions${pathnameQuery}`);
+}
+
+export async function getRecipients(pathnameQuery: string) {
+  return internalApiRequest<RecipientListResponse>(`/api/recipients${pathnameQuery}`);
 }
 
 export async function getTransaction(transactionId: number) {

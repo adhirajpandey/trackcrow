@@ -1,3 +1,5 @@
+import type { ServiceResult } from "@/server/shared/result";
+
 export type RecipientDto = {
   id: number;
   uuid: string;
@@ -11,6 +13,16 @@ export type RecipientDto = {
     value: string;
     normalizedValue: string;
   }>;
+};
+
+export type RecipientListDto = {
+  recipients: RecipientDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 };
 
 export type RecipientDetailTransactionDto = {
@@ -55,3 +67,14 @@ export type RecipientLookupInput = {
   userUuid: string;
   recipientId: number;
 };
+
+export type RecipientListInput = {
+  userUuid: string;
+  page?: number;
+  size?: number;
+  q?: string;
+  sortBy?: "displayName" | "transactionCount";
+  sortOrder?: "asc" | "desc";
+};
+
+export type RecipientListResult = ServiceResult<RecipientListDto, "INTERNAL_ERROR">;

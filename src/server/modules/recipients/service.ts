@@ -7,6 +7,8 @@ import type {
   RecipientDetailDto,
   RecipientDetailTransactionDto,
   RecipientDto,
+  RecipientListInput,
+  RecipientListResult,
   RecipientLookupInput,
   ResolveRecipientInput,
 } from "./types";
@@ -126,30 +128,99 @@ function detectIdentifierKind(value: string): RecipientIdentifierKind {
 }
 
 export async function listRecipients(
-  input: { userUuid: string }
-): Promise<ServiceResult<RecipientDto[], "INTERNAL_ERROR">> {
-  try {
-    const recipients = await prisma.recipient.findMany({
-      where: { userUuid: input.userUuid },
-      include: {
+  input: RecipientListInput
+): Promise<RecipientListResult> {
+  const page = input.page ? Math.max(1, Math.floor(input.page)) : 1;
+  const pageSize = input.size ? Math.max(1, Math.min(100, Math.floor(input.size))) : 20;
+  const skip = (page - 1) * pageSize;
+  const q = input.q?.trim() ?? "";
+  const sortBy = input.sortBy ?? "displayName";
+  const sortOrder = input.sortOrder === "desc" ? "desc" : "asc";
+
+  const normalizedSearch = normalizeValue(q);
+  const kindMatches = new Set<RecipientIdentifierKind>();
+  if (normalizedSearch.includes("upi")) {
+    kindMatches.add(RecipientIdentifierKind.UPI_ID);
+  }
+  if (normalizedSearch.includes("card")) {
+    kindMatches.add(RecipientIdentifierKind.CARD_MERCHANT);
+  }
+  if (normalizedSearch.includes("phone")) {
+    kindMatches.add(RecipientIdentifierKind.PHONE);
+  }
+  if (normalizedSearch.includes("text")) {
+    kindMatches.add(RecipientIdentifierKind.TEXT);
+  }
+
+  const where: Record<string, unknown> = { userUuid: input.userUuid };
+
+  if (q) {
+    const identifierOrFilters: Array<Record<string, unknown>> = [
+      { value: { contains: q, mode: "insensitive" } },
+      { normalizedValue: { contains: normalizedSearch, mode: "insensitive" } },
+    ];
+
+    if (kindMatches.size > 0) {
+      identifierOrFilters.push({ kind: { in: [...kindMatches] } });
+    }
+
+    where.OR = [
+      { displayName: { contains: q, mode: "insensitive" } },
+      { normalizedName: { contains: normalizedSearch, mode: "insensitive" } },
+      {
         identifiers: {
-          orderBy: { createdAt: "asc" },
-          select: {
-            id: true,
-            uuid: true,
-            kind: true,
-            value: true,
-            normalizedValue: true,
+          some: {
+            OR: identifierOrFilters,
           },
         },
-        _count: {
-          select: { transactions: true },
-        },
       },
-      orderBy: [{ displayName: "asc" }],
-    });
+    ];
+  }
 
-    return ok(recipients.map(toRecipientDto));
+  try {
+    const total = await prisma.recipient.count({ where });
+    const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+    const recipients =
+      total > 0 && page <= totalPages
+        ? await prisma.recipient.findMany({
+            where,
+            include: {
+              identifiers: {
+                orderBy: { createdAt: "asc" },
+                select: {
+                  id: true,
+                  uuid: true,
+                  kind: true,
+                  value: true,
+                  normalizedValue: true,
+                },
+              },
+              _count: {
+                select: { transactions: true },
+              },
+            },
+            orderBy:
+              sortBy === "transactionCount"
+                ? [
+                    { transactions: { _count: sortOrder } },
+                    { displayName: "asc" },
+                    { id: "asc" },
+                  ]
+                : [{ displayName: sortOrder }, { id: "asc" }],
+            skip,
+            take: pageSize,
+          })
+        : [];
+
+    return ok({
+      recipients: recipients.map(toRecipientDto),
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1 && totalPages > 0,
+    });
   } catch (error) {
     logger.error("listRecipients - Failed to list recipients", error as Error, {
       userUuid: input.userUuid,

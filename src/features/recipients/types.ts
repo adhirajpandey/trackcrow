@@ -55,10 +55,21 @@ export type RecipientsPagination = {
   hasPrev: boolean;
 };
 
+export type RecipientListResponse = {
+  recipients: RecipientListItemDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
 export type RecipientsQueryResult = {
   status: "ready" | "error";
   message: string | null;
   recipients: RecipientListItemDto[];
+  pagination: RecipientsPagination;
 };
 
 export type RecipientsPageData = {
