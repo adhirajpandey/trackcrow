@@ -41,6 +41,7 @@ __pycache__/
 !/docs/assets/**
 
 /scripts/outputs/
+/scripts/inputs/*.csv
 
 # browser verification artifacts
 .playwright-mcp/
