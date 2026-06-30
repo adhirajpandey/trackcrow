@@ -16,10 +16,19 @@ import type {
 type TransactionCreateResponse = { id: number; uuid: string };
 type TransactionUpdateResponse = { id: number };
 
-async function invalidateTransactionData(queryClient: QueryClient) {
+async function invalidateTransactionData(
+  queryClient: QueryClient,
+  options?: { refetchType?: "active" | "inactive" | "all" | "none" }
+) {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+    queryClient.invalidateQueries({
+      queryKey: transactionsQueryKeys.all,
+      refetchType: options?.refetchType,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: dashboardQueryKeys.all,
+      refetchType: options?.refetchType,
+    }),
   ]);
 }
 
@@ -58,13 +67,11 @@ export function useDeleteTransactionMutation() {
   return useMutation({
     mutationFn: ({ transactionId }: { transactionId: number }) =>
       apiDelete<TransactionUpdateResponse>(`/api/transactions/${transactionId}`),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        invalidateTransactionData(queryClient),
-        queryClient.invalidateQueries({
-          queryKey: transactionsQueryKeys.detail(variables.transactionId),
-        }),
-      ]);
+    onSuccess: (_data, variables) => {
+      queryClient.removeQueries({
+        queryKey: transactionsQueryKeys.detail(variables.transactionId),
+      });
+      void invalidateTransactionData(queryClient, { refetchType: "none" });
     },
   });
 }
