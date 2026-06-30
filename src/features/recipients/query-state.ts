@@ -47,13 +47,13 @@ function parsePageSize(value: string | undefined) {
 function parseSortBy(value: string | undefined): RecipientSortBy {
   return sortByOptions.has(value as RecipientSortBy)
     ? (value as RecipientSortBy)
-    : "displayName";
+    : "transactionCount";
 }
 
 function parseSortOrder(value: string | undefined): RecipientSortOrder {
   return sortOrderOptions.has(value as RecipientSortOrder)
     ? (value as RecipientSortOrder)
-    : "asc";
+    : "desc";
 }
 
 export function getRecipientsPageState(

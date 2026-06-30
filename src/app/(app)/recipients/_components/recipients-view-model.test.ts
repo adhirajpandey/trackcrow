@@ -4,7 +4,6 @@ import {
   buildFooterSummary,
   buildPageHref,
   buildRecipientsPageData,
-  buildResetHref,
   buildSearchHref,
   buildSortHref,
 } from "./recipients-view-model";
@@ -79,17 +78,16 @@ const baseResult: RecipientsQueryResult = {
 };
 
 describe("recipients view model", () => {
-  it("builds search, sort, page, and reset hrefs", () => {
+  it("builds search, sort, and page hrefs", () => {
     expect(buildSearchHref(baseFilters, "  merchant ")).toBe(
-      "/recipients?q=merchant&page=1&sortBy=displayName&sortOrder=asc"
+      "/recipients?q=merchant&page=1&size=10&sortBy=displayName&sortOrder=asc"
     );
     expect(buildSortHref(baseFilters, "transactionCount")).toBe(
-      "/recipients?q=biraj&page=1&sortBy=transactionCount&sortOrder=desc"
+      "/recipients?q=biraj&page=1&size=10&sortBy=transactionCount&sortOrder=desc"
     );
     expect(buildPageHref(baseFilters, 3)).toBe(
-      "/recipients?q=biraj&page=3&sortBy=displayName&sortOrder=asc"
+      "/recipients?q=biraj&page=3&size=10&sortBy=displayName&sortOrder=asc"
     );
-    expect(buildResetHref()).toBe("/recipients?sortBy=displayName&sortOrder=asc");
   });
 
   it("maps paged rows and collapses identifier overflow", () => {

@@ -78,14 +78,6 @@ export function buildSearchHref(filters: RecipientsControlState, q: string) {
   return toHref(params);
 }
 
-export function buildResetHref() {
-  const params = new URLSearchParams();
-  params.set("size", "10");
-  params.set("sortBy", "displayName");
-  params.set("sortOrder", "asc");
-  return toHref(params);
-}
-
 export function buildPaginationItems(currentPage: number, totalPages: number) {
   if (totalPages <= 1) {
     return [1];

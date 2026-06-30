@@ -13,8 +13,8 @@ describe("recipients query state", () => {
       q: "",
       page: 1,
       pageSize: recipientsPageSize,
-      sortBy: "displayName",
-      sortOrder: "asc",
+      sortBy: "transactionCount",
+      sortOrder: "desc",
     });
   });
 
@@ -35,8 +35,8 @@ describe("recipients query state", () => {
       }).query
     ).toMatchObject({
       page: 1,
-      sortBy: "displayName",
-      sortOrder: "asc",
+      sortBy: "transactionCount",
+      sortOrder: "desc",
     });
   });
 
