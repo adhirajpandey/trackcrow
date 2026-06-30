@@ -54,7 +54,7 @@ export type RecipientsControlState = RecipientsApiQuery;
 
 export type RecipientIdentifierChip = {
   id: string;
-  label: string;
+  tone: "upi" | "text" | "card" | "default";
   value: string;
 };
 

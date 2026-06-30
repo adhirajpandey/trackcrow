@@ -1,4 +1,5 @@
 import type {
+  RecipientIdentifierChip,
   RecipientsControlState,
   RecipientsPageData,
   RecipientsQueryResult,
@@ -26,14 +27,16 @@ function toHref(params: URLSearchParams) {
   return query ? `/recipients?${query}` : "/recipients";
 }
 
-function normalizeIdentifierKind(kind: string) {
+function getIdentifierTone(kind: string): RecipientIdentifierChip["tone"] {
   switch (kind) {
     case "UPI_ID":
-      return "UPI";
+      return "upi";
+    case "TEXT":
+      return "text";
     case "CARD_MERCHANT":
-      return "CARD";
+      return "card";
     default:
-      return kind.replace(/_/g, " ").toUpperCase();
+      return "default";
   }
 }
 
@@ -133,7 +136,7 @@ export function buildRecipientsPageData(input: {
     rows: input.result.recipients.map((recipient) => {
       const identifierChips = recipient.identifiers.slice(0, 2).map((identifier) => ({
         id: identifier.uuid,
-        label: normalizeIdentifierKind(identifier.kind),
+        tone: getIdentifierTone(identifier.kind),
         value: identifier.value,
       }));
 

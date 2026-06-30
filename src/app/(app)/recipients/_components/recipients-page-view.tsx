@@ -33,6 +33,7 @@ import {
 } from "@/features/recipients/query-state";
 import { useRecipientsQuery } from "@/features/recipients/queries";
 import type {
+  RecipientIdentifierChip,
   RecipientsPageInitialData,
   RecipientsPageRow,
 } from "@/features/recipients/types";
@@ -60,6 +61,19 @@ type ColumnMeta = {
   sortable?: "displayName" | "transactionCount" | "totalAmount";
   widthClassName?: string;
 };
+
+function getIdentifierChipClassName(tone: RecipientIdentifierChip["tone"]) {
+  switch (tone) {
+    case "upi":
+      return "border-emerald-500/25 bg-emerald-500/12 text-emerald-300";
+    case "card":
+      return "border-sky-500/25 bg-sky-500/12 text-sky-300";
+    case "text":
+      return "border-slate-400/20 bg-slate-400/10 text-slate-300";
+    default:
+      return "border-border/45 bg-background/12 text-secondary-foreground";
+  }
+}
 
 const columns: ColumnDef<RecipientsPageRow>[] = [
   {
@@ -89,11 +103,13 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
         {row.original.identifierChips.map((identifier) => (
           <span
             key={identifier.id}
-            className="inline-flex max-w-full items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+            className={cn(
+              "inline-flex max-w-full items-center rounded-[999px] border px-3 py-1 text-xs font-medium",
+              getIdentifierChipClassName(identifier.tone)
+            )}
             title={identifier.value}
           >
-            <span className="shrink-0">{identifier.label}</span>
-            <span className="truncate text-primary/90">{identifier.value}</span>
+            <span className="truncate">{identifier.value}</span>
           </span>
         ))}
         {row.original.overflowIdentifierCount > 0 ? (
@@ -443,10 +459,13 @@ export function RecipientsPageView({
               {drawerRow.identifierChips.map((identifier) => (
                 <span
                   key={identifier.id}
-                  className="inline-flex max-w-full items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                  className={cn(
+                    "inline-flex max-w-full items-center rounded-[999px] border px-3 py-1 text-xs font-medium",
+                    getIdentifierChipClassName(identifier.tone)
+                  )}
+                  title={identifier.value}
                 >
-                  <span className="shrink-0">{identifier.label}</span>
-                  <span className="truncate text-primary/90">{identifier.value}</span>
+                  <span className="truncate">{identifier.value}</span>
                 </span>
               ))}
               {drawerRow.overflowIdentifierCount > 0 ? (

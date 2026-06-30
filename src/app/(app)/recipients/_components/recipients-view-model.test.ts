@@ -96,6 +96,25 @@ describe("recipients view model", () => {
       result: baseResult,
     });
 
+    expect(pageData.rows[0]?.identifierChips).toEqual([
+      {
+        id: "rid-11",
+        tone: "upi",
+        value: "biraj@oksbi",
+      },
+      {
+        id: "rid-12",
+        tone: "text",
+        value: "biraj borah",
+      },
+    ]);
+    expect(pageData.rows[1]?.identifierChips).toEqual([
+      {
+        id: "rid-21",
+        tone: "card",
+        value: "LUXMI ENTERPRISES",
+      },
+    ]);
     expect(pageData.rows[0]?.overflowIdentifierCount).toBe(1);
     expect(pageData.pagination).toEqual(baseResult.pagination);
     expect(buildFooterSummary(pageData.pagination)).toBe("Showing 11 to 11 of 11 recipients");
