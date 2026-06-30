@@ -1,7 +1,6 @@
-import { AppShell } from "@/components/product/app-shell";
-import { Toaster } from "@/components/ui/sonner";
-import { QueryProvider } from "@/lib/query/query-client";
 import { requirePageSessionUser } from "@/server/auth/session";
+
+import { AppLayoutShell } from "./app-layout-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +11,5 @@ export default async function AppLayout({
 }>) {
   const user = await requirePageSessionUser();
 
-  return (
-    <QueryProvider>
-      <AppShell user={user}>{children}</AppShell>
-      <Toaster />
-    </QueryProvider>
-  );
+  return <AppLayoutShell user={user}>{children}</AppLayoutShell>;
 }

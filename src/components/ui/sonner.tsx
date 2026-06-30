@@ -17,7 +17,7 @@ type AppToastInput = {
 export function Toaster() {
   return (
     <Sonner
-      position="top-right"
+      position="bottom-right"
       richColors={false}
       closeButton
       expand={false}
