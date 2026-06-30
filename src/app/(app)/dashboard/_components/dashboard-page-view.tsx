@@ -77,6 +77,14 @@ function getChartTooltipAlignment(index: number, total: number) {
   return "center";
 }
 
+function getChartBarHeight(height: number) {
+  if (height <= 0) {
+    return "0";
+  }
+
+  return `max(1px, ${height}%)`;
+}
+
 export function DashboardPageView({ data }: { data: DashboardPageData }) {
   const hasTransactions = data.summary.transactionCount > 0;
   const knownSpendTotal = getKnownSpendTotal(data.spendingByCategory);
@@ -755,7 +763,7 @@ function SpendingTrendPanel({
                               bucket.isLatest && !bucket.isPeak && "bg-info",
                               !bucket.isPeak && !bucket.isLatest && "bg-primary/90"
                             )}
-                            style={{ height: `${bucket.height}%` }}
+                            style={{ height: getChartBarHeight(bucket.height) }}
                           />
                         </span>
                       </Link>

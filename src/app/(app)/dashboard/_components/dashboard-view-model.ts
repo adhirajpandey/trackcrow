@@ -334,9 +334,22 @@ export function buildChartTicks(maxValue: number) {
     return [];
   }
 
-  const step = getNiceStep(maxValue / 3);
-  const topValue = step * 3;
-  return [0, step, step * 2, topValue].map((value) => ({
+  const tickIntervals = [3, 4, 5];
+  const { step, intervalCount } = tickIntervals
+    .map((intervalCount) => {
+      const step = getNiceStep(maxValue / intervalCount);
+      return {
+        intervalCount,
+        step,
+        topValue: step * intervalCount,
+      };
+    })
+    .reduce((best, candidate) =>
+      candidate.topValue < best.topValue ? candidate : best
+    );
+  const topValue = step * intervalCount;
+
+  return Array.from({ length: intervalCount + 1 }, (_, index) => step * index).map((value) => ({
     ratio: topValue === 0 ? 0 : value / topValue,
     value,
   }));
@@ -833,8 +846,7 @@ export function buildChartBuckets(input: {
     return {
       period: item.period,
       href: buildPeriodTransactionsHref(item.period, input.granularity),
-      height:
-        input.chartMax > 0 ? Math.max(6, (item.totalSpend / input.chartMax) * 100) : 6,
+      height: input.chartMax > 0 ? (item.totalSpend / input.chartMax) * 100 : 0,
       isPeak,
       isLatest,
       label,

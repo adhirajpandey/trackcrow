@@ -62,6 +62,13 @@ describe("dashboard view model", () => {
   });
 
   it("builds rounded chart ticks from nice steps", () => {
+    expect(buildChartTicks(34000)).toEqual([
+      { ratio: 0, value: 0 },
+      { ratio: 1 / 4, value: 10000 },
+      { ratio: 1 / 2, value: 20000 },
+      { ratio: 3 / 4, value: 30000 },
+      { ratio: 1, value: 40000 },
+    ]);
     expect(buildChartTicks(58000)).toEqual([
       { ratio: 0, value: 0 },
       { ratio: 1 / 3, value: 20000 },
@@ -692,6 +699,26 @@ describe("dashboard view model", () => {
         transactionLabel: "1 transactions",
       },
     });
+  });
+
+  it("keeps chart bucket heights truly proportional for small values", () => {
+    const buckets = buildChartBuckets({
+      periods: [
+        { period: "2026-06-01", totalSpend: 0, transactionCount: 0 },
+        { period: "2026-06-02", totalSpend: 76, transactionCount: 1 },
+        { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
+      ],
+      peakPeriod: { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
+      latestPeriod: { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
+      averagePeriodSpend: 822.3333333333334,
+      chartMax: 40000,
+      periodLabelStep: 1,
+      granularity: "day",
+    });
+
+    expect(buckets[0]?.height).toBe(0);
+    expect(buckets[1]?.height).toBeCloseTo(0.19, 2);
+    expect(buckets[2]?.height).toBeCloseTo(5.98, 2);
   });
 
   it("builds top-card comparisons from previous-period data", () => {
