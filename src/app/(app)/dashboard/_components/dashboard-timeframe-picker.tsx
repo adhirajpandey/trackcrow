@@ -84,6 +84,7 @@ export function TimeframePicker({
   )
     ? selectedRange
     : "";
+  const secondaryRangeActive = showQuickRanges && secondaryRangeValue !== "";
 
   useEffect(() => {
     setSelectedRange(value);
@@ -273,9 +274,12 @@ export function TimeframePicker({
           type="button"
           aria-haspopup="menu"
           aria-expanded={isOpen}
+          aria-pressed={secondaryRangeActive}
           onClick={() => setIsOpen((current) => !current)}
           className={cn(
             "inline-flex min-h-9 items-center gap-2 rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            secondaryRangeActive &&
+              "border-primary/50 bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
             triggerClassName
           )}
         >
