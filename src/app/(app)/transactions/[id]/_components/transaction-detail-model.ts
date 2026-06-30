@@ -219,6 +219,31 @@ export function applyTransactionSuggestion(
   };
 }
 
+type TransactionDetailShortcutEventLike = {
+  defaultPrevented: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  target: EventTarget | null;
+};
+
+export function shouldIgnoreTransactionDetailShortcut(
+  event: TransactionDetailShortcutEventLike
+) {
+  if (
+    event.defaultPrevented ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    event.shiftKey
+  ) {
+    return true;
+  }
+
+  return isEditableShortcutTarget(event.target);
+}
+
 export function buildTransactionQuickChecks(transaction: TransactionRecord): TransactionQuickCheck[] {
   const recipientLabel = formatRecipientDisplayLabel({
     recipientName: transaction.recipientName,
@@ -284,6 +309,39 @@ function mapTransactionToMutationPayload(
 function toNullableTrimmedString(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+function isEditableShortcutTarget(target: EventTarget | null) {
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+
+  const candidate = target as {
+    closest?: (selector: string) => unknown;
+    tagName?: string;
+    isContentEditable?: boolean;
+    getAttribute?: (name: string) => string | null;
+  };
+
+  if (typeof candidate.closest === "function") {
+    return Boolean(
+      candidate.closest("input, textarea, select, button, [contenteditable], [role='textbox']")
+    );
+  }
+
+  const tagName = candidate.tagName?.toLowerCase();
+  if (tagName && ["input", "textarea", "select", "button"].includes(tagName)) {
+    return true;
+  }
+
+  if (candidate.isContentEditable) {
+    return true;
+  }
+
+  return (
+    candidate.getAttribute?.("role") === "textbox" ||
+    candidate.getAttribute?.("contenteditable") != null
+  );
 }
 
 function toNullableInteger(value: string) {

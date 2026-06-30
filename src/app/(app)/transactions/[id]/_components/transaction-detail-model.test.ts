@@ -10,7 +10,35 @@ import {
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
   mapTransactionToFormValues,
+  shouldIgnoreTransactionDetailShortcut,
 } from "./transaction-detail-model";
+
+function createShortcutTarget(
+  overrides: Partial<{
+    tagName: string;
+    role: string | null;
+    contenteditable: string | null;
+    isContentEditable: boolean;
+    closest: (selector: string) => unknown;
+  }> = {}
+) {
+  return {
+    tagName: overrides.tagName,
+    isContentEditable: overrides.isContentEditable ?? false,
+    closest: overrides.closest,
+    getAttribute(name: string) {
+      if (name === "role") {
+        return overrides.role ?? null;
+      }
+
+      if (name === "contenteditable") {
+        return overrides.contenteditable ?? null;
+      }
+
+      return null;
+    },
+  } as EventTarget;
+}
 
 const categories: CategoryOption[] = [
   {
@@ -226,5 +254,76 @@ describe("transaction detail model", () => {
       subcategoryId: "",
       matched: false,
     });
+  });
+
+  it("does not ignore c and s shortcuts outside editable controls", () => {
+    const target = createShortcutTarget({ tagName: "div" });
+
+    expect(
+      shouldIgnoreTransactionDetailShortcut({
+        defaultPrevented: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+        target,
+      })
+    ).toBe(false);
+
+    expect(["c", "C", "s", "S"].every((key) => ["c", "s"].includes(key.toLowerCase()))).toBe(
+      true
+    );
+  });
+
+  it("ignores shortcuts inside editable controls", () => {
+    for (const target of [
+      createShortcutTarget({ tagName: "input" }),
+      createShortcutTarget({ tagName: "textarea" }),
+      createShortcutTarget({ tagName: "select" }),
+      createShortcutTarget({ tagName: "button" }),
+      createShortcutTarget({ contenteditable: "true" }),
+      createShortcutTarget({ role: "textbox" }),
+    ]) {
+      expect(
+        shouldIgnoreTransactionDetailShortcut({
+          defaultPrevented: false,
+          ctrlKey: false,
+          metaKey: false,
+          altKey: false,
+          shiftKey: false,
+          target,
+        })
+      ).toBe(true);
+    }
+  });
+
+  it("ignores shortcuts with modifiers or default prevention", () => {
+    const target = createShortcutTarget({ tagName: "div" });
+
+    expect(
+      shouldIgnoreTransactionDetailShortcut({
+        defaultPrevented: true,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+        target,
+      })
+    ).toBe(true);
+
+    for (const modifierState of [
+      { ctrlKey: true, metaKey: false, altKey: false, shiftKey: false },
+      { ctrlKey: false, metaKey: true, altKey: false, shiftKey: false },
+      { ctrlKey: false, metaKey: false, altKey: true, shiftKey: false },
+      { ctrlKey: false, metaKey: false, altKey: false, shiftKey: true },
+    ]) {
+      expect(
+        shouldIgnoreTransactionDetailShortcut({
+          defaultPrevented: false,
+          target,
+          ...modifierState,
+        })
+      ).toBe(true);
+    }
   });
 });

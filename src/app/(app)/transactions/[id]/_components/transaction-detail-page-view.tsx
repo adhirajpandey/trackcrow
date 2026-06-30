@@ -68,6 +68,7 @@ import {
   mapFormValuesToTransactionPayload,
   mapTransactionToFormValues,
   parseDateTimeLocalAsIst,
+  shouldIgnoreTransactionDetailShortcut,
   transactionDetailFormSchema,
   type TransactionDetailFormSchema,
 } from "./transaction-detail-model";
@@ -93,6 +94,13 @@ export function TransactionDetailPageView({
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
   const pendingSuggestedSubcategoryRef = useRef<string | null>(null);
+  const shortcutStateRef = useRef({
+    hasUnsavedChanges: false,
+    isSuggesting: false,
+    isSaving: false,
+  });
+  const saveShortcutRef = useRef<() => void>(() => undefined);
+  const suggestShortcutRef = useRef<() => void>(() => undefined);
   const transactionQuery = useTransactionQuery({
     transactionId,
     initialData: initialTransactionData,
@@ -136,6 +144,11 @@ export function TransactionDetailPageView({
     remarks: currentRemarks,
     locationRaw: currentLocationRaw,
   });
+  shortcutStateRef.current = {
+    hasUnsavedChanges,
+    isSuggesting,
+    isSaving: updateMutation.isPending,
+  };
 
   useEffect(() => {
     form.reset(mapTransactionToFormValues(transaction));
@@ -170,6 +183,7 @@ export function TransactionDetailPageView({
     const timeoutId = window.setTimeout(() => setCopiedValue(null), 1200);
     return () => window.clearTimeout(timeoutId);
   }, [copiedValue]);
+
   const previewTransaction = {
     ...transaction,
     amount: Number(currentAmount) || transaction.amount,
@@ -251,6 +265,40 @@ export function TransactionDetailPageView({
       setIsSuggesting(false);
     }
   }
+
+  saveShortcutRef.current = () => {
+    void form.handleSubmit(handleSubmit)();
+  };
+  suggestShortcutRef.current = () => {
+    void handleSuggest();
+  };
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (shouldIgnoreTransactionDetailShortcut(event)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (key === "c" && !shortcutStateRef.current.isSuggesting) {
+        event.preventDefault();
+        suggestShortcutRef.current();
+        return;
+      }
+
+      if (
+        key === "s" &&
+        !shortcutStateRef.current.isSaving &&
+        shortcutStateRef.current.hasUnsavedChanges
+      ) {
+        event.preventDefault();
+        saveShortcutRef.current();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   async function handleDelete() {
     try {
