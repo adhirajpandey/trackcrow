@@ -532,7 +532,7 @@ function LargestTransactionsPanel({
                       {transaction.category ?? "Uncategorized"}
                     </p>
                   </TableCell>
-                  <TableCell className="py-4 text-secondary-foreground">
+                  <TableCell className="whitespace-nowrap py-4 text-secondary-foreground">
                     {formatShortDate(transaction.timestamp)}
                   </TableCell>
                   <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">

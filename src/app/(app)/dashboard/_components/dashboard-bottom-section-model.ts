@@ -29,7 +29,7 @@ export const dashboardTableLayouts = {
   largestTransactions: {
     columns: ["Recipient", "Date", "Amount"],
     template: "minmax(0,1.5fr) 108px 96px",
-    columnWidths: ["50%", "26%", "24%"],
+    columnWidths: ["45%", "31%", "24%"],
     rightAlignedColumns: [2],
   },
   recentTransactions: {

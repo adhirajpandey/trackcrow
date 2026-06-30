@@ -121,11 +121,12 @@ describe("dashboard bottom section model", () => {
       columnWidths: ["54%", "22%", "24%"],
       rightAlignedColumns: [1, 2],
     });
-    expect(dashboardTableLayouts.largestTransactions.columns).toEqual([
-      "Recipient",
-      "Date",
-      "Amount",
-    ]);
+    expect(dashboardTableLayouts.largestTransactions).toEqual({
+      columns: ["Recipient", "Date", "Amount"],
+      template: "minmax(0,1.5fr) 108px 96px",
+      columnWidths: ["45%", "31%", "24%"],
+      rightAlignedColumns: [2],
+    });
     expect(dashboardTableLayouts.recentTransactions.template).toBe(
       "132px minmax(0,1.55fr) 96px minmax(180px,1fr)"
     );
