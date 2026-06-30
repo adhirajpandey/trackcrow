@@ -56,11 +56,25 @@ import {
 } from "./dashboard-style";
 
 const chartLabelBandRem = 2.8;
-const chartTopPaddingRem = 1.1;
-const chartMinHeightClass = "min-h-[272px] sm:min-h-[288px]";
+const chartTooltipBandRem = 3.5;
+const chartHeightClass = "h-[22rem] sm:h-[24rem] xl:h-[26rem]";
+const chartPlotInsetTopRem = 0.85;
+const chartTooltipWidthRem = 13.5;
 
 function getChartTrackOffset(ratio: number) {
-  return `calc(${ratio * 100}% - ${ratio * chartTopPaddingRem}rem)`;
+  return `calc(${ratio * 100}% - ${ratio * chartPlotInsetTopRem}rem)`;
+}
+
+function getChartTooltipAlignment(index: number, total: number) {
+  if (total <= 2 || index <= 1) {
+    return "left";
+  }
+
+  if (index >= total - 2) {
+    return "right";
+  }
+
+  return "center";
 }
 
 export function DashboardPageView({ data }: { data: DashboardPageData }) {
@@ -574,7 +588,6 @@ function SpendingTrendPanel({
 }) {
   const legendByLabel = new Map(chartLegendItems.map((item) => [item.label, item.className]));
   const chartColumnsTemplate = `repeat(${Math.max(chartBuckets.length, 1)}, minmax(0, 1fr))`;
-  const chartRowsTemplate = `minmax(0, 1fr) ${chartLabelBandRem}rem`;
 
   return (
     <Card className={dashboardPanelClassName}>
@@ -630,15 +643,24 @@ function SpendingTrendPanel({
             helper="Try a different timeframe or import transactions."
           />
         ) : (
-          <div className="overflow-hidden rounded-[8px] border border-border/35 bg-[linear-gradient(180deg,rgba(10,17,14,0.62),rgba(8,13,11,0.76))] px-4 py-4 sm:px-5">
+          <div className="rounded-[8px] border border-border/35 bg-[linear-gradient(180deg,rgba(10,17,14,0.62),rgba(8,13,11,0.76))] px-4 py-4 sm:px-5">
             <div
               className={cn(
                 "grid min-w-0 grid-cols-[3.15rem_minmax(0,1fr)] gap-2.5 sm:gap-3",
-                chartMinHeightClass
+                chartHeightClass
               )}
             >
-              <div className="grid h-full min-h-0" style={{ gridTemplateRows: chartRowsTemplate }}>
-                <div className="relative min-h-0" style={{ paddingTop: `${chartTopPaddingRem}rem` }}>
+              <div
+                className="grid h-full min-h-0"
+                style={{
+                  gridTemplateRows: `${chartTooltipBandRem}rem minmax(0,1fr) ${chartLabelBandRem}rem`,
+                }}
+              >
+                <div />
+                <div
+                  className="relative min-h-0"
+                  style={{ paddingTop: `${chartPlotInsetTopRem}rem` }}
+                >
                   {chartTicks.map((tick) => (
                     <div
                       key={`${tick.ratio}-${tick.value}`}
@@ -652,8 +674,17 @@ function SpendingTrendPanel({
                 <div />
               </div>
 
-              <div className="grid min-w-0" style={{ gridTemplateRows: chartRowsTemplate }}>
-                <div className="relative min-h-0" style={{ paddingTop: `${chartTopPaddingRem}rem` }}>
+              <div
+                className="relative grid min-w-0"
+                style={{
+                  gridTemplateRows: `${chartTooltipBandRem}rem minmax(0,1fr) ${chartLabelBandRem}rem`,
+                }}
+              >
+                <div className="min-h-0" />
+                <div
+                  className="relative min-h-0"
+                  style={{ paddingTop: `${chartPlotInsetTopRem}rem` }}
+                >
                   {chartTicks.map((tick) => (
                     <div
                       key={`grid-${tick.ratio}-${tick.value}`}
@@ -672,26 +703,49 @@ function SpendingTrendPanel({
                     className="grid h-full min-w-0 items-end gap-1.5 pr-1 sm:gap-2 sm:pr-2"
                     style={{ gridTemplateColumns: chartColumnsTemplate }}
                   >
-                    {chartBuckets.map((bucket) => (
+                    {chartBuckets.map((bucket, index) => (
                       <Link
                         key={bucket.period}
                         href={bucket.href}
                         className="group relative flex h-full min-w-0 items-end rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
                         aria-label={bucket.ariaLabel}
                       >
-                        <span className="pointer-events-none absolute bottom-full left-1/2 z-10 hidden w-44 -translate-x-1/2 -translate-y-2 rounded-[8px] border border-border/70 bg-popover px-3 py-2 text-center text-sm text-popover-foreground shadow-lg group-hover:block group-focus-visible:block">
-                          {bucket.tooltip.title}
-                          <span className="mt-1 block font-semibold tabular-nums">
-                            {bucket.tooltip.amountLabel}
-                          </span>
-                          <span className="mt-1 block text-secondary-foreground">
-                            {bucket.tooltip.transactionLabel}
-                          </span>
-                          {bucket.tooltip.comparisonLabel ? (
-                            <span className="mt-1 block text-secondary-foreground">
-                              {bucket.tooltip.comparisonLabel}
+                        <span
+                          className={cn(
+                            "pointer-events-none absolute bottom-[calc(100%+0.75rem)] z-20 hidden",
+                            "group-hover:block group-focus-visible:block"
+                          )}
+                          style={{
+                            width: `${chartTooltipWidthRem}rem`,
+                            ...(getChartTooltipAlignment(index, chartBuckets.length) === "left"
+                              ? { left: 0 }
+                              : getChartTooltipAlignment(index, chartBuckets.length) === "right"
+                                ? { right: 0 }
+                                : { left: "50%", transform: "translateX(-50%)" }),
+                          }}
+                        >
+                          <span className="block rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(28,39,33,0.98),rgba(18,27,22,0.98))] px-3 py-2 text-left shadow-[0_16px_40px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+                            <span className="text-[11px] font-semibold text-foreground">
+                              {bucket.tooltip.title}
                             </span>
-                          ) : null}
+                            <span className="mt-1 block text-sm font-semibold text-foreground tabular-nums">
+                              {bucket.tooltip.amountLabel}
+                            </span>
+                            <span className="mt-1 block text-[11px] leading-4 text-secondary-foreground">
+                              {bucket.tooltip.transactionLabel}
+                            </span>
+                          </span>
+                          <span
+                            className={cn(
+                              "mt-1 block h-2.5 w-2.5 rotate-45 border-b border-r border-border/70 bg-[rgb(18,27,22)]",
+                              getChartTooltipAlignment(index, chartBuckets.length) === "left" &&
+                                "ml-5",
+                              getChartTooltipAlignment(index, chartBuckets.length) === "center" &&
+                                "mx-auto",
+                              getChartTooltipAlignment(index, chartBuckets.length) === "right" &&
+                                "mr-5 ml-auto"
+                            )}
+                          />
                         </span>
                         <span className="flex h-full w-full items-end rounded-[3px] bg-secondary/10 px-[1px] pb-[1px]">
                           <span

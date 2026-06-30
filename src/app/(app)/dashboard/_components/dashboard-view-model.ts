@@ -113,7 +113,6 @@ export type DashboardChartTooltipVm = {
   title: string;
   amountLabel: string;
   transactionLabel: string;
-  comparisonLabel: string | null;
 };
 
 export type DashboardChartBucketVm = {
@@ -601,7 +600,10 @@ export function buildPeriodTransactionsHref(
   period: string,
   granularity: DashboardPageData["range"]["granularity"]
 ) {
-  return buildTransactionsHref(getPeriodBounds(period, granularity));
+  return buildTransactionsHref({
+    range: "custom",
+    ...getPeriodBounds(period, granularity),
+  });
 }
 
 export function buildReviewQueueCard(input: {
@@ -798,29 +800,11 @@ function getChangeSummarySignal(
 
 export function buildChartTooltip(input: {
   period: DashboardPeriodSpendDto;
-  averagePeriodSpend: number;
-  peakPeriod: DashboardPeriodSpendDto | null;
-  latestPeriod: DashboardPeriodSpendDto | null;
 }): DashboardChartTooltipVm {
-  const averageDelta = input.period.totalSpend - input.averagePeriodSpend;
-  let comparisonLabel: string | null = null;
-
-  if (input.peakPeriod?.period === input.period.period) {
-    comparisonLabel = "Peak bucket in this range";
-  } else if (input.latestPeriod?.period === input.period.period) {
-    comparisonLabel = "Latest bucket in this range";
-  } else if (input.averagePeriodSpend > 0) {
-    comparisonLabel =
-      averageDelta >= 0
-        ? `${formatCurrency(Math.abs(averageDelta))} above the period average`
-        : `${formatCurrency(Math.abs(averageDelta))} below the period average`;
-  }
-
   return {
     title: formatPeriod(input.period.period),
     amountLabel: formatCurrency(input.period.totalSpend),
     transactionLabel: `${formatNumber(input.period.transactionCount)} transactions`,
-    comparisonLabel,
   };
 }
 
@@ -844,9 +828,6 @@ export function buildChartBuckets(input: {
 
     const tooltip = buildChartTooltip({
       period: item,
-      averagePeriodSpend: input.averagePeriodSpend,
-      peakPeriod: input.peakPeriod,
-      latestPeriod: input.latestPeriod,
     });
 
     return {

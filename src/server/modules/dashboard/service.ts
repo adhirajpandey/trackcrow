@@ -5,6 +5,8 @@ import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
 import type { DashboardRangeInput, SpendingByPeriodInput } from "./types";
 
+const IST_OFFSET_MINUTES = 330;
+
 function buildDateFilter(input: { startDate?: Date; endDate?: Date }) {
   return {
     ...(input.startDate || input.endDate
@@ -31,26 +33,41 @@ function buildRawMessageDateFilter(input: { startDate?: Date; endDate?: Date }) 
   };
 }
 
+function getIstDateParts(date: Date) {
+  const istDate = new Date(date.getTime() + IST_OFFSET_MINUTES * 60 * 1000);
+
+  return {
+    year: istDate.getUTCFullYear(),
+    month: istDate.getUTCMonth() + 1,
+    day: istDate.getUTCDate(),
+  };
+}
+
+function formatPeriodPart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
 function getPeriodKey(date: Date, granularity: NonNullable<SpendingByPeriodInput["granularity"]>) {
+  const ist = getIstDateParts(date);
+
   if (granularity === "day") {
-    return date.toISOString().slice(0, 10);
+    return `${ist.year}-${formatPeriodPart(ist.month)}-${formatPeriodPart(ist.day)}`;
   }
 
   if (granularity === "week") {
-    const day = date.getUTCDay();
+    const istMidnight = new Date(Date.UTC(ist.year, ist.month - 1, ist.day));
+    const day = istMidnight.getUTCDay();
     const daysSinceMonday = (day + 6) % 7;
-    const monday = new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-    );
+    const monday = new Date(istMidnight);
     monday.setUTCDate(monday.getUTCDate() - daysSinceMonday);
     return monday.toISOString().slice(0, 10);
   }
 
   if (granularity === "year") {
-    return String(date.getUTCFullYear());
+    return String(ist.year);
   }
 
-  return date.toISOString().slice(0, 7);
+  return `${ist.year}-${formatPeriodPart(ist.month)}`;
 }
 
 export async function getDashboardSummary(

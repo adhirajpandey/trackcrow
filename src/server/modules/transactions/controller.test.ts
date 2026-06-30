@@ -57,6 +57,38 @@ describe("transactions controller", () => {
     );
   });
 
+  it("converts custom day filters into full IST day boundaries", async () => {
+    listTransactionsMock.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        transactions: [],
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+        firstTxnDate: null,
+        lastTxnDate: null,
+      },
+    });
+
+    const response = await getTransactions(
+      new Request(
+        "http://localhost/api/transactions?range=custom&startDate=2026-06-18&endDate=2026-06-18"
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(listTransactionsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userUuid: "user-1",
+        startDate: new Date("2026-06-17T18:30:00.000Z"),
+        endDate: new Date("2026-06-18T18:29:59.999Z"),
+      })
+    );
+  });
+
   it("patches a transaction category with the narrow payload", async () => {
     updateTransactionCategoryMock.mockResolvedValueOnce({
       ok: true,

@@ -358,7 +358,7 @@ describe("dashboard view model", () => {
       endDate: "2026-12-31",
     });
     expect(buildPeriodTransactionsHref("2026-06", "month")).toBe(
-      "/transactions?startDate=2026-06-01&endDate=2026-06-30"
+      "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-30"
     );
   });
 
@@ -663,15 +663,11 @@ describe("dashboard view model", () => {
     expect(
       buildChartTooltip({
         period: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-        averagePeriodSpend: 750,
-        peakPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-        latestPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
       })
     ).toEqual({
       title: "02 Jun 2026",
       amountLabel: "\u20b91,100",
       transactionLabel: "3 transactions",
-      comparisonLabel: "Peak bucket in this range",
     });
 
     expect(
@@ -688,7 +684,7 @@ describe("dashboard view model", () => {
         granularity: "day",
       })[0]
     ).toMatchObject({
-      href: "/transactions?startDate=2026-06-01&endDate=2026-06-01",
+      href: "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-01",
       showLabel: true,
       tooltip: {
         title: "01 Jun 2026",

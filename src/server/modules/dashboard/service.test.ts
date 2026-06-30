@@ -145,6 +145,20 @@ describe("dashboard service", () => {
     });
   });
 
+  it("groups spending by IST calendar boundaries for drilldown links", async () => {
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      { amount: 100, timestamp: new Date("2026-06-29T20:00:00.000Z") },
+      { amount: 50, timestamp: new Date("2026-06-29T22:30:00.000Z") },
+    ]);
+
+    await expect(
+      getSpendingByPeriod({ userUuid: "user-1", granularity: "day" })
+    ).resolves.toEqual({
+      ok: true,
+      data: [{ period: "2026-06-30", totalSpend: 150, transactionCount: 2 }],
+    });
+  });
+
   it("counts large transactions using the provided threshold", async () => {
     mockPrisma.transaction.count.mockResolvedValueOnce(4);
 
@@ -211,6 +225,7 @@ describe("dashboard service", () => {
           uuid: "txn-2",
           recipient: "Vivek Pandey",
           category: "Food",
+          subcategory: null,
           amount: 900,
           timestamp: "2026-06-20T10:00:00.000Z",
           source: "SMS",
@@ -220,6 +235,7 @@ describe("dashboard service", () => {
           uuid: "txn-1",
           recipient: "Power Bill",
           category: null,
+          subcategory: null,
           amount: 2500,
           timestamp: "2026-06-18T10:00:00.000Z",
           source: "EMAIL",
@@ -244,6 +260,7 @@ describe("dashboard service", () => {
         recipientRaw: true,
         recipient: { select: { displayName: true } },
         category: { select: { name: true } },
+        subcategory: { select: { name: true } },
       },
     });
   });
