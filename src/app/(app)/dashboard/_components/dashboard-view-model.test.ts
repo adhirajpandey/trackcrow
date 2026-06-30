@@ -6,6 +6,7 @@ import {
   buildChartTicks,
   buildChartTooltip,
   buildDashboardInsights,
+  buildDashboardTimeframeTriggerLabel,
   buildImportIssuesHref,
   buildMetricComparisons,
   buildPeriodTransactionsHref,
@@ -115,6 +116,50 @@ describe("dashboard view model", () => {
         granularity: "year",
       })
     ).toBe("All time");
+  });
+
+  it("shows selected more-range labels in the timeframe trigger", () => {
+    expect(
+      buildDashboardTimeframeTriggerLabel({
+        value: "all-time",
+        showQuickRanges: true,
+        showSelectedLabelInTrigger: false,
+      })
+    ).toBe("All time");
+    expect(
+      buildDashboardTimeframeTriggerLabel({
+        value: "last-6-months",
+        showQuickRanges: true,
+        showSelectedLabelInTrigger: false,
+      })
+    ).toBe("Last 6 months");
+    expect(
+      buildDashboardTimeframeTriggerLabel({
+        value: "custom",
+        showQuickRanges: true,
+        showSelectedLabelInTrigger: false,
+      })
+    ).toBe("Custom range");
+  });
+
+  it("keeps quick dashboard ranges behind the generic more-ranges trigger", () => {
+    expect(
+      buildDashboardTimeframeTriggerLabel({
+        value: "last-30-days",
+        showQuickRanges: true,
+        showSelectedLabelInTrigger: false,
+      })
+    ).toBe("More ranges");
+  });
+
+  it("keeps quick range labels visible when the picker has no quick button group", () => {
+    expect(
+      buildDashboardTimeframeTriggerLabel({
+        value: "last-30-days",
+        showQuickRanges: false,
+        showSelectedLabelInTrigger: true,
+      })
+    ).toBe("30D");
   });
 
   it("excludes uncategorized and transfer-style categories from biggest category", () => {

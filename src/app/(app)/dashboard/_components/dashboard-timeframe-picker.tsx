@@ -12,6 +12,7 @@ import {
 } from "@/features/dashboard/query-state";
 import { cn } from "@/lib/utils";
 import {
+  buildDashboardTimeframeTriggerLabel,
   quickDashboardRanges,
   secondaryDashboardRanges,
 } from "./dashboard-view-model";
@@ -28,18 +29,6 @@ function buildDashboardUrl(range: DashboardRangeValue, startDate?: string, endDa
   }
 
   return `/dashboard?${params.toString()}`;
-}
-
-function getRangeLabel(
-  value: DashboardRangeValue,
-  fallbackLabel?: string
-) {
-  return (
-    quickDashboardRanges.find((range) => range.value === value)?.label ??
-    secondaryDashboardRanges.find((range) => range.value === value)?.label ??
-    fallbackLabel ??
-    "More ranges"
-  );
 }
 
 type TimeframePickerProps = {
@@ -199,9 +188,12 @@ export function TimeframePicker({
     };
   }, [isOpen]);
 
-  const triggerLabel = showSelectedLabelInTrigger
-    ? getRangeLabel(selectedRange, selectedLabel)
-    : "More ranges";
+  const triggerLabel = buildDashboardTimeframeTriggerLabel({
+    value: selectedRange,
+    showQuickRanges,
+    showSelectedLabelInTrigger,
+    selectedLabel,
+  });
 
   const menuContent = (
     <div

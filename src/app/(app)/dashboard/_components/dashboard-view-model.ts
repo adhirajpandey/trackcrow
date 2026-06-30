@@ -150,6 +150,31 @@ export const secondaryDashboardRanges: Array<{
   { value: "custom", label: "Custom range" },
 ];
 
+export function buildDashboardTimeframeTriggerLabel(input: {
+  value: DashboardRangeValue;
+  showQuickRanges: boolean;
+  showSelectedLabelInTrigger: boolean;
+  selectedLabel?: string;
+}) {
+  const secondaryLabel = secondaryDashboardRanges.find(
+    (range) => range.value === input.value
+  )?.label;
+
+  if (secondaryLabel) {
+    return secondaryLabel;
+  }
+
+  if (input.showSelectedLabelInTrigger && !input.showQuickRanges) {
+    return (
+      quickDashboardRanges.find((range) => range.value === input.value)?.label ??
+      input.selectedLabel ??
+      "More ranges"
+    );
+  }
+
+  return "More ranges";
+}
+
 export const chartLegendItems = [
   { label: "Normal", className: "bg-primary" },
   { label: "Peak", className: "bg-accent" },
