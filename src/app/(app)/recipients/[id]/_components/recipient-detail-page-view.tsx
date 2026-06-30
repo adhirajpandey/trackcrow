@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Check,
   CheckCircle2,
-  ChevronDown,
   CircleAlert,
   Copy,
   LoaderCircle,
@@ -44,6 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import {
@@ -79,10 +77,8 @@ const badgeClassName =
   "inline-flex min-h-8 items-center rounded-[999px] border px-3 text-sm font-medium";
 const fieldClassName =
   "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/72 focus-visible:ring-2 focus-visible:ring-ring";
-const selectMenuClassName =
-  "overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]";
 
-const identifierKindOptions = [
+const identifierKindOptions: SelectOption[] = [
   { value: "AUTO", label: "Auto-detect" },
   { value: "UPI_ID", label: "UPI ID" },
   { value: "PHONE", label: "Phone" },
@@ -515,10 +511,12 @@ export function RecipientDetailPageView({
               />
             </Field>
             <Field label="Kind">
-              <ThemedSelect
+              <Select
+                ariaLabel="Identifier kind"
                 value={identifierKind}
-                onChange={setIdentifierKind}
+                onValueChange={setIdentifierKind}
                 options={identifierKindOptions}
+                triggerClassName={fieldClassName}
               />
             </Field>
             <DialogFooter>
@@ -625,151 +623,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-sm font-medium text-secondary-foreground">{label}</span>
       {children}
     </label>
-  );
-}
-
-function ThemedSelect({
-  value,
-  onChange,
-  options,
-  disabled = false,
-}: {
-  value: string;
-  onChange: (nextValue: string) => void;
-  options: Array<{ value: string; label: string }>;
-  disabled?: boolean;
-}) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const menuPanelRef = useRef<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuStyle, setMenuStyle] = useState<CSSProperties | undefined>(undefined);
-  const selectedOption =
-    options.find((option) => option.value === value) ?? options[0] ?? { value: "", label: "" };
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function updateMenuPosition() {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) {
-        return;
-      }
-
-      const minWidth = Math.max(rect.width, 220);
-      const left = Math.max(12, Math.min(rect.left, window.innerWidth - minWidth - 12));
-
-      setMenuStyle({
-        position: "fixed",
-        top: rect.bottom + 8,
-        left,
-        width: rect.width,
-        minWidth,
-        zIndex: 80,
-      });
-    }
-
-    updateMenuPosition();
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node;
-      const clickedInsideTrigger = menuRef.current?.contains(target);
-      const clickedInsideMenu = menuPanelRef.current?.contains(target);
-
-      if (!clickedInsideTrigger && !clickedInsideMenu) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      window.addEventListener("mousedown", handlePointerDown);
-      window.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        disabled={disabled}
-        onClick={() => {
-          if (!disabled) {
-            setIsOpen((current) => !current);
-          }
-        }}
-        className={cn(
-          fieldClassName,
-          "inline-flex items-center justify-between gap-3 text-left",
-          disabled && "cursor-not-allowed opacity-60",
-          isOpen && "border-border/70 bg-background/24"
-        )}
-      >
-        <span className="truncate">{selectedOption.label}</span>
-        <ChevronDown
-          className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")}
-        />
-      </button>
-
-      {isOpen
-        ? createPortal(
-            <div
-              ref={menuPanelRef}
-              role="listbox"
-              style={menuStyle}
-              className={selectMenuClassName}
-            >
-              <div className="max-h-64 overflow-y-auto py-1">
-                {options.map((option) => {
-                  const selected = option.value === value;
-
-                  return (
-                    <button
-                      key={`${option.value}-${option.label}`}
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      onClick={() => {
-                        onChange(option.value);
-                        setIsOpen(false);
-                      }}
-                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20"
-                    >
-                      <span className="truncate">{option.label}</span>
-                      {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
-    </div>
   );
 }
 

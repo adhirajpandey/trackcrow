@@ -1,18 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  Check,
   CircleAlert,
-  ChevronDown,
   MapPinned,
   LoaderCircle,
   Save,
@@ -35,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import { useDeleteTransactionMutation, useUpdateTransactionMutation } from "@/features/transactions/mutations";
@@ -77,8 +74,6 @@ const fieldClassName =
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 const badgeClassName =
   "inline-flex min-h-8 items-center rounded-[999px] border px-3 text-sm font-medium";
-const selectMenuClassName =
-  "overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]";
 
 export function TransactionDetailPageView({
   transactionId,
@@ -445,9 +440,10 @@ export function TransactionDetailPageView({
                   control={form.control}
                   name="categoryId"
                   render={({ field }) => (
-                    <ThemedSelect
+                    <Select
+                      ariaLabel="Category"
                       value={field.value}
-                      onChange={field.onChange}
+                      onValueChange={field.onChange}
                       options={[
                         { value: "", label: "Uncategorized" },
                         ...categories.map((category) => ({
@@ -455,6 +451,7 @@ export function TransactionDetailPageView({
                           label: category.name,
                         })),
                       ]}
+                      triggerClassName={fieldClassName}
                     />
                   )}
                 />
@@ -468,9 +465,10 @@ export function TransactionDetailPageView({
                   control={form.control}
                   name="subcategoryId"
                   render={({ field }) => (
-                    <ThemedSelect
+                    <Select
+                      ariaLabel="Subcategory"
                       value={field.value}
-                      onChange={field.onChange}
+                      onValueChange={field.onChange}
                       disabled={!selectedCategoryId || subcategoryOptions.length === 0}
                       options={[
                         {
@@ -484,6 +482,7 @@ export function TransactionDetailPageView({
                           label: subcategory.name,
                         })),
                       ]}
+                      triggerClassName={fieldClassName}
                     />
                   )}
                 />
@@ -540,9 +539,10 @@ export function TransactionDetailPageView({
                   control={form.control}
                   name="type"
                   render={({ field }) => (
-                    <ThemedSelect
+                    <Select
+                      ariaLabel="Transaction type"
                       value={field.value}
-                      onChange={field.onChange}
+                      onValueChange={field.onChange}
                       options={[
                         { value: "UPI", label: "UPI" },
                         { value: "CARD", label: "CARD" },
@@ -550,6 +550,7 @@ export function TransactionDetailPageView({
                         { value: "NETBANKING", label: "NETBANKING" },
                         { value: "OTHER", label: "OTHER" },
                       ]}
+                      triggerClassName={fieldClassName}
                     />
                   )}
                 />
@@ -738,151 +739,6 @@ function QuickCheckRow({
       >
         {status === "attention" ? "Action needed" : "Passed"}
       </span>
-    </div>
-  );
-}
-
-function ThemedSelect({
-  value,
-  onChange,
-  options,
-  disabled = false,
-}: {
-  value: string;
-  onChange: (nextValue: string) => void;
-  options: Array<{ value: string; label: string }>;
-  disabled?: boolean;
-}) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const menuPanelRef = useRef<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuStyle, setMenuStyle] = useState<CSSProperties | undefined>(undefined);
-  const selectedOption =
-    options.find((option) => option.value === value) ?? options[0] ?? { value: "", label: "" };
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function updateMenuPosition() {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) {
-        return;
-      }
-
-      const minWidth = Math.max(rect.width, 220);
-      const left = Math.max(12, Math.min(rect.left, window.innerWidth - minWidth - 12));
-
-      setMenuStyle({
-        position: "fixed",
-        top: rect.bottom + 8,
-        left,
-        width: rect.width,
-        minWidth,
-        zIndex: 80,
-      });
-    }
-
-    updateMenuPosition();
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node;
-      const clickedInsideTrigger = menuRef.current?.contains(target);
-      const clickedInsideMenu = menuPanelRef.current?.contains(target);
-
-      if (!clickedInsideTrigger && !clickedInsideMenu) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      window.addEventListener("mousedown", handlePointerDown);
-      window.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  return (
-    <div ref={menuRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        disabled={disabled}
-        onClick={() => {
-          if (!disabled) {
-            setIsOpen((current) => !current);
-          }
-        }}
-        className={cn(
-          fieldClassName,
-          "inline-flex items-center justify-between gap-3 text-left",
-          disabled && "cursor-not-allowed opacity-60",
-          isOpen && "border-border/70 bg-background/24"
-        )}
-      >
-        <span className="truncate">{selectedOption.label}</span>
-        <ChevronDown
-          className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")}
-        />
-      </button>
-
-      {isOpen
-        ? createPortal(
-            <div
-              ref={menuPanelRef}
-              role="listbox"
-              style={menuStyle}
-              className={selectMenuClassName}
-            >
-              <div className="max-h-64 overflow-y-auto py-1">
-                {options.map((option) => {
-                  const selected = option.value === value;
-
-                  return (
-                    <button
-                      key={`${option.value}-${option.label}`}
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      onClick={() => {
-                        onChange(option.value);
-                        setIsOpen(false);
-                      }}
-                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20"
-                    >
-                      <span className="truncate">{option.label}</span>
-                      {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
     </div>
   );
 }
