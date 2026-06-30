@@ -487,15 +487,8 @@ export function buildRecentTransactionMeta(
 
 export function buildRecentTransactionsSummary(input: {
   transactionCount: number;
-  uncategorizedCount: number;
 }) {
-  const recentLabel = `${formatNumber(input.transactionCount)} recent`;
-  const reviewLabel =
-    input.uncategorizedCount > 0
-      ? `${formatNumber(input.uncategorizedCount)} need category`
-      : "All categorized";
-
-  return `${recentLabel} \u00b7 ${reviewLabel}`;
+  return `${formatNumber(input.transactionCount)} recent`;
 }
 
 function formatCompactNumber(value: number, fractionDigits: number) {

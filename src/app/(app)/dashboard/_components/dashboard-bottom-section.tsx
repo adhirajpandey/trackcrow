@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowUpRight,
-  ChevronRight,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,8 +30,6 @@ import {
 } from "./dashboard-bottom-section-model";
 import {
   dashboardAttentionPanelClassName,
-  dashboardFooterLinkClassName,
-  dashboardFooterSecondaryLinkClassName,
   dashboardInnerTableClassName,
   dashboardPanelClassName,
   dashboardPrimaryActionClassName,
@@ -40,7 +37,6 @@ import {
 import { TransactionsTable } from "@/app/(app)/transactions/_components/transactions-table";
 import {
   buildFrequentRecipientRows,
-  buildRecentTransactionsSummary,
   buildTransactionsHref,
   formatCurrency,
   getCategoryShare,
@@ -58,7 +54,7 @@ export function DashboardBottomSection({
   displayRange: string;
   topCategory: string | null;
 }) {
-  const recentTransactions = data.recentTransactions.slice(0, 6);
+  const recentTransactions = data.recentTransactions.slice(0, 10);
   const knownCategories = getKnownSpendingCategories(data.spendingByCategory);
   const knownSpendTotal = getKnownSpendTotal(data.spendingByCategory);
   const maxKnownCategorySpend = Math.max(
@@ -69,11 +65,6 @@ export function DashboardBottomSection({
     data.spendingByCategory.find((item) => item.category === "Uncategorized") ?? null;
   const frequentRecipientRows = buildFrequentRecipientRows({
     recipients: data.frequentRecipients,
-  });
-
-  const recentSummary = buildRecentTransactionsSummary({
-    transactionCount: recentTransactions.length,
-    uncategorizedCount: recentTransactions.filter((transaction) => !transaction.category).length,
   });
 
   return (
@@ -102,7 +93,6 @@ export function DashboardBottomSection({
           transactions={recentTransactions}
           range={data.range}
           transactionStatus={data.sectionStatus.transactions}
-          summary={recentSummary}
           displayRange={displayRange}
         />
       </section>
@@ -184,8 +174,6 @@ function SpendingByCategoryPanel({
       <AlignedPanelHeader
         title="Where your money went"
         description="Known categories only"
-        href="/transactions"
-        hrefLabel="Open transactions"
       />
       <CardContent className="flex flex-1 flex-col">
         {categories.length === 0 ? (
@@ -401,13 +389,11 @@ function RecentTransactionsPanel({
   transactions,
   range,
   transactionStatus,
-  summary,
   displayRange,
 }: {
   transactions: DashboardPageData["recentTransactions"];
   range: DashboardPageData["range"];
   transactionStatus: DashboardPageData["sectionStatus"]["transactions"];
-  summary: string;
   displayRange: string;
 }) {
   const router = useRouter();
@@ -417,11 +403,8 @@ function RecentTransactionsPanel({
       <AlignedPanelHeader
         title="Recent transactions"
         description={`Latest activity in ${displayRange}.`}
-        trailing={
-          <div className="flex items-center justify-between gap-3 pt-1 text-sm font-medium text-secondary-foreground">
-            <span className="tracking-[0.01em]">{summary}</span>
-          </div>
-        }
+        href={buildTransactionsHref(getRangeParams(range))}
+        hrefLabel="Open recent transactions"
       />
       <CardContent className="flex flex-1 flex-col">
         {transactions.length === 0 ? (
@@ -436,18 +419,11 @@ function RecentTransactionsPanel({
         ) : (
           <TransactionsTable
             rows={transactions}
-            columns={["timestamp", "recipient", "amount", "category"]}
+            columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
             variant="embedded"
             rowHref={(transaction) => `/transactions/${transaction.id}`}
             onNavigate={router.push}
             emptyTitle="No recent transactions in this period."
-            footerActions={
-              <PanelFooterLink
-                href={buildTransactionsHref(getRangeParams(range))}
-                label="View all activity"
-                className={dashboardFooterSecondaryLinkClassName}
-              />
-            }
           />
         )}
       </CardContent>
@@ -487,26 +463,6 @@ function TableHeader({
       ))}
       </TableRow>
     </SemanticTableHeader>
-  );
-}
-
-function PanelFooterLink({
-  href,
-  label,
-  className,
-}: {
-  href: string;
-  label: string;
-  className?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(className ?? dashboardFooterLinkClassName, "cursor-pointer")}
-    >
-      {label}
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </Link>
   );
 }
 
