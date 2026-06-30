@@ -139,6 +139,7 @@ export async function listTransactions(
   const sortBy = input.sortBy;
   const sortOrder = input.sortOrder === "asc" ? "asc" : "desc";
   const categoryFilters = input.categories ?? [];
+  const subcategoryFilters = input.subcategories ?? [];
 
   const where: Record<string, unknown> = { userUuid: input.userUuid };
   const andFilters: Array<Record<string, unknown>> = [];
@@ -173,6 +174,10 @@ export async function listTransactions(
     if (categoryOrs.length > 0) {
       andFilters.push({ OR: categoryOrs });
     }
+  }
+
+  if (subcategoryFilters.length > 0) {
+    andFilters.push({ subcategory: { name: { in: subcategoryFilters } } });
   }
 
   if (input.startDate || input.endDate) {

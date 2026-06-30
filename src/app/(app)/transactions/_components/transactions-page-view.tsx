@@ -52,12 +52,14 @@ import {
   buildPageHref,
   buildPaginationItems,
   buildSortHref,
+  buildSubcategoryOptions,
   formatTransactionAmount,
   formatTransactionDateLabel,
   formatTransactionTimeLabel,
   getSortDirection,
 } from "./transactions-view-model";
 import { TransactionsFilterControls } from "./transactions-filter-controls";
+import { TransactionsTimeframePicker } from "./transactions-timeframe-picker";
 
 type ColumnMeta = {
   align?: "left" | "right";
@@ -156,14 +158,17 @@ export function TransactionsPageView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [drawerRow, setDrawerRow] = useState<TransactionsPageRow | null>(null);
-  const state = getTransactionsPageState(toSearchParamsObject(searchParams));
+  const categoriesQuery = useCategoriesQuery({
+    initialData: initialCategoriesData,
+  });
+  const categoriesData = categoriesQuery.data ?? initialCategoriesData;
+  const state = getTransactionsPageState(toSearchParamsObject(searchParams), {
+    categories: categoriesData,
+  });
   const transactionsQuery = useTransactionsQuery({
     query: state.query,
     initialQuery: initialTransactionsQuery,
     initialData: initialTransactionsData,
-  });
-  const categoriesQuery = useCategoriesQuery({
-    initialData: initialCategoriesData,
   });
   const isInitialQuery = isSameTransactionsQuery(
     state.query,
@@ -175,7 +180,7 @@ export function TransactionsPageView({
     query: state.query,
     view: state.view,
     result: transactionsData ?? initialTransactionsData,
-    categories: categoriesQuery.data ?? initialCategoriesData,
+    categories: categoriesData,
   });
   const message = transactionsQuery.error
     ? getApiClientErrorMessage(
@@ -186,6 +191,7 @@ export function TransactionsPageView({
   const status = transactionsQuery.error ? "error" : data.status;
   const isRefreshing = transactionsQuery.isFetching && !transactionsQuery.isPending;
   const categoryOptions = buildCategoryOptions(data.categories);
+  const subcategoryOptions = buildSubcategoryOptions(data.categories, data.filters);
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: data.rows,
@@ -215,6 +221,7 @@ export function TransactionsPageView({
         eyebrow="Transaction workspace"
         title="Transactions"
         description="Search, filter, and review all your transactions in one place."
+        actions={<TransactionsTimeframePicker filters={data.filters} />}
       />
 
       {message ? (
@@ -233,7 +240,9 @@ export function TransactionsPageView({
       <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
         <TransactionsFilterControls
           filters={data.filters}
+          categories={data.categories}
           categoryOptions={categoryOptions}
+          subcategoryOptions={subcategoryOptions}
         />
       </section>
 

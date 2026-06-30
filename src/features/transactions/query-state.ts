@@ -106,23 +106,60 @@ function parseDateParam(value: string | undefined) {
   return value;
 }
 
-function getTransactionsRangeState(searchParams: TransactionsSearchParams) {
+function getTransactionsRangeState(
+  searchParams: TransactionsSearchParams,
+  persistedRange?: string | null
+) {
   const requestedRange = firstParam(searchParams.range);
   const hasValidRange = dashboardRangeValues.has(requestedRange as DashboardRangeValue);
-  const shouldFallbackToAllTime =
-    !hasValidRange ||
-    (requestedRange === "custom" &&
-      (!parseDateParam(firstParam(searchParams.startDate)) ||
-        !parseDateParam(firstParam(searchParams.endDate))));
+  const hasInvalidCustomRange =
+    requestedRange === "custom" &&
+    (!parseDateParam(firstParam(searchParams.startDate)) ||
+      !parseDateParam(firstParam(searchParams.endDate)));
+  const normalizedSearchParams =
+    hasValidRange && !hasInvalidCustomRange
+      ? searchParams
+      : hasInvalidCustomRange
+        ? { ...searchParams, range: "all-time", startDate: undefined, endDate: undefined }
+        : { ...searchParams, range: undefined, startDate: undefined, endDate: undefined };
 
   return getDashboardRangeState({
-    searchParams: shouldFallbackToAllTime
-      ? { ...searchParams, range: "all-time", startDate: undefined, endDate: undefined }
-      : searchParams,
-    persistedRange: "all-time",
+    searchParams: normalizedSearchParams,
+    persistedRange: persistedRange ?? "all-time",
   });
 }
 
+function getSelectedCategorySubcategories(
+  availableCategories: CategoryOption[] | undefined,
+  selectedCategories: string[]
+) {
+  if (!availableCategories || availableCategories.length === 0) {
+    return null;
+  }
+
+  const selectedCategoryNames = new Set(
+    selectedCategories
+      .filter((category) => category.toLowerCase() !== "uncategorized")
+      .map((category) => category.toLowerCase())
+  );
+
+  if (selectedCategoryNames.size === 0) {
+    return new Set<string>();
+  }
+
+  const subcategories = new Set<string>();
+  for (const category of availableCategories) {
+    if (!selectedCategoryNames.has(category.name.toLowerCase())) {
+      continue;
+    }
+
+    for (const subcategory of category.subcategories) {
+      subcategories.add(subcategory.name);
+    }
+  }
+
+  return subcategories;
+}
 
 function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
   return {
@@ -148,9 +185,13 @@ function normalizeCategories(categories: string[]) {
 }
 
 export function getTransactionsPageState(
-  searchParams: TransactionsSearchParams
+  searchParams: TransactionsSearchParams,
+  options: {
+    persistedRange?: string | null;
+    categories?: CategoryOption[];
+  } = {}
 ): TransactionsPageState {
-  const rangeState = getTransactionsRangeState(searchParams);
+  const rangeState = getTransactionsRangeState(searchParams, options.persistedRange);
   const q = firstParam(searchParams.q)?.trim() ?? "";
   const startDate = parseDateParam(rangeState.startDate ?? undefined);
   const endDate = parseDateParam(rangeState.endDate ?? undefined);
@@ -167,13 +208,24 @@ export function getTransactionsPageState(
     !categories.some((category) => category.toLowerCase() === "uncategorized")
       ? [...categories, "Uncategorized"]
       : categories;
+  const normalizedSortedCategories = normalizeCategories(normalizedCategories);
+  const rawSubcategories = getRepeatedParams(searchParams.subcategory);
+  const allowedSubcategories = getSelectedCategorySubcategories(
+    options.categories,
+    normalizedSortedCategories
+  );
+  const normalizedSubcategories =
+    allowedSubcategories === null
+      ? rawSubcategories
+      : rawSubcategories.filter((subcategory) => allowedSubcategories.has(subcategory));
 
   return {
     query: {
       q,
       startDate,
       endDate,
-      categories: normalizeCategories(normalizedCategories),
+      categories: normalizedSortedCategories,
+      subcategories: normalizeCategories([...new Set(normalizedSubcategories)]),
       page,
       pageSize: parsePageSize(firstParam(searchParams.size)),
       sortBy,
@@ -202,7 +254,9 @@ export function isSameTransactionsQuery(
     left.sortBy === right.sortBy &&
     left.sortOrder === right.sortOrder &&
     left.categories.length === right.categories.length &&
-    left.categories.every((category, index) => category === right.categories[index])
+    left.categories.every((category, index) => category === right.categories[index]) &&
+    left.subcategories.length === right.subcategories.length &&
+    left.subcategories.every((subcategory, index) => subcategory === right.subcategories[index])
   );
 }
 
@@ -220,6 +274,9 @@ export function buildTransactionsApiSearchParams(query: TransactionsApiQuery) {
   }
   for (const category of query.categories) {
     params.append("category", category);
+  }
+  for (const subcategory of query.subcategories) {
+    params.append("subcategory", subcategory);
   }
 
   params.set("page", String(query.page));

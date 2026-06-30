@@ -6,7 +6,9 @@ export default function TransactionsLoading() {
       eyebrowWidth="w-44"
       titleWidth="w-64"
       descriptionWidth="w-[34rem]"
-      filterControlCount={5}
+      actionWidths={["w-64", "w-40"]}
+      filterControlCount={4}
+      filterControlClassNames={["", "", "", "flex items-end lg:justify-end"]}
       tableMinWidth="min-w-[860px]"
       tableColumns={[
         { className: "w-[20%]" },

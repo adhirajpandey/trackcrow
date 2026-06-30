@@ -30,6 +30,7 @@ export type TransactionsApiQuery = {
   startDate: string | null;
   endDate: string | null;
   categories: string[];
+  subcategories: string[];
   page: number;
   pageSize: number;
   sortBy: TransactionSortBy;

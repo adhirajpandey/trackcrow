@@ -6,6 +6,7 @@ const query: TransactionsApiQuery = {
   startDate: null,
   endDate: null,
   categories: ["Food"],
+  subcategories: [],
   page: 2,
   pageSize: 10,
   sortBy: "amount",

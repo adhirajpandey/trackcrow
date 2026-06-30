@@ -53,11 +53,21 @@ export async function getTransactions(request: Request) {
   const searchParams = new URL(request.url).searchParams;
   const categoryParams = searchParams.getAll("category");
   const categoriesCsv = searchParams.get("categories");
+  const subcategoryParams = searchParams.getAll("subcategory");
+  const subcategoriesCsv = searchParams.get("subcategories");
   const categories = Array.from(
     new Set([
       ...categoryParams,
       ...(categoriesCsv
         ? categoriesCsv.split(",").map((value) => value.trim()).filter(Boolean)
+        : []),
+    ])
+  );
+  const subcategories = Array.from(
+    new Set([
+      ...subcategoryParams,
+      ...(subcategoriesCsv
+        ? subcategoriesCsv.split(",").map((value) => value.trim()).filter(Boolean)
         : []),
     ])
   );
@@ -71,6 +81,7 @@ export async function getTransactions(request: Request) {
     startDate: searchParams.get("startDate") ?? undefined,
     endDate: searchParams.get("endDate") ?? undefined,
     categories: categories.length > 0 ? categories : undefined,
+    subcategories: subcategories.length > 0 ? subcategories : undefined,
   });
   if (!parsed.success) {
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });

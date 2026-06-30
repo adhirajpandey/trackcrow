@@ -12,20 +12,21 @@ import { getApiErrorMessage, getCategories, getTransactions } from "@/lib/intern
 import { requirePageSessionUser } from "@/server/auth/session";
 
 export async function getTransactionsPageData(
-  searchParams: TransactionsSearchParams
+  searchParams: TransactionsSearchParams,
+  options: { persistedRange?: string | null } = {}
 ): Promise<TransactionsPageInitialData> {
   await requirePageSessionUser();
 
-  const state = getTransactionsPageState(searchParams);
+  const categoriesPromise = getCategories().catch(() => []);
+  const categoriesResponse = await categoriesPromise;
+  const state = getTransactionsPageState(searchParams, {
+    persistedRange: options.persistedRange,
+    categories: categoriesResponse,
+  });
   const params = buildTransactionsApiSearchParams(state.query);
 
-  const categoriesPromise = getCategories().catch(() => []);
-
   try {
-    const [transactions, categoriesResponse] = await Promise.all([
-      getTransactions(`?${params.toString()}`),
-      categoriesPromise,
-    ]);
+    const transactions = await getTransactions(`?${params.toString()}`);
 
     return {
       initialTransactionsQuery: state.query,
@@ -41,7 +42,7 @@ export async function getTransactionsPageData(
         state.query,
         getApiErrorMessage(error, "Transactions are temporarily unavailable. Try again in a moment.")
       ),
-      initialCategoriesData: await categoriesPromise,
+      initialCategoriesData: categoriesResponse,
     };
   }
 }

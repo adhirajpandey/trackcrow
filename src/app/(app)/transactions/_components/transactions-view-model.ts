@@ -30,6 +30,7 @@ function getBaseParams(
       | "startDate"
       | "endDate"
       | "categories"
+      | "subcategories"
       | "selectedTransactionUuid"
       | "review"
       | "status"
@@ -54,6 +55,9 @@ function getBaseParams(
   }
   for (const category of nextFilters.categories) {
     params.append("category", category);
+  }
+  for (const subcategory of nextFilters.subcategories) {
+    params.append("subcategory", subcategory);
   }
   if (nextFilters.selectedTransactionUuid) {
     params.set("transaction", nextFilters.selectedTransactionUuid);
@@ -166,6 +170,34 @@ export function buildCategoryOptions(categories: CategoryOption[]) {
   }));
 }
 
+export function buildSubcategoryOptions(
+  categories: CategoryOption[],
+  filters: Pick<TransactionsControlState, "categories">
+) {
+  const selectedCategories = new Set(
+    filters.categories
+      .filter((category) => category.toLowerCase() !== "uncategorized")
+      .map((category) => category.toLowerCase())
+  );
+
+  if (selectedCategories.size === 0) {
+    return [];
+  }
+
+  const options = categories
+    .filter((category) => selectedCategories.has(category.name.toLowerCase()))
+    .flatMap((category) =>
+      category.subcategories.map((subcategory) => ({
+        value: subcategory.name,
+        label: subcategory.name,
+      }))
+    );
+
+  return [...new Map(options.map((option) => [option.value, option])).values()].sort((left, right) =>
+    left.label.localeCompare(right.label, undefined, { sensitivity: "base" })
+  );
+}
+
 export function buildCategoryTriggerLabel(filters: TransactionsControlState) {
   if (filters.categories.length === 0) {
     return "All categories";
@@ -178,9 +210,40 @@ export function buildCategoryTriggerLabel(filters: TransactionsControlState) {
   return `${filters.categories.length} categories`;
 }
 
+export function buildSubcategoryTriggerLabel(filters: TransactionsControlState) {
+  if (filters.subcategories.length === 0) {
+    return "All subcategories";
+  }
+
+  if (filters.subcategories.length === 1) {
+    return filters.subcategories[0] ?? "All subcategories";
+  }
+
+  return `${filters.subcategories.length} subcategories`;
+}
+
+function getValidSubcategoriesForCategories(
+  categories: CategoryOption[] | undefined,
+  selectedCategories: string[],
+  selectedSubcategories: string[]
+) {
+  if (!categories) {
+    return selectedSubcategories;
+  }
+
+  const validOptions = new Set(
+    buildSubcategoryOptions(categories, { categories: selectedCategories }).map(
+      (option) => option.value
+    )
+  );
+
+  return selectedSubcategories.filter((subcategory) => validOptions.has(subcategory));
+}
+
 function buildCategoryHref(
   filters: TransactionsControlState,
-  categories: string[]
+  categories: string[],
+  categoryOptions?: CategoryOption[]
 ) {
   const nextStatus =
     filters.status === "uncategorized" &&
@@ -190,6 +253,11 @@ function buildCategoryHref(
 
   const params = getBaseParams(filters, {
     categories,
+    subcategories: getValidSubcategoriesForCategories(
+      categoryOptions,
+      categories,
+      filters.subcategories
+    ),
     status: nextStatus,
   });
   params.set("page", "1");
@@ -200,18 +268,48 @@ function buildCategoryHref(
 }
 
 export function buildClearCategoriesHref(filters: TransactionsControlState) {
-  return buildCategoryHref(filters, []);
+  return buildCategoryHref(filters, [], []);
 }
 
 export function buildToggleCategoryHref(
   filters: TransactionsControlState,
-  category: string
+  category: string,
+  categoryOptions?: CategoryOption[]
 ) {
   const nextCategories = filters.categories.includes(category)
     ? filters.categories.filter((value) => value !== category)
     : [...filters.categories, category];
 
-  return buildCategoryHref(filters, nextCategories);
+  return buildCategoryHref(filters, nextCategories, categoryOptions);
+}
+
+function buildSubcategoryHref(
+  filters: TransactionsControlState,
+  subcategories: string[]
+) {
+  const params = getBaseParams(filters, {
+    subcategories,
+  });
+  params.set("page", "1");
+  params.set("size", String(filters.pageSize));
+  params.set("sortBy", filters.sortBy);
+  params.set("sortOrder", filters.sortOrder);
+  return toHref(params);
+}
+
+export function buildClearSubcategoriesHref(filters: TransactionsControlState) {
+  return buildSubcategoryHref(filters, []);
+}
+
+export function buildToggleSubcategoryHref(
+  filters: TransactionsControlState,
+  subcategory: string
+) {
+  const nextSubcategories = filters.subcategories.includes(subcategory)
+    ? filters.subcategories.filter((value) => value !== subcategory)
+    : [...filters.subcategories, subcategory];
+
+  return buildSubcategoryHref(filters, nextSubcategories);
 }
 
 export function formatTransactionDateLabel(timestamp: string) {
@@ -226,10 +324,15 @@ export function formatTransactionAmount(amount: number) {
   return formatCurrency(amount);
 }
 
-export function buildResetHref() {
+export function buildResetHref(filters: Pick<TransactionsControlState, "range" | "startDate" | "endDate">) {
   const params = new URLSearchParams();
-  params.set("range", "all-time");
-  params.set("size", "10");
+  params.set("range", filters.range);
+  if (filters.range === "custom" && filters.startDate) {
+    params.set("startDate", filters.startDate);
+  }
+  if (filters.range === "custom" && filters.endDate) {
+    params.set("endDate", filters.endDate);
+  }
   params.set("sortBy", "timestamp");
   params.set("sortOrder", "desc");
   return toHref(params);
@@ -256,6 +359,9 @@ export function buildFilterFormHiddenParams(filters: TransactionsControlState) {
   }
   for (const category of filters.categories) {
     hiddenParams.push({ name: "category", value: category });
+  }
+  for (const subcategory of filters.subcategories) {
+    hiddenParams.push({ name: "subcategory", value: subcategory });
   }
   return hiddenParams;
 }

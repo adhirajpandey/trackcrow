@@ -3,15 +3,17 @@ jest.mock("@/server/auth/session", () => ({
 }));
 
 jest.mock("./service", () => ({
+  listTransactions: jest.fn(),
   updateTransactionCategory: jest.fn(),
 }));
 
 import { requireSessionUser } from "@/server/auth/session";
 
-import { patchTransactionCategory } from "./controller";
-import { updateTransactionCategory } from "./service";
+import { getTransactions, patchTransactionCategory } from "./controller";
+import { listTransactions, updateTransactionCategory } from "./service";
 
 const requireSessionUserMock = jest.mocked(requireSessionUser);
+const listTransactionsMock = jest.mocked(listTransactions);
 const updateTransactionCategoryMock = jest.mocked(updateTransactionCategory);
 
 describe("transactions controller", () => {
@@ -21,6 +23,38 @@ describe("transactions controller", () => {
       ok: true,
       data: { userUuid: "user-1" },
     });
+  });
+
+  it("accepts repeated and CSV category and subcategory filters", async () => {
+    listTransactionsMock.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        transactions: [],
+        page: 1,
+        pageSize: 10,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+        firstTxnDate: null,
+        lastTxnDate: null,
+      },
+    });
+
+    const response = await getTransactions(
+      new Request(
+        "http://localhost/api/transactions?category=Food&categories=Travel,Shopping&subcategory=Lunch&subcategories=Dinner,Snacks"
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(listTransactionsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userUuid: "user-1",
+        categories: ["Food", "Travel", "Shopping"],
+        subcategories: ["Lunch", "Dinner", "Snacks"],
+      })
+    );
   });
 
   it("patches a transaction category with the narrow payload", async () => {

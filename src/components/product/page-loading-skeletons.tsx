@@ -24,14 +24,18 @@ export function WorkspaceListPageSkeleton({
   eyebrowWidth = "w-36",
   titleWidth = "w-64",
   descriptionWidth = "w-[32rem]",
+  actionWidths = [],
   filterControlCount = 5,
+  filterControlClassNames,
   tableColumns = defaultTableColumns,
   tableMinWidth = "min-w-[860px]",
 }: {
   eyebrowWidth?: string;
   titleWidth?: string;
   descriptionWidth?: string;
+  actionWidths?: string[];
   filterControlCount?: number;
+  filterControlClassNames?: string[];
   tableColumns?: TableSkeletonColumn[];
   tableMinWidth?: string;
 }) {
@@ -41,8 +45,12 @@ export function WorkspaceListPageSkeleton({
         eyebrowWidth={eyebrowWidth}
         titleWidth={titleWidth}
         descriptionWidth={descriptionWidth}
+        actionWidths={actionWidths}
       />
-      <FilterPanelSkeleton controlCount={filterControlCount} />
+      <FilterPanelSkeleton
+        controlCount={filterControlCount}
+        controlClassNames={filterControlClassNames}
+      />
       <DataTableSkeleton columns={tableColumns} minWidth={tableMinWidth} />
     </div>
   );
@@ -120,14 +128,32 @@ export function PageHeaderSkeleton({
   );
 }
 
-export function FilterPanelSkeleton({ controlCount = 5 }: { controlCount?: number }) {
+export function FilterPanelSkeleton({
+  controlCount = 5,
+  controlClassNames,
+}: {
+  controlCount?: number;
+  controlClassNames?: string[];
+}) {
   return (
     <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div
+        className={cn(
+          "grid gap-3 md:grid-cols-2",
+          controlClassNames ? "lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]" : "xl:grid-cols-5"
+        )}
+      >
         {Array.from({ length: controlCount }).map((_, index) => (
-          <div key={index} className="space-y-2">
-            <Skeleton className="h-4 w-24 rounded-[8px]" />
-            <Skeleton className="h-11 rounded-[8px]" />
+          <div key={index} className={cn("space-y-2", controlClassNames?.[index])}>
+            {index === controlCount - 1 && controlClassNames ? null : (
+              <Skeleton className="h-4 w-24 rounded-[8px]" />
+            )}
+            <Skeleton
+              className={cn(
+                "h-11 rounded-[8px]",
+                index === controlCount - 1 && controlClassNames && "h-12 w-12"
+              )}
+            />
           </div>
         ))}
       </div>

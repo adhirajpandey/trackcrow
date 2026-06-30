@@ -176,6 +176,7 @@ describe("transaction service", () => {
       sortBy: "amount",
       sortOrder: "asc",
       categories: ["Food", "uncategorized"],
+      subcategories: ["Dinner"],
       startDate: first,
       endDate: last,
     });
@@ -200,6 +201,7 @@ describe("transaction service", () => {
           AND: expect.arrayContaining([
             expect.objectContaining({ OR: expect.any(Array) }),
             expect.objectContaining({ OR: expect.any(Array) }),
+            { subcategory: { name: { in: ["Dinner"] } } },
             { timestamp: { gte: first, lte: last } },
           ]),
         }),

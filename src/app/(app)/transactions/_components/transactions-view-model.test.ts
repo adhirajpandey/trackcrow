@@ -17,6 +17,7 @@ const baseFilters: TransactionsControlState = {
   startDate: "2026-06-01",
   endDate: "2026-06-21",
   categories: ["Food"],
+  subcategories: [],
   page: 3,
   pageSize: 10,
   sortBy: "amount",
@@ -31,11 +32,11 @@ const baseFilters: TransactionsControlState = {
 describe("transactions view model", () => {
   it("builds category toggle hrefs for add, remove, and multi-select flows", () => {
     expect(buildToggleCategoryHref(baseFilters, "Travel")).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&category=Travel&transaction=txn-12&review=large&page=1&sortBy=amount&sortOrder=asc"
+      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&category=Travel&transaction=txn-12&review=large&page=1&size=10&sortBy=amount&sortOrder=asc"
     );
 
     expect(buildToggleCategoryHref(baseFilters, "Food")).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&transaction=txn-12&review=large&page=1&sortBy=amount&sortOrder=asc"
+      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&transaction=txn-12&review=large&page=1&size=10&sortBy=amount&sortOrder=asc"
     );
 
     expect(
@@ -47,21 +48,21 @@ describe("transactions view model", () => {
         "Travel"
       )
     ).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&transaction=txn-12&review=large&page=1&sortBy=amount&sortOrder=asc"
+      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&transaction=txn-12&review=large&page=1&size=10&sortBy=amount&sortOrder=asc"
     );
   });
 
   it("preserves custom range state while toggling categories and paging", () => {
     expect(buildSearchHref(baseFilters, "  groceries ")).toBe(
-      "/transactions?range=custom&q=groceries&startDate=2026-06-01&endDate=2026-06-21&category=Food&transaction=txn-12&review=large&page=1&sortBy=amount&sortOrder=asc"
+      "/transactions?range=custom&q=groceries&startDate=2026-06-01&endDate=2026-06-21&category=Food&transaction=txn-12&review=large&page=1&size=10&sortBy=amount&sortOrder=asc"
     );
 
     expect(buildPageHref(baseFilters, 2)).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&transaction=txn-12&review=large&page=2&sortBy=amount&sortOrder=asc"
+      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&transaction=txn-12&review=large&page=2&size=10&sortBy=amount&sortOrder=asc"
     );
 
     expect(buildTransactionsRangeHref(baseFilters, "custom", "2026-05-01", "2026-05-31")).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-05-01&endDate=2026-05-31&category=Food&transaction=txn-12&review=large&page=1&sortBy=amount&sortOrder=asc"
+      "/transactions?range=custom&q=rent&startDate=2026-05-01&endDate=2026-05-31&category=Food&transaction=txn-12&review=large&page=1&size=10&sortBy=amount&sortOrder=asc"
     );
   });
 
@@ -74,16 +75,18 @@ describe("transactions view model", () => {
     };
 
     expect(buildSortHref(multiCategoryFilters, "amount")).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&category=Travel&transaction=txn-12&review=large&page=1&sortBy=amount&sortOrder=desc"
+      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&category=Food&category=Travel&transaction=txn-12&review=large&page=1&size=10&sortBy=amount&sortOrder=desc"
     );
 
     expect(buildClearCategoriesHref(multiCategoryFilters)).toBe(
-      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&transaction=txn-12&review=large&page=1&sortBy=timestamp&sortOrder=desc"
+      "/transactions?range=custom&q=rent&startDate=2026-06-01&endDate=2026-06-21&transaction=txn-12&review=large&page=1&size=10&sortBy=timestamp&sortOrder=desc"
     );
   });
 
   it("clears drilldown and selection state in the reset href", () => {
-    expect(buildResetHref()).toBe("/transactions?range=all-time&sortBy=timestamp&sortOrder=desc");
+    expect(buildResetHref(baseFilters)).toBe(
+      "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-21&sortBy=timestamp&sortOrder=desc"
+    );
   });
 
   it("builds category trigger labels for none, one, many, and uncategorized states", () => {
@@ -102,10 +105,12 @@ describe("transactions view model", () => {
       buildFilterFormHiddenParams({
         ...baseFilters,
         categories: ["Food", "Uncategorized"],
+        subcategories: ["Lunch"],
         status: "uncategorized",
       })
     ).toEqual([
       { name: "range", value: "custom" },
+      { name: "size", value: 10 },
       { name: "sortBy", value: "amount" },
       { name: "sortOrder", value: "asc" },
       { name: "startDate", value: "2026-06-01" },
@@ -115,6 +120,7 @@ describe("transactions view model", () => {
       { name: "status", value: "uncategorized" },
       { name: "category", value: "Food" },
       { name: "category", value: "Uncategorized" },
+      { name: "subcategory", value: "Lunch" },
     ]);
   });
 });

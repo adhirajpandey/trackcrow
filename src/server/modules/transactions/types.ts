@@ -48,6 +48,7 @@ export type ListTransactionsInput = {
   startDate?: Date;
   endDate?: Date;
   categories?: string[];
+  subcategories?: string[];
 };
 
 export type TransactionListRangeInput = {

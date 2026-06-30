@@ -45,4 +45,5 @@ export const listTransactionsQuerySchema = z.object({
   startDate: optionalDateParam,
   endDate: optionalDateParam,
   categories: z.array(z.string().trim().min(1)).optional(),
+  subcategories: z.array(z.string().trim().min(1)).optional(),
 });
