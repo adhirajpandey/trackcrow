@@ -146,6 +146,28 @@ export function mapFormValuesToTransactionPayload(
   };
 }
 
+export function hasTransactionDetailChanges(
+  transaction: TransactionRecord,
+  values: TransactionDetailFormValues
+) {
+  const nextPayload = mapFormValuesToTransactionPayload(values);
+  const currentPayload = mapTransactionToMutationPayload(transaction);
+
+  return (
+    nextPayload.amount !== currentPayload.amount ||
+    nextPayload.recipientRaw !== currentPayload.recipientRaw ||
+    nextPayload.recipientName !== currentPayload.recipientName ||
+    nextPayload.categoryId !== currentPayload.categoryId ||
+    nextPayload.subcategoryId !== currentPayload.subcategoryId ||
+    nextPayload.type !== currentPayload.type ||
+    nextPayload.timestamp !== currentPayload.timestamp ||
+    nextPayload.reference !== currentPayload.reference ||
+    nextPayload.accountLabel !== currentPayload.accountLabel ||
+    nextPayload.remarks !== currentPayload.remarks ||
+    nextPayload.locationRaw !== currentPayload.locationRaw
+  );
+}
+
 export function getSubcategoryOptions(
   categories: CategoryOption[],
   categoryId: string
@@ -239,6 +261,24 @@ export function getTransactionGoogleMapsHref(locationRaw: string | null | undefi
   return `https://www.google.com/maps/search/${encodeURIComponent(
     `${coordinates.latitude},${coordinates.longitude}`
   )}`;
+}
+
+function mapTransactionToMutationPayload(
+  transaction: TransactionRecord
+): TransactionMutationInput {
+  return {
+    amount: transaction.amount,
+    recipientRaw: transaction.recipientRaw.trim(),
+    recipientName: toNullableTrimmedString(transaction.recipientName ?? ""),
+    categoryId: transaction.categoryId,
+    subcategoryId: transaction.subcategoryId,
+    type: transaction.type,
+    timestamp: toDate(transaction.timestamp).toISOString(),
+    reference: toNullableTrimmedString(transaction.reference ?? ""),
+    accountLabel: toNullableTrimmedString(transaction.accountLabel ?? ""),
+    remarks: toNullableTrimmedString(transaction.remarks ?? ""),
+    locationRaw: toNullableTrimmedString(transaction.locationRaw ?? ""),
+  };
 }
 
 function toNullableTrimmedString(value: string) {

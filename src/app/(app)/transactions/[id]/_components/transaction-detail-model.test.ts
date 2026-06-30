@@ -6,6 +6,7 @@ import {
   getTransactionGoogleMapsHref,
   getRecipientDetailHref,
   getSubcategoryOptions,
+  hasTransactionDetailChanges,
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
   mapTransactionToFormValues,
@@ -110,6 +111,64 @@ describe("transaction detail model", () => {
       remarks: "dinner",
       locationRaw: null,
     });
+  });
+
+  it("returns false when form values normalize to the existing transaction payload", () => {
+    expect(hasTransactionDetailChanges(transaction, mapTransactionToFormValues(transaction))).toBe(
+      false
+    );
+  });
+
+  it("returns true when a scalar field changes", () => {
+    expect(
+      hasTransactionDetailChanges(transaction, {
+        ...mapTransactionToFormValues(transaction),
+        amount: "1200",
+      })
+    ).toBe(true);
+  });
+
+  it("ignores whitespace-only edits that normalize to the same payload", () => {
+    expect(
+      hasTransactionDetailChanges(transaction, {
+        ...mapTransactionToFormValues(transaction),
+        recipientRaw: " 742810776@kotakbank ",
+        recipientName: " Kotak Bank UPI ",
+        accountLabel: " Kotak **1234 ",
+      })
+    ).toBe(false);
+  });
+
+  it("returns true when category or subcategory changes", () => {
+    expect(
+      hasTransactionDetailChanges(transaction, {
+        ...mapTransactionToFormValues(transaction),
+        categoryId: "1",
+        subcategoryId: "11",
+      })
+    ).toBe(true);
+  });
+
+  it("treats empty strings and null nullable fields as unchanged", () => {
+    const nullableTransaction: TransactionRecord = {
+      ...transaction,
+      recipientName: null,
+      reference: null,
+      accountLabel: null,
+      remarks: null,
+      locationRaw: null,
+    };
+
+    expect(
+      hasTransactionDetailChanges(nullableTransaction, {
+        ...mapTransactionToFormValues(nullableTransaction),
+        recipientName: "   ",
+        reference: " ",
+        accountLabel: "",
+        remarks: "  ",
+        locationRaw: "",
+      })
+    ).toBe(false);
   });
 
   it("filters subcategories by category and validates the selected subcategory", () => {

@@ -59,6 +59,7 @@ import {
   buildTransactionQuickChecks,
   formatTransactionAmount,
   formatTransactionDateTime,
+  hasTransactionDetailChanges,
   getRecipientDetailHref,
   getSubcategoryOptions,
   getTransactionGoogleMapsHref,
@@ -86,7 +87,7 @@ export function TransactionDetailPageView({
 }: TransactionDetailPageInitialData) {
   const router = useRouter();
   const [banner, setBanner] = useState<{
-    tone: "success" | "error" | "info";
+    tone: "error" | "info";
     message: string;
   } | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -117,8 +118,24 @@ export function TransactionDetailPageView({
   const currentRecipientName = form.watch("recipientName");
   const currentType = form.watch("type");
   const currentLocationRaw = form.watch("locationRaw");
+  const currentReference = form.watch("reference");
+  const currentAccountLabel = form.watch("accountLabel");
+  const currentRemarks = form.watch("remarks");
   const subcategoryOptions = getSubcategoryOptions(categories, selectedCategoryId);
   const googleMapsHref = getTransactionGoogleMapsHref(currentLocationRaw);
+  const hasUnsavedChanges = hasTransactionDetailChanges(transaction, {
+    amount: currentAmount,
+    recipientRaw: currentRecipientRaw,
+    recipientName: currentRecipientName,
+    categoryId: selectedCategoryId,
+    subcategoryId: selectedSubcategoryId,
+    type: currentType,
+    timestamp: currentTimestamp,
+    reference: currentReference,
+    accountLabel: currentAccountLabel,
+    remarks: currentRemarks,
+    locationRaw: currentLocationRaw,
+  });
 
   useEffect(() => {
     form.reset(mapTransactionToFormValues(transaction));
@@ -176,7 +193,12 @@ export function TransactionDetailPageView({
       });
 
       await transactionQuery.refetch();
-      setBanner({ tone: "success", message: "Transaction changes saved." });
+      toast({
+        tone: "success",
+        title: "Transaction saved",
+        description: "Transaction changes saved.",
+        durationMs: 3200,
+      });
     } catch (error) {
       applyServerErrors(error, form.setError);
       setBanner({
@@ -277,7 +299,7 @@ export function TransactionDetailPageView({
             <Button
               type="submit"
               className="min-w-[168px]"
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || !hasUnsavedChanges}
             >
               {updateMutation.isPending ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -294,7 +316,6 @@ export function TransactionDetailPageView({
         <section
           className={cn(
             "rounded-[8px] border px-4 py-3 text-sm",
-            banner.tone === "success" && "border-primary/35 bg-primary/10 text-foreground",
             banner.tone === "error" && "border-destructive/45 bg-destructive/10 text-foreground",
             banner.tone === "info" && "border-border/45 bg-background/14 text-secondary-foreground"
           )}
