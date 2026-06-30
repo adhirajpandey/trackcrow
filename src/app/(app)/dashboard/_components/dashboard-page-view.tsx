@@ -6,12 +6,8 @@ import {
   BarChart3,
   Calendar,
   CheckCircle2,
-  ChevronRight,
   Clock3,
   Layers3,
-  ReceiptText,
-  Sparkles,
-  TriangleAlert,
   UserRound,
 } from "lucide-react";
 
@@ -23,13 +19,11 @@ import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 import { DashboardBottomSection } from "./dashboard-bottom-section";
 import { DashboardTimeframePicker } from "./dashboard-timeframe-picker";
 import {
-  buildBiggestChangeCard,
   buildChartBuckets,
   buildChartTicks,
   buildMostFrequentRecipient,
   buildMetricComparisons,
   buildReviewQueueCard,
-  buildSuggestedRules,
   buildTransactionsHref,
   buildWhatChangedSummary,
   chartLegendItems,
@@ -92,12 +86,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     recipients: data.frequentRecipients,
     range: data.range,
   });
-  const biggestChange = buildBiggestChangeCard({
-    summary: data.summary,
-    comparison: data.comparison,
-    categories: data.spendingByCategory,
-    range: data.range,
-  });
   const metricComparisons = buildMetricComparisons({
     summary: data.summary,
     comparison: data.comparison,
@@ -117,9 +105,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     chartMax,
     periodLabelStep,
     granularity: data.range.granularity,
-  });
-  const suggestedRules = buildSuggestedRules({
-    recipients: data.frequentRecipients,
   });
   const mostFrequentRecipient = buildMostFrequentRecipient({
     recipients: data.frequentRecipients,
@@ -182,7 +167,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
       </section>
 
-      <section className="grid gap-3 2xl:grid-cols-[minmax(0,1.58fr)_minmax(320px,0.72fr)]">
+      <section className="grid gap-3">
         <SpendingTrendPanel
           periods={data.spendingByPeriod}
           peakPeriod={peakPeriod}
@@ -193,19 +178,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           chartBuckets={chartBuckets}
           hasTransactions={hasTransactions}
           changeSummary={changeSummary}
-        />
-        <RightRail
-          needsCategoryCount={data.summary.uncategorizedCount}
-          needsCategoryAmount={
-            data.spendingByCategory.find((item) => item.category === "Uncategorized")
-              ?.totalSpend ?? 0
-          }
-          needsCategoryHref={buildTransactionsHref({
-            ...rangeParams,
-            status: "uncategorized",
-          })}
-          biggestChange={biggestChange}
-          suggestedRules={suggestedRules}
+          displayRange={displayRange}
         />
       </section>
 
@@ -576,124 +549,6 @@ function TopCardDetailList({
   );
 }
 
-function RightRail({
-  needsCategoryCount,
-  needsCategoryAmount,
-  needsCategoryHref,
-  biggestChange,
-  suggestedRules,
-}: {
-  needsCategoryCount: number;
-  needsCategoryAmount: number;
-  needsCategoryHref: string;
-  biggestChange: ReturnType<typeof buildBiggestChangeCard>;
-  suggestedRules: ReturnType<typeof buildSuggestedRules>;
-}) {
-  return (
-    <div className="grid gap-3">
-      <Link
-        href={needsCategoryHref}
-        className={cn(
-          dashboardPanelClassName,
-          "group px-4 py-4 transition-colors hover:border-accent/25",
-          "bg-[linear-gradient(180deg,rgba(33,28,12,0.66),rgba(18,18,12,0.94))]"
-        )}
-      >
-        <RailHeader
-          icon={<TriangleAlert className="h-4 w-4 text-accent" />}
-          label="Needs category"
-        />
-        <p className="mt-2 text-[1.05rem] font-semibold text-foreground">
-          {formatNumber(needsCategoryCount)} transactions still need a category.
-        </p>
-        <p className="mt-1 text-sm text-secondary-foreground">
-          {formatCurrency(needsCategoryAmount)} across {formatNumber(needsCategoryCount)}{" "}
-          transactions
-        </p>
-      </Link>
-
-      <Link
-        href={biggestChange.href ?? "#"}
-        className={cn(dashboardPanelClassName, "group px-4 py-4 transition-colors hover:border-primary/18")}
-      >
-        <RailHeader
-          icon={<Sparkles className="h-4 w-4 text-primary" />}
-          label={biggestChange.label}
-        />
-        <p className="mt-2 text-[1.05rem] font-semibold text-primary">
-          {biggestChange.value}
-        </p>
-        <p className="mt-1 text-sm text-secondary-foreground">{biggestChange.helper}</p>
-      </Link>
-
-      <div className={cn(dashboardPanelClassName, "px-4 py-4")}>
-        <RailHeader
-          icon={<ReceiptText className="h-4 w-4 text-info" />}
-          label="Rule suggestions"
-          href="/recipients"
-        />
-        <p className="mt-2 text-sm text-secondary-foreground">
-          {suggestedRules.length > 0
-            ? `${suggestedRules.length} suggestions based on repeated recipients.`
-            : "Suggestions appear once repeated recipients emerge in this period."}
-        </p>
-        {suggestedRules.length > 0 ? (
-          <div className="mt-3 space-y-2 text-sm">
-            {suggestedRules.map((rule) => (
-              <div key={rule.recipient} className="flex items-center justify-between gap-3">
-                <span className="truncate text-foreground">{rule.recipient}</span>
-                <Link href={rule.href} className="shrink-0 text-primary">
-                  {rule.action}
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function RailHeader({
-  icon,
-  label,
-  href,
-}: {
-  icon: ReactNode;
-  label: string;
-  href?: string;
-}) {
-  if (href) {
-    return (
-      <Link
-        href={href}
-        aria-label={`Open ${label}`}
-        className={cn(
-          "group -mx-2 flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-background/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      >
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="underline-offset-4 group-hover:underline group-focus-visible:underline">
-            {label}
-          </span>
-        </div>
-        <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground group-focus-visible:text-foreground" />
-      </Link>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-between gap-3 text-sm font-medium text-secondary-foreground">
-      <div className="flex items-center gap-2">
-        {icon}
-        {label}
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </div>
-  );
-}
-
 function SpendingTrendPanel({
   periods,
   peakPeriod,
@@ -704,6 +559,7 @@ function SpendingTrendPanel({
   chartBuckets,
   hasTransactions,
   changeSummary,
+  displayRange,
 }: {
   periods: DashboardPageData["spendingByPeriod"];
   peakPeriod: DashboardPageData["spendingByPeriod"][number] | null;
@@ -714,6 +570,7 @@ function SpendingTrendPanel({
   chartBuckets: ReturnType<typeof buildChartBuckets>;
   hasTransactions: boolean;
   changeSummary: ReturnType<typeof buildWhatChangedSummary>;
+  displayRange: string;
 }) {
   const legendByLabel = new Map(chartLegendItems.map((item) => [item.label, item.className]));
   const chartColumnsTemplate = `repeat(${Math.max(chartBuckets.length, 1)}, minmax(0, 1fr))`;
@@ -728,7 +585,7 @@ function SpendingTrendPanel({
               Spending trend
             </CardTitle>
             <p className="mt-1 text-sm leading-5 text-secondary-foreground">
-              Compare daily spending across this period and spot anomalies quickly.
+              Daily spend across {displayRange}.
             </p>
           </div>
           <div className="grid gap-1.5 sm:grid-cols-2 xl:min-w-[386px] xl:grid-cols-4">

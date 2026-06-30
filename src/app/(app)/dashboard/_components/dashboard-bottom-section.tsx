@@ -73,6 +73,7 @@ export function DashboardBottomSection({
         <SpendingByCategoryPanel
           categories={knownCategories}
           categorizedSpendTotal={knownSpendTotal}
+          displayRange={displayRange}
           maxCategorySpend={maxKnownCategorySpend}
           topCategory={topCategory}
           sectionStatus={data.sectionStatus.categories}
@@ -155,6 +156,7 @@ function AlignedPanelHeader({
 function SpendingByCategoryPanel({
   categories,
   categorizedSpendTotal,
+  displayRange,
   maxCategorySpend,
   topCategory,
   sectionStatus,
@@ -162,6 +164,7 @@ function SpendingByCategoryPanel({
 }: {
   categories: DashboardPageData["spendingByCategory"];
   categorizedSpendTotal: number;
+  displayRange: string;
   maxCategorySpend: number;
   topCategory: string | null;
   sectionStatus: DashboardPageData["sectionStatus"]["categories"];
@@ -172,8 +175,8 @@ function SpendingByCategoryPanel({
   return (
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
-        title="Where your money went"
-        description="Known categories only"
+        title="Spending by category"
+        description={`Categorized spend in ${displayRange}.`}
       />
       <CardContent className="flex flex-1 flex-col">
         {categories.length === 0 ? (
@@ -298,7 +301,7 @@ function FrequentRecipientsPanel({
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
         title="Frequent recipients"
-        description={`Most repeated recipients in ${displayRange}.`}
+        description={`Recipients paid most often in ${displayRange}.`}
         href="/recipients"
       />
       <CardContent className="flex flex-1 flex-col">
@@ -364,7 +367,7 @@ function LargestTransactionsPanel({
     <Card className={cn(dashboardPanelClassName, "flex min-h-[470px] flex-col")}>
       <AlignedPanelHeader
         title="Largest transactions"
-        description={`Highest-value transactions inside ${displayRange}.`}
+        description={`Biggest payments in ${displayRange}.`}
         href="/transactions"
       />
       <CardContent className="flex flex-1 flex-col">
@@ -402,7 +405,7 @@ function RecentTransactionsPanel({
     <Card className={cn(dashboardPanelClassName, "flex flex-col")}>
       <AlignedPanelHeader
         title="Recent transactions"
-        description={`Latest activity in ${displayRange}.`}
+        description={`Newest payments in ${displayRange}.`}
         href={buildTransactionsHref(getRangeParams(range))}
         hrefLabel="Open recent transactions"
       />
