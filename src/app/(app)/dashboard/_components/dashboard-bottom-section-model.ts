@@ -26,17 +26,6 @@ export const dashboardTableLayouts = {
     columnWidths: ["54%", "22%", "24%"],
     rightAlignedColumns: [1, 2],
   },
-  largestTransactions: {
-    columns: ["Recipient", "Date", "Amount"],
-    template: "minmax(0,1.5fr) 108px 96px",
-    columnWidths: ["45%", "31%", "24%"],
-    rightAlignedColumns: [2],
-  },
-  recentTransactions: {
-    columns: ["Date", "Recipient", "Amount", "Category"],
-    template: "132px minmax(0,1.55fr) 96px minmax(180px,1fr)",
-    rightAlignedColumns: [2],
-  },
 } satisfies Record<string, DashboardTableLayout>;
 
 export function buildRecentTransactionsApiHref(input: {
@@ -84,6 +73,7 @@ export function mapTransactionListToDashboardItems(
       fallbackLabel: "Unknown recipient",
     }),
     category: transaction.category,
+    subcategory: transaction.subcategory,
     amount: transaction.amount,
     timestamp: transaction.timestamp,
     source: transaction.source,

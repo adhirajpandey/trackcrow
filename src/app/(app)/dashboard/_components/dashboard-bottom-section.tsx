@@ -1,20 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode, RefObject } from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowUpRight,
-  Check,
-  ChevronDown,
   ChevronRight,
-  LoaderCircle,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -31,27 +26,23 @@ import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import {
-  buildCategoryQuickTagOptions,
   buildLargestTransactionHref,
   dashboardTableLayouts,
-  getCategoryTriggerLabel,
 } from "./dashboard-bottom-section-model";
 import {
   dashboardAttentionPanelClassName,
   dashboardFooterLinkClassName,
   dashboardFooterSecondaryLinkClassName,
-  dashboardFooterStackClassName,
   dashboardInnerTableClassName,
   dashboardPanelClassName,
   dashboardPrimaryActionClassName,
 } from "./dashboard-style";
+import { TransactionsTable } from "@/app/(app)/transactions/_components/transactions-table";
 import {
   buildFrequentRecipientRows,
-  buildRecentTransactionMeta,
   buildRecentTransactionsSummary,
   buildTransactionsHref,
   formatCurrency,
-  formatShortDate,
   getCategoryShare,
   getKnownSpendTotal,
   getKnownSpendingCategories,
@@ -67,20 +58,7 @@ export function DashboardBottomSection({
   displayRange: string;
   topCategory: string | null;
 }) {
-  const router = useRouter();
-  const [recentTransactions, setRecentTransactions] = useState(
-    data.recentTransactions.slice(0, 6)
-  );
-  const [pendingTransactionId, setPendingTransactionId] = useState<number | null>(null);
-  const [assignmentErrorTransactionId, setAssignmentErrorTransactionId] = useState<
-    number | null
-  >(null);
-  const [openCategoryMenuTransactionId, setOpenCategoryMenuTransactionId] = useState<
-    number | null
-  >(null);
-  const categoryMenuRef = useRef<HTMLDivElement | null>(null);
-  const [isRefreshing, startRefreshTransition] = useTransition();
-  const quickTagOptions = buildCategoryQuickTagOptions(data.categoryOptions);
+  const recentTransactions = data.recentTransactions.slice(0, 6);
   const knownCategories = getKnownSpendingCategories(data.spendingByCategory);
   const knownSpendTotal = getKnownSpendTotal(data.spendingByCategory);
   const maxKnownCategorySpend = Math.max(
@@ -92,81 +70,6 @@ export function DashboardBottomSection({
   const frequentRecipientRows = buildFrequentRecipientRows({
     recipients: data.frequentRecipients,
   });
-
-  useEffect(() => {
-    setRecentTransactions(data.recentTransactions.slice(0, 6));
-  }, [data.recentTransactions]);
-
-  useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (!categoryMenuRef.current?.contains(event.target as Node)) {
-        setOpenCategoryMenuTransactionId(null);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpenCategoryMenuTransactionId(null);
-      }
-    }
-
-    if (openCategoryMenuTransactionId !== null) {
-      window.addEventListener("mousedown", handlePointerDown);
-      window.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [openCategoryMenuTransactionId]);
-
-  async function handleQuickTag(transactionId: number, categoryId: number) {
-    const category = data.categoryOptions.find((item) => item.id === categoryId);
-    if (!category) {
-      return;
-    }
-
-    const previousTransactions = recentTransactions;
-    const nextCategoryName = category.name;
-
-    setAssignmentErrorTransactionId(null);
-    setPendingTransactionId(transactionId);
-    setOpenCategoryMenuTransactionId(null);
-    setRecentTransactions((current) =>
-      current.flatMap((transaction) => {
-        if (transaction.id !== transactionId) {
-          return [transaction];
-        }
-
-        return [{ ...transaction, category: nextCategoryName }];
-      })
-    );
-
-    try {
-      const response = await fetch(`/api/transactions/${transactionId}/category`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "same-origin",
-        body: JSON.stringify({ categoryId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update category");
-      }
-
-      startRefreshTransition(() => {
-        router.refresh();
-      });
-    } catch {
-      setRecentTransactions(previousTransactions);
-      setAssignmentErrorTransactionId(transactionId);
-    } finally {
-      setPendingTransactionId(null);
-    }
-  }
 
   const recentSummary = buildRecentTransactionsSummary({
     transactionCount: recentTransactions.length,
@@ -200,18 +103,6 @@ export function DashboardBottomSection({
           range={data.range}
           transactionStatus={data.sectionStatus.transactions}
           summary={recentSummary}
-          isLoading={isRefreshing}
-          quickTagOptions={quickTagOptions}
-          pendingTransactionId={pendingTransactionId}
-          assignmentErrorTransactionId={assignmentErrorTransactionId}
-          onQuickTag={handleQuickTag}
-          openCategoryMenuTransactionId={openCategoryMenuTransactionId}
-          onToggleCategoryMenu={(transactionId) =>
-            setOpenCategoryMenuTransactionId((current) =>
-              current === transactionId ? null : transactionId
-            )
-          }
-          categoryMenuRef={categoryMenuRef}
           displayRange={displayRange}
         />
       </section>
@@ -492,57 +383,14 @@ function LargestTransactionsPanel({
         {transactions.length === 0 ? (
           <EmptyPanel title="No large transactions in this period." />
         ) : (
-          <div className={dashboardInnerTableClassName}>
-            <Table className="table-fixed">
-              <TableHeader layout={dashboardTableLayouts.largestTransactions} />
-              <TableBody>
-              {transactions.map((transaction, index) => (
-                <TableRow
-                  key={transaction.uuid}
-                  tabIndex={0}
-                  role="link"
-                  className={cn(
-                    "cursor-pointer hover:bg-secondary/18",
-                    index > 0 && "border-t border-border/40"
-                  )}
-                  onClick={(event) =>
-                    handleLinkRowClick(
-                      event,
-                      buildLargestTransactionHref(transaction.id),
-                      router.push
-                    )
-                  }
-                  onKeyDown={(event) =>
-                    handleLinkRowKeyDown(
-                      event,
-                      buildLargestTransactionHref(transaction.id),
-                      router.push
-                    )
-                  }
-                >
-                  <TableCell className="overflow-hidden py-4">
-                    <Link
-                      href={buildLargestTransactionHref(transaction.id)}
-                      className="block truncate font-medium text-foreground"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {transaction.recipient}
-                    </Link>
-                    <p className="mt-0.5 truncate text-xs text-secondary-foreground">
-                      {transaction.category ?? "Uncategorized"}
-                    </p>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap py-4 text-secondary-foreground">
-                    {formatShortDate(transaction.timestamp)}
-                  </TableCell>
-                  <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
-                    {formatCurrency(transaction.amount)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              </TableBody>
-            </Table>
-          </div>
+          <TransactionsTable
+            rows={transactions}
+            columns={["recipient", "timestamp", "amount"]}
+            variant="compact"
+            rowHref={(transaction) => buildLargestTransactionHref(transaction.id)}
+            onNavigate={router.push}
+            emptyTitle="No large transactions in this period."
+          />
         )}
       </CardContent>
     </Card>
@@ -554,28 +402,12 @@ function RecentTransactionsPanel({
   range,
   transactionStatus,
   summary,
-  isLoading,
-  quickTagOptions,
-  pendingTransactionId,
-  assignmentErrorTransactionId,
-  onQuickTag,
-  openCategoryMenuTransactionId,
-  onToggleCategoryMenu,
-  categoryMenuRef,
   displayRange,
 }: {
   transactions: DashboardPageData["recentTransactions"];
   range: DashboardPageData["range"];
   transactionStatus: DashboardPageData["sectionStatus"]["transactions"];
   summary: string;
-  isLoading: boolean;
-  quickTagOptions: Array<{ id: number; label: string }>;
-  pendingTransactionId: number | null;
-  assignmentErrorTransactionId: number | null;
-  onQuickTag: (transactionId: number, categoryId: number) => Promise<void>;
-  openCategoryMenuTransactionId: number | null;
-  onToggleCategoryMenu: (transactionId: number) => void;
-  categoryMenuRef: RefObject<HTMLDivElement | null>;
   displayRange: string;
 }) {
   const router = useRouter();
@@ -588,7 +420,6 @@ function RecentTransactionsPanel({
         trailing={
           <div className="flex items-center justify-between gap-3 pt-1 text-sm font-medium text-secondary-foreground">
             <span className="tracking-[0.01em]">{summary}</span>
-            {isLoading ? <LoaderCircle className="h-4 w-4 animate-spin text-primary" /> : null}
           </div>
         }
       />
@@ -603,152 +434,22 @@ function RecentTransactionsPanel({
             }
           />
         ) : (
-          <div className={dashboardInnerTableClassName}>
-            <Table className="min-w-[860px]">
-              <TableHeader layout={dashboardTableLayouts.recentTransactions} />
-              <TableBody>
-              {transactions.map((transaction, index) => {
-                const meta = buildRecentTransactionMeta(transaction.category, transaction.timestamp);
-                const isPending = pendingTransactionId === transaction.id;
-                const hasAssignmentError = assignmentErrorTransactionId === transaction.id;
-                const isCategoryMenuOpen =
-                  openCategoryMenuTransactionId === transaction.id;
-
-                return (
-                  <TableRow
-                    key={transaction.uuid}
-                    className={cn(
-                      "cursor-pointer items-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                      index > 0 && "border-t border-border/40"
-                    )}
-                    role="link"
-                    tabIndex={0}
-                    onClick={(event) =>
-                      handleLinkRowClick(
-                        event,
-                        `/transactions/${transaction.id}`,
-                        router.push
-                      )
-                    }
-                    onKeyDown={(event) =>
-                      handleLinkRowKeyDown(
-                        event,
-                        `/transactions/${transaction.id}`,
-                        router.push
-                      )
-                    }
-                  >
-                    <TableCell className="py-4 text-secondary-foreground">
-                      <span className="block text-sm font-medium text-foreground">
-                        {meta.dateLabel}
-                      </span>
-                      <span className="mt-1 block text-xs tracking-[0.01em] text-secondary-foreground/88">
-                        {meta.timeLabel}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <Link
-                        href={`/transactions/${transaction.id}`}
-                        onClick={(event) => event.stopPropagation()}
-                        className="block truncate pr-3 text-[15px] font-medium leading-6 text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {transaction.recipient}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="py-4 text-right font-semibold tabular-nums text-foreground">
-                      {formatCurrency(transaction.amount)}
-                    </TableCell>
-                    <TableCell className="py-4">
-                      {meta.needsCategory ? (
-                        <div className="w-full max-w-[220px] space-y-2">
-                          <div
-                            ref={isCategoryMenuOpen ? categoryMenuRef : undefined}
-                            className="relative w-full"
-                          >
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onToggleCategoryMenu(transaction.id);
-                              }}
-                              onKeyDown={(event) => event.stopPropagation()}
-                              disabled={isPending}
-                              aria-haspopup="listbox"
-                              aria-expanded={isCategoryMenuOpen}
-                              className={cn(
-                                "min-h-9 w-full justify-between rounded-[10px] border-accent/30 bg-[rgba(41,36,18,0.78)] px-3.5 text-sm font-medium text-accent transition-colors hover:bg-[rgba(52,46,20,0.92)] hover:text-accent focus-visible:ring-accent/40",
-                                isCategoryMenuOpen && "border-accent/45 bg-[rgba(52,46,20,0.92)]"
-                              )}
-                            >
-                              <span className="truncate">
-                                {getCategoryTriggerLabel(transaction.category)}
-                              </span>
-                              <ChevronDown
-                                className={cn(
-                                  "h-3.5 w-3.5 shrink-0 transition-transform",
-                                  isCategoryMenuOpen && "rotate-180"
-                                )}
-                              />
-                            </Button>
-                            {isCategoryMenuOpen ? (
-                              <div
-                                role="listbox"
-                                className="absolute left-0 top-[calc(100%+0.4rem)] z-20 w-full overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]"
-                              >
-                                <div className="border-b border-border/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-secondary-foreground/80">
-                                  Select category
-                                </div>
-                                <div className="max-h-56 overflow-y-auto py-1">
-                                  {quickTagOptions.map((option) => (
-                                    <button
-                                      key={option.id}
-                                      type="button"
-                                      role="option"
-                                      aria-selected={transaction.category === option.label}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        void onQuickTag(transaction.id, option.id);
-                                      }}
-                                      onKeyDown={(event) => event.stopPropagation()}
-                                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20"
-                                    >
-                                      <span className="truncate">{option.label}</span>
-                                      {transaction.category === option.label ? (
-                                        <Check className="h-4 w-4 shrink-0 text-primary" />
-                                      ) : null}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                          {hasAssignmentError ? (
-                            <span className="block pl-0.5 text-xs text-destructive">
-                              Category update failed.
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="inline-flex min-h-9 max-w-full items-center rounded-[999px] border border-primary/20 bg-primary/10 px-3.5 text-sm font-medium text-primary">
-                          <span className="truncate">{meta.categoryLabel}</span>
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-        <FooterActions>
-          <PanelFooterLink
-            href={buildTransactionsHref(getRangeParams(range))}
-            label="View all activity"
-            className={dashboardFooterSecondaryLinkClassName}
+          <TransactionsTable
+            rows={transactions}
+            columns={["timestamp", "recipient", "amount", "category"]}
+            variant="embedded"
+            rowHref={(transaction) => `/transactions/${transaction.id}`}
+            onNavigate={router.push}
+            emptyTitle="No recent transactions in this period."
+            footerActions={
+              <PanelFooterLink
+                href={buildTransactionsHref(getRangeParams(range))}
+                label="View all activity"
+                className={dashboardFooterSecondaryLinkClassName}
+              />
+            }
           />
-        </FooterActions>
+        )}
       </CardContent>
     </Card>
   );
@@ -807,10 +508,6 @@ function PanelFooterLink({
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </Link>
   );
-}
-
-function FooterActions({ children }: { children: ReactNode }) {
-  return <div className={dashboardFooterStackClassName}>{children}</div>;
 }
 
 function EmptyPanel({

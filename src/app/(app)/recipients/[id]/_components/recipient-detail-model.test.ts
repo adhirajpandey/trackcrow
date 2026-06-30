@@ -123,4 +123,38 @@ describe("buildRecipientDetailPageData", () => {
       1,
     ]);
   });
+
+  it("keeps all linked transactions for client-side pagination", () => {
+    const linkedTransactions = Array.from({ length: 13 }, (_, index) => ({
+      id: index + 1,
+      uuid: `txn-${index + 1}`,
+      amount: 100 + index,
+      currency: "INR",
+      type: "UPI",
+      source: "sms",
+      recipientRaw: "Sample Recipient",
+      recipientName: null,
+      timestamp: `2026-06-${String(30 - index).padStart(2, "0")}T10:00:00.000Z`,
+      category: "Food",
+      subcategory: "Dinner",
+      categoryId: 1,
+      subcategoryId: 2,
+    }));
+
+    const pageData = buildRecipientDetailPageData({
+      id: 7,
+      uuid: "rcp-7",
+      displayName: "Sample Recipient",
+      normalizedName: "sample recipient",
+      createdAt: "2026-06-01T00:00:00.000Z",
+      updatedAt: "2026-06-30T00:00:00.000Z",
+      transactionCount: linkedTransactions.length,
+      identifiers: [],
+      linkedTransactions,
+    });
+
+    expect(pageData.recentTransactions).toHaveLength(13);
+    expect(pageData.recentTransactions[0]?.uuid).toBe("txn-1");
+    expect(pageData.recentTransactions[12]?.uuid).toBe("txn-13");
+  });
 });

@@ -79,6 +79,7 @@ describe("dashboard bottom section model", () => {
         uuid: "txn-12",
         recipient: "Vivek Pandey",
         category: null,
+        subcategory: null,
         amount: 190,
         timestamp: "2026-06-20T09:00:00.000Z",
         source: "SMS",
@@ -121,15 +122,6 @@ describe("dashboard bottom section model", () => {
       columnWidths: ["54%", "22%", "24%"],
       rightAlignedColumns: [1, 2],
     });
-    expect(dashboardTableLayouts.largestTransactions).toEqual({
-      columns: ["Recipient", "Date", "Amount"],
-      template: "minmax(0,1.5fr) 108px 96px",
-      columnWidths: ["45%", "31%", "24%"],
-      rightAlignedColumns: [2],
-    });
-    expect(dashboardTableLayouts.recentTransactions.template).toBe(
-      "132px minmax(0,1.55fr) 96px minmax(180px,1fr)"
-    );
   });
 
   it("defines a shared footer spacing stack for dashboard footer links", () => {

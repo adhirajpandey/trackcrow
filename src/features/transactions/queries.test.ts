@@ -78,6 +78,7 @@ describe("transactions queries", () => {
         uuid: "txn-1",
         recipient: "Acme Rent",
         category: "Housing",
+        subcategory: null,
       }),
     ]);
     expect(data.pagination).toMatchObject({

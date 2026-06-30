@@ -321,6 +321,7 @@ export async function getRecentLargeTransactions(
       uuid: string;
       recipient: string;
       category: string | null;
+      subcategory: string | null;
       amount: number;
       timestamp: string;
       source: string;
@@ -348,6 +349,7 @@ export async function getRecentLargeTransactions(
         recipientRaw: true,
         recipient: { select: { displayName: true } },
         category: { select: { name: true } },
+        subcategory: { select: { name: true } },
       },
     });
 
@@ -362,6 +364,7 @@ export async function getRecentLargeTransactions(
           fallbackLabel: "Unknown merchant",
         }),
         category: transaction.category?.name ?? null,
+        subcategory: transaction.subcategory?.name ?? null,
         amount: Number(transaction.amount),
         timestamp: transaction.timestamp.toISOString(),
         source: transaction.source,
@@ -384,6 +387,7 @@ export async function getRecentTransactions(
       uuid: string;
       recipient: string;
       category: string | null;
+      subcategory: string | null;
       amount: number;
       timestamp: string;
       source: string;
@@ -411,6 +415,7 @@ export async function getRecentTransactions(
         recipientRaw: true,
         recipient: { select: { displayName: true } },
         category: { select: { name: true } },
+        subcategory: { select: { name: true } },
       },
     });
 
@@ -425,6 +430,7 @@ export async function getRecentTransactions(
           fallbackLabel: "Unknown merchant",
         }),
         category: transaction.category?.name ?? null,
+        subcategory: transaction.subcategory?.name ?? null,
         amount: Number(transaction.amount),
         timestamp: transaction.timestamp.toISOString(),
         source: transaction.source,

@@ -17,6 +17,7 @@ export type TransactionsQueryRow = {
   recipient: string;
   amount: number;
   category: string | null;
+  subcategory: string | null;
   source: TransactionRecord["source"];
   timestamp: string;
 };

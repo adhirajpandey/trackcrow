@@ -64,6 +64,7 @@ export type DashboardRecentTransactionDto = {
   uuid: string;
   recipient: string;
   category: string | null;
+  subcategory: string | null;
   amount: number;
   timestamp: string;
   source: string;

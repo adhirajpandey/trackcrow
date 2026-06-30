@@ -173,6 +173,7 @@ function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
     }),
     amount: transaction.amount,
     category: transaction.category,
+    subcategory: transaction.subcategory,
     source: transaction.source,
     timestamp: transaction.timestamp,
   };

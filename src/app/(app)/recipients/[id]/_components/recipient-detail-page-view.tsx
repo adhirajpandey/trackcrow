@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
-import { DataTableShell } from "@/components/product/data-table-shell";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,19 +53,22 @@ import {
 import type { RecipientDetailPageInitialData } from "@/features/recipients/types";
 import { useUpdateTransactionCategoryMutation } from "@/features/transactions/mutations";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
-import {
-  handleLinkRowClick,
-  handleLinkRowKeyDown,
-} from "@/lib/row-link-navigation";
 import { cn } from "@/lib/utils";
 import {
   dashboardInnerTableClassName,
   dashboardPanelClassName,
 } from "@/app/(app)/dashboard/_components/dashboard-style";
+import { TransactionsTable } from "@/app/(app)/transactions/_components/transactions-table";
 import {
-  formatTransactionDateLabel,
-  formatTransactionTimeLabel,
-} from "@/app/(app)/transactions/_components/transactions-view-model";
+  paginateTransactionTableRows,
+  sortTransactionTableRows,
+  toggleTransactionTableSort,
+  transactionTablePageSize,
+} from "@/app/(app)/transactions/_components/transactions-table-model";
+import type {
+  TransactionSortBy,
+  TransactionSortOrder,
+} from "@/features/transactions/types";
 
 import {
   formatRecipientDate,
@@ -104,6 +106,11 @@ export function RecipientDetailPageView({
   const [identifierValue, setIdentifierValue] = useState("");
   const [identifierKind, setIdentifierKind] = useState("AUTO");
   const [pendingTransfer, setPendingTransfer] = useState<IdentifierTransferImpact | null>(null);
+  const [relatedTransactionsPage, setRelatedTransactionsPage] = useState(1);
+  const [relatedTransactionsSort, setRelatedTransactionsSort] = useState<{
+    sortBy: TransactionSortBy;
+    sortOrder: TransactionSortOrder;
+  }>({ sortBy: "timestamp", sortOrder: "desc" });
 
   const cleanup = data.cleanupSuggestion;
   const categoryExists = cleanup.categoryId
@@ -145,7 +152,24 @@ export function RecipientDetailPageView({
     },
   ] as const;
 
-  const relatedTransactions = data.recentTransactions;
+  const sortedRelatedTransactions = useMemo(
+    () =>
+      sortTransactionTableRows(
+        data.recentTransactions,
+        relatedTransactionsSort.sortBy,
+        relatedTransactionsSort.sortOrder
+      ),
+    [data.recentTransactions, relatedTransactionsSort.sortBy, relatedTransactionsSort.sortOrder]
+  );
+  const relatedTransactions = useMemo(
+    () =>
+      paginateTransactionTableRows(
+        sortedRelatedTransactions,
+        relatedTransactionsPage,
+        transactionTablePageSize
+      ),
+    [relatedTransactionsPage, sortedRelatedTransactions]
+  );
 
   useEffect(() => {
     if (!copiedValue) {
@@ -422,83 +446,30 @@ export function RecipientDetailPageView({
                 </p>
               </div>
             </div>
-            <DataTableShell className="mx-5 mb-5">
-              {relatedTransactions.length > 0 ? (
-                <Table className="min-w-[860px] table-fixed">
-                  <TableHeader className="border-b border-border/40 bg-background/16">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[20%]">Date & time</TableHead>
-                      <TableHead className="w-[16%] text-right">Amount</TableHead>
-                      <TableHead className="w-[22%]">Category</TableHead>
-                      <TableHead className="w-[22%]">Subcategory</TableHead>
-                      <TableHead className="w-[10%]">Source</TableHead>
-                      <TableHead className="w-[10%]">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {relatedTransactions.map((transaction) => (
-                      <TableRow
-                        key={transaction.uuid}
-                        tabIndex={0}
-                        role="link"
-                        className="group cursor-pointer"
-                        onClick={(event) => {
-                          handleLinkRowClick(
-                            event,
-                            `/transactions/${transaction.id}`,
-                            router.push
-                          );
-                        }}
-                        onKeyDown={(event) => {
-                          handleLinkRowKeyDown(
-                            event,
-                            `/transactions/${transaction.id}`,
-                            router.push
-                          );
-                        }}
-                      >
-                        <TableCell className="py-4">
-                          <div className="min-w-0">
-                            <p className="font-medium text-foreground">
-                              {formatTransactionDateLabel(transaction.timestamp)}
-                            </p>
-                            <p className="mt-1 text-xs text-secondary-foreground/85">
-                              {formatTransactionTimeLabel(transaction.timestamp)}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4 text-right font-semibold tabular-nums text-foreground">
-                          {formatRecipientTotal(transaction.amount)}
-                        </TableCell>
-                        <TableCell className="py-4 font-medium text-foreground">
-                          {transaction.category ?? "Uncategorized"}
-                        </TableCell>
-                        <TableCell className="py-4 text-secondary-foreground">
-                          {transaction.subcategory ?? "-"}
-                        </TableCell>
-                        <TableCell className="py-4 font-medium uppercase tracking-[0.08em] text-secondary-foreground">
-                          {transaction.source}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "py-4 font-medium",
-                            transaction.status === "uncategorized"
-                              ? "text-accent"
-                              : "text-secondary-foreground"
-                          )}
-                        >
-                          {transaction.status === "uncategorized" ? "Needs review" : "Set"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="px-5 py-8 text-sm text-secondary-foreground">
-                  No linked transactions found for this recipient.
-                </div>
-              )}
-            </DataTableShell>
+            <TransactionsTable
+              className="mx-5 mb-5"
+              rows={relatedTransactions.rows}
+              columns={["timestamp", "amount", "category", "subcategory"]}
+              variant="embedded"
+              sort={{
+                sortBy: relatedTransactionsSort.sortBy,
+                sortOrder: relatedTransactionsSort.sortOrder,
+                sortableColumns: ["timestamp", "amount"],
+                onSort: (sortBy) => {
+                  setRelatedTransactionsSort((current) =>
+                    toggleTransactionTableSort(current, sortBy)
+                  );
+                  setRelatedTransactionsPage(1);
+                },
+              }}
+              pagination={{
+                ...relatedTransactions.pagination,
+                onPageChange: setRelatedTransactionsPage,
+              }}
+              rowHref={(transaction) => `/transactions/${transaction.id}`}
+              onNavigate={router.push}
+              emptyTitle="No linked transactions found for this recipient."
+            />
           </section>
         </main>
 

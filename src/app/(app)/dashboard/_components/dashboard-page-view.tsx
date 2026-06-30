@@ -87,6 +87,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
   const rangeParams = getRangeParams(data.range);
   const reviewQueue = buildReviewQueueCard({
     summary: data.summary,
+    importHealth: data.importHealth,
     largeTransactionCount: data.largeTransactionCount,
     recipients: data.frequentRecipients,
     range: data.range,

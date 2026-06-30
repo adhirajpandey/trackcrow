@@ -6,8 +6,6 @@ import type {
 } from "@/features/recipients/types";
 import type { RecipientDetailDto } from "@/server/modules/recipients/types";
 
-const recentTransactionsLimit = 12;
-
 function formatIdentifierKind(kind: string) {
   switch (kind) {
     case "UPI_ID":
@@ -202,7 +200,7 @@ export function buildRecipientDetailPageData(
       reviewTransactionId: uncategorizedTransactionIds[0] ?? null,
       applyLabel: suggestionLabel ? `Apply ${suggestionLabel}` : null,
     },
-    recentTransactions: recipient.linkedTransactions.slice(0, recentTransactionsLimit).map((transaction) => ({
+    recentTransactions: recipient.linkedTransactions.map((transaction) => ({
       id: transaction.id,
       uuid: transaction.uuid,
       amount: transaction.amount,
