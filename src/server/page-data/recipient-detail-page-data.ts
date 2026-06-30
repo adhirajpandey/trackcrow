@@ -3,6 +3,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 
 import type { RecipientDetailPageInitialData } from "@/features/recipients/types";
+import { getCategories } from "@/lib/internal-api";
 import { requirePageSessionUser } from "@/server/auth/session";
 import { getRecipientDetail } from "@/server/modules/recipients/service";
 
@@ -12,6 +13,7 @@ export async function getRecipientDetailPageData(
   recipientId: number
 ): Promise<RecipientDetailPageInitialData> {
   const sessionUser = await requirePageSessionUser();
+  const categoriesPromise = getCategories().catch(() => []);
   const result = await getRecipientDetail({
     userUuid: sessionUser.userUuid,
     recipientId,
@@ -27,5 +29,6 @@ export async function getRecipientDetailPageData(
 
   return {
     initialRecipientDetailData: buildRecipientDetailPageData(result.data),
+    initialCategoriesData: await categoriesPromise,
   };
 }

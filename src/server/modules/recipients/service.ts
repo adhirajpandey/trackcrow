@@ -7,6 +7,9 @@ import type {
   RecipientDetailDto,
   RecipientDetailTransactionDto,
   RecipientDto,
+  RecipientIdentifierTransferImpact,
+  RecipientIdentifierWriteInput,
+  RecipientIdentifierWriteResult,
   RecipientListInput,
   RecipientListResult,
   RecipientLookupInput,
@@ -51,6 +54,8 @@ function toRecipientDetailTransactionDto(record: {
   currency: string;
   type: string;
   source: string;
+  recipientRaw: string;
+  recipientName: string | null;
   timestamp: Date;
   categoryId: number | null;
   subcategoryId: number | null;
@@ -64,6 +69,8 @@ function toRecipientDetailTransactionDto(record: {
     currency: record.currency,
     type: record.type,
     source: record.source,
+    recipientRaw: record.recipientRaw,
+    recipientName: record.recipientName,
     timestamp: record.timestamp.toISOString(),
     category: record.category?.name ?? null,
     subcategory: record.subcategory?.name ?? null,
@@ -93,6 +100,8 @@ function toRecipientDetailDto(record: {
     currency: string;
     type: string;
     source: string;
+    recipientRaw: string;
+    recipientName: string | null;
     timestamp: Date;
     categoryId: number | null;
     subcategoryId: number | null;
@@ -132,6 +141,72 @@ function detectIdentifierKind(value: string): RecipientIdentifierKind {
   }
 
   return RecipientIdentifierKind.TEXT;
+}
+
+function toIdentifierDto(identifier: {
+  id: number;
+  uuid: string;
+  kind: string;
+  value: string;
+  normalizedValue: string;
+}) {
+  return {
+    id: identifier.id,
+    uuid: identifier.uuid,
+    kind: identifier.kind,
+    value: identifier.value,
+    normalizedValue: identifier.normalizedValue,
+  };
+}
+
+function transactionMatchesIdentifier(
+  transaction: { recipientRaw: string; recipientName: string | null },
+  normalizedValue: string
+) {
+  return (
+    normalizeValue(transaction.recipientRaw) === normalizedValue ||
+    (transaction.recipientName ? normalizeValue(transaction.recipientName) === normalizedValue : false)
+  );
+}
+
+async function buildIdentifierTransferImpact(input: {
+  userUuid: string;
+  targetRecipient: { id: number; displayName: string };
+  sourceRecipient: { id: number; displayName: string };
+  identifier: {
+    id: number;
+    uuid: string;
+    kind: string;
+    value: string;
+    normalizedValue: string;
+  };
+}): Promise<RecipientIdentifierTransferImpact> {
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      userUuid: input.userUuid,
+      recipientId: input.sourceRecipient.id,
+    },
+    select: {
+      amount: true,
+      recipientRaw: true,
+      recipientName: true,
+    },
+  });
+  const matchingTransactions = transactions.filter((transaction) =>
+    transactionMatchesIdentifier(transaction, input.identifier.normalizedValue)
+  );
+  const totalAmount = matchingTransactions.reduce(
+    (sum, transaction) => sum + transaction.amount.toNumber(),
+    0
+  );
+
+  return {
+    sourceRecipient: input.sourceRecipient,
+    targetRecipient: input.targetRecipient,
+    identifier: toIdentifierDto(input.identifier),
+    transactionCount: matchingTransactions.length,
+    totalAmount,
+  };
 }
 
 export async function listRecipients(
@@ -406,6 +481,8 @@ export async function getRecipientDetail(
             currency: true,
             type: true,
             source: true,
+            recipientRaw: true,
+            recipientName: true,
             timestamp: true,
             categoryId: true,
             subcategoryId: true,
@@ -429,6 +506,149 @@ export async function getRecipientDetail(
     logger.error("getRecipientDetail - Failed to get recipient detail", error as Error, {
       userUuid: input.userUuid,
       recipientId: input.recipientId,
+    });
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function addRecipientIdentifier(
+  input: RecipientIdentifierWriteInput
+): Promise<RecipientIdentifierWriteResult> {
+  const value = input.value.trim();
+  const normalizedValue = normalizeValue(value);
+  const kind = input.kind && input.kind !== "AUTO" ? input.kind : detectIdentifierKind(value);
+
+  try {
+    const targetRecipient = await prisma.recipient.findFirst({
+      where: { id: input.recipientId, userUuid: input.userUuid },
+      select: { id: true, displayName: true },
+    });
+    if (!targetRecipient) {
+      return fail("NOT_FOUND");
+    }
+
+    const existingIdentifier = await prisma.recipientIdentifier.findFirst({
+      where: {
+        userUuid: input.userUuid,
+        kind,
+        normalizedValue,
+      },
+      include: {
+        recipient: {
+          select: { id: true, displayName: true },
+        },
+      },
+    });
+
+    if (!existingIdentifier) {
+      const created = await prisma.recipientIdentifier.create({
+        data: {
+          userUuid: input.userUuid,
+          recipientId: targetRecipient.id,
+          kind,
+          value,
+          normalizedValue,
+        },
+        select: {
+          id: true,
+          uuid: true,
+          kind: true,
+          value: true,
+          normalizedValue: true,
+        },
+      });
+
+      return ok({
+        status: "created",
+        identifier: toIdentifierDto(created),
+        movedTransactionCount: 0,
+        movedTransactionTotalAmount: 0,
+      });
+    }
+
+    if (existingIdentifier.recipientId === targetRecipient.id) {
+      return ok({
+        status: "already_linked",
+        identifier: toIdentifierDto(existingIdentifier),
+        movedTransactionCount: 0,
+        movedTransactionTotalAmount: 0,
+      });
+    }
+
+    const sourceRecipient = {
+      id: existingIdentifier.recipient.id,
+      displayName: existingIdentifier.recipient.displayName,
+    };
+    const impact = await buildIdentifierTransferImpact({
+      userUuid: input.userUuid,
+      targetRecipient,
+      sourceRecipient,
+      identifier: existingIdentifier,
+    });
+
+    if (!input.transfer) {
+      return fail("CONFLICT", impact);
+    }
+
+    const sourceTransactions = await prisma.transaction.findMany({
+      where: {
+        userUuid: input.userUuid,
+        recipientId: sourceRecipient.id,
+      },
+      select: {
+        id: true,
+        amount: true,
+        recipientRaw: true,
+        recipientName: true,
+      },
+    });
+    const matchingTransactions = sourceTransactions.filter((transaction) =>
+      transactionMatchesIdentifier(transaction, normalizedValue)
+    );
+    const matchingTransactionIds = matchingTransactions.map((transaction) => transaction.id);
+    const movedTransactionTotalAmount = matchingTransactions.reduce(
+      (sum, transaction) => sum + transaction.amount.toNumber(),
+      0
+    );
+
+    const movedIdentifier = await prisma.$transaction(async (tx) => {
+      const updatedIdentifier = await tx.recipientIdentifier.update({
+        where: { id: existingIdentifier.id },
+        data: { recipientId: targetRecipient.id },
+        select: {
+          id: true,
+          uuid: true,
+          kind: true,
+          value: true,
+          normalizedValue: true,
+        },
+      });
+
+      if (matchingTransactionIds.length > 0) {
+        await tx.transaction.updateMany({
+          where: {
+            userUuid: input.userUuid,
+            recipientId: sourceRecipient.id,
+            id: { in: matchingTransactionIds },
+          },
+          data: { recipientId: targetRecipient.id },
+        });
+      }
+
+      return updatedIdentifier;
+    });
+
+    return ok({
+      status: "moved",
+      identifier: toIdentifierDto(movedIdentifier),
+      movedTransactionCount: matchingTransactionIds.length,
+      movedTransactionTotalAmount,
+    });
+  } catch (error) {
+    logger.error("addRecipientIdentifier - Failed to add recipient identifier", error as Error, {
+      userUuid: input.userUuid,
+      recipientId: input.recipientId,
+      kind,
     });
     return fail("INTERNAL_ERROR");
   }

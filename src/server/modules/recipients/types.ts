@@ -1,4 +1,5 @@
 import type { ServiceResult } from "@/server/shared/result";
+import type { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 
 export type RecipientDto = {
   id: number;
@@ -33,6 +34,8 @@ export type RecipientDetailTransactionDto = {
   currency: string;
   type: string;
   source: string;
+  recipientRaw: string;
+  recipientName: string | null;
   timestamp: string;
   category: string | null;
   subcategory: string | null;
@@ -69,6 +72,45 @@ export type RecipientLookupInput = {
   recipientId: number;
 };
 
+export type RecipientIdentifierWriteInput = RecipientLookupInput & {
+  value: string;
+  kind?: RecipientIdentifierKind | "AUTO";
+  transfer?: boolean;
+};
+
+export type RecipientIdentifierTransferImpact = {
+  sourceRecipient: {
+    id: number;
+    displayName: string;
+  };
+  targetRecipient: {
+    id: number;
+    displayName: string;
+  };
+  identifier: {
+    id: number;
+    uuid: string;
+    kind: string;
+    value: string;
+    normalizedValue: string;
+  };
+  transactionCount: number;
+  totalAmount: number;
+};
+
+export type RecipientIdentifierWriteDto = {
+  status: "created" | "already_linked" | "moved";
+  identifier: {
+    id: number;
+    uuid: string;
+    kind: string;
+    value: string;
+    normalizedValue: string;
+  };
+  movedTransactionCount: number;
+  movedTransactionTotalAmount: number;
+};
+
 export type RecipientListInput = {
   userUuid: string;
   page?: number;
@@ -79,3 +121,7 @@ export type RecipientListInput = {
 };
 
 export type RecipientListResult = ServiceResult<RecipientListDto, "INTERNAL_ERROR">;
+export type RecipientIdentifierWriteResult = ServiceResult<
+  RecipientIdentifierWriteDto,
+  "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR"
+>;

@@ -1,3 +1,5 @@
+import type { CategoryOption } from "@/common/types";
+
 export type RecipientIdentifierDto = {
   id: number;
   uuid: string;
@@ -14,6 +16,27 @@ export type RecipientListItemDto = {
   transactionCount: number;
   totalAmount: number;
   identifiers: RecipientIdentifierDto[];
+};
+
+export type RecipientIdentifierTransferImpact = {
+  sourceRecipient: {
+    id: number;
+    displayName: string;
+  };
+  targetRecipient: {
+    id: number;
+    displayName: string;
+  };
+  identifier: RecipientIdentifierDto;
+  transactionCount: number;
+  totalAmount: number;
+};
+
+export type RecipientIdentifierWriteDto = {
+  status: "created" | "already_linked" | "moved";
+  identifier: RecipientIdentifierDto;
+  movedTransactionCount: number;
+  movedTransactionTotalAmount: number;
 };
 
 export type RecipientSortBy = "displayName" | "transactionCount" | "totalAmount";
@@ -90,14 +113,24 @@ export type RecipientDetailIdentifierRow = {
   id: string;
   kindLabel: string;
   value: string;
-  normalizedValue: string;
+  transactionCount: number;
+  sourceLabel: string;
 };
 
 export type RecipientDetailCategoryRow = {
   id: string;
   category: string;
+  categoryId: number | null;
   transactionCount: number;
   totalAmount: number;
+  consistencyPercent: number;
+};
+
+export type RecipientDetailSubcategoryPattern = {
+  id: string;
+  subcategory: string;
+  subcategoryId: number;
+  transactionCount: number;
 };
 
 export type RecipientDetailTransactionRow = {
@@ -105,8 +138,29 @@ export type RecipientDetailTransactionRow = {
   uuid: string;
   amount: number;
   category: string | null;
+  categoryId: number | null;
+  subcategory: string | null;
+  subcategoryId: number | null;
   source: string;
   timestamp: string;
+  status: "categorized" | "uncategorized";
+  isLarge: boolean;
+  isRecent: boolean;
+};
+
+export type RecipientDetailCleanupSuggestion = {
+  category: string | null;
+  categoryId: number | null;
+  subcategory: string | null;
+  subcategoryId: number | null;
+  consistencyPercent: number;
+  categorizedTransactionCount: number;
+  totalTransactionCount: number;
+  totalAmount: number;
+  uncategorizedCount: number;
+  uncategorizedTransactionIds: number[];
+  reviewTransactionId: number | null;
+  applyLabel: string | null;
 };
 
 export type RecipientDetailMetadataItem = {
@@ -142,6 +196,9 @@ export type RecipientDetailPageData = {
   updatedAt: string;
   identifiers: RecipientDetailIdentifierRow[];
   categoryRows: RecipientDetailCategoryRow[];
+  dominantCategory: RecipientDetailCategoryRow | null;
+  dominantSubcategory: RecipientDetailSubcategoryPattern | null;
+  cleanupSuggestion: RecipientDetailCleanupSuggestion;
   recentTransactions: RecipientDetailTransactionRow[];
   metadata: RecipientDetailMetadataItem[];
   quickChecks: RecipientDetailQuickCheck[];
@@ -150,4 +207,5 @@ export type RecipientDetailPageData = {
 
 export type RecipientDetailPageInitialData = {
   initialRecipientDetailData: RecipientDetailPageData;
+  initialCategoriesData: CategoryOption[];
 };

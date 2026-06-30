@@ -441,12 +441,29 @@ export async function updateTransactionCategory(
       return fail("VALIDATION_ERROR", [{ path: ["categoryId"], message: "Unknown category" }]);
     }
 
+    const hasSubcategory = await ensureOwnedSubcategory(
+      input.userUuid,
+      input.categoryId,
+      input.subcategoryId
+    );
+    if (!hasSubcategory) {
+      return fail("VALIDATION_ERROR", [
+        { path: ["subcategoryId"], message: "Unknown subcategory" },
+      ]);
+    }
+
     const updated = await prisma.transaction.update({
       where: { id: input.transactionId },
       data: {
         categoryId: input.categoryId,
         subcategoryId:
-          input.categoryId == null || existing.categoryId !== input.categoryId ? null : undefined,
+          input.categoryId == null
+            ? null
+            : input.subcategoryId !== undefined
+              ? input.subcategoryId
+              : existing.categoryId !== input.categoryId
+                ? null
+                : undefined,
       },
       include: {
         category: { select: { name: true } },

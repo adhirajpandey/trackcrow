@@ -111,6 +111,7 @@ export type UpdateTransactionInput = TransactionMutationInput & {
 export type UpdateTransactionCategoryInput = {
   transactionId: number;
   categoryId?: number | null;
+  subcategoryId?: number | null;
 };
 
 export type TransactionDetailFormValues = {

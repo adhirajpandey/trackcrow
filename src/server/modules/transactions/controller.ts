@@ -193,6 +193,7 @@ export async function patchTransactionCategory(
     transactionId,
     userUuid: sessionData.userUuid,
     categoryId: parsed.data.categoryId ?? null,
+    subcategoryId: parsed.data.subcategoryId,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);

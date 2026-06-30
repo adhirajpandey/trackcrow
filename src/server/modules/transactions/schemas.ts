@@ -29,6 +29,7 @@ export const updateTransactionSchema = createTransactionSchema;
 
 export const updateTransactionCategorySchema = z.object({
   categoryId: optionalNullablePositiveInt,
+  subcategoryId: optionalNullablePositiveInt,
 });
 
 export const transactionIdParamsSchema = z.object({

@@ -80,6 +80,7 @@ export type TransactionCategoryUpdateInput = {
   userUuid: string;
   transactionId: number;
   categoryId: number | null;
+  subcategoryId?: number | null;
 };
 
 export type TransactionLookupInput = {
