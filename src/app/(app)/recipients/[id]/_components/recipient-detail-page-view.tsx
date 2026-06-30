@@ -54,6 +54,10 @@ import {
 import type { RecipientDetailPageInitialData } from "@/features/recipients/types";
 import { useUpdateTransactionCategoryMutation } from "@/features/transactions/mutations";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
+import {
+  handleLinkRowClick,
+  handleLinkRowKeyDown,
+} from "@/lib/row-link-navigation";
 import { cn } from "@/lib/utils";
 import {
   dashboardInnerTableClassName,
@@ -439,16 +443,18 @@ export function RecipientDetailPageView({
                         role="link"
                         className="group cursor-pointer"
                         onClick={(event) => {
-                          if (isInteractiveTarget(event.target as HTMLElement)) {
-                            return;
-                          }
-                          router.push(`/transactions/${transaction.id}`);
+                          handleLinkRowClick(
+                            event,
+                            `/transactions/${transaction.id}`,
+                            router.push
+                          );
                         }}
                         onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            router.push(`/transactions/${transaction.id}`);
-                          }
+                          handleLinkRowKeyDown(
+                            event,
+                            `/transactions/${transaction.id}`,
+                            router.push
+                          );
                         }}
                       >
                         <TableCell className="py-4">
@@ -629,10 +635,6 @@ function parseTransferImpact(value: unknown): IdentifierTransferImpact | null {
   }
 
   return impact as IdentifierTransferImpact;
-}
-
-function isInteractiveTarget(target: HTMLElement | null) {
-  return Boolean(target?.closest("a, button, input, select, textarea"));
 }
 
 function MetricBlock({ label, value }: { label: string; value: string }) {

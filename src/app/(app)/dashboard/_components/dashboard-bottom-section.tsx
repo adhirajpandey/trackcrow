@@ -23,6 +23,10 @@ import {
   TableHeader as SemanticTableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  handleLinkRowClick,
+  handleLinkRowKeyDown,
+} from "@/lib/row-link-navigation";
 import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
@@ -197,7 +201,6 @@ export function DashboardBottomSection({
           transactionStatus={data.sectionStatus.transactions}
           summary={recentSummary}
           isLoading={isRefreshing}
-          onOpenTransaction={(transactionId) => router.push(`/transactions/${transactionId}`)}
           quickTagOptions={quickTagOptions}
           pendingTransactionId={pendingTransactionId}
           assignmentErrorTransactionId={assignmentErrorTransactionId}
@@ -316,12 +319,25 @@ function SpendingByCategoryPanel({
                   return (
                     <TableRow
                       key={item.category}
+                      tabIndex={0}
+                      role="link"
                       className={cn(
                         "cursor-pointer hover:bg-secondary/18",
                         index > 0 && "border-t border-border/40"
                       )}
-                      onClick={() =>
-                        router.push(buildTransactionsHref({ category: item.category }))
+                      onClick={(event) =>
+                        handleLinkRowClick(
+                          event,
+                          buildTransactionsHref({ category: item.category }),
+                          router.push
+                        )
+                      }
+                      onKeyDown={(event) =>
+                        handleLinkRowKeyDown(
+                          event,
+                          buildTransactionsHref({ category: item.category }),
+                          router.push
+                        )
                       }
                     >
                       <TableCell className="py-4">
@@ -417,11 +433,18 @@ function FrequentRecipientsPanel({
               {recipients.map((recipient, index) => (
                 <TableRow
                   key={recipient.recipient}
+                  tabIndex={0}
+                  role="link"
                   className={cn(
                     "cursor-pointer hover:bg-secondary/18",
                     index > 0 && "border-t border-border/40"
                   )}
-                  onClick={() => router.push(recipient.href)}
+                  onClick={(event) =>
+                    handleLinkRowClick(event, recipient.href, router.push)
+                  }
+                  onKeyDown={(event) =>
+                    handleLinkRowKeyDown(event, recipient.href, router.push)
+                  }
                 >
                   <TableCell className="py-4 font-medium text-foreground">
                     <Link
@@ -484,11 +507,26 @@ function LargestTransactionsPanel({
               {transactions.map((transaction, index) => (
                 <TableRow
                   key={transaction.uuid}
+                  tabIndex={0}
+                  role="link"
                   className={cn(
                     "cursor-pointer hover:bg-secondary/18",
                     index > 0 && "border-t border-border/40"
                   )}
-                  onClick={() => router.push(buildLargestTransactionHref(transaction.id))}
+                  onClick={(event) =>
+                    handleLinkRowClick(
+                      event,
+                      buildLargestTransactionHref(transaction.id),
+                      router.push
+                    )
+                  }
+                  onKeyDown={(event) =>
+                    handleLinkRowKeyDown(
+                      event,
+                      buildLargestTransactionHref(transaction.id),
+                      router.push
+                    )
+                  }
                 >
                   <TableCell className="py-4">
                     <Link
@@ -525,7 +563,6 @@ function RecentTransactionsPanel({
   transactionStatus,
   summary,
   isLoading,
-  onOpenTransaction,
   quickTagOptions,
   pendingTransactionId,
   assignmentErrorTransactionId,
@@ -540,7 +577,6 @@ function RecentTransactionsPanel({
   transactionStatus: DashboardPageData["sectionStatus"]["transactions"];
   summary: string;
   isLoading: boolean;
-  onOpenTransaction: (transactionId: number) => void;
   quickTagOptions: Array<{ id: number; label: string }>;
   pendingTransactionId: number | null;
   assignmentErrorTransactionId: number | null;
@@ -550,6 +586,8 @@ function RecentTransactionsPanel({
   categoryMenuRef: RefObject<HTMLDivElement | null>;
   displayRange: string;
 }) {
+  const router = useRouter();
+
   return (
     <Card className={cn(dashboardPanelClassName, "flex flex-col")}>
       <AlignedPanelHeader
@@ -593,13 +631,20 @@ function RecentTransactionsPanel({
                     )}
                     role="link"
                     tabIndex={0}
-                    onClick={() => onOpenTransaction(transaction.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onOpenTransaction(transaction.id);
-                      }
-                    }}
+                    onClick={(event) =>
+                      handleLinkRowClick(
+                        event,
+                        `/transactions/${transaction.id}`,
+                        router.push
+                      )
+                    }
+                    onKeyDown={(event) =>
+                      handleLinkRowKeyDown(
+                        event,
+                        `/transactions/${transaction.id}`,
+                        router.push
+                      )
+                    }
                   >
                     <TableCell className="py-4 text-secondary-foreground">
                       <span className="block text-sm font-medium text-foreground">

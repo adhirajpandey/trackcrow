@@ -37,6 +37,10 @@ import type {
   RecipientsPageRow,
 } from "@/features/recipients/types";
 import { getApiClientErrorMessage } from "@/lib/api/client";
+import {
+  handleLinkRowClick,
+  handleLinkRowKeyDown,
+} from "@/lib/row-link-navigation";
 import { numberToINR } from "@/common/utils";
 import { cn } from "@/lib/utils";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
@@ -316,16 +320,18 @@ export function RecipientsPageView({
                       role="link"
                       className="group cursor-pointer"
                       onClick={(event) => {
-                        if (isInteractiveTarget(event.target as HTMLElement)) {
-                          return;
-                        }
-                        router.push(`/recipients/${row.original.id}`);
+                        handleLinkRowClick(
+                          event,
+                          `/recipients/${row.original.id}`,
+                          router.push
+                        );
                       }}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          router.push(`/recipients/${row.original.id}`);
-                        }
+                        handleLinkRowKeyDown(
+                          event,
+                          `/recipients/${row.original.id}`,
+                          router.push
+                        );
                       }}
                     >
                       {row.getVisibleCells().map((cell) => {
@@ -474,8 +480,4 @@ function DetailMetric({
       <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
-}
-
-function isInteractiveTarget(target: HTMLElement) {
-  return Boolean(target.closest("a, button, input, select, textarea"));
 }

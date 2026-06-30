@@ -40,6 +40,10 @@ import type {
 } from "@/features/transactions/types";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
 import { getApiClientErrorMessage } from "@/lib/api/client";
+import {
+  handleLinkRowClick,
+  handleLinkRowKeyDown,
+} from "@/lib/row-link-navigation";
 import { cn } from "@/lib/utils";
 
 import {
@@ -344,16 +348,18 @@ export function TransactionsPageView({
                         row.original.isSelected && "bg-primary/10"
                       )}
                       onClick={(event) => {
-                        if (isInteractiveTarget(event.target as HTMLElement)) {
-                          return;
-                        }
-                        router.push(`/transactions/${row.original.id}`);
+                        handleLinkRowClick(
+                          event,
+                          `/transactions/${row.original.id}`,
+                          router.push
+                        );
                       }}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          router.push(`/transactions/${row.original.id}`);
-                        }
+                        handleLinkRowKeyDown(
+                          event,
+                          `/transactions/${row.original.id}`,
+                          router.push
+                        );
                       }}
                     >
                       {row.getVisibleCells().map((cell) => {
@@ -479,8 +485,4 @@ function DetailMetric({
       <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
-}
-
-function isInteractiveTarget(target: HTMLElement) {
-  return Boolean(target.closest("a, button, input, select, textarea"));
 }
