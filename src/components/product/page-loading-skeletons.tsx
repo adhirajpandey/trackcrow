@@ -58,9 +58,20 @@ export function WorkspaceListPageSkeleton({
 
 export function WorkspaceDetailPageSkeleton({
   formLayout = false,
+  sidePanels,
 }: {
   formLayout?: boolean;
+  sidePanels?: Array<{ rows: number; tallRows?: boolean }>;
 }) {
+  const resolvedSidePanels =
+    sidePanels ??
+    [
+      { rows: 5 },
+      { rows: 3, tallRows: true },
+      { rows: 3, tallRows: true },
+      ...(formLayout ? [{ rows: 2, tallRows: true }] : []),
+    ];
+
   return (
     <div className="space-y-3.5">
       <PageHeaderSkeleton
@@ -89,10 +100,13 @@ export function WorkspaceDetailPageSkeleton({
         </div>
 
         <aside className="space-y-3">
-          <SidePanelSkeleton rows={5} />
-          <SidePanelSkeleton rows={3} tallRows />
-          <SidePanelSkeleton rows={3} tallRows />
-          {formLayout ? <SidePanelSkeleton rows={2} tallRows /> : null}
+          {resolvedSidePanels.map((panel, index) => (
+            <SidePanelSkeleton
+              key={`${panel.rows}-${panel.tallRows ? "tall" : "compact"}-${index}`}
+              rows={panel.rows}
+              tallRows={panel.tallRows}
+            />
+          ))}
         </aside>
       </div>
     </div>

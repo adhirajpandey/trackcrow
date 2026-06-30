@@ -13,7 +13,6 @@ import {
   Check,
   CircleAlert,
   ChevronDown,
-  Copy,
   MapPinned,
   LoaderCircle,
   Save,
@@ -92,7 +91,6 @@ export function TransactionDetailPageView({
     message: string;
   } | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [copiedValue, setCopiedValue] = useState<string | null>(null);
   const pendingSuggestedSubcategoryRef = useRef<string | null>(null);
   const shortcutStateRef = useRef({
     hasUnsavedChanges: false,
@@ -174,15 +172,6 @@ export function TransactionDetailPageView({
       form.setValue("subcategoryId", "", { shouldDirty: true });
     }
   }, [categories, form, selectedCategoryId, selectedSubcategoryId, subcategoryOptions]);
-
-  useEffect(() => {
-    if (!copiedValue) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => setCopiedValue(null), 1200);
-    return () => window.clearTimeout(timeoutId);
-  }, [copiedValue]);
 
   const previewTransaction = {
     ...transaction,
@@ -312,15 +301,6 @@ export function TransactionDetailPageView({
           "Unable to delete this transaction right now."
         ),
       });
-    }
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopiedValue(value);
-    } catch {
-      setCopiedValue(null);
     }
   }
 
@@ -608,41 +588,11 @@ export function TransactionDetailPageView({
 
         <aside className="space-y-3">
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Metadata</h2>
-            <div className="mt-4 space-y-1">
-              <MetadataRow
-                label="Transaction ID"
-                value={`txn_${transaction.id}`}
-                onCopy={() => void handleCopy(`txn_${transaction.id}`)}
-                copied={copiedValue === `txn_${transaction.id}`}
-              />
-              <MetadataRow
-                label="User UUID"
-                value={transaction.userUuid}
-                onCopy={() => void handleCopy(transaction.userUuid)}
-                copied={copiedValue === transaction.userUuid}
-              />
-              <MetadataRow label="Created" value={formatTransactionDateTime(transaction.createdAt)} />
-              <MetadataRow label="Updated" value={formatTransactionDateTime(transaction.updatedAt)} />
-              <MetadataRow label="Source" value={transaction.source} />
-            </div>
-          </section>
-
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
             <h2 className="text-[1.05rem] font-semibold text-foreground">Quick checks</h2>
             <div className="mt-4 space-y-3">
               {quickChecks.map((check) => (
                 <QuickCheckRow key={check.id} label={check.label} status={check.status} />
               ))}
-            </div>
-          </section>
-
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Recorded details</h2>
-            <div className="mt-4 space-y-1">
-              <MetadataRow label="Import source" value={transaction.source === "SMS" ? "SMS ingestion" : "Manual transaction"} />
-              <MetadataRow label="Category" value={transaction.category ?? "Uncategorized"} />
-              <MetadataRow label="Subcategory" value={transaction.subcategory ?? "-"} />
             </div>
           </section>
 
@@ -748,37 +698,6 @@ function DefinitionGrid({
           <span className="text-sm font-medium text-foreground break-all">{item.value}</span>
         </div>
       ))}
-    </div>
-  );
-}
-
-function MetadataRow({
-  label,
-  value,
-  onCopy,
-  copied = false,
-}: {
-  label: string;
-  value: string;
-  onCopy?: () => void;
-  copied?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-border/35 py-3 text-sm last:border-b-0 last:pb-0">
-      <span className="text-secondary-foreground">{label}</span>
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-right font-medium text-foreground">{value}</span>
-        {onCopy ? (
-          <button
-            type="button"
-            onClick={onCopy}
-            aria-label={`Copy ${label}`}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-secondary-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {copied ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
-          </button>
-        ) : null}
-      </div>
     </div>
   );
 }
