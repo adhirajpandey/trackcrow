@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
+  Layers3,
   ReceiptText,
   Sparkles,
   TriangleAlert,
@@ -86,7 +87,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
   const rangeParams = getRangeParams(data.range);
   const reviewQueue = buildReviewQueueCard({
     summary: data.summary,
-    importHealth: data.importHealth,
     largeTransactionCount: data.largeTransactionCount,
     recipients: data.frequentRecipients,
     range: data.range,
@@ -155,15 +155,20 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           href={buildTransactionsHref(rangeParams)}
           label="Total spent"
           value={formatCompactCurrency(data.summary.totalSpend, { style: "kpi" })}
-          helper={`${formatCurrency(data.summary.totalSpend)} across ${formatNumber(
-            data.summary.transactionCount
-          )} transactions`}
-          comparison={metricComparisons.totalSpend}
+          emphasis={metricComparisons.totalSpend}
+          details={[
+            { label: "Booked spend", value: formatCurrency(data.summary.totalSpend) },
+            {
+              label: "Transactions",
+              value: formatNumber(data.summary.transactionCount),
+            },
+          ]}
           tone="primary"
           icon={<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
         />
         <ReviewQueueHero card={reviewQueue} />
-        <MetricCard
+        <TopCategoryCard
+          category={topCategoryInsight}
           href={
             topCategoryInsight
               ? buildTransactionsHref({
@@ -172,24 +177,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
                 })
               : "/transactions"
           }
-          label="Top known category"
-          value={
-            topCategoryInsight
-              ? formatCurrency(topCategoryInsight.totalSpend)
-              : "No known category yet"
-          }
-          helper={
-            topCategoryInsight
-              ? topCategoryInsight.category
-              : "Categorize transactions to see your top category."
-          }
-          comparison={
-            topCategoryInsight
-              ? `${topCategoryInsight.share}% of categorized spend`
-              : "Known spend only"
-          }
-          tone="secondary"
-          icon={<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
         />
         <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
       </section>
@@ -234,16 +221,16 @@ function MetricCard({
   href,
   label,
   value,
-  helper,
-  comparison,
+  emphasis,
+  details,
   tone,
   icon,
 }: {
   href: string;
   label: string;
   value: string;
-  helper: string;
-  comparison: string;
+  emphasis: string;
+  details: Array<{ label: string; value: string }>;
   tone: "primary" | "secondary";
   icon: ReactNode;
 }) {
@@ -261,8 +248,17 @@ function MetricCard({
             {value}
           </p>
         }
-        secondaryValue={<p className={dashboardTopCardMetaClassName}>{comparison}</p>}
-        helper={<p className={dashboardTopCardHelperClassName}>{helper}</p>}
+        secondaryValue={
+          <p
+            className={cn(
+              dashboardTopCardMetaClassName,
+              tone === "primary" ? "text-primary/90" : "text-foreground"
+            )}
+          >
+            {emphasis}
+          </p>
+        }
+        helper={<TopCardDetailList items={details} />}
       />
     </TopDashboardCardFrame>
   );
@@ -287,11 +283,24 @@ function MostFrequentRecipientCard({
             </p>
           }
           secondaryValue={
-            <p className={dashboardTopCardMetaClassName}>
-              {formatNumber(recipient.paymentCount)} payments, {formatCurrency(recipient.totalAmount)}
+            <p className={cn(dashboardTopCardMetaClassName, "text-foreground")}>
+              {formatNumber(recipient.paymentCount)} payments this period
             </p>
           }
-          helper={<p className={dashboardTopCardHelperClassName}>{recipient.helper}</p>}
+          helper={
+            <TopCardDetailList
+              items={[
+                {
+                  label: "Total amount",
+                  value: formatCurrency(recipient.totalAmount),
+                },
+                {
+                  label: "Recommendation",
+                  value: recipient.helper,
+                },
+              ]}
+            />
+          }
           action={
             recipient.action === "Create rule" ? (
               <span
@@ -331,7 +340,6 @@ function ReviewQueueHero({
   const needsCategoryTask = card.tasks.find((task) => task.label === "Need category");
   const largeTransactionsTask = card.tasks.find((task) => task.label === "Large transactions");
   const ruleMatchesTask = card.tasks.find((task) => task.label === "Possible rule matches");
-  const importIssuesTask = card.tasks.find((task) => task.label === "Import issues");
 
   return (
     <TopDashboardCardFrame
@@ -354,20 +362,30 @@ function ReviewQueueHero({
         primaryValue={
           <p className={cn(dashboardTopCardValueClassName, "text-accent")}>
             {formatNumber(card.totalReviewCount)}
-            <span className="ml-1.5 text-base text-foreground">
-              transactions need review
-            </span>
           </p>
         }
         secondaryValue={
-          <div className="space-y-1.5 text-sm leading-5 text-foreground">
-            <p>{formatNumber(needsCategoryTask?.count ?? 0)} need category</p>
-            <p>{formatNumber(largeTransactionsTask?.count ?? 0)} large transactions</p>
-            <p>{formatNumber(ruleMatchesTask?.count ?? 0)} possible rule matches</p>
-            {importIssuesTask && importIssuesTask.count > 0 ? (
-              <p>{formatNumber(importIssuesTask.count)} import issues</p>
-            ) : null}
-          </div>
+          <p className={cn(dashboardTopCardMetaClassName, "text-foreground")}>
+            {card.hasItems ? "Transaction review workload" : "No transaction review backlog"}
+          </p>
+        }
+        helper={
+          <TopCardDetailList
+            items={[
+              {
+                label: "Need category",
+                value: formatNumber(needsCategoryTask?.count ?? 0),
+              },
+              {
+                label: "Large transactions",
+                value: formatNumber(largeTransactionsTask?.count ?? 0),
+              },
+              {
+                label: "Possible rules",
+                value: formatNumber(ruleMatchesTask?.count ?? 0),
+              },
+            ]}
+          />
         }
         action={
           <span
@@ -381,6 +399,74 @@ function ReviewQueueHero({
           </span>
         }
       />
+    </TopDashboardCardFrame>
+  );
+}
+
+function TopCategoryCard({
+  category,
+  href,
+}: {
+  category: ReturnType<typeof getTopCategoryInsight>;
+  href: string;
+}) {
+  return (
+    <TopDashboardCardFrame href={href}>
+      <TopDashboardCardHeader
+        label="Top known category"
+        icon={<Layers3 className="h-4 w-4" />}
+      />
+      {category ? (
+        <TopDashboardCardBody
+          primaryValue={
+            <p className={cn(dashboardTopCardEntityValueClassName, "text-foreground")}>
+              {category.category}
+            </p>
+          }
+          secondaryValue={
+            <p className={dashboardTopCardMetaClassName}>
+              {formatCurrency(category.totalSpend)} spent
+            </p>
+          }
+          helper={
+            <TopCardDetailList
+              items={[
+                {
+                  label: "Share of known spend",
+                  value: `${category.share}%`,
+                },
+                {
+                  label: "Top subcategory",
+                  value: category.topSubcategory
+                    ? `${category.topSubcategory.name} • ${formatCurrency(category.topSubcategory.totalSpend)}`
+                    : "Not enough detail yet",
+                },
+              ]}
+            />
+          }
+        />
+      ) : (
+        <TopDashboardCardBody
+          primaryValue={
+            <p className={cn(dashboardTopCardEntityValueClassName, "text-foreground")}>
+              No known category yet
+            </p>
+          }
+          secondaryValue={
+            <p className={dashboardTopCardMetaClassName}>Known spend only</p>
+          }
+          helper={
+            <TopCardDetailList
+              items={[
+                {
+                  label: "Next step",
+                  value: "Categorize transactions to surface leaders",
+                },
+              ]}
+            />
+          }
+        />
+      )}
     </TopDashboardCardFrame>
   );
 }
@@ -463,6 +549,28 @@ function TopDashboardCardBody({
       <div className={dashboardTopCardActionSlotClassName}>
         {action ?? <div className="min-h-9" />}
       </div>
+    </div>
+  );
+}
+
+function TopCardDetailList({
+  items,
+}: {
+  items: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="mt-3 space-y-2">
+      {items.map((item) => (
+        <div
+          key={`${item.label}-${item.value}`}
+          className="flex items-start justify-between gap-3 text-sm leading-5"
+        >
+          <span className="text-secondary-foreground">{item.label}</span>
+          <span className="max-w-[60%] text-right font-medium text-foreground">
+            {item.value}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

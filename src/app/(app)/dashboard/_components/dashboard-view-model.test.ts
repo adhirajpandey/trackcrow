@@ -166,10 +166,15 @@ describe("dashboard view model", () => {
     expect(
       getTopCategoryInsight(
         [
-          { category: "Uncategorized", totalSpend: 70000, transactionCount: 20 },
-          { category: "Transfers", totalSpend: 20000, transactionCount: 5 },
-          { category: "Essentials", totalSpend: 600, transactionCount: 5 },
-          { category: "Food", totalSpend: 400, transactionCount: 4 },
+          { category: "Uncategorized", totalSpend: 70000, transactionCount: 20, topSubcategory: null },
+          { category: "Transfers", totalSpend: 20000, transactionCount: 5, topSubcategory: null },
+          {
+            category: "Essentials",
+            totalSpend: 600,
+            transactionCount: 5,
+            topSubcategory: { name: "Groceries", totalSpend: 400, transactionCount: 3 },
+          },
+          { category: "Food", totalSpend: 400, transactionCount: 4, topSubcategory: null },
         ],
         1000
       )
@@ -177,13 +182,14 @@ describe("dashboard view model", () => {
       category: "Essentials",
       totalSpend: 600,
       transactionCount: 5,
+      topSubcategory: { name: "Groceries", totalSpend: 400, transactionCount: 3 },
       share: 60,
     });
     expect(
       getTopCategoryInsight(
         [
-          { category: "Uncategorized", totalSpend: 70000, transactionCount: 20 },
-          { category: "Internal transfers", totalSpend: 20000, transactionCount: 5 },
+          { category: "Uncategorized", totalSpend: 70000, transactionCount: 20, topSubcategory: null },
+          { category: "Internal transfers", totalSpend: 20000, transactionCount: 5, topSubcategory: null },
         ],
         90000
       )
@@ -280,19 +286,13 @@ describe("dashboard view model", () => {
       title: "Needs review",
       action: "Review now",
       hasItems: true,
-      totalReviewCount: 9,
+      totalReviewCount: 6,
       tasks: [
         {
           label: "Need category",
           count: 3,
           tone: "attention",
           href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
-        },
-        {
-          label: "Import issues",
-          count: 3,
-          tone: "warning",
-          href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue",
         },
         {
           label: "Large transactions",
@@ -307,7 +307,7 @@ describe("dashboard view model", () => {
           href: "/recipients",
         },
       ],
-      helper: "9 transactions need review",
+      helper: "6 transactions need review",
     });
   });
 
@@ -391,12 +391,12 @@ describe("dashboard view model", () => {
             averageSpend: 333,
           },
           spendingByCategory: [
-            { category: "Food", totalSpend: 700, transactionCount: 2 },
+            { category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null },
           ],
         },
         categories: [
-          { category: "Travel", totalSpend: 900, transactionCount: 2 },
-          { category: "Food", totalSpend: 600, transactionCount: 2 },
+          { category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null },
+          { category: "Food", totalSpend: 600, transactionCount: 2, topSubcategory: null },
         ],
         importIssueCount: 2,
         range,
@@ -458,7 +458,7 @@ describe("dashboard view model", () => {
             uncategorizedCount: 0,
             averageSpend: 333,
           },
-          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
+          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null }],
         },
         periods: [
           { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
@@ -492,7 +492,7 @@ describe("dashboard view model", () => {
             uncategorizedCount: 0,
             averageSpend: 125,
           },
-          spendingByCategory: [{ category: "Food", totalSpend: 500, transactionCount: 3 }],
+          spendingByCategory: [{ category: "Food", totalSpend: 500, transactionCount: 3, topSubcategory: null }],
         },
         periods: [
           { period: "2026-06-01", totalSpend: 80, transactionCount: 1 },
@@ -529,7 +529,7 @@ describe("dashboard view model", () => {
             uncategorizedCount: 0,
             averageSpend: 250,
           },
-          spendingByCategory: [{ category: "Food", totalSpend: 600, transactionCount: 2 }],
+          spendingByCategory: [{ category: "Food", totalSpend: 600, transactionCount: 2, topSubcategory: null }],
         },
         periods: [
           { period: "2026-06-01", totalSpend: 200, transactionCount: 1 },
@@ -619,9 +619,9 @@ describe("dashboard view model", () => {
             uncategorizedCount: 0,
             averageSpend: 333,
           },
-          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
+          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null }],
         },
-        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2 }],
+        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null }],
         range,
       })
     ).toEqual({
@@ -717,9 +717,9 @@ describe("dashboard view model", () => {
             uncategorizedCount: 0,
             averageSpend: 300,
           },
-          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2 }],
+          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null }],
         },
-        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2 }],
+        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null }],
       })
     ).toEqual({
       totalSpend: "+50% vs previous period",

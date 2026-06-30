@@ -401,8 +401,8 @@ function getRecipientReviewAction(input: {
   return "Review" as const;
 }
 
-function getRecipientActionHref() {
-  return "/recipients";
+function getRecipientActionHref(recipientId: number | null = null) {
+  return recipientId ? `/recipients/${recipientId}` : "/recipients";
 }
 
 export function formatCurrency(value: number) {
@@ -618,19 +618,15 @@ export function buildReviewQueueCard(input: {
   recipients?: DashboardPageData["frequentRecipients"];
   range: DashboardPageData["range"];
 }): ReviewQueueCardVm {
-  const importIssueCount =
-    input.importHealth.failedCount + input.importHealth.unparseableCount;
   const repeatedRecipientMatchCount = (input.recipients ?? [])
     .filter((recipient) => recipient.paymentCount >= 2)
     .reduce((sum, recipient) => sum + recipient.paymentCount, 0);
   const totalReviewCount =
     input.summary.uncategorizedCount +
-    importIssueCount +
     input.largeTransactionCount +
     repeatedRecipientMatchCount;
   const hasItems =
     input.summary.uncategorizedCount > 0 ||
-    importIssueCount > 0 ||
     input.largeTransactionCount > 0 ||
     repeatedRecipientMatchCount > 0;
   const tasks: ReviewTaskVm[] = [
@@ -640,13 +636,6 @@ export function buildReviewQueueCard(input: {
       tone: "attention",
       href: buildUncategorizedTransactionsHref(input.range),
       helper: "Transactions that still need a category.",
-    },
-    {
-      label: "Import issues",
-      count: importIssueCount,
-      tone: "warning",
-      href: buildImportIssuesHref(input.range),
-      helper: "Failed or unparseable messages that need review.",
     },
     {
       label: "Large transactions",
@@ -1058,7 +1047,7 @@ export function buildSuggestedRules(input: {
       return {
         recipient: recipient.recipient,
         action,
-        href: getRecipientActionHref(),
+        href: getRecipientActionHref(recipient.recipientId),
         paymentCount: recipient.paymentCount,
         totalAmount: recipient.totalAmount,
       };
@@ -1079,7 +1068,7 @@ export function buildMostFrequentRecipient(input: {
     paymentCount: recipient.paymentCount,
     totalAmount: recipient.totalAmount,
     action,
-    href: getRecipientActionHref(),
+    href: getRecipientActionHref(recipient.recipientId),
     helper:
       action === "Create rule"
         ? "Good candidate for a rule"
@@ -1096,7 +1085,7 @@ export function buildFrequentRecipientRows(input: {
     return {
       ...recipient,
       action,
-      href: getRecipientActionHref(),
+      href: getRecipientActionHref(recipient.recipientId),
     };
   });
 }

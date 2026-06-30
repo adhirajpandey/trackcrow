@@ -110,7 +110,7 @@ describe("getDashboardPageData", () => {
     });
     mockGetSpendingByCategory.mockResolvedValue({
       ok: true,
-      data: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+      data: [{ category: "Food", totalSpend: 300, transactionCount: 2, topSubcategory: null }],
     });
     mockGetSpendingByPeriod.mockResolvedValue({
       ok: true,
@@ -180,9 +180,13 @@ describe("getDashboardPageData", () => {
           uncategorizedCount: 1,
           averageSpend: 150,
         },
-        spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+        spendingByCategory: [
+          { category: "Food", totalSpend: 300, transactionCount: 2, topSubcategory: null },
+        ],
       },
-      spendingByCategory: [{ category: "Food", totalSpend: 300, transactionCount: 2 }],
+      spendingByCategory: [
+        { category: "Food", totalSpend: 300, transactionCount: 2, topSubcategory: null },
+      ],
       categoryOptions: [
         {
           id: 9,

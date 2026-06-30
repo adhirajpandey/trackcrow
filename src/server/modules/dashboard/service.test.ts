@@ -65,9 +65,10 @@ describe("dashboard service", () => {
 
   it("groups spending by category including Uncategorized", async () => {
     mockPrisma.transaction.findMany.mockResolvedValueOnce([
-      { amount: 100, category: { name: "Food" } },
-      { amount: 50, category: null },
-      { amount: 75, category: { name: "Food" } },
+      { amount: 100, category: { name: "Food" }, subcategory: { name: "Lunch" } },
+      { amount: 50, category: null, subcategory: null },
+      { amount: 75, category: { name: "Food" }, subcategory: { name: "Dinner" } },
+      { amount: 80, category: { name: "Food" }, subcategory: { name: "Lunch" } },
     ]);
 
     await expect(
@@ -75,8 +76,22 @@ describe("dashboard service", () => {
     ).resolves.toEqual({
       ok: true,
       data: [
-        { category: "Food", totalSpend: 175, transactionCount: 2 },
-        { category: "Uncategorized", totalSpend: 50, transactionCount: 1 },
+        {
+          category: "Food",
+          totalSpend: 255,
+          transactionCount: 3,
+          topSubcategory: {
+            name: "Lunch",
+            totalSpend: 180,
+            transactionCount: 2,
+          },
+        },
+        {
+          category: "Uncategorized",
+          totalSpend: 50,
+          transactionCount: 1,
+          topSubcategory: null,
+        },
       ],
     });
   });
@@ -239,19 +254,19 @@ describe("dashboard service", () => {
         amount: 900,
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { displayName: "vivek.pandey5@oksbi" },
+        recipient: { id: 30, displayName: "vivek.pandey5@oksbi" },
       },
       {
         amount: 250,
         recipientName: "Power bill",
         recipientRaw: "POWER BILL",
-        recipient: { displayName: "Utility" },
+        recipient: { id: 18, displayName: "Utility" },
       },
       {
         amount: 600,
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { displayName: "vivek.pandey5@oksbi" },
+        recipient: { id: 30, displayName: "vivek.pandey5@oksbi" },
       },
     ]);
 
@@ -264,11 +279,13 @@ describe("dashboard service", () => {
       ok: true,
       data: [
         {
+          recipientId: 30,
           recipient: "Vivek Pandey",
           paymentCount: 2,
           totalAmount: 1500,
         },
         {
+          recipientId: 18,
           recipient: "Power Bill",
           paymentCount: 1,
           totalAmount: 250,

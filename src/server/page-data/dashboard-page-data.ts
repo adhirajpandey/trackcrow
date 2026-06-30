@@ -33,6 +33,11 @@ export type DashboardCategorySpendDto = {
   category: string;
   totalSpend: number;
   transactionCount: number;
+  topSubcategory: {
+    name: string;
+    totalSpend: number;
+    transactionCount: number;
+  } | null;
 };
 
 export type DashboardPeriodSpendDto = {
@@ -65,6 +70,7 @@ export type DashboardRecentTransactionDto = {
 };
 
 export type DashboardFrequentRecipientDto = {
+  recipientId: number | null;
   recipient: string;
   paymentCount: number;
   totalAmount: number;

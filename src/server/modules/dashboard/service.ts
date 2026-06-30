@@ -111,6 +111,11 @@ export async function getSpendingByCategory(
       category: string;
       totalSpend: number;
       transactionCount: number;
+      topSubcategory: {
+        name: string;
+        totalSpend: number;
+        transactionCount: number;
+      } | null;
     }>,
     "INTERNAL_ERROR"
   >
@@ -128,22 +133,69 @@ export async function getSpendingByCategory(
         category: {
           select: { name: true },
         },
+        subcategory: {
+          select: { name: true },
+        },
       },
     });
 
-    const groups = new Map<string, { totalSpend: number; transactionCount: number }>();
+    const groups = new Map<
+      string,
+      {
+        totalSpend: number;
+        transactionCount: number;
+        subcategories: Map<string, { totalSpend: number; transactionCount: number }>;
+      }
+    >();
     for (const txn of transactions) {
       const key = txn.category?.name ?? "Uncategorized";
-      const current = groups.get(key) ?? { totalSpend: 0, transactionCount: 0 };
+      const current = groups.get(key) ?? {
+        totalSpend: 0,
+        transactionCount: 0,
+        subcategories: new Map<string, { totalSpend: number; transactionCount: number }>(),
+      };
       current.totalSpend += Number(txn.amount);
       current.transactionCount += 1;
+
+      if (txn.category?.name && txn.subcategory?.name) {
+        const subcategory = current.subcategories.get(txn.subcategory.name) ?? {
+          totalSpend: 0,
+          transactionCount: 0,
+        };
+        subcategory.totalSpend += Number(txn.amount);
+        subcategory.transactionCount += 1;
+        current.subcategories.set(txn.subcategory.name, subcategory);
+      }
+
       groups.set(key, current);
     }
 
     return ok(
       [...groups.entries()]
-        .map(([category, data]) => ({ category, ...data }))
-        .sort((a, b) => b.totalSpend - a.totalSpend)
+        .map(([category, data]) => {
+          const topSubcategory =
+            [...data.subcategories.entries()]
+              .map(([name, subcategory]) => ({ name, ...subcategory }))
+              .sort((left, right) => {
+                if (right.totalSpend !== left.totalSpend) {
+                  return right.totalSpend - left.totalSpend;
+                }
+
+                if (right.transactionCount !== left.transactionCount) {
+                  return right.transactionCount - left.transactionCount;
+                }
+
+                return left.name.localeCompare(right.name);
+              })[0] ?? null;
+
+          return {
+            category,
+            totalSpend: data.totalSpend,
+            transactionCount: data.transactionCount,
+            topSubcategory,
+          };
+        })
+        .sort((left, right) => right.totalSpend - left.totalSpend)
     );
   } catch (error) {
     logger.error("getSpendingByCategory - Failed", error as Error, {
@@ -391,6 +443,7 @@ export async function getFrequentRecipients(
 ): Promise<
   ServiceResult<
     Array<{
+      recipientId: number | null;
       recipient: string;
       paymentCount: number;
       totalAmount: number;
@@ -410,11 +463,14 @@ export async function getFrequentRecipients(
         amount: true,
         recipientName: true,
         recipientRaw: true,
-        recipient: { select: { displayName: true } },
+        recipient: { select: { id: true, displayName: true } },
       },
     });
 
-    const groups = new Map<string, { paymentCount: number; totalAmount: number }>();
+    const groups = new Map<
+      string,
+      { recipientId: number | null; recipient: string; paymentCount: number; totalAmount: number }
+    >();
     for (const transaction of transactions) {
       const recipient =
         formatRecipientDisplayLabel({
@@ -423,15 +479,22 @@ export async function getFrequentRecipients(
           recipientRaw: transaction.recipientRaw,
           fallbackLabel: "Unknown payee",
         });
-      const current = groups.get(recipient) ?? { paymentCount: 0, totalAmount: 0 };
+      const key = transaction.recipient?.id
+        ? `id:${transaction.recipient.id}`
+        : `label:${recipient}`;
+      const current = groups.get(key) ?? {
+        recipientId: transaction.recipient?.id ?? null,
+        recipient,
+        paymentCount: 0,
+        totalAmount: 0,
+      };
       current.paymentCount += 1;
       current.totalAmount += Number(transaction.amount);
-      groups.set(recipient, current);
+      groups.set(key, current);
     }
 
     return ok(
-      [...groups.entries()]
-        .map(([recipient, data]) => ({ recipient, ...data }))
+      [...groups.values()]
         .sort((left, right) => {
           if (right.paymentCount !== left.paymentCount) {
             return right.paymentCount - left.paymentCount;
