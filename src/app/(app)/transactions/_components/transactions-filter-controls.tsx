@@ -37,10 +37,22 @@ export function TransactionsFilterControls({
   categoryOptions: CategoryMenuOption[];
   subcategoryOptions: CategoryMenuOption[];
 }) {
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchTimeoutRef = useRef<number | null>(null);
   const categoryTriggerLabel = buildCategoryTriggerLabel(filters);
   const subcategoryTriggerLabel = buildSubcategoryTriggerLabel(filters);
   const subcategoryDisabled = subcategoryOptions.length === 0;
+
+  useEffect(() => {
+    if (searchTimeoutRef.current !== null) {
+      window.clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    if (searchInputRef.current && searchInputRef.current.value !== filters.q) {
+      searchInputRef.current.value = filters.q;
+    }
+  }, [filters.q]);
 
   useEffect(() => {
     return () => {
@@ -55,7 +67,7 @@ export function TransactionsFilterControls({
       <label className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
         <Search className="h-4 w-4 text-secondary-foreground/75" />
         <input
-          key={filters.q}
+          ref={searchInputRef}
           defaultValue={filters.q}
           onChange={(event) => {
             if (searchTimeoutRef.current !== null) {
