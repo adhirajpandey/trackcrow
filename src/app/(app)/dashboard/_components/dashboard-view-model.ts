@@ -886,10 +886,15 @@ export function buildDashboardInsights(input: {
   const insights: DashboardInsightVm[] = [];
 
   if (input.summary.uncategorizedCount > 0) {
+    const uncategorizedLabel =
+      input.summary.uncategorizedCount === 1
+        ? "1 transaction still needs a category"
+        : `${formatNumber(input.summary.uncategorizedCount)} transactions still need a category`;
+
     insights.push({
       label: "Uncategorized",
-      value: `${formatNumber(input.summary.uncategorizedCount)} need category`,
-      helper: "Open uncategorized transactions for this range.",
+      value: uncategorizedLabel,
+      helper: "Review transactions in this range that still need a category.",
       href: buildUncategorizedTransactionsHref(input.range),
       tone: "attention",
     });
@@ -899,10 +904,10 @@ export function buildDashboardInsights(input: {
     label: "Category leader",
     value: topCategory ? topCategory.category : "Not ready yet",
     helper: topCategory
-      ? `${topCategory.share}% of categorized spend \u00b7 ${formatCurrency(topCategory.totalSpend)}`
+      ? `${topCategory.share}% of categorized spending \u00b7 ${formatCurrency(topCategory.totalSpend)}`
       : input.sectionStatus.categories === "incomplete"
-        ? "Categorize more transactions to sharpen this view."
-        : "No categorized spending in this range.",
+        ? "Add more categories to make this view clearer."
+        : "There isn't any categorized spending in this period yet.",
     href: topCategory
       ? buildTransactionsHref({
           ...getRangeParams(input.range),
@@ -922,10 +927,10 @@ export function buildDashboardInsights(input: {
           : "All imports parsed",
     helper:
       input.importIssueCount > 0
-        ? "Failed and unparseable messages waiting in review."
+        ? "Failed or unreadable messages are waiting for review."
         : input.sectionStatus.imports === "empty"
-          ? "Import messages to populate dashboard coverage."
-          : "No import review items in this range.",
+          ? "Import messages to start filling out the dashboard."
+          : "No import issues in this period.",
     href: buildImportIssuesHref(input.range),
     tone: input.importIssueCount > 0 ? "attention" : "info",
   });

@@ -330,7 +330,7 @@ export function RecipientDetailPageView({
                 <p className="mt-2 text-sm text-secondary-foreground">
                   {data.dominantCategory
                     ? `${data.dominantCategory.transactionCount} of ${data.transactionCount} transactions · ${formatRecipientTotal(data.dominantCategory.totalAmount)}`
-                    : "Categorized transactions will build this pattern."}
+                    : "Categorized transactions will help reveal this pattern."}
                 </p>
                 {data.dominantSubcategory ? (
                   <p className="mt-2 text-sm text-secondary-foreground">
@@ -344,9 +344,9 @@ export function RecipientDetailPageView({
                 <p className="mt-2 text-sm text-accent">
                   {cleanup.uncategorizedCount > 0
                     ? `${cleanup.uncategorizedCount} transaction${
-                        cleanup.uncategorizedCount === 1 ? " is" : "s are"
-                      } uncategorized`
-                    : "All linked transactions are categorized"}
+                        cleanup.uncategorizedCount === 1 ? " still needs" : " still need"
+                      } a category`
+                    : "All linked transactions have categories"}
                 </p>
               </div>
               <Button

@@ -259,13 +259,13 @@ describe("dashboard view model", () => {
         transactionCount: 10,
         uncategorizedCount: 8,
       })
-    ).toBe("10 recent \u00b7 8 need category");
+    ).toBe("10 recent");
     expect(
       buildRecentTransactionsSummary({
         transactionCount: 4,
         uncategorizedCount: 0,
       })
-    ).toBe("4 recent \u00b7 All categorized");
+    ).toBe("4 recent");
   });
 
   it("derives compact review queue copy with the shared threshold", () => {
@@ -410,22 +410,22 @@ describe("dashboard view model", () => {
     ).toEqual([
       {
         label: "Uncategorized",
-        value: "1 need category",
-        helper: "Open uncategorized transactions for this range.",
+        value: "1 transaction still needs a category",
+        helper: "Review transactions in this range that still need a category.",
         href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
         tone: "attention",
       },
       {
         label: "Category leader",
         value: "Travel",
-        helper: "60% of categorized spend \u00b7 \u20b9900",
+        helper: "60% of categorized spending \u00b7 \u20b9900",
         href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
         tone: "neutral",
       },
       {
         label: "Import health",
         value: "2 issues flagged",
-        helper: "Failed and unparseable messages waiting in review.",
+        helper: "Failed or unreadable messages are waiting for review.",
         href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue",
         tone: "attention",
       },

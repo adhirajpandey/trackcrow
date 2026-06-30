@@ -463,7 +463,8 @@ export function TransactionDetailPageView({
             </div>
 
             <p className="mt-3 text-sm text-secondary-foreground">
-              Categorized transactions are included in spend insights and dashboard drilldowns.
+              Categorize this transaction to include it in spending insights and dashboard
+              breakdowns.
             </p>
           </section>
 
