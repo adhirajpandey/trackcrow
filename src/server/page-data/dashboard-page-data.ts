@@ -238,7 +238,7 @@ export async function getDashboardPageData(
       }),
       getFrequentRecipients({
         ...rangeInput,
-        take: 5,
+        take: 7,
       }),
       listCategoriesForUser({
         userUuid: sessionUser.userUuid,

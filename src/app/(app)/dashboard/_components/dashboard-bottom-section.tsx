@@ -309,7 +309,7 @@ function SpendingByCategoryPanel({
         ) : (
           <div className="space-y-3">
             <div className={dashboardInnerTableClassName}>
-              <Table className="min-w-[520px]">
+              <Table className="table-fixed">
                 <TableHeader layout={dashboardTableLayouts.spendingByCategory} />
                 <TableBody>
                 {categories.slice(0, 5).map((item, index) => {
@@ -340,8 +340,8 @@ function SpendingByCategoryPanel({
                         )
                       }
                     >
-                      <TableCell className="py-4">
-                        <div className="flex items-start gap-2">
+                      <TableCell className="overflow-hidden py-4">
+                        <div className="flex min-w-0 items-start gap-2">
                           <span
                             className={cn(
                               "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
@@ -350,7 +350,7 @@ function SpendingByCategoryPanel({
                           />
                           <Link
                             href={buildTransactionsHref({ category: item.category })}
-                            className="break-words font-medium leading-5 text-foreground"
+                            className="block min-w-0 truncate font-medium leading-5 text-foreground"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {item.category}
@@ -427,7 +427,7 @@ function FrequentRecipientsPanel({
           <EmptyPanel title="No repeated recipients in this period." />
         ) : (
           <div className={dashboardInnerTableClassName}>
-            <Table className="min-w-[560px]">
+            <Table className="table-fixed">
               <TableHeader layout={dashboardTableLayouts.frequentRecipients} />
               <TableBody>
               {recipients.map((recipient, index) => (
@@ -446,10 +446,10 @@ function FrequentRecipientsPanel({
                     handleLinkRowKeyDown(event, recipient.href, router.push)
                   }
                 >
-                  <TableCell className="py-4 font-medium text-foreground">
+                  <TableCell className="overflow-hidden py-4 font-medium text-foreground">
                     <Link
                       href={recipient.href}
-                      className="truncate"
+                      className="block truncate"
                       onClick={(event) => event.stopPropagation()}
                     >
                       {recipient.recipient}
@@ -460,14 +460,6 @@ function FrequentRecipientsPanel({
                   </TableCell>
                   <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
                     {formatCurrency(recipient.totalAmount)}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "py-4 text-right font-semibold",
-                      recipient.action === "Create rule" ? "text-primary" : "text-accent"
-                    )}
-                  >
-                    {recipient.action}
                   </TableCell>
                 </TableRow>
               ))}
@@ -501,7 +493,7 @@ function LargestTransactionsPanel({
           <EmptyPanel title="No large transactions in this period." />
         ) : (
           <div className={dashboardInnerTableClassName}>
-            <Table className="min-w-[520px]">
+            <Table className="table-fixed">
               <TableHeader layout={dashboardTableLayouts.largestTransactions} />
               <TableBody>
               {transactions.map((transaction, index) => (
@@ -528,10 +520,10 @@ function LargestTransactionsPanel({
                     )
                   }
                 >
-                  <TableCell className="py-4">
+                  <TableCell className="overflow-hidden py-4">
                     <Link
                       href={buildLargestTransactionHref(transaction.id)}
-                      className="truncate font-medium text-foreground"
+                      className="block truncate font-medium text-foreground"
                       onClick={(event) => event.stopPropagation()}
                     >
                       {transaction.recipient}
@@ -770,6 +762,7 @@ function TableHeader({
     template: string;
     rightAlignedColumns?: number[];
     centerAlignedColumns?: number[];
+    columnWidths?: string[];
   };
 }) {
   return (
@@ -782,6 +775,11 @@ function TableHeader({
             layout.rightAlignedColumns?.includes(index) && "text-right",
             layout.centerAlignedColumns?.includes(index) && "text-center"
           )}
+          style={
+            layout.columnWidths?.[index]
+              ? { width: layout.columnWidths[index] }
+              : undefined
+          }
         >
           {column}
         </TableHead>

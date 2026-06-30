@@ -112,9 +112,15 @@ describe("dashboard bottom section model", () => {
     expect(dashboardTableLayouts.spendingByCategory).toEqual({
       columns: ["Category", "Amount", "% of spend"],
       template: "minmax(0,1.55fr) 96px 72px",
+      columnWidths: ["58%", "25%", "17%"],
       rightAlignedColumns: [1, 2],
     });
-    expect(dashboardTableLayouts.frequentRecipients.rightAlignedColumns).toEqual([1, 2, 3]);
+    expect(dashboardTableLayouts.frequentRecipients).toEqual({
+      columns: ["Recipient", "Payments", "Amount"],
+      template: "minmax(0,1.45fr) 78px 104px",
+      columnWidths: ["54%", "22%", "24%"],
+      rightAlignedColumns: [1, 2],
+    });
     expect(dashboardTableLayouts.largestTransactions.columns).toEqual([
       "Recipient",
       "Date",

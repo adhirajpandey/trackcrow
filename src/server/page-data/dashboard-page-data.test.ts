@@ -236,7 +236,7 @@ describe("getDashboardPageData", () => {
       userUuid: "user-1",
       startDate: new Date("2026-05-31T18:30:00.000Z"),
       endDate: new Date("2026-06-30T18:29:59.999Z"),
-      take: 5,
+      take: 7,
     });
     expect(mockGetRecentTransactions).toHaveBeenCalledWith({
       userUuid: "user-1",

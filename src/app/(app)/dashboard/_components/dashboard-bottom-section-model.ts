@@ -8,6 +8,7 @@ export type DashboardRecentTransactionItem = DashboardPageData["recentTransactio
 export type DashboardTableLayout = {
   columns: string[];
   template: string;
+  columnWidths?: string[];
   rightAlignedColumns?: number[];
   centerAlignedColumns?: number[];
 };
@@ -16,16 +17,19 @@ export const dashboardTableLayouts = {
   spendingByCategory: {
     columns: ["Category", "Amount", "% of spend"],
     template: "minmax(0,1.55fr) 96px 72px",
+    columnWidths: ["58%", "25%", "17%"],
     rightAlignedColumns: [1, 2],
   },
   frequentRecipients: {
-    columns: ["Recipient", "Payments", "Amount", "Action"],
-    template: "minmax(0,1.5fr) 72px 96px 92px",
-    rightAlignedColumns: [1, 2, 3],
+    columns: ["Recipient", "Payments", "Amount"],
+    template: "minmax(0,1.45fr) 78px 104px",
+    columnWidths: ["54%", "22%", "24%"],
+    rightAlignedColumns: [1, 2],
   },
   largestTransactions: {
     columns: ["Recipient", "Date", "Amount"],
     template: "minmax(0,1.5fr) 108px 96px",
+    columnWidths: ["50%", "26%", "24%"],
     rightAlignedColumns: [2],
   },
   recentTransactions: {
