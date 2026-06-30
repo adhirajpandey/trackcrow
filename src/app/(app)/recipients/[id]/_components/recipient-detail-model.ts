@@ -158,23 +158,33 @@ export function buildRecipientDetailPageData(
     lastPaidAt,
     createdAt: recipient.createdAt,
     updatedAt: recipient.updatedAt,
-    identifiers: recipient.identifiers.map((identifier) => ({
-      id: identifier.uuid,
-      kindLabel: formatIdentifierKind(identifier.kind),
-      value: identifier.value,
-      transactionCount: recipient.linkedTransactions.filter((transaction) => {
-        const normalizedRecipientRaw = transaction.recipientRaw.trim().toLowerCase().replace(/\s+/g, " ");
-        const normalizedRecipientName = transaction.recipientName
-          ? transaction.recipientName.trim().toLowerCase().replace(/\s+/g, " ")
-          : null;
+    identifiers: recipient.identifiers
+      .map((identifier) => ({
+        id: identifier.uuid,
+        kindLabel: formatIdentifierKind(identifier.kind),
+        value: identifier.value,
+        transactionCount: recipient.linkedTransactions.filter((transaction) => {
+          const normalizedRecipientRaw = transaction.recipientRaw
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+          const normalizedRecipientName = transaction.recipientName
+            ? transaction.recipientName.trim().toLowerCase().replace(/\s+/g, " ")
+            : null;
 
-        return (
-          normalizedRecipientRaw === identifier.normalizedValue ||
-          normalizedRecipientName === identifier.normalizedValue
-        );
-      }).length,
-      sourceLabel: formatIdentifierSource(identifier.kind),
-    })),
+          return (
+            normalizedRecipientRaw === identifier.normalizedValue ||
+            normalizedRecipientName === identifier.normalizedValue
+          );
+        }).length,
+        sourceLabel: formatIdentifierSource(identifier.kind),
+      }))
+      .sort(
+        (left, right) =>
+          right.transactionCount - left.transactionCount ||
+          left.value.localeCompare(right.value) ||
+          left.id.localeCompare(right.id)
+      ),
     categoryRows,
     dominantCategory,
     dominantSubcategory,
