@@ -23,19 +23,27 @@ function DashboardPanelSkeleton({
 
 function TopCardSkeleton() {
   return (
-    <div className="flex min-h-[236px] flex-col rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)]">
+    <div className="flex min-h-[236px] flex-col rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-9 w-9 rounded-[8px]" />
+        <Skeleton className="h-11 w-11 rounded-[8px]" />
       </div>
-      <Skeleton className="mt-4 h-8 w-24" />
-      <Skeleton className="mt-2 h-4 w-40" />
-      <div className="mt-3 space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-[88%]" />
+      <div className="mt-5 space-y-2.5">
+        <Skeleton className="h-9 w-32" />
+        <Skeleton className="h-4 w-40" />
       </div>
-      <div className="mt-auto pt-4">
-        <Skeleton className="h-9 w-full rounded-[8px]" />
+      <div className="mt-5 space-y-2.5 border-t border-border/35 pt-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-10 justify-self-end" />
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-16 justify-self-end" />
+        </div>
+      </div>
+      <div className="mt-auto pt-5">
+        <Skeleton className="h-10 w-full rounded-[8px] sm:w-40" />
       </div>
     </div>
   );

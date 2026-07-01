@@ -7,11 +7,13 @@ import {
   Calendar,
   CheckCircle2,
   Clock3,
-  Layers3,
+  FolderTree,
   UserRound,
+  Wallet,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AppPageHeader } from "@/components/product/app-page-header";
 import { MobilePageHeader } from "@/components/product/mobile/mobile-primitives";
 import { cn } from "@/lib/utils";
@@ -48,12 +50,16 @@ import {
   dashboardPrimaryActionClassName,
   dashboardSmallActionClassName,
   dashboardTopCardActionSlotClassName,
+  dashboardTopCardAttentionDetailSectionClassName,
   dashboardTopCardAttentionClassName,
+  dashboardTopCardBodyClassName,
   dashboardTopCardClassName,
+  dashboardTopCardDetailSectionClassName,
   dashboardTopCardEntityValueClassName,
   dashboardTopCardHeaderClassName,
   dashboardTopCardHelperClassName,
   dashboardTopCardLabelClassName,
+  dashboardTopCardLeadStackClassName,
   dashboardTopCardMetaClassName,
   dashboardTopCardValueClassName,
 } from "./dashboard-style";
@@ -202,7 +208,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             ]}
             actionLabel="View transactions"
             tone="primary"
-            icon={<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
+            icon={<Wallet className="h-4.5 w-4.5" />}
           />
         </div>
         <div className="order-3">
@@ -272,34 +278,20 @@ function MetricCard({
   icon: ReactNode;
 }) {
   return (
-    <TopDashboardCardFrame href={href} accentBorder={tone === "primary"}>
+    <TopDashboardCardFrame>
       <TopDashboardCardHeader label={label} icon={icon} />
       <TopDashboardCardBody
-        primaryValue={
-          <p
-            className={cn(
-              dashboardTopCardValueClassName,
-              tone === "primary" ? "text-primary" : "text-foreground"
-            )}
-          >
-            {value}
-          </p>
+        lead={
+          <DashboardTopCardMetric
+            value={value}
+            valueTone={tone === "primary" ? "primary" : "default"}
+            emphasis={emphasis}
+            emphasisTone={tone === "primary" ? "primary" : "strong"}
+          />
         }
-        secondaryValue={
-          <p
-            className={cn(
-              dashboardTopCardMetaClassName,
-              tone === "primary" ? "text-primary/90" : "text-foreground"
-            )}
-          >
-            {emphasis}
-          </p>
-        }
-        helper={<TopCardDetailList items={details} />}
+        details={<TopCardDetailList items={details} />}
         action={
-          actionLabel ? (
-            <SecondaryCardAction label={actionLabel} tone={tone} />
-          ) : undefined
+          actionLabel ? <SecondaryCardAction href={href} label={actionLabel} /> : undefined
         }
       />
     </TopDashboardCardFrame>
@@ -311,25 +303,26 @@ function MostFrequentRecipientCard({
 }: {
   recipient: ReturnType<typeof buildMostFrequentRecipient>;
 }) {
+  const recipientHref = recipient?.href ?? "/recipients";
+
   return (
-    <TopDashboardCardFrame href={recipient?.href ?? "/recipients"}>
+    <TopDashboardCardFrame>
       <TopDashboardCardHeader
         label="Most frequent recipient"
         icon={<UserRound className="h-4 w-4" />}
       />
       {recipient ? (
         <TopDashboardCardBody
-          primaryValue={
-            <p className={cn(dashboardTopCardEntityValueClassName, "text-primary")}>
-              {recipient.recipient}
-            </p>
+          lead={
+            <DashboardTopCardMetric
+              value={recipient.recipient}
+              valueTone="primary"
+              emphasis={`${formatNumber(recipient.paymentCount)} payments this period`}
+              emphasisTone="strong"
+              entity
+            />
           }
-          secondaryValue={
-            <p className={cn(dashboardTopCardMetaClassName, "text-foreground")}>
-              {formatNumber(recipient.paymentCount)} payments this period
-            </p>
-          }
-          helper={
+          details={
             <TopCardDetailList
               items={[
                 {
@@ -345,23 +338,22 @@ function MostFrequentRecipientCard({
           }
           action={
             <SecondaryCardAction
+              href={recipientHref}
               label={recipient.action === "Create rule" ? "Create rule" : "View recipient"}
             />
           }
         />
       ) : (
         <TopDashboardCardBody
-          primaryValue={
-            <p className={cn(dashboardTopCardEntityValueClassName, "text-foreground")}>
-              No repeated recipients yet
-            </p>
+          lead={
+            <DashboardTopCardMetric
+              value="No repeated recipients yet"
+              emphasis="Repeated payments will appear here."
+              emphasisTone="muted"
+              entity
+            />
           }
-          helper={
-            <p className={dashboardTopCardHelperClassName}>
-              Repeated payments will appear here.
-            </p>
-          }
-          action={<SecondaryCardAction label="View recipients" />}
+          action={<SecondaryCardAction href={recipientHref} label="View recipients" />}
         />
       )}
     </TopDashboardCardFrame>
@@ -378,10 +370,7 @@ function ReviewQueueHero({
   const ruleMatchesTask = card.tasks.find((task) => task.label === "Possible rule matches");
 
   return (
-    <TopDashboardCardFrame
-      href={card.hasItems ? card.href : buildTransactionsHref({})}
-      attention
-    >
+    <TopDashboardCardFrame tone="attention">
       <TopDashboardCardHeader
         label="Needs review"
         labelTone="accent"
@@ -395,18 +384,22 @@ function ReviewQueueHero({
         iconTone="accent"
       />
       <TopDashboardCardBody
-        primaryValue={
-          <p className={cn(dashboardTopCardValueClassName, "text-accent")}>
-            {formatNumber(card.totalReviewCount)}
-          </p>
+        tone="attention"
+        lead={
+          <DashboardTopCardMetric
+            value={formatNumber(card.totalReviewCount)}
+            valueTone="accent"
+            emphasis={
+              card.hasItems
+                ? "Transaction review workload"
+                : "No transaction review backlog"
+            }
+            emphasisTone="strong"
+          />
         }
-        secondaryValue={
-          <p className={cn(dashboardTopCardMetaClassName, "text-foreground")}>
-            {card.hasItems ? "Transaction review workload" : "No transaction review backlog"}
-          </p>
-        }
-        helper={
+        details={
           <TopCardDetailList
+            tone="attention"
             items={[
               {
                 label: "Need category",
@@ -424,15 +417,19 @@ function ReviewQueueHero({
           />
         }
         action={
-          <span
+          <Button
+            asChild
+            variant="ghost"
             className={cn(
               dashboardPrimaryActionClassName,
-              "w-full gap-2 border border-accent/35 bg-accent text-accent-foreground transition-colors hover:brightness-105"
+              "w-full border border-accent/35 bg-accent text-accent-foreground hover:border-accent/45 hover:bg-[#f6c251]"
             )}
           >
-            {card.hasItems ? "Review now" : "View transactions"}
-            <ArrowRight className="h-4 w-4" />
-          </span>
+            <Link href={card.hasItems ? card.href : buildTransactionsHref({})}>
+              {card.hasItems ? "Review now" : "View transactions"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
         }
       />
     </TopDashboardCardFrame>
@@ -449,24 +446,21 @@ function TopCategoryCard({
   emptyHref: string;
 }) {
   return (
-    <TopDashboardCardFrame href={category ? href : emptyHref}>
+    <TopDashboardCardFrame>
       <TopDashboardCardHeader
         label="Top known category"
-        icon={<Layers3 className="h-4 w-4" />}
+        icon={<FolderTree className="h-4 w-4" />}
       />
       {category ? (
         <TopDashboardCardBody
-          primaryValue={
-            <p className={cn(dashboardTopCardEntityValueClassName, "text-foreground")}>
-              {category.category}
-            </p>
+          lead={
+            <DashboardTopCardMetric
+              value={category.category}
+              emphasis={`${formatCurrency(category.totalSpend)} spent`}
+              entity
+            />
           }
-          secondaryValue={
-            <p className={dashboardTopCardMetaClassName}>
-              {formatCurrency(category.totalSpend)} spent
-            </p>
-          }
-          helper={
+          details={
             <TopCardDetailList
               items={[
                 {
@@ -482,24 +476,23 @@ function TopCategoryCard({
               ]}
             />
           }
-          action={<SecondaryCardAction label="View category" />}
+          action={<SecondaryCardAction href={href} label="View category" />}
         />
       ) : (
         <TopDashboardCardBody
-          primaryValue={
-            <p className={cn(dashboardTopCardEntityValueClassName, "text-foreground")}>
-              No known category yet
-            </p>
+          lead={
+            <DashboardTopCardMetric
+              value="No known category yet"
+              emphasis="Known spend only"
+              entity
+            />
           }
-          secondaryValue={
-            <p className={dashboardTopCardMetaClassName}>Known spend only</p>
-          }
-          helper={
+          details={
             <p className={dashboardTopCardHelperClassName}>
               Categorize transactions to surface leaders.
             </p>
           }
-          action={<SecondaryCardAction label="Categorize" />}
+          action={<SecondaryCardAction href={emptyHref} label="Categorize" />}
         />
       )}
     </TopDashboardCardFrame>
@@ -508,25 +501,17 @@ function TopCategoryCard({
 
 function TopDashboardCardFrame({
   children,
-  href,
-  attention = false,
-  accentBorder = false,
+  tone = "default",
 }: {
   children: ReactNode;
-  href: string;
-  attention?: boolean;
-  accentBorder?: boolean;
+  tone?: "default" | "attention";
 }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        attention ? dashboardTopCardAttentionClassName : dashboardTopCardClassName,
-        accentBorder && "border-primary/16"
-      )}
+    <article
+      className={tone === "attention" ? dashboardTopCardAttentionClassName : dashboardTopCardClassName}
     >
       {children}
-    </Link>
+    </article>
   );
 }
 
@@ -566,21 +551,30 @@ function TopDashboardCardHeader({
 }
 
 function TopDashboardCardBody({
-  primaryValue,
-  secondaryValue,
-  helper,
+  lead,
+  details,
   action,
+  tone = "default",
 }: {
-  primaryValue: ReactNode;
-  secondaryValue?: ReactNode;
-  helper?: ReactNode;
+  lead: ReactNode;
+  details?: ReactNode;
   action?: ReactNode;
+  tone?: "default" | "attention";
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {primaryValue}
-      {secondaryValue}
-      {helper}
+    <div className={dashboardTopCardBodyClassName}>
+      {lead}
+      {details ? (
+        <div
+          className={
+            tone === "attention"
+              ? dashboardTopCardAttentionDetailSectionClassName
+              : dashboardTopCardDetailSectionClassName
+          }
+        >
+          {details}
+        </div>
+      ) : null}
       {action ? <div className={dashboardTopCardActionSlotClassName}>{action}</div> : null}
     </div>
   );
@@ -588,18 +582,27 @@ function TopDashboardCardBody({
 
 function TopCardDetailList({
   items,
+  tone = "default",
 }: {
   items: Array<{ label: string; value: string }>;
+  tone?: "default" | "attention";
 }) {
   return (
-    <div className="mt-3 space-y-2">
+    <div className="space-y-2.5">
       {items.map((item) => (
         <div
           key={`${item.label}-${item.value}`}
           className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 text-sm leading-5"
         >
-          <span className="text-secondary-foreground">{item.label}</span>
-          <span className="max-w-[16ch] text-right font-medium text-foreground">
+          <span
+            className={cn(
+              "text-secondary-foreground",
+              tone === "attention" && "text-secondary-foreground/95"
+            )}
+          >
+            {item.label}
+          </span>
+          <span className="max-w-[16ch] text-right font-medium text-foreground overflow-wrap-anywhere">
             {item.value}
           </span>
         </div>
@@ -608,26 +611,74 @@ function TopCardDetailList({
   );
 }
 
+function DashboardTopCardMetric({
+  value,
+  emphasis,
+  valueTone = "default",
+  emphasisTone = "default",
+  entity = false,
+}: {
+  value: string;
+  emphasis?: string;
+  valueTone?: "default" | "primary" | "accent";
+  emphasisTone?: "default" | "primary" | "strong" | "muted";
+  entity?: boolean;
+}) {
+  return (
+    <div className={dashboardTopCardLeadStackClassName}>
+      <p
+        className={cn(
+          entity ? dashboardTopCardEntityValueClassName : dashboardTopCardValueClassName,
+          valueTone === "default" && "text-foreground",
+          valueTone === "primary" && "text-primary",
+          valueTone === "accent" && "text-accent"
+        )}
+      >
+        {value}
+      </p>
+      {emphasis ? (
+        <p
+          className={cn(
+            dashboardTopCardMetaClassName,
+            emphasisTone === "default" && "text-secondary-foreground",
+            emphasisTone === "primary" && "text-primary/90",
+            emphasisTone === "strong" && "text-foreground",
+            emphasisTone === "muted" && "text-secondary-foreground"
+          )}
+        >
+          {emphasis}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function SecondaryCardAction({
+  href,
   label,
   tone = "secondary",
 }: {
+  href: string;
   label: string;
   tone?: "primary" | "secondary";
 }) {
   return (
-    <span
+    <Button
+      asChild
+      variant="secondary"
       className={cn(
         dashboardSmallActionClassName,
-        "w-fit gap-2 border text-sm",
+        "w-full text-sm sm:w-fit",
         tone === "primary"
-          ? "border-primary/18 bg-primary/8 text-primary"
-          : "border-border/45 bg-background/10 text-secondary-foreground group-hover:border-border/70 group-hover:text-foreground"
+          ? "border-primary/18 bg-primary/8 text-primary hover:bg-primary/12"
+          : "border-border/45 bg-background/10 text-secondary-foreground hover:border-border/70 hover:text-foreground"
       )}
     >
-      {label}
-      <ArrowRight className="h-3.5 w-3.5" />
-    </span>
+      <Link href={href}>
+        {label}
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </Button>
   );
 }
 

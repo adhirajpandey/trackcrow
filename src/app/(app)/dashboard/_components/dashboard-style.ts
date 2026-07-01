@@ -31,26 +31,36 @@ export const dashboardPrimaryActionClassName =
   "inline-flex min-h-11 items-center justify-center rounded-[8px] px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export const dashboardMetricIconClassName =
-  "flex h-11 w-11 items-center justify-center rounded-[8px]";
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px]";
 
 export const dashboardTopCardClassName =
-  "group flex h-full min-h-[208px] flex-col rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] transition-colors hover:border-primary/18 hover:bg-[linear-gradient(180deg,rgba(14,25,19,0.98),rgba(10,17,14,0.98))]";
+  "flex h-full min-h-[236px] flex-col rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:p-5";
 
 export const dashboardTopCardAttentionClassName =
-  "flex h-full min-h-[208px] flex-col rounded-[8px] border border-accent/40 bg-[linear-gradient(180deg,rgba(52,40,10,0.68),rgba(23,18,10,0.98))] px-4 py-4 shadow-[0_10px_26px_rgba(0,0,0,0.22)]";
+  "flex h-full min-h-[236px] flex-col rounded-[8px] border border-accent/40 bg-[linear-gradient(180deg,rgba(52,40,10,0.68),rgba(23,18,10,0.98))] p-4 shadow-[0_10px_26px_rgba(0,0,0,0.22)] sm:p-5";
 
 export const dashboardTopCardHeaderClassName = "flex items-start justify-between gap-3";
 
 export const dashboardTopCardLabelClassName = "text-sm font-medium text-secondary-foreground";
 
 export const dashboardTopCardValueClassName =
-  "mt-4 break-words text-[1.55rem] font-semibold leading-tight tabular-nums";
+  "break-words text-[1.55rem] font-semibold leading-tight tabular-nums sm:text-[1.65rem]";
 
 export const dashboardTopCardEntityValueClassName =
-  "mt-4 break-words text-[1.55rem] font-semibold leading-tight";
+  "break-words text-[1.55rem] font-semibold leading-tight sm:text-[1.65rem]";
 
-export const dashboardTopCardMetaClassName = "mt-2 text-sm font-semibold text-secondary-foreground";
+export const dashboardTopCardMetaClassName = "text-sm font-semibold text-secondary-foreground";
 
-export const dashboardTopCardHelperClassName = "mt-2 text-sm leading-5 text-secondary-foreground";
+export const dashboardTopCardHelperClassName = "text-sm leading-5 text-secondary-foreground";
 
-export const dashboardTopCardActionSlotClassName = "mt-4";
+export const dashboardTopCardBodyClassName = "mt-5 flex min-h-0 flex-1 flex-col";
+
+export const dashboardTopCardLeadStackClassName = "space-y-2.5";
+
+export const dashboardTopCardDetailSectionClassName =
+  "mt-5 border-t border-border/35 pt-4";
+
+export const dashboardTopCardAttentionDetailSectionClassName =
+  "mt-5 border-t border-accent/18 pt-4";
+
+export const dashboardTopCardActionSlotClassName = "mt-auto pt-5";
