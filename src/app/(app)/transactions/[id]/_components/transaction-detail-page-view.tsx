@@ -397,7 +397,7 @@ export function TransactionDetailPageView({
           <section
             className={cn(
               selectedCategoryId ? dashboardPanelClassName : dashboardAttentionPanelClassName,
-              "px-5 py-5"
+              "relative z-10 overflow-visible px-5 py-5"
             )}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
