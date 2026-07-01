@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   ClipboardList,
@@ -34,12 +34,11 @@ const navigation = [
   { href: "/recipients", label: "Recipients", icon: Users },
   {
     href: "/transactions?review=queue&status=uncategorized",
-    activePath: "/transactions",
+    id: "review-queue",
     label: "Review queue",
     icon: ClipboardList,
   },
   { href: "#rules", label: "Rules", icon: ScrollText, disabled: true },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 function handleSignOut() {
@@ -54,32 +53,34 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(104,211,145,0.10),transparent_28%),linear-gradient(180deg,#08100c_0%,#09110d_36%,#0f1411_100%)] text-foreground lg:grid lg:grid-cols-[276px_1fr]">
       <aside className="hidden border-r border-border/55 bg-[#06100c]/88 backdrop-blur-xl lg:block">
-        <ShellSidebar pathname={pathname} user={user} />
+        <ShellSidebar pathname={pathname} searchParams={searchParams} user={user} />
       </aside>
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex min-h-14 items-center border-b border-border/70 bg-background/95 px-4 backdrop-blur lg:hidden">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 flex min-h-16 items-center border-b border-border/70 bg-background/95 px-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] backdrop-blur lg:hidden">
+          <div className="flex items-center gap-3.5">
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-11 w-11 rounded-full border border-border/70 bg-background/30"
+              className="h-10 w-10 rounded-[12px] border border-transparent bg-transparent text-secondary-foreground/88 hover:bg-white/4 hover:text-foreground"
               onClick={() => setIsOpen(true)}
               aria-label="Open navigation"
               title="Open navigation"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-[18px] w-[18px]" />
             </Button>
             <BrandMark
+              className="gap-4"
               size="compact"
-              markClassName="rounded-[12px]"
-              textClassName="text-base tracking-normal text-foreground"
+              markClassName="h-11 w-11 rounded-[12px]"
+              textClassName="pt-px text-base tracking-normal text-foreground"
             />
           </div>
         </header>
@@ -92,10 +93,11 @@ export function AppShell({
               aria-label="Close navigation"
               onClick={() => setIsOpen(false)}
             />
-            <aside className="absolute left-0 top-0 flex h-full w-[86vw] max-w-[360px] flex-col border-r border-border/70 bg-[#06100c]/96 px-4 py-4 backdrop-blur-xl">
+            <aside className="absolute left-0 top-0 flex h-full w-[86vw] max-w-[360px] flex-col border-r border-border/70 bg-[#06100c]/96 px-[max(16px,env(safe-area-inset-left))] pb-[calc(16px+env(safe-area-inset-bottom))] pt-4 pr-[max(16px,env(safe-area-inset-right))] backdrop-blur-xl">
               <div className="min-h-0 flex-1">
                 <ShellSidebarContent
                   pathname={pathname}
+                  searchParams={searchParams}
                   user={user}
                   onNavigate={() => setIsOpen(false)}
                   compactBrand
@@ -115,15 +117,17 @@ export function AppShell({
 
 function ShellSidebar({
   pathname,
+  searchParams,
   user,
 }: {
   pathname: string;
+  searchParams: ReturnType<typeof useSearchParams>;
   user: AppShellUser;
 }) {
   return (
     <div className="sticky top-0 h-screen px-4 py-5">
       <div className="h-full">
-        <ShellSidebarContent pathname={pathname} user={user} />
+        <ShellSidebarContent pathname={pathname} searchParams={searchParams} user={user} />
       </div>
     </div>
   );
@@ -131,11 +135,13 @@ function ShellSidebar({
 
 function ShellSidebarContent({
   pathname,
+  searchParams,
   user,
   onNavigate,
   compactBrand = false,
 }: {
   pathname: string;
+  searchParams: ReturnType<typeof useSearchParams>;
   user: AppShellUser;
   onNavigate?: () => void;
   compactBrand?: boolean;
@@ -144,8 +150,8 @@ function ShellSidebarContent({
     <div className="flex h-full min-h-0 flex-col">
       <SidebarBrand compact={compactBrand} />
 
-      <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
-        <ShellNav pathname={pathname} onNavigate={onNavigate} />
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+        <ShellNav pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} />
       </div>
 
       <SidebarFooter user={user} onNavigate={onNavigate} />
@@ -154,34 +160,59 @@ function ShellSidebarContent({
 }
 
 function SidebarBrand({ compact = false }: { compact?: boolean }) {
-  if (compact) {
-    return (
-      <div className="min-w-0 rounded-[12px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-        <BrandMark
-          size="compact"
-          markClassName="rounded-[12px]"
-          textClassName="text-[1.05rem] tracking-normal text-foreground"
-        />
-        <p className="mt-1 text-sm leading-5 text-secondary-foreground">
-          Track | Review | Control
-        </p>
-      </div>
-    );
-  }
+  const logoClassName = compact
+    ? "h-[64px] w-[64px] rounded-[18px] border-[#9fe8be]/60 shadow-[0_0_0_1px_rgba(186,244,211,0.16),0_0_18px_rgba(104,211,145,0.24)]"
+    : "h-[52px] w-[52px] rounded-[15px] border-[#9fe8be]/55 shadow-[0_0_0_1px_rgba(186,244,211,0.13),0_0_14px_rgba(104,211,145,0.16)]";
+  const wordmarkClassName = compact
+    ? "text-[1.02rem] tracking-[0.26em]"
+    : "text-[0.84rem] tracking-[0.16em]";
+  const subtitleClassName = compact
+    ? "mt-1.5 text-[0.84rem] leading-[1.3]"
+    : "mt-1 text-[0.74rem] leading-[1.2]";
+  const taglineClassName = compact
+    ? "mt-2 whitespace-nowrap text-[0.82rem] leading-5"
+    : "mt-1.5 whitespace-nowrap text-[0.67rem] leading-4";
 
   return (
-    <div className="relative overflow-hidden rounded-[16px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
-      <div className="pointer-events-none absolute bottom-2 right-0 h-14 w-28 bg-[linear-gradient(180deg,transparent,rgba(104,211,145,0.14))] opacity-70 [mask-image:repeating-linear-gradient(180deg,transparent,transparent_3px,black_4px)]" />
-      <span className="pointer-events-none absolute right-4 top-4 h-1.5 w-1.5 rotate-45 bg-primary/70" />
-      <BrandMark
-        className="relative"
-        markClassName="h-16 w-16 rounded-[16px]"
-        textClassName="text-[13px]"
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-[20px] border border-[#72d8a2]/30 bg-[radial-gradient(circle_at_left,rgba(54,150,104,0.18),transparent_38%),linear-gradient(135deg,rgba(8,21,16,0.98),rgba(4,12,9,0.96))] px-4 py-3.5 shadow-[inset_0_0_0_1px_rgba(220,255,235,0.03),0_0_0_1px_rgba(114,216,162,0.05)]",
+        !compact && "rounded-[18px] px-3.5 py-3"
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_26%,transparent_74%,rgba(114,216,162,0.05))]" />
+      <div
+        className={cn(
+          "pointer-events-none absolute top-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl",
+          compact ? "-left-7 h-24 w-24" : "-left-5 h-18 w-18"
+        )}
       />
-      <p className="relative mt-4 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
-        Track | Review | Control
-      </p>
+      <div className={cn("relative flex items-center", compact ? "gap-3.5" : "gap-2.5")}>
+        <BrandMark
+          size="compact"
+          showText={false}
+          markClassName={logoClassName}
+        />
+        <div className="min-w-0 flex-1 self-center">
+          <p
+            className={cn(
+              "font-semibold uppercase leading-none text-[#79d7a4]",
+              compact ? "truncate" : "pr-1",
+              wordmarkClassName
+            )}
+          >
+            TrackCrow
+          </p>
+          <p className={cn("font-medium text-white/55", subtitleClassName)}>
+            AI-powered expense tracking
+          </p>
+          <p className={cn("font-medium text-primary/82", taglineClassName)}>
+            Track <span className={compact ? "px-1.5 text-primary/50" : "px-1 text-primary/45"}>|</span>{" "}
+            Review <span className={compact ? "px-1.5 text-primary/50" : "px-1 text-primary/45"}>|</span>{" "}
+            Control
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -194,7 +225,7 @@ function SidebarFooter({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="mt-4 border-t border-border/45 pt-4">
+    <div className="mt-4 border-t border-border/45 pb-[env(safe-area-inset-bottom)] pt-4">
       <ProfileCard user={user} onNavigate={onNavigate} />
     </div>
   );
@@ -215,9 +246,7 @@ function ProfileCard({
           <p className="truncate text-[14px] font-semibold leading-tight text-[#eef5f0]">
             {user.name ?? "TrackCrow user"}
           </p>
-          <p className="mt-1 text-xs font-medium text-[#8ee5ad]">
-            Free account
-          </p>
+          <p className="mt-1 text-xs font-medium text-[#8ee5ad]">Free account</p>
         </div>
       </div>
       <div className="mt-3.5 h-px bg-[linear-gradient(90deg,rgba(111,207,151,0.18),rgba(255,255,255,0.04),transparent)]" />
@@ -248,26 +277,28 @@ function ProfileCard({
 
 function ShellNav({
   pathname,
+  searchParams,
   onNavigate,
 }: {
   pathname: string;
+  searchParams: ReturnType<typeof useSearchParams>;
   onNavigate?: () => void;
 }) {
+  const review = searchParams.get("review");
+
   return (
     <nav className="mt-5 space-y-1">
       {navigation.map((item) => {
         const Icon = item.icon;
-        const activeTarget = "activePath" in item ? item.activePath : item.href;
         const active =
-          !item.disabled &&
-          (pathname === activeTarget || pathname.startsWith(`${activeTarget}/`));
+          !item.disabled && isNavigationItemActive(item.href, pathname, review, item.id);
         const itemClassName = cn(
           "group relative flex min-h-11 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           active
             ? "bg-[linear-gradient(180deg,rgba(104,211,145,0.18),rgba(104,211,145,0.08))] text-foreground"
             : item.disabled
               ? "cursor-not-allowed text-secondary-foreground/55"
-              : "text-secondary-foreground hover:bg-white/2 hover:text-foreground"
+              : "text-secondary-foreground/90 hover:bg-white/2 hover:text-foreground"
         );
         const iconClassName = cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
@@ -275,7 +306,7 @@ function ShellNav({
             ? "border-primary/20 bg-[#11271d] text-primary"
             : item.disabled
               ? "border-white/8 bg-transparent text-secondary-foreground/45"
-              : "border-white/8 bg-transparent text-secondary-foreground group-hover:border-primary/12 group-hover:bg-primary/6 group-hover:text-foreground"
+              : "border-white/10 bg-transparent text-secondary-foreground/90 group-hover:border-primary/12 group-hover:bg-primary/6 group-hover:text-foreground"
         );
 
         const content = (
@@ -316,6 +347,26 @@ function ShellNav({
       })}
     </nav>
   );
+}
+
+function isNavigationItemActive(
+  href: string,
+  pathname: string,
+  review: string | null,
+  itemId?: string
+) {
+  if (itemId === "review-queue") {
+    return pathname === "/transactions" && review === "queue";
+  }
+
+  if (href === "/transactions") {
+    return (
+      (pathname === href || pathname.startsWith(`${href}/`)) &&
+      !(pathname === "/transactions" && review === "queue")
+    );
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function getInitials(name: string | null, email: string | null) {
