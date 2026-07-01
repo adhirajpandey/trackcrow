@@ -37,7 +37,7 @@ export function DataTablePagination({
         item === "ellipsis" ? (
           <span
             key={`ellipsis-${index}`}
-            className="inline-flex min-h-9 min-w-9 items-center justify-center text-sm text-secondary-foreground"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm text-secondary-foreground"
           >
             ...
           </span>
@@ -48,7 +48,7 @@ export function DataTablePagination({
             onClick={() => onNavigate(buildPageHref(item))}
             aria-current={item === page ? "page" : undefined}
             className={cn(
-              "inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border px-3 text-sm font-medium transition-colors",
+              "inline-flex min-h-11 min-w-11 items-center justify-center rounded-[8px] border px-3 text-sm font-medium transition-colors",
               item === page
                 ? "border-primary/35 bg-primary/14 text-primary"
                 : "border-border/45 bg-background/10 text-foreground hover:border-border/70 hover:bg-background/16"
@@ -88,7 +88,7 @@ function PageControl({
     return (
       <span
         aria-disabled="true"
-        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/30 bg-background/8 text-secondary-foreground/45"
+        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[8px] border border-border/30 bg-background/8 text-secondary-foreground/65"
       >
         {children}
       </span>
@@ -100,7 +100,7 @@ function PageControl({
       type="button"
       onClick={() => onNavigate(href)}
       aria-label={ariaLabel}
-      className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-foreground transition-colors hover:border-border/70 hover:bg-background/16"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-foreground transition-colors hover:border-border/70 hover:bg-background/16"
     >
       {children}
     </button>

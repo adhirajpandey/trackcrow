@@ -24,7 +24,7 @@ type SelectProps = {
 };
 
 const selectTriggerClassName =
-  "inline-flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/72 focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 const selectContentClassName =
   "absolute left-0 z-20 w-full overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]";
 

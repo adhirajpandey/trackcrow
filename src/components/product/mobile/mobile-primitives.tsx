@@ -30,6 +30,7 @@ export function MobilePageHeader({
   meta,
   actions,
   className,
+  showEyebrowOnMobile = false,
 }: {
   eyebrow: string;
   title: string;
@@ -37,19 +38,20 @@ export function MobilePageHeader({
   meta?: ReactNode;
   actions?: ReactNode;
   className?: string;
+  showEyebrowOnMobile?: boolean;
 }) {
   return (
-    <section className={cn("space-y-3 border-b border-border pb-5 lg:hidden", className)}>
-      <div className="min-w-0 space-y-3">
+    <section className={cn("space-y-2.5 border-b border-border pb-3.5 lg:hidden", className)}>
+      <div className="min-w-0 space-y-2">
         <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
-            {eyebrow}
-          </p>
-          <h1 className="mt-2 break-words text-[2.05rem] font-bold leading-tight text-foreground">
+          {showEyebrowOnMobile ? (
+            <p className="text-xs font-semibold text-primary">{eyebrow}</p>
+          ) : null}
+          <h1 className={cn("break-words text-2xl font-bold leading-tight text-foreground", showEyebrowOnMobile && "mt-1")}>
             {title}
           </h1>
           {description ? (
-            <div className="mt-3 max-w-full text-[15px] leading-6 text-muted-foreground">
+            <div className="mt-1.5 max-w-full text-sm leading-5 text-secondary-foreground">
               {description}
             </div>
           ) : null}
@@ -60,7 +62,7 @@ export function MobilePageHeader({
           </div>
         ) : null}
       </div>
-      {actions ? <div className="flex flex-col gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-col gap-2 pt-1">{actions}</div> : null}
     </section>
   );
 }
@@ -83,12 +85,12 @@ export function MobileSearchBar({
         className
       )}
     >
-      <Search className="h-4 w-4 shrink-0 text-secondary-foreground/75" />
+      <Search className="h-4 w-4 shrink-0 text-secondary-foreground" />
       <input
         defaultValue={defaultValue}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/70"
+        className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/85"
       />
     </label>
   );
@@ -114,7 +116,7 @@ export function MobileFilterChips({
         <span
           key={item.label}
           className={cn(
-            "inline-flex min-h-8 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
+            "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
             item.tone === "accent"
               ? "border-accent/30 bg-accent/12 text-accent"
               : "border-primary/20 bg-primary/10 text-primary"
@@ -169,7 +171,7 @@ export function MobileActionBar({
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-20 -mx-4 border-t border-border/60 bg-background/96 px-4 py-3 backdrop-blur supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden",
+        "sticky bottom-0 z-20 -mx-4 border-t border-border/60 bg-background/96 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden",
         className
       )}
     >
@@ -225,7 +227,7 @@ export function MobileStatGrid({
     >
       {items.map((item) => (
         <div key={item.label} className={cn(mobileCardClassName, "px-4 py-3")}>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/80">
+          <p className="text-xs font-semibold text-secondary-foreground">
             {item.label}
           </p>
           <p
@@ -372,7 +374,7 @@ export function MobileSectionLink({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-10 w-full items-center justify-between rounded-[8px] border border-border/50 bg-background/12 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-background/18"
+      className="inline-flex min-h-11 w-full items-center justify-between rounded-[8px] border border-border/50 bg-background/12 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-background/18"
     >
       <span>{label}</span>
       <ChevronRight className="h-4 w-4 text-secondary-foreground" />

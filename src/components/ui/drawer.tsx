@@ -61,7 +61,12 @@ function DrawerFooter({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mt-auto grid gap-2 px-5 pb-5 pt-4", className)} {...props} />;
+  return (
+    <div
+      className={cn("mt-auto grid gap-2 px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-4", className)}
+      {...props}
+    />
+  );
 }
 
 const DrawerTitle = React.forwardRef<

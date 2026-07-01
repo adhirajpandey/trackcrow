@@ -295,7 +295,7 @@ export function TransactionsFilterControls({
                   className={cn(
                     "min-h-11 rounded-[8px] border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     active
-                      ? "border-primary/70 bg-primary/14 text-primary"
+                      ? "border-primary/70 bg-primary text-primary-foreground shadow-[0_0_0_1px_rgba(104,211,145,0.18)]"
                       : "border-border/55 bg-background/10 text-secondary-foreground hover:bg-background/16 hover:text-foreground"
                   )}
                 >
@@ -352,7 +352,7 @@ export function TransactionsFilterControls({
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]">
       <label className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
-        <Search className="h-4 w-4 text-secondary-foreground/75" />
+        <Search className="h-4 w-4 text-secondary-foreground" />
         <input
           ref={searchInputRef}
           value={isDraftMode ? filters.q : undefined}
@@ -379,7 +379,7 @@ export function TransactionsFilterControls({
             }, 300);
           }}
           placeholder="Search recipient, remarks, amount..."
-          className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/70"
+          className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/85"
         />
       </label>
 
@@ -557,7 +557,7 @@ function FilterMenu({
         menuClassName
       )}
     >
-      <div className="border-b border-border/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-secondary-foreground/80">
+      <div className="border-b border-border/45 px-3 py-2 text-xs font-semibold text-secondary-foreground">
         {label}
       </div>
       <div className="max-h-56 overflow-y-auto py-1">
@@ -630,7 +630,12 @@ function FilterOptionButton({
       role="option"
       aria-selected={selected}
       onClick={onSelect}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20"
+      className={cn(
+        "flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:bg-secondary/20",
+        selected
+          ? "bg-primary/12 text-primary hover:bg-primary/16"
+          : "text-foreground hover:bg-secondary/20"
+      )}
     >
       <span className="truncate">{label}</span>
       {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}

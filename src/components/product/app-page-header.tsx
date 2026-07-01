@@ -26,7 +26,7 @@ export function AppPageHeader({
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 max-w-full">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
+          <p className="text-sm font-semibold text-primary">
             {eyebrow}
           </p>
           <h1 className="mt-2 break-words text-[32px] font-bold leading-tight text-foreground lg:text-[42px]">

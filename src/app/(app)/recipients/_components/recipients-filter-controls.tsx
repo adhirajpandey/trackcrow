@@ -38,7 +38,7 @@ export function RecipientsFilterControls({
   return (
     <div className="grid gap-3">
       <label className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
-        <Search className="h-4 w-4 text-secondary-foreground/75" />
+        <Search className="h-4 w-4 text-secondary-foreground" />
         <input
           ref={searchInputRef}
           defaultValue={filters.q}
@@ -54,7 +54,7 @@ export function RecipientsFilterControls({
             }, 300);
           }}
           placeholder="Search recipient, normalized name, identifier..."
-          className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/70"
+          className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/85"
         />
       </label>
     </div>

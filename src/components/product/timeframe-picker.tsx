@@ -217,9 +217,9 @@ export function TimeframePicker({
               }
             }}
             className={cn(
-              "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active
-                ? "bg-secondary/75 text-foreground"
+            "flex min-h-11 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            active
+                ? "bg-primary/12 text-primary"
                 : "text-secondary-foreground hover:bg-secondary/55 hover:text-foreground"
             )}
           >
@@ -248,7 +248,7 @@ export function TimeframePicker({
                   setSelectedRange(range.value);
                   navigate(range.value);
                 }}
-                className={`min-h-8 rounded-[6px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`min-h-11 rounded-[6px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-secondary-foreground hover:bg-secondary/45 hover:text-foreground"
@@ -269,7 +269,7 @@ export function TimeframePicker({
           aria-pressed={secondaryRangeActive}
           onClick={() => setIsOpen((current) => !current)}
           className={cn(
-            "inline-flex min-h-9 items-center gap-2 rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex min-h-11 items-center gap-2 rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             secondaryRangeActive &&
               "border-primary/50 bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
             triggerClassName
@@ -300,7 +300,7 @@ export function TimeframePicker({
             type="date"
             value={customStartDate}
             onChange={(event) => setCustomStartDate(event.target.value)}
-            className="min-h-9 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <label className="sr-only" htmlFor={`${idPrefix}-end-date`}>
             End date
@@ -310,7 +310,7 @@ export function TimeframePicker({
             type="date"
             value={customEndDate}
             onChange={(event) => setCustomEndDate(event.target.value)}
-            className="min-h-9 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           {showCustomApplyButton ? (
             <button
@@ -321,7 +321,7 @@ export function TimeframePicker({
                 }
               }}
               disabled={!customStartDate || !customEndDate}
-              className="min-h-9 rounded-[8px] border border-primary/40 bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-11 rounded-[8px] border border-primary/40 bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Apply
             </button>

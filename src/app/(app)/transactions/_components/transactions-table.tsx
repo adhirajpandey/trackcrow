@@ -351,11 +351,7 @@ function renderDefaultCell(
         </div>
       );
     case "source":
-      return (
-        <div className="font-medium uppercase tracking-[0.08em] text-secondary-foreground">
-          {row.source ?? "-"}
-        </div>
-      );
+      return <div className="font-medium text-secondary-foreground">{row.source ?? "-"}</div>;
     case "status":
       return (
         <div
@@ -374,7 +370,7 @@ export function CategoryBadge({ value }: { value: string | null }) {
   return (
     <span
       className={cn(
-        "inline-flex min-h-8 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
+        "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
         value
           ? "border-primary/20 bg-primary/10 text-primary"
           : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"

@@ -80,9 +80,9 @@ import {
 } from "./recipient-detail-model";
 
 const badgeClassName =
-  "inline-flex min-h-8 items-center rounded-[999px] border px-3 text-sm font-medium";
+  "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
 const fieldClassName =
-  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/72 focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 
 const identifierKindOptions: SelectOption[] = [
   { value: "AUTO", label: "Auto-detect" },
@@ -430,7 +430,7 @@ export function RecipientDetailPageView({
                     <div key={identifier.id} className="rounded-[8px] border border-border/45 bg-background/10 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                          <p className="text-xs font-semibold text-primary">
                             {identifier.kindLabel}
                           </p>
                           <MobileLongValue value={identifier.value} className="mt-2" />
@@ -751,7 +751,7 @@ function parseTransferImpact(value: unknown): IdentifierTransferImpact | null {
 function MetricBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[8px] border border-border/45 bg-background/10 px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/80">
+      <p className="text-sm font-medium text-secondary-foreground">
         {label}
       </p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
@@ -783,7 +783,7 @@ function CopyButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-secondary-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-secondary-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {copied ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
     </button>
@@ -804,7 +804,7 @@ function QuickCheckRow({
       <div className="flex items-center gap-3">
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full border",
+            "flex h-11 w-11 items-center justify-center rounded-full border",
             status === "attention"
               ? "border-accent/30 bg-accent/10 text-accent"
               : "border-primary/22 bg-primary/10 text-primary"

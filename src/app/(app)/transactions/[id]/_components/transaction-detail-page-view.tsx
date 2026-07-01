@@ -75,10 +75,10 @@ import {
 } from "./transaction-detail-model";
 
 const fieldClassName =
-  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/72 focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 const badgeClassName =
-  "inline-flex min-h-8 items-center rounded-[999px] border px-3 text-sm font-medium";
+  "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
 
 export function TransactionDetailPageView({
   transactionId,
@@ -788,7 +788,7 @@ function QuickCheckRow({
       <div className="flex items-center gap-3">
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full border",
+            "flex h-11 w-11 items-center justify-center rounded-full border",
             status === "attention"
               ? "border-accent/30 bg-accent/10 text-accent"
               : "border-primary/22 bg-primary/10 text-primary"

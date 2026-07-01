@@ -115,7 +115,7 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
           <span
             key={identifier.id}
             className={cn(
-              "inline-flex max-w-full items-center rounded-[999px] border px-3 py-1 text-xs font-medium",
+              "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
               getIdentifierChipClassName(identifier.tone)
             )}
             title={identifier.value}
@@ -124,7 +124,7 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
           </span>
         ))}
         {row.original.overflowIdentifierCount > 0 ? (
-          <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
+          <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
             +{row.original.overflowIdentifierCount} more
           </span>
         ) : null}
@@ -310,7 +310,9 @@ export function RecipientsPageView({
                   onClick={() => setDrawerRow(row)}
                   className={cn(
                     mobileCardClassName,
-                    "p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    "p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    drawerRow?.uuid === row.uuid &&
+                      "border-primary/55 bg-primary/[0.07] ring-1 ring-inset ring-primary/35"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3 min-w-0">
@@ -322,14 +324,14 @@ export function RecipientsPageView({
                         {row.secondaryLabel}
                       </p>
                     </div>
-                    <span className="inline-flex min-h-8 shrink-0 items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary">
+                    <span className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary">
                       <BadgeCheck className="h-3.5 w-3.5" />
                       <span>{row.transactionCount}</span>
                     </span>
                   </div>
                   <div className="mt-4 space-y-3">
                     <div className="flex items-start justify-between gap-3 min-w-0">
-                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+                      <span className="text-sm font-medium text-secondary-foreground">
                         Total sent
                       </span>
                       <span className="shrink-0 text-base font-semibold tabular-nums text-foreground">
@@ -341,7 +343,7 @@ export function RecipientsPageView({
                         <span
                           key={identifier.id}
                           className={cn(
-                            "inline-flex max-w-full items-center rounded-[999px] border px-3 py-1 text-xs font-medium",
+                            "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
                             getIdentifierChipClassName(identifier.tone)
                           )}
                           title={identifier.value}
@@ -352,7 +354,7 @@ export function RecipientsPageView({
                         </span>
                       ))}
                       {row.overflowIdentifierCount > 0 ? (
-                        <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                        <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
                           +{row.overflowIdentifierCount} more
                         </span>
                       ) : null}
@@ -521,7 +523,7 @@ export function RecipientsPageView({
         {drawerRow ? (
           <div className="space-y-4 pb-3">
             <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+              <p className="text-xs font-semibold text-secondary-foreground">
                 Total sent
               </p>
               <p className="mt-2 text-[1.65rem] font-semibold leading-none tabular-nums text-foreground">
@@ -545,7 +547,7 @@ export function RecipientsPageView({
                 <span
                   key={identifier.id}
                   className={cn(
-                    "inline-flex max-w-full items-center rounded-[999px] border px-3 py-1 text-xs font-medium",
+                    "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
                     getIdentifierChipClassName(identifier.tone)
                   )}
                   title={identifier.value}
@@ -554,7 +556,7 @@ export function RecipientsPageView({
                 </span>
               ))}
               {drawerRow.overflowIdentifierCount > 0 ? (
-                <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
                   +{drawerRow.overflowIdentifierCount} more
                 </span>
               ) : null}

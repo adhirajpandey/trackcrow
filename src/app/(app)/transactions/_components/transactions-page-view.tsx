@@ -142,13 +142,13 @@ export function TransactionsPageView({
       <MobilePageHeader
         eyebrow="Transaction workspace"
         title="Transactions"
-        description="Search, filter, and review all your transactions in one place."
+        description="Search, filter, and review transactions."
       />
       <div className="hidden lg:block">
         <AppPageHeader
           eyebrow="Transaction workspace"
           title="Transactions"
-          description="Search, filter, and review all your transactions in one place."
+          description="Search, filter, and review transactions."
           actions={<TransactionsTimeframePicker filters={data.filters} />}
         />
       </div>
@@ -195,7 +195,10 @@ export function TransactionsPageView({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-9 max-w-full min-w-0 gap-2 rounded-[8px] border-border/55 bg-background/14 px-3 text-sm font-medium"
+                className={cn(
+                  "min-h-11 max-w-full min-w-0 gap-2 rounded-[8px] border-border/55 bg-background/14 px-3 text-sm font-medium",
+                  mobileFiltersOpen && "border-primary/70 bg-primary/14 text-primary"
+                )}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4 shrink-0" />
@@ -274,7 +277,8 @@ export function TransactionsPageView({
                   className={cn(
                     mobileCardClassName,
                     "px-4 py-3.5 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    row.isSelected && "ring-1 ring-inset ring-primary/30"
+                    (row.isSelected || drawerRow?.uuid === row.uuid) &&
+                      "border-primary/55 bg-primary/[0.07] ring-1 ring-inset ring-primary/35"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3 min-w-0">
@@ -294,7 +298,7 @@ export function TransactionsPageView({
                   <div className="mt-3 flex items-start justify-between gap-3 min-w-0">
                     <span
                       className={cn(
-                        "inline-flex min-h-7 max-w-full min-w-0 items-center rounded-[999px] border px-3 text-sm font-medium",
+                        "inline-flex min-h-11 max-w-full min-w-0 items-center rounded-[999px] border px-3 text-sm font-medium",
                         row.category
                           ? "border-primary/20 bg-primary/10 text-primary"
                           : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
@@ -304,8 +308,11 @@ export function TransactionsPageView({
                         {row.category ?? "Uncategorized"}
                       </span>
                     </span>
-                    <span className="min-w-0 text-right text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
-                      <MobileLongValue value={row.subcategory ?? "No subcategory"} className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75" />
+                    <span className="min-w-0 text-right">
+                      <MobileLongValue
+                        value={row.subcategory ?? "No subcategory"}
+                        className="text-sm font-medium text-secondary-foreground"
+                      />
                     </span>
                   </div>
                 </button>
@@ -380,7 +387,7 @@ export function TransactionsPageView({
         {drawerRow ? (
           <div className="space-y-4 pb-3">
             <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+              <p className="text-xs font-semibold text-secondary-foreground">
                 Amount
               </p>
               <p className="mt-2 text-[1.65rem] font-semibold leading-none tabular-nums text-foreground">
