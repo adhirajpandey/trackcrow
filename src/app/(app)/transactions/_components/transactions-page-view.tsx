@@ -2,19 +2,18 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, SlidersHorizontal, Tag } from "lucide-react";
+import { CalendarDays, ChevronDown, SlidersHorizontal, Tag } from "lucide-react";
 
+import { formatNumber } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import { AppPageHeader } from "@/components/product/app-page-header";
 import {
   MobileBottomSheet,
   MobileCardList,
-  MobileFilterChips,
   MobileLongValue,
   MobilePageHeader,
   MobilePagination,
   MobileSearchBar,
   mobileCardClassName,
-  mobileSurfaceClassName,
 } from "@/components/product/mobile/mobile-primitives";
 import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
 import { Button } from "@/components/ui/button";
@@ -107,17 +106,16 @@ export function TransactionsPageView({
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileDraftFilters, setMobileDraftFilters] = useState(data.filters);
   const searchTimeoutRef = useRef<number | null>(null);
-  const mobileFilterItems = [
-    data.filters.rangeLabel !== "All time" ? { label: data.filters.rangeLabel } : null,
-    data.filters.categories.length > 0
-      ? { label: `${data.filters.categories.length} categor${data.filters.categories.length === 1 ? "y" : "ies"}` }
-      : null,
-    data.filters.subcategories.length > 0
-      ? {
-          label: `${data.filters.subcategories.length} subcategor${data.filters.subcategories.length === 1 ? "y" : "ies"}`,
-        }
-      : null,
-  ].filter(Boolean) as Array<{ label: string }>;
+  const mobileActiveFilterCount =
+    (data.filters.categories.length > 0 ? 1 : 0) +
+    (data.filters.subcategories.length > 0 ? 1 : 0);
+  const mobileTransactionCountLabel = `${formatNumber(data.pagination.total)} transaction${
+    data.pagination.total === 1 ? "" : "s"
+  }`;
+  const mobileFilterTriggerLabel =
+    mobileActiveFilterCount > 0
+      ? `${data.filters.rangeLabel} \u00b7 ${mobileActiveFilterCount} active`
+      : `Filters \u00b7 ${data.filters.rangeLabel}`;
 
   useEffect(() => {
     return () => {
@@ -168,7 +166,7 @@ export function TransactionsPageView({
         </section>
       ) : null}
 
-      <section className={cn(mobileSurfaceClassName, "space-y-3 p-4 lg:hidden")}>
+      <section className="space-y-3 lg:hidden">
         <MobileSearchBar
           defaultValue={data.filters.q}
           placeholder="Search recipient, remarks, amount..."
@@ -182,9 +180,9 @@ export function TransactionsPageView({
             }, 300);
           }}
         />
-        <div className="flex items-center justify-between gap-3">
-          <MobileFilterChips items={mobileFilterItems} className="min-w-0 flex-1" />
-          <MobileBottomSheet
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="min-w-0">
+            <MobileBottomSheet
             open={mobileFiltersOpen}
             onOpenChange={(open) => {
               setMobileFiltersOpen(open);
@@ -193,9 +191,17 @@ export function TransactionsPageView({
               }
             }}
             trigger={
-              <Button type="button" variant="secondary" size="sm" className="shrink-0">
-                <SlidersHorizontal className="h-4 w-4" />
-                Filters
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-9 max-w-full min-w-0 gap-2 rounded-[8px] border-border/55 bg-background/14 px-3 text-sm font-medium"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                  <span className="truncate text-left">{mobileFilterTriggerLabel}</span>
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-secondary-foreground/80" />
               </Button>
             }
             title="Transactions filters"
@@ -234,7 +240,11 @@ export function TransactionsPageView({
               renderMenusInPortal={false}
               menuPortalZIndex={120}
             />
-          </MobileBottomSheet>
+            </MobileBottomSheet>
+          </div>
+          <p className="whitespace-nowrap text-sm text-secondary-foreground">
+            {mobileTransactionCountLabel}
+          </p>
         </div>
       </section>
 
@@ -255,7 +265,7 @@ export function TransactionsPageView({
         {isRefreshing ? <span className="sr-only">Refreshing transactions</span> : null}
         {data.rows.length > 0 ? (
           <>
-            <MobileCardList className="p-4">
+            <MobileCardList>
               {data.rows.map((row) => (
                 <button
                   key={row.uuid}
@@ -263,7 +273,7 @@ export function TransactionsPageView({
                   onClick={() => setDrawerRow(row)}
                   className={cn(
                     mobileCardClassName,
-                    "p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "px-4 py-3.5 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     row.isSelected && "ring-1 ring-inset ring-primary/30"
                   )}
                 >
@@ -281,10 +291,10 @@ export function TransactionsPageView({
                       {formatTransactionAmount(row.amount)}
                     </span>
                   </div>
-                  <div className="mt-4 flex items-start justify-between gap-3 min-w-0">
+                  <div className="mt-3 flex items-start justify-between gap-3 min-w-0">
                     <span
                       className={cn(
-                        "inline-flex min-h-8 max-w-full min-w-0 items-center rounded-[999px] border px-3 text-sm font-medium",
+                        "inline-flex min-h-7 max-w-full min-w-0 items-center rounded-[999px] border px-3 text-sm font-medium",
                         row.category
                           ? "border-primary/20 bg-primary/10 text-primary"
                           : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
