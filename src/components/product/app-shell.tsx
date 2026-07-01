@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
+  ClipboardList,
   Gauge,
   LogOut,
   Menu,
   ReceiptText,
+  ScrollText,
   Settings,
   Users,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -31,6 +32,14 @@ const navigation = [
   { href: "/dashboard", label: "Overview", icon: Gauge },
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
   { href: "/recipients", label: "Recipients", icon: Users },
+  {
+    href: "/transactions?review=queue&status=uncategorized",
+    activePath: "/transactions",
+    label: "Review queue",
+    icon: ClipboardList,
+  },
+  { href: "#rules", label: "Rules", icon: ScrollText, disabled: true },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 function handleSignOut() {
@@ -54,39 +63,25 @@ export function AppShell({
       </aside>
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border/70 bg-background/95 px-4 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-20 flex min-h-14 items-center border-b border-border/70 bg-background/95 px-4 backdrop-blur lg:hidden">
           <div className="flex items-center gap-3">
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="rounded-full border border-border/70 bg-background/30"
+              className="h-11 w-11 rounded-full border border-border/70 bg-background/30"
               onClick={() => setIsOpen(true)}
               aria-label="Open navigation"
               title="Open navigation"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <BrandMark size="compact" showText={false} />
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
-                TrackCrow
-              </p>
-              <p className="text-base font-semibold text-foreground">Spend ops</p>
-            </div>
+            <BrandMark
+              size="compact"
+              markClassName="rounded-[12px]"
+              textClassName="text-base tracking-normal text-foreground"
+            />
           </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Sign out"
-            title="Sign out"
-            className="rounded-full border border-border/70 bg-background/30"
-            onClick={() => void handleSignOut()}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
         </header>
 
         {isOpen ? (
@@ -97,25 +92,13 @@ export function AppShell({
               aria-label="Close navigation"
               onClick={() => setIsOpen(false)}
             />
-            <aside className="absolute left-0 top-0 flex h-full w-[276px] flex-col border-r border-border/70 bg-[#06100c]/96 px-4 py-5 backdrop-blur-xl">
-              <div className="mb-5 flex items-center justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Close navigation"
-                  title="Close navigation"
-                  className="rounded-full border border-border/70 bg-background/25"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+            <aside className="absolute left-0 top-0 flex h-full w-[86vw] max-w-[360px] flex-col border-r border-border/70 bg-[#06100c]/96 px-4 py-4 backdrop-blur-xl">
               <div className="min-h-0 flex-1">
                 <ShellSidebarContent
                   pathname={pathname}
                   user={user}
                   onNavigate={() => setIsOpen(false)}
+                  compactBrand
                 />
               </div>
             </aside>
@@ -150,14 +133,16 @@ function ShellSidebarContent({
   pathname,
   user,
   onNavigate,
+  compactBrand = false,
 }: {
   pathname: string;
   user: AppShellUser;
   onNavigate?: () => void;
+  compactBrand?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <SidebarBrand />
+      <SidebarBrand compact={compactBrand} />
 
       <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
         <ShellNav pathname={pathname} onNavigate={onNavigate} />
@@ -168,7 +153,22 @@ function ShellSidebarContent({
   );
 }
 
-function SidebarBrand() {
+function SidebarBrand({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="min-w-0 rounded-[12px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <BrandMark
+          size="compact"
+          markClassName="rounded-[12px]"
+          textClassName="text-[1.05rem] tracking-normal text-foreground"
+        />
+        <p className="mt-1 text-sm leading-5 text-secondary-foreground">
+          Track | Review | Control
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative overflow-hidden rounded-[16px] border border-primary/18 bg-[linear-gradient(180deg,rgba(8,24,18,0.96),rgba(6,15,12,0.9))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(104,211,145,0.16),transparent_32%),linear-gradient(135deg,rgba(104,211,145,0.07),transparent_55%)]" />
@@ -180,7 +180,7 @@ function SidebarBrand() {
         textClassName="text-[13px]"
       />
       <p className="relative mt-4 max-w-[11rem] text-[16px] font-semibold leading-[1.4] text-foreground">
-        Track. Review. Control.
+        Track | Review | Control
       </p>
     </div>
   );
@@ -215,14 +215,8 @@ function ProfileCard({
           <p className="truncate text-[14px] font-semibold leading-tight text-[#eef5f0]">
             {user.name ?? "TrackCrow user"}
           </p>
-          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6fcf97]">
+          <p className="mt-1 text-xs font-medium text-[#8ee5ad]">
             Free account
-          </p>
-          <p
-            className="mt-1.5 truncate text-[12px] leading-[1.3] text-[#a4b7ac]"
-            title={user.email ?? "Signed in"}
-          >
-            {user.email ?? "Signed in"}
           </p>
         </div>
       </div>
@@ -231,7 +225,7 @@ function ProfileCard({
         <Link
           href="/settings"
           onClick={onNavigate}
-          className="inline-flex min-h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-[#2b4436] bg-[#0d1713]/52 px-3 text-sm font-medium text-[#d5e2da] transition-colors hover:border-primary/25 hover:bg-primary/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-[#2b4436] bg-[#0d1713]/52 px-3 text-sm font-medium text-[#d5e2da] transition-colors hover:border-primary/25 hover:bg-primary/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Settings className="h-3.5 w-3.5 text-primary" />
           Settings
@@ -241,7 +235,7 @@ function ProfileCard({
           variant="ghost"
           aria-label="Sign out"
           title="Sign out"
-          className="min-h-9 cursor-pointer whitespace-nowrap rounded-[12px] border border-[#563333] bg-[#211111]/52 px-3 text-sm font-medium text-[#f49c9c] hover:border-[#cf4a4a]/55 hover:bg-[#361616] hover:text-[#ffd0d0] focus-visible:ring-[#cf4a4a]"
+          className="min-h-11 cursor-pointer whitespace-nowrap rounded-[12px] border border-[#563333] bg-[#211111]/52 px-3 text-sm font-medium text-[#f49c9c] hover:border-[#cf4a4a]/55 hover:bg-[#361616] hover:text-[#ffd0d0] focus-visible:ring-[#cf4a4a]"
           onClick={() => void handleSignOut()}
         >
           <LogOut className="h-3.5 w-3.5 text-[#ff9b9b]" />
@@ -263,29 +257,30 @@ function ShellNav({
     <nav className="mt-5 space-y-1">
       {navigation.map((item) => {
         const Icon = item.icon;
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const activeTarget = "activePath" in item ? item.activePath : item.href;
+        const active =
+          !item.disabled &&
+          (pathname === activeTarget || pathname.startsWith(`${activeTarget}/`));
+        const itemClassName = cn(
+          "group relative flex min-h-11 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          active
+            ? "bg-[linear-gradient(180deg,rgba(104,211,145,0.18),rgba(104,211,145,0.08))] text-foreground"
+            : item.disabled
+              ? "cursor-not-allowed text-secondary-foreground/55"
+              : "text-secondary-foreground hover:bg-white/2 hover:text-foreground"
+        );
+        const iconClassName = cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
+          active
+            ? "border-primary/20 bg-[#11271d] text-primary"
+            : item.disabled
+              ? "border-white/8 bg-transparent text-secondary-foreground/45"
+              : "border-white/8 bg-transparent text-secondary-foreground group-hover:border-primary/12 group-hover:bg-primary/6 group-hover:text-foreground"
+        );
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "group relative flex min-h-11 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active
-                ? "bg-[linear-gradient(180deg,rgba(104,211,145,0.18),rgba(104,211,145,0.08))] text-foreground"
-                : "text-muted-foreground hover:bg-white/2 hover:text-foreground"
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
-                active
-                  ? "border-primary/20 bg-[#11271d] text-primary"
-                  : "border-white/8 bg-transparent text-muted-foreground group-hover:border-primary/12 group-hover:bg-primary/6 group-hover:text-foreground"
-              )}
-            >
+        const content = (
+          <>
+            <span className={iconClassName}>
               <Icon className="h-4 w-4" />
             </span>
             <span className="flex-1">{item.label}</span>
@@ -296,6 +291,26 @@ function ShellNav({
                 active ? "bg-primary shadow-[0_0_12px_rgba(104,211,145,0.8)]" : "opacity-0"
               )}
             />
+          </>
+        );
+
+        if (item.disabled) {
+          return (
+            <div key={item.label} aria-disabled="true" className={itemClassName}>
+              {content}
+            </div>
+          );
+        }
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
+            className={itemClassName}
+          >
+            {content}
           </Link>
         );
       })}
