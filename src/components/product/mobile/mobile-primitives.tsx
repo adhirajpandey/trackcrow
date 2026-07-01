@@ -133,15 +133,19 @@ export function MobileBottomSheet({
   description,
   children,
   footer,
+  open,
+  onOpenChange,
 }: {
   trigger: ReactNode;
   title: string;
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <Drawer>
+    <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent className="lg:hidden">
         <DrawerHeader>

@@ -297,6 +297,17 @@ function buildSubcategoryHref(
   return toHref(params);
 }
 
+export function buildApplyFiltersHref(filters: TransactionsControlState) {
+  const params = getBaseParams(filters, {
+    q: filters.q.trim() || undefined,
+  });
+  params.set("page", "1");
+  params.set("size", String(filters.pageSize));
+  params.set("sortBy", filters.sortBy);
+  params.set("sortOrder", filters.sortOrder);
+  return toHref(params);
+}
+
 export function buildClearSubcategoriesHref(filters: TransactionsControlState) {
   return buildSubcategoryHref(filters, []);
 }

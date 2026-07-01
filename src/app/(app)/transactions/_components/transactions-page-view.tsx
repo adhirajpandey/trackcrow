@@ -35,6 +35,7 @@ import { getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
 import {
+  buildApplyFiltersHref,
   buildCategoryOptions,
   buildPageHref,
   buildSearchHref,
@@ -101,6 +102,8 @@ export function TransactionsPageView({
   const isRefreshing = transactionsQuery.isFetching && !transactionsQuery.isPending;
   const categoryOptions = buildCategoryOptions(data.categories);
   const subcategoryOptions = buildSubcategoryOptions(data.categories, data.filters);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileDraftFilters, setMobileDraftFilters] = useState(data.filters);
   const searchTimeoutRef = useRef<number | null>(null);
   const mobileFilterItems = [
     data.filters.rangeLabel !== "All time" ? { label: data.filters.rangeLabel } : null,
@@ -121,6 +124,17 @@ export function TransactionsPageView({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (mobileFiltersOpen) {
+      setMobileDraftFilters(data.filters);
+    }
+  }, [data.filters, mobileFiltersOpen]);
+
+  const mobileSubcategoryOptions = buildSubcategoryOptions(
+    data.categories,
+    mobileDraftFilters
+  );
 
   return (
     <div className="space-y-3.5">
@@ -171,6 +185,13 @@ export function TransactionsPageView({
         <div className="flex items-center justify-between gap-3">
           <MobileFilterChips items={mobileFilterItems} className="min-w-0 flex-1" />
           <MobileBottomSheet
+            open={mobileFiltersOpen}
+            onOpenChange={(open) => {
+              setMobileFiltersOpen(open);
+              if (open) {
+                setMobileDraftFilters(data.filters);
+              }
+            }}
             trigger={
               <Button type="button" variant="secondary" size="sm" className="shrink-0">
                 <SlidersHorizontal className="h-4 w-4" />
@@ -179,12 +200,29 @@ export function TransactionsPageView({
             }
             title="Transactions filters"
             description="Refine the transaction feed."
+            footer={
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  className="min-w-40"
+                  onClick={() => {
+                    updateTransactionsUrl(buildApplyFiltersHref(mobileDraftFilters), "replace");
+                    setMobileFiltersOpen(false);
+                  }}
+                >
+                  Apply Filter
+                </Button>
+              </div>
+            }
           >
             <TransactionsFilterControls
-              filters={data.filters}
+              filters={mobileDraftFilters}
               categories={data.categories}
               categoryOptions={categoryOptions}
-              subcategoryOptions={subcategoryOptions}
+              subcategoryOptions={mobileSubcategoryOptions}
+              mode="draft"
+              onFiltersChange={setMobileDraftFilters}
+              renderMenusInPortal={false}
             />
           </MobileBottomSheet>
         </div>
