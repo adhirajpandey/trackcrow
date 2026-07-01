@@ -20,7 +20,10 @@ import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import { DashboardBottomSection } from "./dashboard-bottom-section";
-import { DashboardTimeframePicker } from "./dashboard-timeframe-picker";
+import {
+  DashboardMobileTimePeriodRow,
+  DashboardTimeframePicker,
+} from "./dashboard-timeframe-picker";
 import {
   buildChartDisplayPeriods,
   buildChartBuckets,
@@ -157,11 +160,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         }
       />
       <div className="lg:hidden">
-        <DashboardTimeframePicker
-          value={data.range.value}
-          startDate={data.range.startDate}
-          endDate={data.range.endDate}
-        />
+        <DashboardMobileTimePeriodRow value={data.range.value} />
       </div>
       <div className="hidden lg:block">
         <AppPageHeader

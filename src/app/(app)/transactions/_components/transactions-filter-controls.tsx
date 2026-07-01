@@ -7,9 +7,12 @@ import { Check, ChevronDown, Search, X } from "lucide-react";
 
 import {
   quickDashboardRanges,
-  secondaryDashboardRanges,
 } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import type { CategoryOption } from "@/common/types";
+import {
+  MobileTimePeriodRow,
+  mobileDashboardSecondaryRanges,
+} from "@/components/product/mobile/mobile-time-period-row";
 import { getDashboardRangeState } from "@/features/dashboard/query-state";
 import type { TransactionsControlState } from "@/features/transactions/types";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
@@ -64,8 +67,6 @@ export function TransactionsFilterControls({
   const subcategoryDisabled = !subcategoryEnabled || subcategoryOptions.length === 0;
   const isDraftMode = mode === "draft";
   const isMobileSheet = variant === "mobile-sheet";
-  const mobileMoreRanges = secondaryDashboardRanges.filter((range) => range.value !== "custom");
-  const moreRangeActive = mobileMoreRanges.some((range) => range.value === filters.range);
 
   useEffect(() => {
     if (isDraftMode) {
@@ -282,44 +283,14 @@ export function TransactionsFilterControls({
     return (
       <div className="space-y-5">
         <FilterSection number="1" title="Time period">
-          <div className="grid grid-cols-5 gap-2">
-            {quickDashboardRanges.map((range) => {
-              const active = filters.range === range.value;
-
-              return (
-                <button
-                  key={range.value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => updateDraftRange(range.value)}
-                  className={cn(
-                    "min-h-11 rounded-[8px] border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    active
-                      ? "border-primary/70 bg-primary text-primary-foreground shadow-[0_0_0_1px_rgba(104,211,145,0.18)]"
-                      : "border-border/55 bg-background/10 text-secondary-foreground hover:bg-background/16 hover:text-foreground"
-                  )}
-                >
-                  {range.label}
-                </button>
-              );
-            })}
-            <FilterMenu
-              label="More time periods"
-              triggerLabel="More"
-              triggerClassName="min-h-11 justify-center px-3"
-              triggerLabelClassName="truncate text-center"
-              triggerIconClassName="hidden"
-              triggerActive={moreRangeActive}
-              renderInPortal={renderMenusInPortal}
-              portalZIndex={menuPortalZIndex}
-              menuClassName="left-auto right-0 w-[13.5rem] min-w-[13.5rem]"
-              options={mobileMoreRanges.map((range) => ({
-                label: range.label,
-                selected: filters.range === range.value,
-                onSelect: () => updateDraftRange(range.value),
-              }))}
-            />
-          </div>
+          <MobileTimePeriodRow
+            value={filters.range}
+            quickRanges={quickDashboardRanges}
+            secondaryRanges={mobileDashboardSecondaryRanges}
+            onSelect={updateDraftRange}
+            renderMenuInPortal={renderMenusInPortal}
+            menuPortalZIndex={menuPortalZIndex}
+          />
         </FilterSection>
 
         <FilterSection number="2" title="Category">

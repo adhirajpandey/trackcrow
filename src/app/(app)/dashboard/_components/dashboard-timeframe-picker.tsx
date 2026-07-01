@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
+import { MobileTimePeriodRow, mobileDashboardSecondaryRanges } from "@/components/product/mobile/mobile-time-period-row";
 import {
   dashboardRangeCookieName,
   type DashboardRangeValue,
@@ -23,6 +26,27 @@ function buildDashboardUrl(range: DashboardRangeValue, startDate?: string, endDa
   }
 
   return `/dashboard?${params.toString()}`;
+}
+
+export function DashboardMobileTimePeriodRow({
+  value,
+}: {
+  value: DashboardRangeValue;
+}) {
+  const router = useRouter();
+
+  return (
+    <MobileTimePeriodRow
+      value={value}
+      quickRanges={quickDashboardRanges}
+      secondaryRanges={mobileDashboardSecondaryRanges}
+      onSelect={(range) => {
+        persistRange(range);
+        router.push(buildDashboardUrl(range));
+      }}
+      renderMenuInPortal
+    />
+  );
 }
 
 export function DashboardTimeframePicker({
