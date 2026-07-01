@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CalendarRange, ChevronDown } from "lucide-react";
@@ -38,6 +38,7 @@ export type TimeframePickerProps = {
   triggerClassName?: string;
   menuClassName?: string;
   renderMenuInPortal?: boolean;
+  menuPortalZIndex?: number;
   autoApplyCustomRange?: boolean;
   showCustomApplyButton?: boolean;
 };
@@ -61,6 +62,7 @@ export function TimeframePicker({
   triggerClassName,
   menuClassName,
   renderMenuInPortal = false,
+  menuPortalZIndex = 80,
   autoApplyCustomRange = false,
   showCustomApplyButton = true,
 }: TimeframePickerProps) {
@@ -120,7 +122,7 @@ export function TimeframePicker({
     }
   }, [autoApplyCustomRange, buildHref, customEndDate, customStartDate, navigate, selectedRange]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen || !renderMenuInPortal) {
       return;
     }
@@ -131,15 +133,29 @@ export function TimeframePicker({
         return;
       }
 
+      const gutter = 12;
+      const gap = 8;
+      const maxMenuHeight = 384;
       const minWidth = Math.max(rect.width, 220);
-      const left = Math.max(12, Math.min(rect.right - minWidth, window.innerWidth - minWidth - 12));
+      const menuHeight = Math.min(menuPanelRef.current?.scrollHeight ?? maxMenuHeight, maxMenuHeight);
+      const availableBelow = window.innerHeight - rect.bottom - gap - gutter;
+      const availableAbove = rect.top - gap - gutter;
+      const openAbove = availableBelow < menuHeight && availableAbove > availableBelow;
+      const availableHeight = Math.max(0, openAbove ? availableAbove : availableBelow);
+      const left = Math.max(
+        gutter,
+        Math.min(rect.right - minWidth, window.innerWidth - minWidth - gutter)
+      );
 
       setPortalStyle({
         position: "fixed",
-        top: rect.bottom + 8,
+        ...(openAbove
+          ? { bottom: window.innerHeight - rect.top + gap }
+          : { top: rect.bottom + gap }),
         left,
         minWidth,
-        zIndex: 80,
+        maxHeight: Math.min(maxMenuHeight, availableHeight),
+        zIndex: menuPortalZIndex,
       });
     }
 
@@ -151,7 +167,7 @@ export function TimeframePicker({
       window.removeEventListener("resize", updatePortalPosition);
       window.removeEventListener("scroll", updatePortalPosition, true);
     };
-  }, [isOpen, renderMenuInPortal]);
+  }, [isOpen, menuPortalZIndex, renderMenuInPortal]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -196,7 +212,7 @@ export function TimeframePicker({
       className={cn(
         "rounded-[8px] border border-border/80 bg-popover p-2 shadow-2xl shadow-background/50",
         renderMenuInPortal
-          ? "max-h-[min(24rem,calc(100vh-2rem))] overflow-y-auto"
+          ? "overflow-y-auto"
           : "absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[220px]",
         menuClassName
       )}
@@ -217,8 +233,8 @@ export function TimeframePicker({
               }
             }}
             className={cn(
-            "flex min-h-11 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            active
+              "flex min-h-11 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              active
                 ? "bg-primary/12 text-primary"
                 : "text-secondary-foreground hover:bg-secondary/55 hover:text-foreground"
             )}

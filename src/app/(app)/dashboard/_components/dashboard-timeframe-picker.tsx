@@ -47,6 +47,7 @@ export function DashboardTimeframePicker({
       showQuickRanges
       showSelectedLabelInTrigger={false}
       idPrefix="dashboard"
+      renderMenuInPortal
     />
   );
 }

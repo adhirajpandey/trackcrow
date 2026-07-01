@@ -199,6 +199,10 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             label="Total spent"
             value={formatCompactCurrency(data.summary.totalSpend, { style: "kpi" })}
             emphasis={metricComparisons.totalSpend}
+            emphasisTone={getSpendComparisonTone(
+              data.summary.totalSpend,
+              data.comparison?.summary.totalSpend
+            )}
             details={[
               { label: "Booked spend", value: formatCurrency(data.summary.totalSpend) },
               {
@@ -207,7 +211,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
               },
             ]}
             actionLabel="View transactions"
-            tone="primary"
             icon={<Wallet className="h-4.5 w-4.5" />}
           />
         </div>
@@ -263,18 +266,18 @@ function MetricCard({
   label,
   value,
   emphasis,
+  emphasisTone,
   details,
   actionLabel,
-  tone,
   icon,
 }: {
   href: string;
   label: string;
   value: string;
   emphasis: string;
+  emphasisTone?: "default" | "positive" | "negative";
   details: Array<{ label: string; value: string }>;
   actionLabel?: string;
-  tone: "primary" | "secondary";
   icon: ReactNode;
 }) {
   return (
@@ -284,9 +287,9 @@ function MetricCard({
         lead={
           <DashboardTopCardMetric
             value={value}
-            valueTone={tone === "primary" ? "primary" : "default"}
+            valueTone="default"
             emphasis={emphasis}
-            emphasisTone={tone === "primary" ? "primary" : "strong"}
+            emphasisTone={emphasisTone}
           />
         }
         details={<TopCardDetailList items={details} />}
@@ -316,7 +319,6 @@ function MostFrequentRecipientCard({
           lead={
             <DashboardTopCardMetric
               value={recipient.recipient}
-              valueTone="primary"
               emphasis={`${formatNumber(recipient.paymentCount)} payments this period`}
               emphasisTone="strong"
               entity
@@ -456,6 +458,7 @@ function TopCategoryCard({
           lead={
             <DashboardTopCardMetric
               value={category.category}
+              valueTone="primary"
               emphasis={`${formatCurrency(category.totalSpend)} spent`}
               entity
             />
@@ -621,7 +624,7 @@ function DashboardTopCardMetric({
   value: string;
   emphasis?: string;
   valueTone?: "default" | "primary" | "accent";
-  emphasisTone?: "default" | "primary" | "strong" | "muted";
+  emphasisTone?: "default" | "primary" | "strong" | "muted" | "positive" | "negative";
   entity?: boolean;
 }) {
   return (
@@ -643,7 +646,9 @@ function DashboardTopCardMetric({
             emphasisTone === "default" && "text-secondary-foreground",
             emphasisTone === "primary" && "text-primary/90",
             emphasisTone === "strong" && "text-foreground",
-            emphasisTone === "muted" && "text-secondary-foreground"
+            emphasisTone === "muted" && "text-secondary-foreground",
+            emphasisTone === "positive" && "text-destructive",
+            emphasisTone === "negative" && "text-primary"
           )}
         >
           {emphasis}
@@ -651,6 +656,14 @@ function DashboardTopCardMetric({
       ) : null}
     </div>
   );
+}
+
+function getSpendComparisonTone(current: number, previous: number | null | undefined) {
+  if (previous === null || previous === undefined || current === previous) {
+    return "default";
+  }
+
+  return current > previous ? "positive" : "negative";
 }
 
 function SecondaryCardAction({
