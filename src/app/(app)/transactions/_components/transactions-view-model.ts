@@ -174,18 +174,25 @@ export function buildSubcategoryOptions(
   categories: CategoryOption[],
   filters: Pick<TransactionsControlState, "categories">
 ) {
-  const selectedCategories = new Set(
-    filters.categories
-      .filter((category) => category.toLowerCase() !== "uncategorized")
-      .map((category) => category.toLowerCase())
-  );
+  const selectedCategories = [
+    ...new Set(
+      filters.categories
+        .filter((category) => category.toLowerCase() !== "uncategorized")
+        .map((category) => category.toLowerCase())
+    ),
+  ];
 
-  if (selectedCategories.size === 0) {
+  if (selectedCategories.length !== 1) {
+    return [];
+  }
+
+  const selectedCategory = selectedCategories[0];
+  if (!selectedCategory) {
     return [];
   }
 
   const options = categories
-    .filter((category) => selectedCategories.has(category.name.toLowerCase()))
+    .filter((category) => category.name.toLowerCase() === selectedCategory)
     .flatMap((category) =>
       category.subcategories.map((subcategory) => ({
         value: subcategory.name,
@@ -196,6 +203,18 @@ export function buildSubcategoryOptions(
   return [...new Map(options.map((option) => [option.value, option])).values()].sort((left, right) =>
     left.label.localeCompare(right.label, undefined, { sensitivity: "base" })
   );
+}
+
+export function hasSingleSubcategoryCategorySelection(
+  filters: Pick<TransactionsControlState, "categories">
+) {
+  const selectedCategories = new Set(
+    filters.categories
+      .filter((category) => category.toLowerCase() !== "uncategorized")
+      .map((category) => category.toLowerCase())
+  );
+
+  return selectedCategories.size === 1;
 }
 
 export function buildCategoryTriggerLabel(filters: TransactionsControlState) {
@@ -306,6 +325,23 @@ export function buildApplyFiltersHref(filters: TransactionsControlState) {
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
+}
+
+export function buildResetFilterState(
+  filters: TransactionsControlState
+): TransactionsControlState {
+  return {
+    ...filters,
+    q: "",
+    page: 1,
+    sortBy: "timestamp",
+    sortOrder: "desc",
+    categories: [],
+    subcategories: [],
+    selectedTransactionUuid: null,
+    review: null,
+    status: null,
+  };
 }
 
 export function buildClearSubcategoriesHref(filters: TransactionsControlState) {

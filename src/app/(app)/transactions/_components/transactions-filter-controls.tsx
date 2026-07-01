@@ -1,24 +1,31 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
+import {
+  quickDashboardRanges,
+  secondaryDashboardRanges,
+} from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import type { CategoryOption } from "@/common/types";
+import { getDashboardRangeState } from "@/features/dashboard/query-state";
 import type { TransactionsControlState } from "@/features/transactions/types";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
 import { cn } from "@/lib/utils";
 
 import {
+  buildCategoryTriggerLabel,
   buildClearCategoriesHref,
   buildClearSubcategoriesHref,
-  buildCategoryTriggerLabel,
+  buildResetFilterState,
   buildResetHref,
   buildSearchHref,
   buildSubcategoryTriggerLabel,
   buildToggleCategoryHref,
   buildToggleSubcategoryHref,
+  hasSingleSubcategoryCategorySelection,
 } from "./transactions-view-model";
 
 type CategoryMenuOption = {
@@ -32,8 +39,10 @@ type TransactionsFilterControlsProps = {
   categoryOptions: CategoryMenuOption[];
   subcategoryOptions: CategoryMenuOption[];
   mode?: "immediate" | "draft";
+  variant?: "desktop" | "mobile-sheet";
   onFiltersChange?: (filters: TransactionsControlState) => void;
   renderMenusInPortal?: boolean;
+  menuPortalZIndex?: number;
 };
 
 export function TransactionsFilterControls({
@@ -42,15 +51,21 @@ export function TransactionsFilterControls({
   categoryOptions,
   subcategoryOptions,
   mode = "immediate",
+  variant = "desktop",
   onFiltersChange,
   renderMenusInPortal = true,
+  menuPortalZIndex = 80,
 }: TransactionsFilterControlsProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchTimeoutRef = useRef<number | null>(null);
   const categoryTriggerLabel = buildCategoryTriggerLabel(filters);
   const subcategoryTriggerLabel = buildSubcategoryTriggerLabel(filters);
-  const subcategoryDisabled = subcategoryOptions.length === 0;
+  const subcategoryEnabled = hasSingleSubcategoryCategorySelection(filters);
+  const subcategoryDisabled = !subcategoryEnabled || subcategoryOptions.length === 0;
   const isDraftMode = mode === "draft";
+  const isMobileSheet = variant === "mobile-sheet";
+  const mobileMoreRanges = secondaryDashboardRanges.filter((range) => range.value !== "custom");
+  const moreRangeActive = mobileMoreRanges.some((range) => range.value === filters.range);
 
   useEffect(() => {
     if (isDraftMode) {
@@ -79,20 +94,90 @@ export function TransactionsFilterControls({
     onFiltersChange?.(nextFilters);
   }
 
+  function getNextRangeLabel(
+    range: TransactionsControlState["range"],
+    startDate: string | null,
+    endDate: string | null
+  ) {
+    if (range === "custom") {
+      if (!startDate || !endDate) {
+        return "Custom range";
+      }
+
+      return getDashboardRangeState({
+        searchParams: {
+          range,
+          startDate,
+          endDate,
+        },
+      }).label;
+    }
+
+    return getDashboardRangeState({
+      searchParams: {
+        range,
+      },
+    }).label;
+  }
+
+  function updateDraftRange(
+    range: TransactionsControlState["range"],
+    overrides: {
+      startDate?: string | null;
+      endDate?: string | null;
+    } = {}
+  ) {
+    const nextStartDate =
+      overrides.startDate !== undefined ? overrides.startDate : filters.startDate;
+    const nextEndDate =
+      overrides.endDate !== undefined ? overrides.endDate : filters.endDate;
+
+    if (range === "custom") {
+      updateDraft({
+        ...filters,
+        page: 1,
+        range,
+        startDate: nextStartDate,
+        endDate: nextEndDate,
+        rangeLabel: getNextRangeLabel(range, nextStartDate, nextEndDate),
+      });
+      return;
+    }
+
+    const rangeState = getDashboardRangeState({
+      searchParams: {
+        range,
+      },
+    });
+
+    updateDraft({
+      ...filters,
+      page: 1,
+      range,
+      startDate: rangeState.startDate,
+      endDate: rangeState.endDate,
+      rangeLabel: rangeState.label,
+    });
+  }
+
   function toggleCategory(category: string) {
     const nextCategories = filters.categories.includes(category)
       ? filters.categories.filter((value) => value !== category)
       : [...filters.categories, category];
-    const allowedSubcategories = new Set(
-      categories
-        .filter((option) =>
-          nextCategories
-            .filter((value) => value.toLowerCase() !== "uncategorized")
-            .map((value) => value.toLowerCase())
-            .includes(option.name.toLowerCase())
+    const singleCategorySelected =
+      nextCategories.filter((value) => value.toLowerCase() !== "uncategorized").length === 1;
+    const allowedSubcategories = singleCategorySelected
+      ? new Set(
+          categories
+            .filter((option) =>
+              nextCategories
+                .filter((value) => value.toLowerCase() !== "uncategorized")
+                .map((value) => value.toLowerCase())
+                .includes(option.name.toLowerCase())
+            )
+            .flatMap((option) => option.subcategories.map((subcategory) => subcategory.name))
         )
-        .flatMap((option) => option.subcategories.map((subcategory) => subcategory.name))
-    );
+      : new Set<string>();
 
     updateDraft({
       ...filters,
@@ -110,6 +195,16 @@ export function TransactionsFilterControls({
     });
   }
 
+  function clearCategoriesDraft() {
+    updateDraft({
+      ...filters,
+      page: 1,
+      categories: [],
+      subcategories: [],
+      status: null,
+    });
+  }
+
   function toggleSubcategory(subcategory: string) {
     updateDraft({
       ...filters,
@@ -121,19 +216,137 @@ export function TransactionsFilterControls({
     });
   }
 
-  function resetDraftFilters() {
+  function clearSubcategoriesDraft() {
     updateDraft({
       ...filters,
-      q: "",
       page: 1,
-      sortBy: "timestamp",
-      sortOrder: "desc",
-      categories: [],
       subcategories: [],
-      selectedTransactionUuid: null,
-      review: null,
-      status: null,
     });
+  }
+
+  function resetDraftFilters() {
+    updateDraft(buildResetFilterState(filters));
+  }
+
+  const categoryMenuOptions = [
+    {
+      label: "All categories",
+      selected: filters.categories.length === 0,
+      onSelect: isDraftMode
+        ? clearCategoriesDraft
+        : () => updateTransactionsUrl(buildClearCategoriesHref(filters), "replace"),
+    },
+    {
+      label: "Uncategorized",
+      selected: filters.categories.includes("Uncategorized"),
+      onSelect: isDraftMode
+        ? () => toggleCategory("Uncategorized")
+        : () =>
+            updateTransactionsUrl(
+              buildToggleCategoryHref(filters, "Uncategorized", categories),
+              "replace"
+            ),
+    },
+    ...categoryOptions.map((option) => ({
+      label: option.label,
+      selected: filters.categories.includes(option.value),
+      onSelect: isDraftMode
+        ? () => toggleCategory(option.value)
+        : () =>
+            updateTransactionsUrl(
+              buildToggleCategoryHref(filters, option.value, categories),
+              "replace"
+            ),
+    })),
+  ];
+
+  const subcategoryMenuOptions = [
+    {
+      label: "All subcategories",
+      selected: filters.subcategories.length === 0,
+      onSelect: isDraftMode
+        ? clearSubcategoriesDraft
+        : () => updateTransactionsUrl(buildClearSubcategoriesHref(filters), "replace"),
+    },
+    ...subcategoryOptions.map((option) => ({
+      label: option.label,
+      selected: filters.subcategories.includes(option.value),
+      onSelect: isDraftMode
+        ? () => toggleSubcategory(option.value)
+        : () =>
+            updateTransactionsUrl(buildToggleSubcategoryHref(filters, option.value), "replace"),
+    })),
+  ];
+
+  if (isMobileSheet) {
+    return (
+      <div className="space-y-5">
+        <FilterSection number="1" title="Time period">
+          <div className="grid grid-cols-5 gap-2">
+            {quickDashboardRanges.map((range) => {
+              const active = filters.range === range.value;
+
+              return (
+                <button
+                  key={range.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => updateDraftRange(range.value)}
+                  className={cn(
+                    "min-h-11 rounded-[8px] border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "border-primary/70 bg-primary/14 text-primary"
+                      : "border-border/55 bg-background/10 text-secondary-foreground hover:bg-background/16 hover:text-foreground"
+                  )}
+                >
+                  {range.label}
+                </button>
+              );
+            })}
+            <FilterMenu
+              label="More time periods"
+              triggerLabel="More"
+              triggerClassName="min-h-11 justify-center px-3"
+              triggerLabelClassName="truncate text-center"
+              triggerIconClassName="hidden"
+              triggerActive={moreRangeActive}
+              renderInPortal={renderMenusInPortal}
+              portalZIndex={menuPortalZIndex}
+              menuClassName="left-auto right-0 w-[13.5rem] min-w-[13.5rem]"
+              options={mobileMoreRanges.map((range) => ({
+                label: range.label,
+                selected: filters.range === range.value,
+                onSelect: () => updateDraftRange(range.value),
+              }))}
+            />
+          </div>
+        </FilterSection>
+
+        <FilterSection number="2" title="Category">
+          <FilterMenu
+            label="Filter categories"
+            triggerLabel={categoryTriggerLabel}
+            renderInPortal={renderMenusInPortal}
+            portalZIndex={menuPortalZIndex}
+            closeOnSelect={false}
+            options={categoryMenuOptions}
+          />
+        </FilterSection>
+
+        <FilterSection number="3" title="Subcategory">
+          <FilterMenu
+            label="Filter subcategories"
+            triggerLabel={subcategoryTriggerLabel}
+            disabled={subcategoryDisabled}
+            disabledLabel={subcategoryEnabled ? "No subcategories" : "Choose one category first"}
+            renderInPortal={renderMenusInPortal}
+            portalZIndex={menuPortalZIndex}
+            closeOnSelect={false}
+            options={subcategoryMenuOptions}
+          />
+        </FilterSection>
+      </div>
+    );
   }
 
   return (
@@ -174,77 +387,18 @@ export function TransactionsFilterControls({
         label="Filter categories"
         triggerLabel={categoryTriggerLabel}
         renderInPortal={renderMenusInPortal}
-        options={[
-          {
-            label: "All categories",
-            selected: filters.categories.length === 0,
-            onSelect: isDraftMode
-              ? () =>
-                  updateDraft({
-                    ...filters,
-                    page: 1,
-                    categories: [],
-                    subcategories: [],
-                    status: null,
-                  })
-              : () => updateTransactionsUrl(buildClearCategoriesHref(filters), "replace"),
-          },
-          {
-            label: "Uncategorized",
-            selected: filters.categories.includes("Uncategorized"),
-            onSelect: isDraftMode
-              ? () => toggleCategory("Uncategorized")
-              : () =>
-                  updateTransactionsUrl(
-                    buildToggleCategoryHref(filters, "Uncategorized", categories),
-                    "replace"
-                  ),
-          },
-          ...categoryOptions.map((option) => ({
-            label: option.label,
-            selected: filters.categories.includes(option.value),
-            onSelect: isDraftMode
-              ? () => toggleCategory(option.value)
-              : () =>
-                  updateTransactionsUrl(
-                    buildToggleCategoryHref(filters, option.value, categories),
-                    "replace"
-                  ),
-          })),
-        ]}
+        portalZIndex={menuPortalZIndex}
+        options={categoryMenuOptions}
       />
 
       <FilterMenu
         label="Filter subcategories"
         triggerLabel={subcategoryTriggerLabel}
         disabled={subcategoryDisabled}
-        disabledLabel="Select category first"
+        disabledLabel={subcategoryEnabled ? "No subcategories" : "Select one category first"}
         renderInPortal={renderMenusInPortal}
-        options={[
-          {
-            label: "All subcategories",
-            selected: filters.subcategories.length === 0,
-            onSelect: isDraftMode
-              ? () =>
-                  updateDraft({
-                    ...filters,
-                    page: 1,
-                    subcategories: [],
-                  })
-              : () => updateTransactionsUrl(buildClearSubcategoriesHref(filters), "replace"),
-          },
-          ...subcategoryOptions.map((option) => ({
-            label: option.label,
-            selected: filters.subcategories.includes(option.value),
-            onSelect: isDraftMode
-              ? () => toggleSubcategory(option.value)
-              : () =>
-                  updateTransactionsUrl(
-                    buildToggleSubcategoryHref(filters, option.value),
-                    "replace"
-                  ),
-          })),
-        ]}
+        portalZIndex={menuPortalZIndex}
+        options={subcategoryMenuOptions}
       />
 
       <div className="flex items-center lg:justify-end">
@@ -269,6 +423,26 @@ export function TransactionsFilterControls({
   );
 }
 
+function FilterSection({
+  number,
+  title,
+  children,
+}: {
+  number: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 border-b border-border/40 pb-5 last:border-b-0 last:pb-0">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-foreground">{number}.</span>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function FilterMenu({
   label,
   triggerLabel,
@@ -276,6 +450,13 @@ function FilterMenu({
   disabled = false,
   disabledLabel,
   renderInPortal = true,
+  portalZIndex = 80,
+  closeOnSelect = true,
+  triggerClassName,
+  triggerLabelClassName,
+  triggerIconClassName,
+  triggerActive = false,
+  menuClassName,
 }: {
   label: string;
   triggerLabel: string;
@@ -287,6 +468,13 @@ function FilterMenu({
   disabled?: boolean;
   disabledLabel?: string;
   renderInPortal?: boolean;
+  portalZIndex?: number;
+  closeOnSelect?: boolean;
+  triggerClassName?: string;
+  triggerLabelClassName?: string;
+  triggerIconClassName?: string;
+  triggerActive?: boolean;
+  menuClassName?: string;
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -314,7 +502,7 @@ function FilterMenu({
         left,
         width: rect.width,
         minWidth,
-        zIndex: 80,
+        zIndex: portalZIndex,
       });
     }
 
@@ -326,7 +514,7 @@ function FilterMenu({
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [isOpen, renderInPortal]);
+  }, [isOpen, portalZIndex, renderInPortal]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -365,7 +553,8 @@ function FilterMenu({
         "overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]",
         renderInPortal
           ? ""
-          : "absolute left-0 top-[calc(100%+0.5rem)] z-20 w-full min-w-[220px]"
+          : "absolute left-0 top-[calc(100%+0.5rem)] z-20 w-full min-w-[220px]",
+        menuClassName
       )}
     >
       <div className="border-b border-border/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-secondary-foreground/80">
@@ -374,11 +563,13 @@ function FilterMenu({
       <div className="max-h-56 overflow-y-auto py-1">
         {options.map((option) => (
           <FilterOptionButton
-            key={`${option.label}-${option.selected}`}
+            key={option.label}
             label={option.label}
             selected={option.selected}
             onSelect={() => {
-              setIsOpen(false);
+              if (closeOnSelect) {
+                setIsOpen(false);
+              }
               option.onSelect();
             }}
           />
@@ -398,13 +589,20 @@ function FilterMenu({
         onClick={() => setIsOpen((current) => !current)}
         className={cn(
           "inline-flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          isOpen && "border-border/70 bg-background/20",
-          disabled && "cursor-not-allowed text-secondary-foreground/55 hover:bg-background/16"
+          (isOpen || triggerActive) && "border-primary/70 bg-primary/14 text-primary",
+          disabled && "cursor-not-allowed text-secondary-foreground/55 hover:bg-background/16",
+          triggerClassName
         )}
       >
-        <span className="truncate">{disabled ? disabledLabel ?? triggerLabel : triggerLabel}</span>
+        <span className={cn("truncate", triggerLabelClassName)}>
+          {disabled ? disabledLabel ?? triggerLabel : triggerLabel}
+        </span>
         <ChevronDown
-          className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")}
+          className={cn(
+            "h-4 w-4 shrink-0 transition-transform",
+            isOpen && "rotate-180",
+            triggerIconClassName
+          )}
         />
       </button>
 

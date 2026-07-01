@@ -19,6 +19,7 @@ import {
 import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
 import { Button } from "@/components/ui/button";
 import { useCategoriesQuery } from "@/features/categories/queries";
+import { dashboardRangeCookieName } from "@/features/dashboard/query-state";
 import {
   buildTransactionsPageData,
   getTransactionsPageState,
@@ -38,6 +39,7 @@ import {
   buildApplyFiltersHref,
   buildCategoryOptions,
   buildPageHref,
+  buildResetFilterState,
   buildSearchHref,
   buildSortHref,
   buildSubcategoryOptions,
@@ -125,16 +127,17 @@ export function TransactionsPageView({
     };
   }, []);
 
-  useEffect(() => {
-    if (mobileFiltersOpen) {
-      setMobileDraftFilters(data.filters);
-    }
-  }, [data.filters, mobileFiltersOpen]);
-
   const mobileSubcategoryOptions = buildSubcategoryOptions(
     data.categories,
     mobileDraftFilters
   );
+  const mobileApplyDisabled =
+    mobileDraftFilters.range === "custom" &&
+    (!mobileDraftFilters.startDate || !mobileDraftFilters.endDate);
+
+  function persistRange(range: typeof mobileDraftFilters.range) {
+    document.cookie = `${dashboardRangeCookieName}=${range}; path=/; max-age=31536000; samesite=lax`;
+  }
 
   return (
     <div className="space-y-3.5">
@@ -143,9 +146,6 @@ export function TransactionsPageView({
         title="Transactions"
         description="Search, filter, and review all your transactions in one place."
       />
-      <div className="lg:hidden">
-        <TransactionsTimeframePicker filters={data.filters} />
-      </div>
       <div className="hidden lg:block">
         <AppPageHeader
           eyebrow="Transaction workspace"
@@ -201,16 +201,24 @@ export function TransactionsPageView({
             title="Transactions filters"
             description="Refine the transaction feed."
             footer={
-              <div className="flex justify-center">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   type="button"
-                  className="min-w-40"
+                  variant="secondary"
+                  onClick={() => setMobileDraftFilters(buildResetFilterState(mobileDraftFilters))}
+                >
+                  Clear all
+                </Button>
+                <Button
+                  type="button"
+                  disabled={mobileApplyDisabled}
                   onClick={() => {
+                    persistRange(mobileDraftFilters.range);
                     updateTransactionsUrl(buildApplyFiltersHref(mobileDraftFilters), "replace");
                     setMobileFiltersOpen(false);
                   }}
                 >
-                  Apply Filter
+                  Apply filters
                 </Button>
               </div>
             }
@@ -221,8 +229,10 @@ export function TransactionsPageView({
               categoryOptions={categoryOptions}
               subcategoryOptions={mobileSubcategoryOptions}
               mode="draft"
+              variant="mobile-sheet"
               onFiltersChange={setMobileDraftFilters}
               renderMenusInPortal={false}
+              menuPortalZIndex={120}
             />
           </MobileBottomSheet>
         </div>
