@@ -115,12 +115,19 @@ export type DashboardChartTooltipVm = {
   transactionLabel: string;
 };
 
+export type DashboardChartDisplayPeriodVm = DashboardPeriodSpendDto & {
+  isFuture: boolean;
+  isPlaceholder: boolean;
+};
+
 export type DashboardChartBucketVm = {
   period: string;
-  href: string;
+  href: string | null;
   height: number;
   isPeak: boolean;
   isLatest: boolean;
+  isFuture: boolean;
+  isPlaceholder: boolean;
   label: ReturnType<typeof formatPeriodLabel>;
   showLabel: boolean;
   tooltip: DashboardChartTooltipVm;
@@ -575,6 +582,10 @@ function formatDateOnly(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function getMonthEndDate(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0));
+}
+
 function getMonthEnd(period: string) {
   const [year, month] = period.split("-").map(Number);
   return formatDateOnly(new Date(Date.UTC(year, month, 0)));
@@ -617,6 +628,58 @@ export function buildPeriodTransactionsHref(
     range: "custom",
     ...getPeriodBounds(period, granularity),
   });
+}
+
+export function buildChartDisplayPeriods(input: {
+  range: DashboardPageData["range"];
+  periods: DashboardPeriodSpendDto[];
+}): DashboardChartDisplayPeriodVm[] {
+  if (
+    input.range.granularity !== "day" ||
+    !input.range.startDate ||
+    !input.range.endDate
+  ) {
+    return input.periods.map((period) => ({
+      ...period,
+      isFuture: false,
+      isPlaceholder: false,
+    }));
+  }
+
+  const start = parseDateOnly(input.range.startDate);
+  const end = parseDateOnly(input.range.endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return input.periods.map((period) => ({
+      ...period,
+      isFuture: false,
+      isPlaceholder: false,
+    }));
+  }
+
+  const displayEnd =
+    input.range.value === "this-month" ? getMonthEndDate(start) : end;
+  const periodsByKey = new Map(input.periods.map((period) => [period.period, period]));
+  const displayPeriods: DashboardChartDisplayPeriodVm[] = [];
+
+  for (
+    let current = new Date(start);
+    current <= displayEnd;
+    current = addDays(current, 1)
+  ) {
+    const key = formatDateOnly(current);
+    const existing = periodsByKey.get(key);
+    const isFuture = current > end;
+
+    displayPeriods.push({
+      period: key,
+      totalSpend: existing?.totalSpend ?? 0,
+      transactionCount: existing?.transactionCount ?? 0,
+      isFuture,
+      isPlaceholder: !existing,
+    });
+  }
+
+  return displayPeriods;
 }
 
 export function buildReviewQueueCard(input: {
@@ -822,10 +885,9 @@ export function buildChartTooltip(input: {
 }
 
 export function buildChartBuckets(input: {
-  periods: DashboardPeriodSpendDto[];
+  periods: DashboardChartDisplayPeriodVm[];
   peakPeriod: DashboardPeriodSpendDto | null;
   latestPeriod: DashboardPeriodSpendDto | null;
-  averagePeriodSpend: number;
   chartMax: number;
   periodLabelStep: number;
   granularity: DashboardPageData["range"]["granularity"];
@@ -845,10 +907,14 @@ export function buildChartBuckets(input: {
 
     return {
       period: item.period,
-      href: buildPeriodTransactionsHref(item.period, input.granularity),
+      href: item.isFuture
+        ? null
+        : buildPeriodTransactionsHref(item.period, input.granularity),
       height: input.chartMax > 0 ? (item.totalSpend / input.chartMax) * 100 : 0,
       isPeak,
       isLatest,
+      isFuture: item.isFuture,
+      isPlaceholder: item.isPlaceholder,
       label,
       showLabel,
       tooltip,

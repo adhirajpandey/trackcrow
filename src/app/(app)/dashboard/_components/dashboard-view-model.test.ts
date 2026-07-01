@@ -2,7 +2,9 @@ import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 
 import {
   buildBiggestChangeCard,
+  buildChartDisplayPeriods,
   buildChartBuckets,
+  buildMostFrequentRecipient,
   buildChartTicks,
   buildChartTooltip,
   buildDashboardInsights,
@@ -680,12 +682,23 @@ describe("dashboard view model", () => {
     expect(
       buildChartBuckets({
         periods: [
-          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
+          {
+            period: "2026-06-01",
+            totalSpend: 400,
+            transactionCount: 1,
+            isFuture: false,
+            isPlaceholder: false,
+          },
+          {
+            period: "2026-06-02",
+            totalSpend: 1100,
+            transactionCount: 3,
+            isFuture: false,
+            isPlaceholder: false,
+          },
         ],
         peakPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
         latestPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-        averagePeriodSpend: 750,
         chartMax: 1200,
         periodLabelStep: 1,
         granularity: "day",
@@ -704,13 +717,30 @@ describe("dashboard view model", () => {
   it("keeps chart bucket heights truly proportional for small values", () => {
     const buckets = buildChartBuckets({
       periods: [
-        { period: "2026-06-01", totalSpend: 0, transactionCount: 0 },
-        { period: "2026-06-02", totalSpend: 76, transactionCount: 1 },
-        { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
+        {
+          period: "2026-06-01",
+          totalSpend: 0,
+          transactionCount: 0,
+          isFuture: false,
+          isPlaceholder: true,
+        },
+        {
+          period: "2026-06-02",
+          totalSpend: 76,
+          transactionCount: 1,
+          isFuture: false,
+          isPlaceholder: false,
+        },
+        {
+          period: "2026-06-03",
+          totalSpend: 2391,
+          transactionCount: 7,
+          isFuture: false,
+          isPlaceholder: false,
+        },
       ],
       peakPeriod: { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
       latestPeriod: { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
-      averagePeriodSpend: 822.3333333333334,
       chartMax: 40000,
       periodLabelStep: 1,
       granularity: "day",
@@ -748,6 +778,145 @@ describe("dashboard view model", () => {
       totalSpend: "+50% vs previous period",
       averageSpend: "+25% vs previous period",
       biggestCategory: "Food to Travel",
+    });
+  });
+
+  it("expands this-month to the full calendar month without diluting raw metrics", () => {
+    const julyRange = {
+      value: "this-month" as const,
+      label: "This month",
+      startDate: "2026-07-01",
+      endDate: "2026-07-01",
+      granularity: "day" as const,
+    };
+    const rawPeriods = [{ period: "2026-07-01", totalSpend: 57067, transactionCount: 5 }];
+
+    const displayPeriods = buildChartDisplayPeriods({
+      range: julyRange,
+      periods: rawPeriods,
+    });
+
+    expect(displayPeriods).toHaveLength(31);
+    expect(displayPeriods[0]).toEqual({
+      period: "2026-07-01",
+      totalSpend: 57067,
+      transactionCount: 5,
+      isFuture: false,
+      isPlaceholder: false,
+    });
+    expect(displayPeriods[1]).toEqual({
+      period: "2026-07-02",
+      totalSpend: 0,
+      transactionCount: 0,
+      isFuture: true,
+      isPlaceholder: true,
+    });
+    expect(displayPeriods[30]).toEqual({
+      period: "2026-07-31",
+      totalSpend: 0,
+      transactionCount: 0,
+      isFuture: true,
+      isPlaceholder: true,
+    });
+    expect(getAveragePeriodSpend(rawPeriods)).toBe(57067);
+    expect(getPeakPeriod(rawPeriods)).toEqual(rawPeriods[0]);
+  });
+
+  it("fills missing elapsed days with zero buckets", () => {
+    expect(
+      buildChartDisplayPeriods({
+        range: {
+          value: "custom",
+          label: "2026-06-01 to 2026-06-03",
+          startDate: "2026-06-01",
+          endDate: "2026-06-03",
+          granularity: "day",
+        },
+        periods: [
+          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
+          { period: "2026-06-03", totalSpend: 900, transactionCount: 2 },
+        ],
+      })
+    ).toEqual([
+      {
+        period: "2026-06-01",
+        totalSpend: 400,
+        transactionCount: 1,
+        isFuture: false,
+        isPlaceholder: false,
+      },
+      {
+        period: "2026-06-02",
+        totalSpend: 0,
+        transactionCount: 0,
+        isFuture: false,
+        isPlaceholder: true,
+      },
+      {
+        period: "2026-06-03",
+        totalSpend: 900,
+        transactionCount: 2,
+        isFuture: false,
+        isPlaceholder: false,
+      },
+    ]);
+  });
+
+  it("keeps future chart buckets non-clickable while preserving drilldowns for elapsed days", () => {
+    const buckets = buildChartBuckets({
+      periods: [
+        {
+          period: "2026-07-01",
+          totalSpend: 57067,
+          transactionCount: 5,
+          isFuture: false,
+          isPlaceholder: false,
+        },
+        {
+          period: "2026-07-02",
+          totalSpend: 0,
+          transactionCount: 0,
+          isFuture: true,
+          isPlaceholder: true,
+        },
+      ],
+      peakPeriod: { period: "2026-07-01", totalSpend: 57067, transactionCount: 5 },
+      latestPeriod: { period: "2026-07-01", totalSpend: 57067, transactionCount: 5 },
+      chartMax: 60000,
+      periodLabelStep: 1,
+      granularity: "day",
+    });
+
+    expect(buckets[0]).toMatchObject({
+      href: "/transactions?range=custom&startDate=2026-07-01&endDate=2026-07-01",
+      isFuture: false,
+      isPlaceholder: false,
+    });
+    expect(buckets[1]).toMatchObject({
+      href: null,
+      isFuture: true,
+      isPlaceholder: true,
+    });
+  });
+
+  it("keeps recipient sparse states separate from real repeated recipients", () => {
+    expect(buildMostFrequentRecipient({ recipients: [] })).toBeNull();
+
+    expect(
+      buildMostFrequentRecipient({
+        recipients: [
+          {
+            recipientId: 4,
+            recipient: "Electric Co",
+            paymentCount: 3,
+            totalAmount: 2400,
+          },
+        ],
+      })
+    ).toMatchObject({
+      action: "Create rule",
+      href: "/recipients/4",
+      helper: "Good candidate for a rule",
     });
   });
 });

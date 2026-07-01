@@ -20,12 +20,14 @@ import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 import { DashboardBottomSection } from "./dashboard-bottom-section";
 import { DashboardTimeframePicker } from "./dashboard-timeframe-picker";
 import {
+  buildChartDisplayPeriods,
   buildChartBuckets,
   buildChartTicks,
   buildMostFrequentRecipient,
   buildMetricComparisons,
   buildReviewQueueCard,
   buildTransactionsHref,
+  buildUncategorizedTransactionsHref,
   buildWhatChangedSummary,
   chartLegendItems,
   formatCompactCurrency,
@@ -93,11 +95,15 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     data.spendingByCategory,
     knownSpendTotal
   );
+  const chartDisplayPeriods = buildChartDisplayPeriods({
+    range: data.range,
+    periods: data.spendingByPeriod,
+  });
   const chartTicks = buildChartTicks(
-    Math.max(...data.spendingByPeriod.map((item) => item.totalSpend), 1)
+    Math.max(...chartDisplayPeriods.map((item) => item.totalSpend), 1)
   );
   const chartMax = chartTicks[chartTicks.length - 1]?.value ?? 0;
-  const periodLabelStep = getPeriodLabelStep(data.spendingByPeriod.length);
+  const periodLabelStep = getPeriodLabelStep(chartDisplayPeriods.length);
   const peakPeriod = getPeakPeriod(data.spendingByPeriod);
   const latestPeriod = data.spendingByPeriod[data.spendingByPeriod.length - 1] ?? null;
   const averagePeriodSpend = getAveragePeriodSpend(data.spendingByPeriod);
@@ -121,10 +127,9 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
   });
   const displayRange = formatDashboardRangeLabel(data.range);
   const chartBuckets = buildChartBuckets({
-    periods: data.spendingByPeriod,
+    periods: chartDisplayPeriods,
     peakPeriod,
     latestPeriod,
-    averagePeriodSpend,
     chartMax,
     periodLabelStep,
     granularity: data.range.granularity,
@@ -195,6 +200,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
                 value: formatNumber(data.summary.transactionCount),
               },
             ]}
+            actionLabel="View transactions"
             tone="primary"
             icon={<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
           />
@@ -202,6 +208,11 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         <div className="order-3">
           <TopCategoryCard
             category={topCategoryInsight}
+            emptyHref={
+              data.summary.uncategorizedCount > 0
+                ? buildUncategorizedTransactionsHref(data.range)
+                : buildTransactionsHref(rangeParams)
+            }
             href={
               topCategoryInsight
                 ? buildTransactionsHref({
@@ -247,6 +258,7 @@ function MetricCard({
   value,
   emphasis,
   details,
+  actionLabel,
   tone,
   icon,
 }: {
@@ -255,6 +267,7 @@ function MetricCard({
   value: string;
   emphasis: string;
   details: Array<{ label: string; value: string }>;
+  actionLabel?: string;
   tone: "primary" | "secondary";
   icon: ReactNode;
 }) {
@@ -283,6 +296,11 @@ function MetricCard({
           </p>
         }
         helper={<TopCardDetailList items={details} />}
+        action={
+          actionLabel ? (
+            <SecondaryCardAction label={actionLabel} tone={tone} />
+          ) : undefined
+        }
       />
     </TopDashboardCardFrame>
   );
@@ -326,16 +344,9 @@ function MostFrequentRecipientCard({
             />
           }
           action={
-            recipient.action === "Create rule" ? (
-              <span
-                className={cn(
-                  dashboardSmallActionClassName,
-                  "border border-primary/24 text-primary"
-                )}
-              >
-                Create rule
-              </span>
-            ) : null
+            <SecondaryCardAction
+              label={recipient.action === "Create rule" ? "Create rule" : "View recipient"}
+            />
           }
         />
       ) : (
@@ -350,6 +361,7 @@ function MostFrequentRecipientCard({
               Repeated payments will appear here.
             </p>
           }
+          action={<SecondaryCardAction label="View recipients" />}
         />
       )}
     </TopDashboardCardFrame>
@@ -430,12 +442,14 @@ function ReviewQueueHero({
 function TopCategoryCard({
   category,
   href,
+  emptyHref,
 }: {
   category: ReturnType<typeof getTopCategoryInsight>;
   href: string;
+  emptyHref: string;
 }) {
   return (
-    <TopDashboardCardFrame href={href}>
+    <TopDashboardCardFrame href={category ? href : emptyHref}>
       <TopDashboardCardHeader
         label="Top known category"
         icon={<Layers3 className="h-4 w-4" />}
@@ -462,12 +476,13 @@ function TopCategoryCard({
                 {
                   label: "Top subcategory",
                   value: category.topSubcategory
-                    ? `${category.topSubcategory.name} • ${formatCurrency(category.topSubcategory.totalSpend)}`
+                    ? `${category.topSubcategory.name} - ${formatCurrency(category.topSubcategory.totalSpend)}`
                     : "Not enough detail yet",
                 },
               ]}
             />
           }
+          action={<SecondaryCardAction label="View category" />}
         />
       ) : (
         <TopDashboardCardBody
@@ -480,15 +495,11 @@ function TopCategoryCard({
             <p className={dashboardTopCardMetaClassName}>Known spend only</p>
           }
           helper={
-            <TopCardDetailList
-              items={[
-                {
-                  label: "Next step",
-                  value: "Categorize transactions to surface leaders",
-                },
-              ]}
-            />
+            <p className={dashboardTopCardHelperClassName}>
+              Categorize transactions to surface leaders.
+            </p>
           }
+          action={<SecondaryCardAction label="Categorize" />}
         />
       )}
     </TopDashboardCardFrame>
@@ -570,9 +581,7 @@ function TopDashboardCardBody({
       {primaryValue}
       {secondaryValue}
       {helper}
-      <div className={dashboardTopCardActionSlotClassName}>
-        {action ?? <div className="min-h-9" />}
-      </div>
+      {action ? <div className={dashboardTopCardActionSlotClassName}>{action}</div> : null}
     </div>
   );
 }
@@ -587,15 +596,38 @@ function TopCardDetailList({
       {items.map((item) => (
         <div
           key={`${item.label}-${item.value}`}
-          className="flex items-start justify-between gap-3 text-sm leading-5"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 text-sm leading-5"
         >
           <span className="text-secondary-foreground">{item.label}</span>
-          <span className="max-w-[60%] text-right font-medium text-foreground">
+          <span className="max-w-[16ch] text-right font-medium text-foreground">
             {item.value}
           </span>
         </div>
       ))}
     </div>
+  );
+}
+
+function SecondaryCardAction({
+  label,
+  tone = "secondary",
+}: {
+  label: string;
+  tone?: "primary" | "secondary";
+}) {
+  return (
+    <span
+      className={cn(
+        dashboardSmallActionClassName,
+        "w-fit gap-2 border text-sm",
+        tone === "primary"
+          ? "border-primary/18 bg-primary/8 text-primary"
+          : "border-border/45 bg-background/10 text-secondary-foreground group-hover:border-border/70 group-hover:text-foreground"
+      )}
+    >
+      {label}
+      <ArrowRight className="h-3.5 w-3.5" />
+    </span>
   );
 }
 
@@ -742,9 +774,15 @@ function SpendingTrendPanel({
                     {chartBuckets.map((bucket, index) => (
                       <Link
                         key={bucket.period}
-                        href={bucket.href}
-                        className="group relative flex h-full min-w-0 items-end rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                        href={bucket.href ?? "#"}
+                        className={cn(
+                          "group relative flex h-full min-w-0 items-end rounded-md focus-visible:outline-none",
+                          bucket.href
+                            ? "focus-visible:ring-2 focus-visible:ring-primary/70"
+                            : "pointer-events-none cursor-default opacity-75"
+                        )}
                         aria-label={bucket.ariaLabel}
+                        tabIndex={bucket.href ? undefined : -1}
                       >
                         <span
                           className={cn(
@@ -787,9 +825,18 @@ function SpendingTrendPanel({
                           <span
                             className={cn(
                               "w-full rounded-[2px] transition-[background-color,filter,transform] duration-150 group-hover:-translate-y-0.5 group-hover:brightness-110 group-focus-visible:-translate-y-0.5 group-focus-visible:brightness-110",
+                              bucket.isFuture &&
+                                "bg-secondary/22 group-hover:translate-y-0 group-hover:brightness-100 group-focus-visible:translate-y-0 group-focus-visible:brightness-100",
+                              bucket.isPlaceholder &&
+                                !bucket.isFuture &&
+                                "bg-primary/35",
                               bucket.isPeak && "bg-accent",
                               bucket.isLatest && !bucket.isPeak && "bg-info",
-                              !bucket.isPeak && !bucket.isLatest && "bg-primary/90"
+                              !bucket.isPeak &&
+                                !bucket.isLatest &&
+                                !bucket.isFuture &&
+                                !bucket.isPlaceholder &&
+                                "bg-primary/90"
                             )}
                             style={{ height: getChartBarHeight(bucket.height) }}
                           />
@@ -812,7 +859,7 @@ function SpendingTrendPanel({
                         <span>
                           <span className="block">{bucket.label.primary}</span>
                           {bucket.label.secondary ? (
-                            <span className="block text-[9px] text-secondary-foreground/70">
+                            <span className="block text-[9px] text-secondary-foreground">
                               {bucket.label.secondary}
                             </span>
                           ) : null}
@@ -854,7 +901,7 @@ function SummaryChip({
     >
       <div className="flex items-center gap-2">
         {dotClassName ? <span className={cn("h-2.5 w-2.5 rounded-full", dotClassName)} /> : null}
-        <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-secondary-foreground/75">
+        <p className="text-[11px] font-medium text-secondary-foreground">
           {label}
         </p>
       </div>
