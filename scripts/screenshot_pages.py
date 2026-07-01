@@ -90,6 +90,11 @@ class PageCapture:
   path: str
   output_slug: str
   heading: str
+  click_target_name: str | None = None
+  click_target_role: str = "link"
+  clicked_output_slug: str | None = None
+  clicked_heading: str | None = None
+  clicked_wait_selector: str | None = None
 
 
 @dataclass(frozen=True)
@@ -128,6 +133,16 @@ VIEWPORT_PRESETS: dict[str, ViewportPreset] = {
 }
 
 PAGE_CAPTURES: dict[str, PageCapture] = {
+  "landing": PageCapture(
+    alias="landing",
+    path="/",
+    output_slug="landing",
+    heading="Turn every payment alert into spending clarity.",
+    click_target_name="See how it works",
+    clicked_output_slug="landing-workflow",
+    clicked_heading="The workflow",
+    clicked_wait_selector="#workflow",
+  ),
   "dashboard": PageCapture(
     alias="dashboard",
     path="/dashboard",
@@ -492,6 +507,9 @@ def capture_page(
   clear_existing_indexed_outputs(base_name, config)
   capture_scrolled_sequence(page, base_name, config)
 
+  if page_capture.click_target_name and page_capture.clicked_output_slug and page_capture.clicked_heading:
+    capture_clicked_page_state(page, page_capture, size_preset, config)
+
 
 def ensure_logged_in(page: Page, url: str) -> None:
   if "/login" in page.url.lower():
@@ -515,9 +533,44 @@ def build_output_base_name(page_capture: PageCapture, size_preset: ViewportPrese
   return f"{size_preset.alias}-{page_capture.output_slug}"
 
 
+def build_clicked_output_base_name(page_capture: PageCapture, size_preset: ViewportPreset) -> str:
+  if not page_capture.clicked_output_slug:
+    raise RuntimeError(f"Clicked output slug is not configured for page alias: {page_capture.alias}")
+
+  return f"{size_preset.alias}-{page_capture.clicked_output_slug}"
+
+
 def clear_existing_indexed_outputs(base_name: str, config: RuntimeConfig) -> None:
   for path in config.output_dir.glob(f"{base_name}-*.png"):
     path.unlink()
+
+
+def capture_clicked_page_state(
+  page: Page,
+  page_capture: PageCapture,
+  size_preset: ViewportPreset,
+  config: RuntimeConfig,
+) -> None:
+  click_target_name = page_capture.click_target_name
+  clicked_heading = page_capture.clicked_heading
+  clicked_wait_selector = page_capture.clicked_wait_selector
+
+  if not click_target_name or not clicked_heading:
+    return
+
+  clicked_base_name = build_clicked_output_base_name(page_capture, size_preset)
+  print(f"Capturing clicked state [{size_preset.alias}] -> {clicked_base_name}-*.png")
+
+  page.get_by_role(page_capture.click_target_role, name=click_target_name).first.click()
+  page.wait_for_function("() => window.location.hash === '#workflow'")
+  if clicked_wait_selector:
+    page.locator(clicked_wait_selector).wait_for(state="visible")
+  else:
+    wait_for_page_content(page, clicked_heading)
+  page.wait_for_timeout(config.post_scroll_settle_ms)
+
+  clear_existing_indexed_outputs(clicked_base_name, config)
+  capture_scrolled_sequence(page, clicked_base_name, config)
 
 
 def capture_scrolled_sequence(page: Page, base_name: str, config: RuntimeConfig) -> None:
