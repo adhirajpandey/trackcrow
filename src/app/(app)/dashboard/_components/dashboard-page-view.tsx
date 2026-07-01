@@ -13,6 +13,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { MobilePageHeader } from "@/components/product/mobile/mobile-primitives";
 import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
@@ -134,7 +135,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
 
   return (
     <div className="space-y-3.5">
-      <AppPageHeader
+      <MobilePageHeader
         eyebrow="Spend operations"
         title="Dashboard"
         meta={
@@ -143,14 +144,33 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             <Calendar className="h-3.5 w-3.5 text-secondary-foreground/80" />
           </>
         }
-        actions={
-          <DashboardTimeframePicker
-            value={data.range.value}
-            startDate={data.range.startDate}
-            endDate={data.range.endDate}
-          />
-        }
       />
+      <div className="lg:hidden">
+        <DashboardTimeframePicker
+          value={data.range.value}
+          startDate={data.range.startDate}
+          endDate={data.range.endDate}
+        />
+      </div>
+      <div className="hidden lg:block">
+        <AppPageHeader
+          eyebrow="Spend operations"
+          title="Dashboard"
+          meta={
+            <>
+              <span className="font-medium text-foreground">{displayRange}</span>
+              <Calendar className="h-3.5 w-3.5 text-secondary-foreground/80" />
+            </>
+          }
+          actions={
+            <DashboardTimeframePicker
+              value={data.range.value}
+              startDate={data.range.startDate}
+              endDate={data.range.endDate}
+            />
+          }
+        />
+      </div>
 
       {data.status === "error" ? (
         <section className="rounded-[8px] border border-destructive/45 bg-destructive/10 px-4 py-3 text-sm text-foreground">
@@ -159,34 +179,42 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-        <MetricCard
-          href={buildTransactionsHref(rangeParams)}
-          label="Total spent"
-          value={formatCompactCurrency(data.summary.totalSpend, { style: "kpi" })}
-          emphasis={metricComparisons.totalSpend}
-          details={[
-            { label: "Booked spend", value: formatCurrency(data.summary.totalSpend) },
-            {
-              label: "Transactions",
-              value: formatNumber(data.summary.transactionCount),
-            },
-          ]}
-          tone="primary"
-          icon={<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
-        />
-        <ReviewQueueHero card={reviewQueue} />
-        <TopCategoryCard
-          category={topCategoryInsight}
-          href={
-            topCategoryInsight
-              ? buildTransactionsHref({
-                  ...rangeParams,
-                  category: topCategoryInsight.category,
-                })
-              : "/transactions"
-          }
-        />
-        <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
+        <div className="order-1">
+          <ReviewQueueHero card={reviewQueue} />
+        </div>
+        <div className="order-2">
+          <MetricCard
+            href={buildTransactionsHref(rangeParams)}
+            label="Total spent"
+            value={formatCompactCurrency(data.summary.totalSpend, { style: "kpi" })}
+            emphasis={metricComparisons.totalSpend}
+            details={[
+              { label: "Booked spend", value: formatCurrency(data.summary.totalSpend) },
+              {
+                label: "Transactions",
+                value: formatNumber(data.summary.transactionCount),
+              },
+            ]}
+            tone="primary"
+            icon={<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
+          />
+        </div>
+        <div className="order-3">
+          <TopCategoryCard
+            category={topCategoryInsight}
+            href={
+              topCategoryInsight
+                ? buildTransactionsHref({
+                    ...rangeParams,
+                    category: topCategoryInsight.category,
+                  })
+                : "/transactions"
+            }
+          />
+        </div>
+        <div className="order-4">
+          <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
+        </div>
       </section>
 
       <section className="grid gap-3">

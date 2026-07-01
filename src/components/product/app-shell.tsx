@@ -48,12 +48,12 @@ export function AppShell({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(104,211,145,0.10),transparent_28%),linear-gradient(180deg,#08100c_0%,#09110d_36%,#0f1411_100%)] text-foreground lg:grid lg:grid-cols-[276px_1fr]">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(104,211,145,0.10),transparent_28%),linear-gradient(180deg,#08100c_0%,#09110d_36%,#0f1411_100%)] text-foreground lg:grid lg:grid-cols-[276px_1fr]">
       <aside className="hidden border-r border-border/55 bg-[#06100c]/88 backdrop-blur-xl lg:block">
         <ShellSidebar pathname={pathname} user={user} />
       </aside>
 
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full overflow-x-hidden">
         <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border/70 bg-background/95 px-4 backdrop-blur lg:hidden">
           <div className="flex items-center gap-3">
             <Button
@@ -122,7 +122,7 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-[1560px] px-4 py-6 lg:px-7 lg:py-6">
+        <main className="mx-auto w-full max-w-[1560px] min-w-0 overflow-x-hidden px-4 py-6 lg:px-7 lg:py-6">
           {children}
         </main>
       </div>

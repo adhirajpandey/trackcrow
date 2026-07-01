@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   flexRender,
@@ -15,6 +15,16 @@ import { AppPageHeader } from "@/components/product/app-page-header";
 import { DataTableEmpty } from "@/components/product/data-table-empty";
 import { DataTablePagination } from "@/components/product/data-table-pagination";
 import { DataTableShell } from "@/components/product/data-table-shell";
+import {
+  MobileCardList,
+  MobileFilterChips,
+  MobileLongValue,
+  MobilePageHeader,
+  MobilePagination,
+  MobileSearchBar,
+  mobileCardClassName,
+  mobileSurfaceClassName,
+} from "@/components/product/mobile/mobile-primitives";
 import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
 import { SortableTableHead } from "@/components/product/sortable-table-head";
 import {
@@ -51,6 +61,7 @@ import {
   buildPageHref,
   buildPaginationItems,
   buildRecipientsPageData,
+  buildSearchHref,
   buildSortHref,
   getSortDirection,
 } from "./recipients-view-model";
@@ -214,14 +225,33 @@ export function RecipientsPageView({
     },
   });
   const paginationItems = buildPaginationItems(data.pagination.page, data.pagination.totalPages);
+  const mobileFilterItems = data.filters.q
+    ? [{ label: `Search: ${data.filters.q}` }]
+    : [];
+  const searchTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current !== null) {
+        window.clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-3.5">
-      <AppPageHeader
+      <MobilePageHeader
         eyebrow="Recipient workspace"
         title="Recipients"
         description="Review resolved payees, identifiers, linked counts, and spend concentration."
       />
+      <div className="hidden lg:block">
+        <AppPageHeader
+          eyebrow="Recipient workspace"
+          title="Recipients"
+          description="Review resolved payees, identifiers, linked counts, and spend concentration."
+        />
+      </div>
 
       {message ? (
         <section
@@ -236,7 +266,24 @@ export function RecipientsPageView({
         </section>
       ) : null}
 
-      <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
+      <section className={cn(mobileSurfaceClassName, "p-4 lg:hidden")}>
+        <MobileSearchBar
+          defaultValue={data.filters.q}
+          placeholder="Search recipient, normalized name, identifier..."
+          onChange={(nextValue) => {
+            if (searchTimeoutRef.current !== null) {
+              window.clearTimeout(searchTimeoutRef.current);
+            }
+
+            searchTimeoutRef.current = window.setTimeout(() => {
+              updateTransactionsUrl(buildSearchHref(data.filters, nextValue), "replace");
+            }, 300);
+          }}
+        />
+        <MobileFilterChips items={mobileFilterItems} className="mt-3" />
+      </section>
+
+      <section className="hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5 lg:block">
         <RecipientsFilterControls filters={data.filters} />
       </section>
 
@@ -255,39 +302,67 @@ export function RecipientsPageView({
         ) : null}
         {data.rows.length > 0 ? (
           <>
-            <div className="grid gap-3 p-4 md:hidden">
+            <MobileCardList className="p-4">
               {data.rows.map((row) => (
                 <button
                   key={row.uuid}
                   type="button"
                   onClick={() => setDrawerRow(row)}
-                  className="rounded-[8px] border border-border/45 bg-background/12 p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={cn(
+                    mobileCardClassName,
+                    "p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-foreground">
+                  <div className="flex items-start justify-between gap-3 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="overflow-wrap-anywhere break-words text-base font-semibold text-foreground">
                         {row.displayName}
                       </p>
-                      <p className="mt-1 text-sm text-secondary-foreground">{row.secondaryLabel}</p>
+                      <p className="mt-1 text-sm text-secondary-foreground">
+                        {row.secondaryLabel}
+                      </p>
                     </div>
-                    <span className="inline-flex min-h-8 items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary">
+                    <span className="inline-flex min-h-8 shrink-0 items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary">
                       <BadgeCheck className="h-3.5 w-3.5" />
                       <span>{row.transactionCount}</span>
                     </span>
                   </div>
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
-                      Total sent
-                    </span>
-                    <span className="text-base font-semibold tabular-nums text-foreground">
-                      {numberToINR(row.totalAmount)}
-                    </span>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3 min-w-0">
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+                        Total sent
+                      </span>
+                      <span className="shrink-0 text-base font-semibold tabular-nums text-foreground">
+                        {numberToINR(row.totalAmount)}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {row.identifierChips.slice(0, 2).map((identifier) => (
+                        <span
+                          key={identifier.id}
+                          className={cn(
+                            "inline-flex max-w-full items-center rounded-[999px] border px-3 py-1 text-xs font-medium",
+                            getIdentifierChipClassName(identifier.tone)
+                          )}
+                          title={identifier.value}
+                        >
+                          <span className="overflow-wrap-anywhere break-words">
+                            {identifier.value}
+                          </span>
+                        </span>
+                      ))}
+                      {row.overflowIdentifierCount > 0 ? (
+                        <span className="inline-flex items-center rounded-[999px] border border-border/45 bg-background/12 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                          +{row.overflowIdentifierCount} more
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </button>
               ))}
-            </div>
+            </MobileCardList>
 
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <Table className="min-w-[920px] table-fixed">
                 <TableHeader className="border-b border-border/40 bg-background/16">
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -403,16 +478,26 @@ export function RecipientsPageView({
 
         <div className="flex flex-col gap-4 border-t border-border/45 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-secondary-foreground">{buildFooterSummary(data.pagination)}</p>
+          <MobilePagination
+            page={data.pagination.page}
+            totalPages={data.pagination.totalPages}
+            hasPrev={data.pagination.hasPrev}
+            hasNext={data.pagination.hasNext}
+            onPrev={() => updateTransactionsUrl(buildPageHref(data.filters, data.pagination.page - 1), "push")}
+            onNext={() => updateTransactionsUrl(buildPageHref(data.filters, data.pagination.page + 1), "push")}
+          />
           {data.pagination.totalPages > 1 ? (
-            <DataTablePagination
-              page={data.pagination.page}
-              totalPages={data.pagination.totalPages}
-              hasPrev={data.pagination.hasPrev}
-              hasNext={data.pagination.hasNext}
-              items={paginationItems}
-              buildPageHref={(page) => buildPageHref(data.filters, page)}
-              onNavigate={(href) => updateTransactionsUrl(href, "push")}
-            />
+            <div className="hidden lg:block">
+              <DataTablePagination
+                page={data.pagination.page}
+                totalPages={data.pagination.totalPages}
+                hasPrev={data.pagination.hasPrev}
+                hasNext={data.pagination.hasNext}
+                items={paginationItems}
+                buildPageHref={(page) => buildPageHref(data.filters, page)}
+                onNavigate={(href) => updateTransactionsUrl(href, "push")}
+              />
+            </div>
           ) : null}
         </div>
       </DataTableShell>
@@ -465,7 +550,7 @@ export function RecipientsPageView({
                   )}
                   title={identifier.value}
                 >
-                  <span className="truncate">{identifier.value}</span>
+                  <MobileLongValue value={identifier.value} />
                 </span>
               ))}
               {drawerRow.overflowIdentifierCount > 0 ? (

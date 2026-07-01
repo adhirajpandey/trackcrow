@@ -38,13 +38,15 @@ export function MobileRowDetailDrawer({
           <DrawerTitle>{title}</DrawerTitle>
           {description ? <DrawerDescription>{description}</DrawerDescription> : null}
         </DrawerHeader>
-        <div className="overflow-y-auto px-5 pb-1">{children}</div>
+        <div className="max-w-full overflow-y-auto px-5 pb-1">{children}</div>
         <DrawerFooter>
-          <Button asChild>
+          <Button asChild className="w-full">
             <Link href={href}>{hrefLabel}</Link>
           </Button>
           <DrawerClose asChild>
-            <Button variant="secondary">Close</Button>
+            <Button variant="secondary" className="w-full">
+              Close
+            </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

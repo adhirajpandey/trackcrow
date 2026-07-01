@@ -20,6 +20,11 @@ import { useRouter } from "next/navigation";
 import type { TransactionRecord } from "@/common/types";
 import { AppPageHeader } from "@/components/product/app-page-header";
 import {
+  MobileActionBar,
+  MobilePageHeader,
+  MobileStatGrid,
+} from "@/components/product/mobile/mobile-primitives";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -301,7 +306,7 @@ export function TransactionDetailPageView({
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3.5">
-      <AppPageHeader
+      <MobilePageHeader
         eyebrow="Transaction workspace"
         title="Transaction detail"
         description="Review, classify, and correct a single transaction without leaving the ledger workspace."
@@ -312,28 +317,49 @@ export function TransactionDetailPageView({
           </>
         }
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="secondary" className="min-w-[180px]">
-              <Link href="/transactions">
-                <ArrowLeft className="h-4 w-4" />
-                Back to transactions
-              </Link>
-            </Button>
-            <Button
-              type="submit"
-              className="min-w-[168px]"
-              disabled={updateMutation.isPending || !hasUnsavedChanges}
-            >
-              {updateMutation.isPending ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save changes
-            </Button>
-          </div>
+          <Button asChild variant="secondary" className="w-full min-w-0">
+            <Link href="/transactions">
+              <ArrowLeft className="h-4 w-4" />
+              Back to transactions
+            </Link>
+          </Button>
         }
       />
+      <div className="hidden lg:block">
+        <AppPageHeader
+          eyebrow="Transaction workspace"
+          title="Transaction detail"
+          description="Review, classify, and correct a single transaction without leaving the ledger workspace."
+          meta={
+            <>
+              <span className="font-medium text-foreground">TXN-{transaction.id}</span>
+              <span className="text-secondary-foreground">{transaction.source}</span>
+            </>
+          }
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild variant="secondary" className="min-w-[180px]">
+                <Link href="/transactions">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to transactions
+                </Link>
+              </Button>
+              <Button
+                type="submit"
+                className="min-w-[168px]"
+                disabled={updateMutation.isPending || !hasUnsavedChanges}
+              >
+                {updateMutation.isPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save changes
+              </Button>
+            </div>
+          }
+        />
+      </div>
 
       {banner ? (
         <section
@@ -356,9 +382,30 @@ export function TransactionDetailPageView({
         </section>
       ) : null}
 
+      <div className="lg:hidden">
+        <MobileStatGrid
+          items={[
+            {
+              label: "Amount",
+              value: formatTransactionAmount(Number(currentAmount) || transaction.amount),
+              tone: "primary",
+            },
+            {
+              label: "When",
+              value: getSummaryLine({
+                timestamp: currentTimestamp,
+                fallbackTimestamp: transaction.timestamp,
+                type: currentType,
+              }),
+            },
+          ]}
+          columns={1}
+        />
+      </div>
+
       <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.78fr)]">
         <div className="space-y-3">
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
+          <section className={cn(dashboardPanelClassName, "hidden px-5 py-5 lg:block")}>
             <div className="grid gap-5 xl:grid-cols-[minmax(240px,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
               <div>
                 <p className="text-sm font-semibold text-secondary-foreground">
@@ -418,7 +465,7 @@ export function TransactionDetailPageView({
               <Button
                 type="button"
                 variant="secondary"
-                className="min-w-[148px]"
+                className="w-full min-w-0 sm:w-auto lg:min-w-[148px]"
                 onClick={() => void handleSuggest()}
                 disabled={isSuggesting}
               >
@@ -498,7 +545,7 @@ export function TransactionDetailPageView({
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient</h2>
-              <Button asChild variant="secondary" className="min-w-[180px]">
+              <Button asChild variant="secondary" className="w-full min-w-0 sm:w-auto lg:min-w-[180px]">
                 <Link href={getRecipientDetailHref(transaction)}>
                   View recipient
                   <ArrowRight className="h-4 w-4" />
@@ -568,7 +615,7 @@ export function TransactionDetailPageView({
                 <div className="space-y-3">
                   <input className={fieldClassName} {...form.register("locationRaw")} />
                   {googleMapsHref ? (
-                    <Button asChild type="button" variant="secondary" className="min-w-[220px]">
+                    <Button asChild type="button" variant="secondary" className="w-full min-w-0 sm:w-auto lg:min-w-[220px]">
                       <a href={googleMapsHref} target="_blank" rel="noreferrer noopener">
                         <MapPinned className="h-4 w-4" />
                         Open in Google Maps
@@ -653,6 +700,30 @@ export function TransactionDetailPageView({
           </section>
         </aside>
       </div>
+
+      <MobileActionBar>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => void handleSuggest()}
+          disabled={isSuggesting}
+        >
+          {isSuggesting ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          Suggest category
+        </Button>
+        <Button type="submit" disabled={updateMutation.isPending || !hasUnsavedChanges}>
+          {updateMutation.isPending ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save changes
+        </Button>
+      </MobileActionBar>
     </form>
   );
 }
@@ -692,11 +763,13 @@ function DefinitionGrid({
   items: Array<{ label: string; value: string }>;
 }) {
   return (
-    <div className="grid gap-3 border-l border-border/45 pl-5">
+    <div className="grid gap-3 border-border/45 md:border-l md:pl-5">
       {items.map((item) => (
         <div key={item.label} className="grid gap-1">
           <span className="text-sm text-secondary-foreground">{item.label}</span>
-          <span className="text-sm font-medium text-foreground break-all">{item.value}</span>
+          <span className="overflow-wrap-anywhere text-sm font-medium text-foreground">
+            {item.value}
+          </span>
         </div>
       ))}
     </div>

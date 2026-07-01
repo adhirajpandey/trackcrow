@@ -15,6 +15,12 @@ import {
 
 import { AppPageHeader } from "@/components/product/app-page-header";
 import {
+  MobileLongValue,
+  MobilePageHeader,
+  MobileSectionPreview,
+  MobileStatGrid,
+} from "@/components/product/mobile/mobile-primitives";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -274,20 +280,22 @@ export function RecipientDetailPageView({
 
   return (
     <div className="space-y-3">
-      <AppPageHeader
+      <MobilePageHeader
         eyebrow="Recipient workspace"
         title="Recipient detail"
         description="Fix categorization gaps, manage matching identifiers, and trace linked payments."
         meta={
           <>
-            <span className="break-all font-medium text-foreground">{data.displayName}</span>
+            <span className="overflow-wrap-anywhere font-medium text-foreground">
+              {data.displayName}
+            </span>
             <span className="text-secondary-foreground">
               {data.transactionCount} transactions linked
             </span>
           </>
         }
         actions={
-          <Button asChild variant="secondary" className="min-w-[176px]">
+          <Button asChild variant="secondary" className="w-full min-w-0">
             <Link href="/recipients">
               <ArrowLeft className="h-4 w-4" />
               Back to recipients
@@ -295,10 +303,48 @@ export function RecipientDetailPageView({
           </Button>
         }
       />
+      <div className="hidden lg:block">
+        <AppPageHeader
+          eyebrow="Recipient workspace"
+          title="Recipient detail"
+          description="Fix categorization gaps, manage matching identifiers, and trace linked payments."
+          meta={
+            <>
+              <span className="break-all font-medium text-foreground">{data.displayName}</span>
+              <span className="text-secondary-foreground">
+                {data.transactionCount} transactions linked
+              </span>
+            </>
+          }
+          actions={
+            <Button asChild variant="secondary" className="min-w-[176px]">
+              <Link href="/recipients">
+                <ArrowLeft className="h-4 w-4" />
+                Back to recipients
+              </Link>
+            </Button>
+          }
+        />
+      </div>
+
+      <div className="lg:hidden">
+        <MobileStatGrid
+          items={[
+            { label: "Total spent", value: formatRecipientTotal(data.totalSpent), tone: "primary" },
+            { label: "Transactions", value: String(data.transactionCount) },
+            { label: "Avg amount", value: formatRecipientTotal(data.averagePayment) },
+            {
+              label: "Latest txn",
+              value: data.lastPaidAt ? formatRecipientDate(data.lastPaidAt) : "No payments",
+            },
+          ]}
+          columns={2}
+        />
+      </div>
 
       <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.62fr)_minmax(300px,0.7fr)]">
         <main className="space-y-3">
-          <section className={cn(dashboardPanelClassName, "px-5 py-4")}>
+          <section className={cn(dashboardPanelClassName, "hidden px-5 py-4 lg:block")}>
             <p className="text-sm font-semibold text-secondary-foreground">Recipient summary</p>
             <h2 className="mt-2 max-w-[920px] text-2xl font-semibold leading-tight text-primary sm:text-3xl">
               {data.displayName}
@@ -350,7 +396,7 @@ export function RecipientDetailPageView({
                 variant="secondary"
                 onClick={() => void handleApplySuggestion()}
                 disabled={!canApplySuggestion || updateCategoryMutation.isPending}
-                className="shrink-0"
+                className="w-full shrink-0 sm:w-auto"
               >
                 {cleanup.applyLabel
                   ? `${cleanup.applyLabel} to ${cleanup.uncategorizedCount} transaction${
@@ -361,7 +407,64 @@ export function RecipientDetailPageView({
             </div>
           </section>
 
-          <section className={cn(dashboardPanelClassName, "overflow-hidden")}>
+          <MobileSectionPreview
+            title="Identifiers"
+            description="Identifiers match incoming SMS payments to this recipient."
+            href={undefined}
+            className="lg:hidden"
+          >
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                onClick={() => setIdentifierDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Add identifier
+              </Button>
+              {data.identifiers.length > 0 ? (
+                <div className="grid gap-3">
+                  {data.identifiers.map((identifier) => (
+                    <div key={identifier.id} className="rounded-[8px] border border-border/45 bg-background/10 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                            {identifier.kindLabel}
+                          </p>
+                          <MobileLongValue value={identifier.value} className="mt-2" />
+                        </div>
+                        <CopyButton
+                          label="Copy identifier"
+                          onClick={() => void handleCopy(identifier.value)}
+                          copied={copiedValue === identifier.value}
+                        />
+                      </div>
+                      <div className="mt-3 flex items-start justify-between gap-3">
+                        <span className="text-sm text-secondary-foreground">Transactions</span>
+                        <span className="shrink-0 text-sm font-medium text-foreground">
+                          {identifier.transactionCount}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-start justify-between gap-3">
+                        <span className="text-sm text-secondary-foreground">Source</span>
+                        <span className="min-w-0 text-right text-sm font-medium text-foreground">
+                          {identifier.sourceLabel}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-secondary-foreground">
+                  No identifiers recorded for this recipient.
+                </p>
+              )}
+            </div>
+          </MobileSectionPreview>
+
+          <section className={cn(dashboardPanelClassName, "hidden overflow-hidden lg:block")}>
             <div className="flex flex-col gap-3 px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-[1.05rem] font-semibold leading-tight text-foreground">
@@ -431,7 +534,46 @@ export function RecipientDetailPageView({
             </div>
           </section>
 
-          <section className={cn(dashboardPanelClassName, "overflow-hidden")}>
+          <MobileSectionPreview
+            title="Related transactions"
+            description="Trace the transactions behind this recipient pattern."
+            href={data.recentTransactions[0] ? `/transactions/${data.recentTransactions[0].id}` : undefined}
+            hrefLabel="Open latest"
+            className="lg:hidden"
+          >
+            <div className="grid gap-3">
+              {relatedTransactions.rows.length > 0 ? (
+                relatedTransactions.rows.map((transaction) => (
+                  <Link
+                    key={transaction.uuid}
+                    href={`/transactions/${transaction.id}`}
+                    className="rounded-[8px] border border-border/45 bg-background/10 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {formatRecipientDate(transaction.timestamp)}
+                        </p>
+                        <p className="mt-1 text-sm text-secondary-foreground">
+                          {transaction.category ?? "Uncategorized"}
+                          {transaction.subcategory ? ` · ${transaction.subcategory}` : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                        {formatRecipientTotal(transaction.amount)}
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-secondary-foreground">
+                  No linked transactions found for this recipient.
+                </p>
+              )}
+            </div>
+          </MobileSectionPreview>
+
+          <section className={cn(dashboardPanelClassName, "hidden overflow-hidden lg:block")}>
             <div className="px-5 pb-4 pt-5">
               <div>
                 <h2 className="text-[1.05rem] font-semibold leading-tight text-foreground">

@@ -20,20 +20,20 @@ export function AppPageHeader({
   return (
     <section
       className={cn(
-        "border-b border-border pb-6",
+        "w-full max-w-full min-w-0 overflow-hidden border-b border-border pb-6",
         className
       )}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 max-w-full">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
             {eyebrow}
           </p>
-          <h1 className="mt-2 text-[32px] font-bold leading-tight text-foreground lg:text-[42px]">
+          <h1 className="mt-2 break-words text-[32px] font-bold leading-tight text-foreground lg:text-[42px]">
             {title}
           </h1>
           {description ? (
-            <div className="mt-3 max-w-2xl text-[15px] leading-6 text-muted-foreground">
+            <div className="mt-3 max-w-2xl min-w-0 text-[15px] leading-6 text-muted-foreground">
               {description}
             </div>
           ) : null}
@@ -43,7 +43,7 @@ export function AppPageHeader({
             </div>
           ) : null}
         </div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
+        {actions ? <div className="w-full shrink-0 lg:w-auto">{actions}</div> : null}
       </div>
     </section>
   );

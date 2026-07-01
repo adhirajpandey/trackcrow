@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, Tag } from "lucide-react";
+import { CalendarDays, SlidersHorizontal, Tag } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
+import {
+  MobileBottomSheet,
+  MobileCardList,
+  MobileFilterChips,
+  MobileLongValue,
+  MobilePageHeader,
+  MobilePagination,
+  MobileSearchBar,
+  mobileCardClassName,
+  mobileSurfaceClassName,
+} from "@/components/product/mobile/mobile-primitives";
 import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
+import { Button } from "@/components/ui/button";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import {
   buildTransactionsPageData,
@@ -25,6 +37,7 @@ import { cn } from "@/lib/utils";
 import {
   buildCategoryOptions,
   buildPageHref,
+  buildSearchHref,
   buildSortHref,
   buildSubcategoryOptions,
   formatTransactionAmount,
@@ -88,15 +101,45 @@ export function TransactionsPageView({
   const isRefreshing = transactionsQuery.isFetching && !transactionsQuery.isPending;
   const categoryOptions = buildCategoryOptions(data.categories);
   const subcategoryOptions = buildSubcategoryOptions(data.categories, data.filters);
+  const searchTimeoutRef = useRef<number | null>(null);
+  const mobileFilterItems = [
+    data.filters.rangeLabel !== "All time" ? { label: data.filters.rangeLabel } : null,
+    data.filters.categories.length > 0
+      ? { label: `${data.filters.categories.length} categor${data.filters.categories.length === 1 ? "y" : "ies"}` }
+      : null,
+    data.filters.subcategories.length > 0
+      ? {
+          label: `${data.filters.subcategories.length} subcategor${data.filters.subcategories.length === 1 ? "y" : "ies"}`,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ label: string }>;
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current !== null) {
+        window.clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-3.5">
-      <AppPageHeader
+      <MobilePageHeader
         eyebrow="Transaction workspace"
         title="Transactions"
         description="Search, filter, and review all your transactions in one place."
-        actions={<TransactionsTimeframePicker filters={data.filters} />}
       />
+      <div className="lg:hidden">
+        <TransactionsTimeframePicker filters={data.filters} />
+      </div>
+      <div className="hidden lg:block">
+        <AppPageHeader
+          eyebrow="Transaction workspace"
+          title="Transactions"
+          description="Search, filter, and review all your transactions in one place."
+          actions={<TransactionsTimeframePicker filters={data.filters} />}
+        />
+      </div>
 
       {message ? (
         <section
@@ -111,7 +154,43 @@ export function TransactionsPageView({
         </section>
       ) : null}
 
-      <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
+      <section className={cn(mobileSurfaceClassName, "space-y-3 p-4 lg:hidden")}>
+        <MobileSearchBar
+          defaultValue={data.filters.q}
+          placeholder="Search recipient, remarks, amount..."
+          onChange={(nextValue) => {
+            if (searchTimeoutRef.current !== null) {
+              window.clearTimeout(searchTimeoutRef.current);
+            }
+
+            searchTimeoutRef.current = window.setTimeout(() => {
+              updateTransactionsUrl(buildSearchHref(data.filters, nextValue), "replace");
+            }, 300);
+          }}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <MobileFilterChips items={mobileFilterItems} className="min-w-0 flex-1" />
+          <MobileBottomSheet
+            trigger={
+              <Button type="button" variant="secondary" size="sm" className="shrink-0">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+              </Button>
+            }
+            title="Transactions filters"
+            description="Refine the transaction feed."
+          >
+            <TransactionsFilterControls
+              filters={data.filters}
+              categories={data.categories}
+              categoryOptions={categoryOptions}
+              subcategoryOptions={subcategoryOptions}
+            />
+          </MobileBottomSheet>
+        </div>
+      </section>
+
+      <section className="hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5 lg:block">
         <TransactionsFilterControls
           filters={data.filters}
           categories={data.categories}
@@ -128,20 +207,21 @@ export function TransactionsPageView({
         {isRefreshing ? <span className="sr-only">Refreshing transactions</span> : null}
         {data.rows.length > 0 ? (
           <>
-            <div className="grid gap-3 p-4 md:hidden">
+            <MobileCardList className="p-4">
               {data.rows.map((row) => (
                 <button
                   key={row.uuid}
                   type="button"
                   onClick={() => setDrawerRow(row)}
                   className={cn(
-                    "rounded-[8px] border border-border/45 bg-background/12 p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    mobileCardClassName,
+                    "p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     row.isSelected && "ring-1 ring-inset ring-primary/30"
                   )}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-foreground">
+                  <div className="flex items-start justify-between gap-3 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="overflow-wrap-anywhere break-words text-base font-semibold text-foreground">
                         {row.recipient}
                       </p>
                       <p className="mt-1 text-sm text-secondary-foreground">
@@ -149,50 +229,54 @@ export function TransactionsPageView({
                         {formatTransactionTimeLabel(row.timestamp)}
                       </p>
                     </div>
-                    <span className="text-base font-semibold tabular-nums text-foreground">
+                    <span className="shrink-0 text-base font-semibold tabular-nums text-foreground">
                       {formatTransactionAmount(row.amount)}
                     </span>
                   </div>
-                  <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="mt-4 flex items-start justify-between gap-3 min-w-0">
                     <span
                       className={cn(
-                        "inline-flex min-h-8 max-w-[68%] items-center rounded-[999px] border px-3 text-sm font-medium",
+                        "inline-flex min-h-8 max-w-full min-w-0 items-center rounded-[999px] border px-3 text-sm font-medium",
                         row.category
                           ? "border-primary/20 bg-primary/10 text-primary"
                           : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
                       )}
                     >
-                      <span className="truncate">{row.category ?? "Uncategorized"}</span>
+                      <span className="overflow-wrap-anywhere break-words">
+                        {row.category ?? "Uncategorized"}
+                      </span>
                     </span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
-                      {row.subcategory ?? "No subcategory"}
+                    <span className="min-w-0 text-right text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75">
+                      <MobileLongValue value={row.subcategory ?? "No subcategory"} className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary-foreground/75" />
                     </span>
                   </div>
                 </button>
               ))}
-            </div>
+            </MobileCardList>
 
-            <TransactionsTable
-              rows={data.rows}
-              columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
-              variant="full"
-              selectedRowUuid={data.filters.selectedTransactionUuid}
-              sort={{
-                sortBy: data.filters.sortBy,
-                sortOrder: data.filters.sortOrder,
-                sortableColumns: ["timestamp", "amount"],
-                onSort: (sortBy) =>
-                  updateTransactionsUrl(buildSortHref(data.filters, sortBy), "push"),
-              }}
-              pagination={{
-                ...data.pagination,
-                buildPageHref: (page) => buildPageHref(data.filters, page),
-                onNavigate: (href) => updateTransactionsUrl(href, "push"),
-              }}
-              rowHref={(row) => `/transactions/${row.id}`}
-              onNavigate={router.push}
-              emptyTitle="No transactions matched the current filters."
-            />
+            <div className="hidden lg:block">
+              <TransactionsTable
+                rows={data.rows}
+                columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
+                variant="full"
+                selectedRowUuid={data.filters.selectedTransactionUuid}
+                sort={{
+                  sortBy: data.filters.sortBy,
+                  sortOrder: data.filters.sortOrder,
+                  sortableColumns: ["timestamp", "amount"],
+                  onSort: (sortBy) =>
+                    updateTransactionsUrl(buildSortHref(data.filters, sortBy), "push"),
+                }}
+                pagination={{
+                  ...data.pagination,
+                  buildPageHref: (page) => buildPageHref(data.filters, page),
+                  onNavigate: (href) => updateTransactionsUrl(href, "push"),
+                }}
+                rowHref={(row) => `/transactions/${row.id}`}
+                onNavigate={router.push}
+                emptyTitle="No transactions matched the current filters."
+              />
+            </div>
           </>
         ) : (
           <TransactionsTable
@@ -205,6 +289,17 @@ export function TransactionsPageView({
           />
         )}
       </section>
+
+      <div className="lg:hidden">
+        <MobilePagination
+          page={data.pagination.page}
+          totalPages={data.pagination.totalPages}
+          hasPrev={data.pagination.hasPrev}
+          hasNext={data.pagination.hasNext}
+          onPrev={() => updateTransactionsUrl(buildPageHref(data.filters, data.pagination.page - 1), "push")}
+          onNext={() => updateTransactionsUrl(buildPageHref(data.filters, data.pagination.page + 1), "push")}
+        />
+      </div>
 
       <MobileRowDetailDrawer
         open={drawerRow !== null}

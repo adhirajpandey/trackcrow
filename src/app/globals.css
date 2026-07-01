@@ -74,6 +74,16 @@ body {
   color: var(--foreground);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0;
+  overflow-x: clip;
+}
+
+#__next {
+  min-height: 100%;
+}
+
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 a {
