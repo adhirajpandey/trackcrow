@@ -170,7 +170,7 @@ function MoreTimePeriodsMenu({
       <div className="border-b border-border/45 px-3 py-2 text-xs font-semibold text-secondary-foreground">
         More time periods
       </div>
-      <div className="max-h-56 overflow-y-auto py-1">
+      <div className="scrollbar-none max-h-56 overflow-y-auto py-1">
         {options.map((option) => {
           const selected = value === option.value;
 
