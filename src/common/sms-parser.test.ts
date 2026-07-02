@@ -48,6 +48,19 @@ describe("parseTransactionMessage", () => {
       type: "CARD",
       account: "KOTAK",
     });
+
+    expect(
+      parseTransactionMessage(
+        "INR 5977 spent on Kotak Credit Card x6387 on 02-Jul-2026 at UPI-K-309629880406-MAN. Avl limit INR 34023 Fraud? https://kotak.bank.in/KBANKT/CCTXN"
+      )
+    ).toMatchObject({
+      amount: 5977,
+      recipient: "MAN",
+      recipient_name: "MAN",
+      reference: "309629880406",
+      type: "CARD",
+      account: "KOTAK",
+    });
   });
 
   it("parses HDFC multiline UPI messages", () => {

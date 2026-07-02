@@ -51,7 +51,7 @@ const smsParsers: SmsParser[] = [
   {
     name: 'KOTAK_CREDIT_CARD',
     test: (message) => message.includes('Kotak Credit Card') && message.includes('spent on') && message.includes(' at '),
-    regex: /INR\s+(?<amount>[\d,.]+)\s+spent\s+on\s+Kotak\s+Credit\s+Card\s+(?<card_number>x\d+)\s+on\s+.+?\s+at\s+UPI-(?<reference>\d+)-(?<recipient_name>[^.]+)\./i,
+    regex: /INR\s+(?<amount>[\d,.]+)\s+spent\s+on\s+Kotak\s+Credit\s+Card\s+(?<card_number>x\d+)\s+on\s+.+?\s+at\s+UPI-(?:K-)?(?<reference>\d+)-(?<recipient_name>[^.]+)\./i,
     mapper: (match) => {
       const groups = match.groups ?? {};
       return {
