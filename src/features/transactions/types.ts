@@ -118,8 +118,6 @@ export type UpdateTransactionCategoryInput = {
 
 export type TransactionDetailFormValues = {
   amount: string;
-  recipientRaw: string;
-  recipientName: string;
   categoryId: string;
   subcategoryId: string;
   type: TransactionType;

@@ -6,11 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import {
   ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  CircleAlert,
-  MapPinned,
   LoaderCircle,
+  MapPinned,
+  UserRound,
   Save,
   Sparkles,
   Trash2,
@@ -44,10 +42,7 @@ import {
   getTransactionSuggestionData,
   useTransactionQuery,
 } from "@/features/transactions/queries";
-import type {
-  TransactionDetailFormValues,
-  TransactionDetailPageInitialData,
-} from "@/features/transactions/types";
+import type { TransactionDetailFormValues, TransactionDetailPageInitialData } from "@/features/transactions/types";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import {
@@ -57,14 +52,13 @@ import {
 
 import {
   applyTransactionSuggestion,
-  buildTransactionQuickChecks,
   formatTransactionAmount,
   formatTransactionDateTime,
-  hasTransactionDetailChanges,
   getRecipientDetailHref,
   getSubcategoryOptions,
-  getTransactionGoogleMapsHref,
   getTransactionDisplayRecipient,
+  getTransactionGoogleMapsHref,
+  hasTransactionDetailChanges,
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
   mapTransactionToFormValues,
@@ -76,6 +70,10 @@ import {
 
 const fieldClassName =
   "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
+const embeddedFieldClassName =
+  "min-h-11 min-w-0 flex-1 bg-transparent px-3.5 text-sm text-foreground outline-none placeholder:text-secondary-foreground/85";
+const embeddedActionButtonClassName =
+  "group h-11 shrink-0 rounded-none border-l border-border/55 bg-background/8 px-4 shadow-none transition-colors hover:border-border/75 hover:bg-secondary/18 hover:text-foreground";
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 const badgeClassName =
   "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
@@ -120,8 +118,6 @@ export function TransactionDetailPageView({
   const selectedSubcategoryId = form.watch("subcategoryId");
   const currentAmount = form.watch("amount");
   const currentTimestamp = form.watch("timestamp");
-  const currentRecipientRaw = form.watch("recipientRaw");
-  const currentRecipientName = form.watch("recipientName");
   const currentType = form.watch("type");
   const currentLocationRaw = form.watch("locationRaw");
   const currentReference = form.watch("reference");
@@ -131,8 +127,6 @@ export function TransactionDetailPageView({
   const googleMapsHref = getTransactionGoogleMapsHref(currentLocationRaw);
   const hasUnsavedChanges = hasTransactionDetailChanges(transaction, {
     amount: currentAmount,
-    recipientRaw: currentRecipientRaw,
-    recipientName: currentRecipientName,
     categoryId: selectedCategoryId,
     subcategoryId: selectedSubcategoryId,
     type: currentType,
@@ -176,14 +170,11 @@ export function TransactionDetailPageView({
   const previewTransaction = {
     ...transaction,
     amount: Number(currentAmount) || transaction.amount,
-    recipientRaw: currentRecipientRaw,
-    recipientName: currentRecipientName.trim() || null,
     type: currentType,
     timestamp: transaction.timestamp,
     categoryId: selectedCategoryId ? Number(selectedCategoryId) : null,
     subcategoryId: selectedSubcategoryId ? Number(selectedSubcategoryId) : null,
   } satisfies TransactionRecord;
-  const quickChecks = buildTransactionQuickChecks(previewTransaction);
 
   async function handleSubmit(values: TransactionDetailFormSchema) {
     setBanner(null);
@@ -192,7 +183,7 @@ export function TransactionDetailPageView({
     try {
       await updateMutation.mutateAsync({
         transactionId,
-        ...mapFormValuesToTransactionPayload(values),
+        ...mapFormValuesToTransactionPayload(transaction, values),
       });
 
       await transactionQuery.refetch();
@@ -405,42 +396,6 @@ export function TransactionDetailPageView({
 
       <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.78fr)]">
         <div className="space-y-3">
-          <section className={cn(dashboardPanelClassName, "hidden px-5 py-5 lg:block")}>
-            <div className="grid gap-5 xl:grid-cols-[minmax(240px,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
-              <div>
-                <p className="text-sm font-semibold text-secondary-foreground">
-                  Transaction summary
-                </p>
-                <p className="mt-4 text-[2.25rem] font-semibold leading-none text-primary tabular-nums">
-                  {formatTransactionAmount(Number(currentAmount) || transaction.amount)}
-                </p>
-                <p className="mt-3 text-sm text-secondary-foreground">
-                  {getSummaryLine({
-                    timestamp: currentTimestamp,
-                    fallbackTimestamp: transaction.timestamp,
-                    type: currentType,
-                  })}
-                </p>
-              </div>
-
-              <DefinitionGrid
-                items={[
-                  { label: "Recipient", value: getTransactionDisplayRecipient(previewTransaction) },
-                  { label: "Raw recipient", value: currentRecipientRaw || "Missing" },
-                  { label: "Source", value: transaction.source },
-                ]}
-              />
-
-              <DefinitionGrid
-                items={[
-                  { label: "Type", value: currentType },
-                  { label: "Currency", value: transaction.currency },
-                  { label: "Reference", value: form.watch("reference").trim() || "-" },
-                ]}
-              />
-            </div>
-          </section>
-
           <section
             className={cn(
               selectedCategoryId ? dashboardPanelClassName : dashboardAttentionPanelClassName,
@@ -543,34 +498,9 @@ export function TransactionDetailPageView({
           </section>
 
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient</h2>
-              <Button asChild variant="secondary" className="w-full min-w-0 sm:w-auto lg:min-w-[180px]">
-                <Link href={getRecipientDetailHref(transaction)}>
-                  View recipient
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <Field
-                label="Recipient display name"
-                error={form.formState.errors.recipientName?.message}
-              >
-                <input className={fieldClassName} {...form.register("recipientName")} />
-              </Field>
-              <Field label="Raw recipient" error={form.formState.errors.recipientRaw?.message}>
-                <input className={fieldClassName} {...form.register("recipientRaw")} />
-              </Field>
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <ReadOnlyField label="Resolved recipient" value={getTransactionDisplayRecipient(previewTransaction)} />
-              <ReadOnlyField label="Recipient source" value={transaction.source === "SMS" ? "Imported from SMS" : "Manual entry"} />
-            </div>
-          </section>
-
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Payment details</h2>
+            <h2 className="text-[1.05rem] font-semibold text-foreground">
+              Transaction details
+            </h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Amount" error={form.formState.errors.amount?.message}>
                 <input
@@ -608,17 +538,43 @@ export function TransactionDetailPageView({
               <Field label="Account label" error={form.formState.errors.accountLabel?.message}>
                 <input className={fieldClassName} {...form.register("accountLabel")} />
               </Field>
+              <ReadOnlyActionField
+                label="Recipient"
+                value={getTransactionDisplayRecipient(previewTransaction)}
+                action={
+                  <Button
+                    asChild
+                    type="button"
+                    variant="secondary"
+                    className={embeddedActionButtonClassName}
+                    >
+                      <Link href={getRecipientDetailHref(transaction)}>
+                        View recipient
+                      <UserRound className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                }
+              />
               <Field label="Reference" error={form.formState.errors.reference?.message}>
                 <input className={fieldClassName} {...form.register("reference")} />
               </Field>
-              <Field label="Location" error={form.formState.errors.locationRaw?.message}>
-                <div className="space-y-3">
-                  <input className={fieldClassName} {...form.register("locationRaw")} />
+              <Field
+                label="Location"
+                error={form.formState.errors.locationRaw?.message}
+                className="md:col-span-2"
+              >
+                <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-input bg-background/18 focus-within:ring-2 focus-within:ring-ring">
+                  <input className={embeddedFieldClassName} {...form.register("locationRaw")} />
                   {googleMapsHref ? (
-                    <Button asChild type="button" variant="secondary" className="w-full min-w-0 sm:w-auto lg:min-w-[220px]">
+                    <Button
+                      asChild
+                      type="button"
+                      variant="secondary"
+                      className={embeddedActionButtonClassName}
+                    >
                       <a href={googleMapsHref} target="_blank" rel="noreferrer noopener">
+                        Open map
                         <MapPinned className="h-4 w-4" />
-                        Open in Google Maps
                       </a>
                     </Button>
                   ) : null}
@@ -636,18 +592,9 @@ export function TransactionDetailPageView({
 
         <aside className="space-y-3">
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Quick checks</h2>
-            <div className="mt-4 space-y-3">
-              {quickChecks.map((check) => (
-                <QuickCheckRow key={check.id} label={check.label} status={check.status} />
-              ))}
-            </div>
-          </section>
-
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
             <h2 className="text-[1.05rem] font-semibold text-foreground">Danger zone</h2>
             <p className="mt-3 text-sm leading-6 text-secondary-foreground">
-              Deleting a transaction removes it from the ledger and clears any linked raw-message reference.
+              Deleting this transaction removes it from the ledger and unlinks any raw-message reference.
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -669,8 +616,8 @@ export function TransactionDetailPageView({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This permanently removes TXN-{transaction.id} from the ledger and clears
-                    any linked raw-message reference. This action cannot be undone.
+                    This permanently removes TXN-{transaction.id} from the ledger and unlinks
+                    any raw-message reference. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -731,14 +678,16 @@ export function TransactionDetailPageView({
 function Field({
   label,
   error,
+  className,
   children,
 }: {
   label: string;
   error?: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <label className={cn("block", className)}>
       <span className="mb-2 block text-sm font-medium text-secondary-foreground">{label}</span>
       {children}
       {error ? <span className="mt-2 block text-sm text-destructive">{error}</span> : null}
@@ -746,72 +695,24 @@ function Field({
   );
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function ReadOnlyActionField({
+  label,
+  value,
+  action,
+}: {
+  label: string;
+  value: string;
+  action: React.ReactNode;
+}) {
   return (
     <div>
       <span className="mb-2 block text-sm font-medium text-secondary-foreground">{label}</span>
-      <div className="min-h-11 rounded-[8px] border border-border/50 bg-background/10 px-3.5 py-3 text-sm text-foreground">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function DefinitionGrid({
-  items,
-}: {
-  items: Array<{ label: string; value: string }>;
-}) {
-  return (
-    <div className="grid gap-3 border-border/45 md:border-l md:pl-5">
-      {items.map((item) => (
-        <div key={item.label} className="grid gap-1">
-          <span className="text-sm text-secondary-foreground">{item.label}</span>
-          <span className="overflow-wrap-anywhere text-sm font-medium text-foreground">
-            {item.value}
-          </span>
+      <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-border/50 bg-background/10">
+        <div className="overflow-wrap-anywhere flex min-w-0 flex-1 items-center px-3.5 py-3 text-sm text-foreground">
+          {value}
         </div>
-      ))}
-    </div>
-  );
-}
-
-function QuickCheckRow({
-  label,
-  status,
-}: {
-  label: string;
-  status: "attention" | "passed";
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[8px] border border-border/45 bg-background/10 px-3.5 py-3">
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-full border",
-            status === "attention"
-              ? "border-accent/30 bg-accent/10 text-accent"
-              : "border-primary/22 bg-primary/10 text-primary"
-          )}
-        >
-          {status === "attention" ? (
-            <CircleAlert className="h-4 w-4" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4" />
-          )}
-        </span>
-        <span className="text-sm font-medium text-foreground">{label}</span>
+        {action}
       </div>
-      <span
-        className={cn(
-          badgeClassName,
-          status === "attention"
-            ? "border-accent/30 bg-accent/12 text-accent"
-            : "border-primary/20 bg-primary/10 text-primary"
-        )}
-      >
-        {status === "attention" ? "Action needed" : "Passed"}
-      </span>
     </div>
   );
 }
@@ -868,8 +769,6 @@ function applyServerErrors(
 function isTransactionDetailField(value: string): value is keyof TransactionDetailFormValues {
   return [
     "amount",
-    "recipientRaw",
-    "recipientName",
     "categoryId",
     "subcategoryId",
     "type",

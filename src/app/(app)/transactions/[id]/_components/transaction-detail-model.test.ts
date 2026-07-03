@@ -2,7 +2,7 @@ import type { CategoryOption, TransactionRecord } from "@/common/types";
 
 import {
   applyTransactionSuggestion,
-  buildTransactionQuickChecks,
+  getTransactionDisplayRecipient,
   getTransactionGoogleMapsHref,
   getRecipientDetailHref,
   getSubcategoryOptions,
@@ -98,8 +98,6 @@ describe("transaction detail model", () => {
   it("maps transaction records into form defaults with IST datetime-local values", () => {
     expect(mapTransactionToFormValues(transaction)).toEqual({
       amount: "1063",
-      recipientRaw: "742810776@kotakbank",
-      recipientName: "Kotak Bank UPI",
       categoryId: "",
       subcategoryId: "",
       type: "UPI",
@@ -113,10 +111,8 @@ describe("transaction detail model", () => {
 
   it("maps form values into API payloads with null trimming and IST to ISO conversion", () => {
     expect(
-      mapFormValuesToTransactionPayload({
+      mapFormValuesToTransactionPayload(transaction, {
         amount: "1063",
-        recipientRaw: " 742810776@kotakbank ",
-        recipientName: " Kotak Bank UPI ",
         categoryId: "1",
         subcategoryId: "11",
         type: "UPI",
@@ -160,8 +156,6 @@ describe("transaction detail model", () => {
     expect(
       hasTransactionDetailChanges(transaction, {
         ...mapTransactionToFormValues(transaction),
-        recipientRaw: " 742810776@kotakbank ",
-        recipientName: " Kotak Bank UPI ",
         accountLabel: " Kotak **1234 ",
       })
     ).toBe(false);
@@ -180,7 +174,6 @@ describe("transaction detail model", () => {
   it("treats empty strings and null nullable fields as unchanged", () => {
     const nullableTransaction: TransactionRecord = {
       ...transaction,
-      recipientName: null,
       reference: null,
       accountLabel: null,
       remarks: null,
@@ -190,7 +183,6 @@ describe("transaction detail model", () => {
     expect(
       hasTransactionDetailChanges(nullableTransaction, {
         ...mapTransactionToFormValues(nullableTransaction),
-        recipientName: "   ",
         reference: " ",
         accountLabel: "",
         remarks: "  ",
@@ -205,16 +197,21 @@ describe("transaction detail model", () => {
     expect(isValidSubcategorySelection(categories, "1", "21")).toBe(false);
   });
 
-  it("builds quick checks from category, source, and recipient linkage", () => {
-    expect(buildTransactionQuickChecks(transaction)).toEqual([
-      { id: "category", label: "Category missing", status: "attention" },
-      { id: "source", label: "Source recorded", status: "passed" },
-      { id: "recipient", label: "Recipient linked", status: "passed" },
-    ]);
-  });
-
   it("builds the canonical recipient detail href from the linked recipient id", () => {
     expect(getRecipientDetailHref(transaction)).toBe("/recipients/30");
+  });
+
+  it("formats the most readable recipient label from available transaction fields", () => {
+    expect(getTransactionDisplayRecipient(transaction)).toBe("Kotak Bank Upi");
+
+    expect(
+      getTransactionDisplayRecipient({
+        ...transaction,
+        recipientName: null,
+        recipientDisplayName: "upi merchant",
+        recipientRaw: "acme.rent-9988@ybl",
+      })
+    ).toBe("Acme Rent");
   });
 
   it("builds a Google Maps search href from coordinate locations", () => {

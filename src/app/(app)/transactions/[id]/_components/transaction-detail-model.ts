@@ -21,24 +21,6 @@ const dateTimePartsFormatter = new Intl.DateTimeFormat("en-CA", {
   hour12: false,
 });
 
-const quickCheckDefinitions = [
-  {
-    key: "category",
-    pendingLabel: "Category missing",
-    passedLabel: "Category set",
-  },
-  {
-    key: "source",
-    pendingLabel: "Source unavailable",
-    passedLabel: "Source recorded",
-  },
-  {
-    key: "recipient",
-    pendingLabel: "Recipient unclear",
-    passedLabel: "Recipient linked",
-  },
-] as const;
-
 export const transactionDetailFormSchema = z.object({
   amount: z
     .string()
@@ -47,8 +29,6 @@ export const transactionDetailFormSchema = z.object({
     .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, {
       message: "Enter an amount greater than 0",
     }),
-  recipientRaw: z.string().trim().min(1, "Raw recipient is required"),
-  recipientName: z.string().trim(),
   categoryId: z.string(),
   subcategoryId: z.string(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]),
@@ -66,12 +46,6 @@ export const transactionDetailFormSchema = z.object({
 });
 
 export type TransactionDetailFormSchema = z.infer<typeof transactionDetailFormSchema>;
-
-export type TransactionQuickCheck = {
-  id: string;
-  label: string;
-  status: "attention" | "passed";
-};
 
 export function formatTransactionDateTime(timestamp: string) {
   return formatDateTime(timestamp);
@@ -115,8 +89,6 @@ export function mapTransactionToFormValues(
 ): TransactionDetailFormValues {
   return {
     amount: String(transaction.amount),
-    recipientRaw: transaction.recipientRaw,
-    recipientName: transaction.recipientName ?? "",
     categoryId: transaction.categoryId == null ? "" : String(transaction.categoryId),
     subcategoryId: transaction.subcategoryId == null ? "" : String(transaction.subcategoryId),
     type: transaction.type,
@@ -129,12 +101,13 @@ export function mapTransactionToFormValues(
 }
 
 export function mapFormValuesToTransactionPayload(
+  transaction: TransactionRecord,
   values: TransactionDetailFormSchema
 ): TransactionMutationInput {
   return {
     amount: Number(values.amount),
-    recipientRaw: values.recipientRaw.trim(),
-    recipientName: toNullableTrimmedString(values.recipientName),
+    recipientRaw: transaction.recipientRaw.trim(),
+    recipientName: toNullableTrimmedString(transaction.recipientName ?? ""),
     categoryId: toNullableInteger(values.categoryId),
     subcategoryId: toNullableInteger(values.subcategoryId),
     type: values.type,
@@ -150,13 +123,11 @@ export function hasTransactionDetailChanges(
   transaction: TransactionRecord,
   values: TransactionDetailFormValues
 ) {
-  const nextPayload = mapFormValuesToTransactionPayload(values);
+  const nextPayload = mapFormValuesToTransactionPayload(transaction, values);
   const currentPayload = mapTransactionToMutationPayload(transaction);
 
   return (
     nextPayload.amount !== currentPayload.amount ||
-    nextPayload.recipientRaw !== currentPayload.recipientRaw ||
-    nextPayload.recipientName !== currentPayload.recipientName ||
     nextPayload.categoryId !== currentPayload.categoryId ||
     nextPayload.subcategoryId !== currentPayload.subcategoryId ||
     nextPayload.type !== currentPayload.type ||
@@ -242,27 +213,6 @@ export function shouldIgnoreTransactionDetailShortcut(
   }
 
   return isEditableShortcutTarget(event.target);
-}
-
-export function buildTransactionQuickChecks(transaction: TransactionRecord): TransactionQuickCheck[] {
-  const recipientLabel = formatRecipientDisplayLabel({
-    recipientName: transaction.recipientName,
-    recipientDisplayName: transaction.recipientDisplayName,
-    recipientRaw: transaction.recipientRaw,
-    fallbackLabel: "",
-  });
-
-  const checks = {
-    category: transaction.categoryId != null,
-    source: Boolean(transaction.source),
-    recipient: recipientLabel.trim().length > 0,
-  };
-
-  return quickCheckDefinitions.map((check) => ({
-    id: check.key,
-    label: checks[check.key] ? check.passedLabel : check.pendingLabel,
-    status: checks[check.key] ? "passed" : "attention",
-  }));
 }
 
 export function getTransactionDisplayRecipient(transaction: TransactionRecord) {
