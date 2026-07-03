@@ -148,6 +148,7 @@ function writeLog(level: LogLevel, entry: LogEntry) {
 
   const requestContext = requestContextStore.getStore();
   const payload = redactValue(undefined, {
+    ...entry,
     timestamp: new Date().toISOString(),
     level,
     event: entry.event,
@@ -155,7 +156,6 @@ function writeLog(level: LogLevel, entry: LogEntry) {
     requestId: requestContext?.requestId,
     method: requestContext?.method,
     path: requestContext?.path,
-    ...entry,
   });
 
   const serialized = JSON.stringify(payload);
