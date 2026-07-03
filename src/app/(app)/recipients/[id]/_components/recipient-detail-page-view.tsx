@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
-  CircleAlert,
   Copy,
   LoaderCircle,
   Plus,
@@ -18,7 +17,8 @@ import {
   MobileLongValue,
   MobilePageHeader,
   MobileSectionPreview,
-  MobileStatGrid,
+  mobileCardClassName,
+  mobileSurfaceClassName,
 } from "@/components/product/mobile/mobile-primitives";
 import {
   AlertDialog,
@@ -54,7 +54,11 @@ import {
   type IdentifierTransferImpact,
   useAddRecipientIdentifierMutation,
 } from "@/features/recipients/mutations";
-import type { RecipientDetailPageInitialData } from "@/features/recipients/types";
+import type {
+  RecipientDetailCleanupSuggestion,
+  RecipientDetailPageData,
+  RecipientDetailPageInitialData,
+} from "@/features/recipients/types";
 import { useUpdateTransactionCategoryMutation } from "@/features/transactions/mutations";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -79,8 +83,6 @@ import {
   formatRecipientTotal,
 } from "./recipient-detail-model";
 
-const badgeClassName =
-  "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
 const fieldClassName =
   "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -130,30 +132,6 @@ export function RecipientDetailPageView({
     .join(" · ");
   const canApplySuggestion =
     categoryExists && cleanup.categoryId != null && cleanup.uncategorizedTransactionIds.length > 0;
-  const statusRows = [
-    {
-      id: "linked",
-      label: "Recipient linked",
-      status: data.transactionCount > 0 ? "passed" : "attention",
-      badgeLabel: data.transactionCount > 0 ? "Passed" : "Action needed",
-    },
-    {
-      id: "identifiers",
-      label: "Has identifiers",
-      status: data.identifiers.length > 0 ? "passed" : "attention",
-      badgeLabel: data.identifiers.length > 0 ? "Passed" : "Missing",
-    },
-    {
-      id: "categorization",
-      label: "Cleanup",
-      status: cleanup.uncategorizedCount > 0 ? "attention" : "passed",
-      badgeLabel:
-        cleanup.uncategorizedCount > 0
-          ? `${cleanup.uncategorizedCount} uncategorized`
-          : "No issues",
-    },
-  ] as const;
-
   const sortedRelatedTransactions = useMemo(
     () =>
       sortTransactionTableRows(
@@ -328,82 +306,50 @@ export function RecipientDetailPageView({
       </div>
 
       <div className="lg:hidden">
-        <MobileStatGrid
-          items={[
-            { label: "Total spent", value: formatRecipientTotal(data.totalSpent), tone: "primary" },
-            { label: "Transactions", value: String(data.transactionCount) },
-            { label: "Avg amount", value: formatRecipientTotal(data.averagePayment) },
-            {
-              label: "Latest txn",
-              value: data.lastPaidAt ? formatRecipientDate(data.lastPaidAt) : "No payments",
-            },
-          ]}
-          columns={2}
+        <MobileRecipientSummary
+          totalSpent={formatRecipientTotal(data.totalSpent)}
+          transactionCount={data.transactionCount}
+          averageAmount={formatRecipientTotal(data.averagePayment)}
+          latestTransaction={data.lastPaidAt ? formatRecipientDate(data.lastPaidAt) : "No payments"}
         />
       </div>
 
-      <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.62fr)_minmax(300px,0.7fr)]">
-        <main className="space-y-3">
-          <section className={cn(dashboardPanelClassName, "hidden px-5 py-4 lg:block")}>
-            <p className="text-sm font-semibold text-secondary-foreground">Recipient summary</p>
-            <h2 className="mt-2 max-w-[920px] text-2xl font-semibold leading-tight text-primary sm:text-3xl">
-              {data.displayName}
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricBlock label="Total spent" value={formatRecipientTotal(data.totalSpent)} />
-              <MetricBlock label="Transactions" value={String(data.transactionCount)} />
-              <MetricBlock label="Avg amount" value={formatRecipientTotal(data.averagePayment)} />
-              <MetricBlock
-                label="Latest txn"
+      <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.78fr)]">
+        <main className="order-2 space-y-3 2xl:order-1">
+          <div className="2xl:hidden">
+            <CategoryPatternPanel
+              categoryLabel={getCategoryPatternLabel(data)}
+              metadata={getCategoryPatternMetadata(data)}
+              cleanupMessage={getCleanupMessage(cleanup.uncategorizedCount)}
+              cleanupApplyLabel={cleanup.applyLabel}
+              uncategorizedCount={cleanup.uncategorizedCount}
+              canApplySuggestion={canApplySuggestion}
+              isApplying={updateCategoryMutation.isPending}
+              onApply={handleApplySuggestion}
+            />
+          </div>
+
+          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
+            <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient details</h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <ReadOnlyDetailField label="Name" value={data.displayName} />
+              <ReadOnlyDetailField
+                label="Total spent"
+                value={formatRecipientTotal(data.totalSpent)}
+              />
+              <ReadOnlyDetailField label="Transactions" value={String(data.transactionCount)} />
+              <ReadOnlyDetailField
+                label="Average amount"
+                value={formatRecipientTotal(data.averagePayment)}
+              />
+              <ReadOnlyDetailField
+                label="Latest transaction"
                 value={data.lastPaidAt ? formatRecipientDate(data.lastPaidAt) : "No payments"}
               />
-            </div>
-          </section>
-
-          <section className={cn(dashboardPanelClassName, "px-5 py-4")}>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-secondary-foreground">Category pattern</p>
-                <h2 className="mt-2 text-2xl font-semibold text-foreground">
-                  {data.dominantCategory
-                    ? `${data.dominantCategory.category} · ${data.dominantCategory.consistencyPercent}% consistency`
-                    : "No dominant category yet"}
-                </h2>
-                <p className="mt-2 text-sm text-secondary-foreground">
-                  {data.dominantCategory
-                    ? `${data.dominantCategory.transactionCount} of ${data.transactionCount} transactions · ${formatRecipientTotal(data.dominantCategory.totalAmount)}`
-                    : "Categorized transactions will help reveal this pattern."}
-                </p>
-                {data.dominantSubcategory ? (
-                  <p className="mt-2 text-sm text-secondary-foreground">
-                    Most common subcategory:{" "}
-                    <span className="font-medium text-foreground">
-                      {data.dominantSubcategory.subcategory}
-                    </span>{" "}
-                    · {data.dominantSubcategory.transactionCount} transactions
-                  </p>
-                ) : null}
-                <p className="mt-2 text-sm text-accent">
-                  {cleanup.uncategorizedCount > 0
-                    ? `${cleanup.uncategorizedCount} transaction${
-                        cleanup.uncategorizedCount === 1 ? " still needs" : " still need"
-                      } a category`
-                    : "All linked transactions have categories"}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void handleApplySuggestion()}
-                disabled={!canApplySuggestion || updateCategoryMutation.isPending}
-                className="w-full shrink-0 sm:w-auto"
-              >
-                {cleanup.applyLabel
-                  ? `${cleanup.applyLabel} to ${cleanup.uncategorizedCount} transaction${
-                      cleanup.uncategorizedCount === 1 ? "" : "s"
-                    }`
-                  : "Apply category"}
-              </Button>
+              <ReadOnlyDetailField
+                label="Identifier count"
+                value={String(data.identifierCount)}
+              />
             </div>
           </section>
 
@@ -427,7 +373,7 @@ export function RecipientDetailPageView({
               {data.identifiers.length > 0 ? (
                 <div className="grid gap-3">
                   {data.identifiers.map((identifier) => (
-                    <div key={identifier.id} className="rounded-[8px] border border-border/45 bg-background/10 p-4">
+                    <div key={identifier.id} className={cn(mobileCardClassName, "p-4")}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-primary">
@@ -547,7 +493,7 @@ export function RecipientDetailPageView({
                   <Link
                     key={transaction.uuid}
                     href={`/transactions/${transaction.id}`}
-                    className="rounded-[8px] border border-border/45 bg-background/10 p-4"
+                    className={cn(mobileCardClassName, "block p-4")}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -609,23 +555,20 @@ export function RecipientDetailPageView({
               emptyTitle="No linked transactions found for this recipient."
             />
           </section>
+
         </main>
 
-        <aside className="space-y-3">
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Status</h2>
-            <div className="mt-4 space-y-3">
-              {statusRows.map((check) => (
-                <QuickCheckRow
-                  key={check.id}
-                  label={check.label}
-                  status={check.status}
-                  badgeLabel={check.badgeLabel}
-                />
-              ))}
-            </div>
-          </section>
-
+        <aside className="order-1 hidden space-y-3 2xl:order-2 2xl:block">
+          <CategoryPatternPanel
+            categoryLabel={getCategoryPatternLabel(data)}
+            metadata={getCategoryPatternMetadata(data)}
+            cleanupMessage={getCleanupMessage(cleanup.uncategorizedCount)}
+            cleanupApplyLabel={cleanup.applyLabel}
+            uncategorizedCount={cleanup.uncategorizedCount}
+            canApplySuggestion={canApplySuggestion}
+            isApplying={updateCategoryMutation.isPending}
+            onApply={handleApplySuggestion}
+          />
         </aside>
       </div>
 
@@ -748,13 +691,127 @@ function parseTransferImpact(value: unknown): IdentifierTransferImpact | null {
   return impact as IdentifierTransferImpact;
 }
 
-function MetricBlock({ label, value }: { label: string; value: string }) {
+function CategoryPatternPanel({
+  categoryLabel,
+  metadata,
+  cleanupMessage,
+  cleanupApplyLabel,
+  uncategorizedCount,
+  canApplySuggestion,
+  isApplying,
+  onApply,
+}: {
+  categoryLabel: string;
+  metadata: string;
+  cleanupMessage: string;
+  cleanupApplyLabel: string | null;
+  uncategorizedCount: number;
+  canApplySuggestion: boolean;
+  isApplying: boolean;
+  onApply: () => Promise<void>;
+}) {
   return (
-    <div className="rounded-[8px] border border-border/45 bg-background/10 px-4 py-3">
-      <p className="text-sm font-medium text-secondary-foreground">
-        {label}
-      </p>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+    <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0">
+          <h2 className="text-[1.05rem] font-semibold text-foreground">Category pattern</h2>
+          <p className="mt-3 break-words text-2xl font-semibold leading-tight text-foreground">
+            {categoryLabel}
+          </p>
+          <p className="mt-2 text-sm leading-5 text-secondary-foreground">{metadata}</p>
+          <p className="mt-3 text-sm leading-5 text-accent">{cleanupMessage}</p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => void onApply()}
+          disabled={!canApplySuggestion || isApplying}
+          className="w-full"
+        >
+          {cleanupApplyLabel
+            ? `${cleanupApplyLabel} to ${uncategorizedCount} transaction${
+                uncategorizedCount === 1 ? "" : "s"
+              }`
+            : "Apply category"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function getCategoryPatternLabel(data: RecipientDetailPageData) {
+  if (!data.dominantCategory) {
+    return "No dominant category yet";
+  }
+
+  return [data.dominantCategory.category, data.dominantSubcategory?.subcategory]
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function getCategoryPatternMetadata(data: RecipientDetailPageData) {
+  if (!data.dominantCategory) {
+    return "Categorized transactions will reveal this recipient pattern.";
+  }
+
+  return `${data.dominantCategory.consistencyPercent}% consistency · ${
+    data.dominantCategory.transactionCount
+  } of ${data.transactionCount} transactions · ${formatRecipientTotal(
+    data.dominantCategory.totalAmount
+  )}`;
+}
+
+function getCleanupMessage(
+  uncategorizedCount: RecipientDetailCleanupSuggestion["uncategorizedCount"]
+) {
+  if (uncategorizedCount > 0) {
+    return `${uncategorizedCount} transaction${
+      uncategorizedCount === 1 ? " needs" : " need"
+    } a category.`;
+  }
+
+  return "All linked transactions have categories.";
+}
+
+function MobileRecipientSummary({
+  totalSpent,
+  transactionCount,
+  averageAmount,
+  latestTransaction,
+}: {
+  totalSpent: string;
+  transactionCount: number;
+  averageAmount: string;
+  latestTransaction: string;
+}) {
+  return (
+    <section className={cn(mobileSurfaceClassName, "px-4 py-3.5")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-secondary-foreground">Total spent</p>
+          <p className="mt-1 break-words text-[1.75rem] font-semibold leading-tight tabular-nums text-primary">
+            {totalSpent}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+          {transactionCount} txns
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 border-t border-border/35 pt-3 text-sm">
+        <SummaryRow label="Avg amount" value={averageAmount} />
+        <SummaryRow label="Latest txn" value={latestTransaction} />
+      </div>
+    </section>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-secondary-foreground">{label}</span>
+      <span className="overflow-wrap-anywhere min-w-0 text-right font-medium text-foreground">
+        {value}
+      </span>
     </div>
   );
 }
@@ -765,6 +822,17 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-sm font-medium text-secondary-foreground">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ReadOnlyDetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="mb-2 block text-sm font-medium text-secondary-foreground">{label}</span>
+      <div className="overflow-wrap-anywhere flex min-h-11 items-center rounded-[8px] border border-border/50 bg-background/10 px-3.5 py-3 text-sm text-foreground">
+        {value}
+      </div>
+    </div>
   );
 }
 
@@ -790,44 +858,3 @@ function CopyButton({
   );
 }
 
-function QuickCheckRow({
-  label,
-  status,
-  badgeLabel,
-}: {
-  label: string;
-  status: "attention" | "passed";
-  badgeLabel: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[8px] border border-border/45 bg-background/10 px-3.5 py-3">
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-full border",
-            status === "attention"
-              ? "border-accent/30 bg-accent/10 text-accent"
-              : "border-primary/22 bg-primary/10 text-primary"
-          )}
-        >
-          {status === "attention" ? (
-            <CircleAlert className="h-4 w-4" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4" />
-          )}
-        </span>
-        <span className="text-sm font-medium text-foreground">{label}</span>
-      </div>
-      <span
-        className={cn(
-          badgeClassName,
-          status === "attention"
-            ? "border-accent/30 bg-accent/12 text-accent"
-            : "border-primary/20 bg-primary/10 text-primary"
-        )}
-      >
-        {badgeLabel}
-      </span>
-    </div>
-  );
-}
