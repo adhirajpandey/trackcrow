@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import {
   ArrowLeft,
+  ChevronDown,
   LoaderCircle,
   MapPinned,
   UserRound,
@@ -20,7 +21,7 @@ import { AppPageHeader } from "@/components/product/app-page-header";
 import {
   MobileActionBar,
   MobilePageHeader,
-  MobileStatGrid,
+  mobileSurfaceClassName,
 } from "@/components/product/mobile/mobile-primitives";
 import {
   AlertDialog,
@@ -77,6 +78,10 @@ const embeddedActionButtonClassName =
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 const badgeClassName =
   "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
+const disclosureSummaryClassName =
+  "flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-foreground marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden [&::-webkit-details-marker]:hidden";
+const inlineDisclosureButtonClassName =
+  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[8px] px-0 text-sm font-semibold text-primary transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function TransactionDetailPageView({
   transactionId,
@@ -89,6 +94,7 @@ export function TransactionDetailPageView({
     message: string;
   } | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
   const pendingSuggestedSubcategoryRef = useRef<string | null>(null);
   const shortcutStateRef = useRef({
     hasUnsavedChanges: false,
@@ -300,7 +306,6 @@ export function TransactionDetailPageView({
       <MobilePageHeader
         eyebrow="Transaction workspace"
         title="Transaction detail"
-        description="Review, classify, and correct a single transaction without leaving the ledger workspace."
         meta={
           <>
             <span className="font-medium text-foreground">TXN-{transaction.id}</span>
@@ -374,23 +379,14 @@ export function TransactionDetailPageView({
       ) : null}
 
       <div className="lg:hidden">
-        <MobileStatGrid
-          items={[
-            {
-              label: "Amount",
-              value: formatTransactionAmount(Number(currentAmount) || transaction.amount),
-              tone: "primary",
-            },
-            {
-              label: "When",
-              value: getSummaryLine({
-                timestamp: currentTimestamp,
-                fallbackTimestamp: transaction.timestamp,
-                type: currentType,
-              }),
-            },
-          ]}
-          columns={1}
+        <MobileTransactionSummary
+          amount={formatTransactionAmount(Number(currentAmount) || transaction.amount)}
+          type={currentType}
+          when={getSummaryLine({
+            timestamp: currentTimestamp,
+            fallbackTimestamp: transaction.timestamp,
+          })}
+          recipient={getTransactionDisplayRecipient(previewTransaction)}
         />
       </div>
 
@@ -501,8 +497,12 @@ export function TransactionDetailPageView({
             <h2 className="text-[1.05rem] font-semibold text-foreground">
               Transaction details
             </h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <Field label="Amount" error={form.formState.errors.amount?.message}>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:mt-4">
+              <Field
+                label="Amount"
+                error={form.formState.errors.amount?.message}
+                className="order-1 lg:order-none"
+              >
                 <input
                   type="number"
                   step="0.01"
@@ -511,7 +511,11 @@ export function TransactionDetailPageView({
                   {...form.register("amount")}
                 />
               </Field>
-              <Field label="Type" error={form.formState.errors.type?.message}>
+              <Field
+                label="Type"
+                error={form.formState.errors.type?.message}
+                className="order-2 lg:order-none"
+              >
                 <Controller
                   control={form.control}
                   name="type"
@@ -532,15 +536,35 @@ export function TransactionDetailPageView({
                   )}
                 />
               </Field>
-              <Field label="Timestamp" error={form.formState.errors.timestamp?.message}>
-                <input type="datetime-local" className={fieldClassName} {...form.register("timestamp")} />
+              <Field
+                label="Timestamp"
+                error={form.formState.errors.timestamp?.message}
+                className={cn(
+                  "order-6 lg:order-none",
+                  !isMoreDetailsOpen && "hidden lg:block"
+                )}
+              >
+                <input
+                  type="datetime-local"
+                  className={fieldClassName}
+                  {...form.register("timestamp")}
+                />
               </Field>
-              <Field label="Account label" error={form.formState.errors.accountLabel?.message}>
+              <Field
+                label="Account label"
+                error={form.formState.errors.accountLabel?.message}
+                className={cn(
+                  "order-6 lg:order-none",
+                  !isMoreDetailsOpen && "hidden lg:block"
+                )}
+              >
                 <input className={fieldClassName} {...form.register("accountLabel")} />
               </Field>
+
               <ReadOnlyActionField
                 label="Recipient"
                 value={getTransactionDisplayRecipient(previewTransaction)}
+                className="order-3 lg:order-none"
                 action={
                   <Button
                     asChild
@@ -555,13 +579,20 @@ export function TransactionDetailPageView({
                     </Button>
                 }
               />
-              <Field label="Reference" error={form.formState.errors.reference?.message}>
+              <Field
+                label="Reference"
+                error={form.formState.errors.reference?.message}
+                className={cn(
+                  "order-6 lg:order-none",
+                  !isMoreDetailsOpen && "hidden lg:block"
+                )}
+              >
                 <input className={fieldClassName} {...form.register("reference")} />
               </Field>
               <Field
                 label="Location"
                 error={form.formState.errors.locationRaw?.message}
-                className="md:col-span-2"
+                className="order-4 md:col-span-2 lg:order-none"
               >
                 <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-input bg-background/18 focus-within:ring-2 focus-within:ring-ring">
                   <input className={embeddedFieldClassName} {...form.register("locationRaw")} />
@@ -580,88 +611,49 @@ export function TransactionDetailPageView({
                   ) : null}
                 </div>
               </Field>
-            </div>
-
-            <div className="mt-4">
-              <Field label="Remarks" error={form.formState.errors.remarks?.message}>
+              <Field
+                label="Remarks"
+                error={form.formState.errors.remarks?.message}
+                className="order-5 md:col-span-2 lg:order-none"
+              >
                 <textarea className={textAreaClassName} {...form.register("remarks")} />
               </Field>
+              <div className="order-6 md:col-span-2 lg:hidden">
+                <button
+                  type="button"
+                  className={inlineDisclosureButtonClassName}
+                  aria-expanded={isMoreDetailsOpen}
+                  onClick={() => setIsMoreDetailsOpen((current) => !current)}
+                >
+                  <span>More details</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-secondary-foreground transition-transform",
+                      isMoreDetailsOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+              </div>
             </div>
           </section>
+
+          <MobileDangerZone
+            transactionId={transaction.id}
+            isDeleting={deleteMutation.isPending}
+            onDelete={handleDelete}
+          />
         </div>
 
-        <aside className="space-y-3">
-          <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">Danger zone</h2>
-            <p className="mt-3 text-sm leading-6 text-secondary-foreground">
-              Deleting this transaction removes it from the ledger and unlinks any raw-message reference.
-            </p>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="mt-4 w-full"
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                  Delete transaction
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This permanently removes TXN-{transaction.id} from the ledger and unlinks
-                    any raw-message reference. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel asChild>
-                    <Button type="button" variant="secondary">
-                      Cancel
-                    </Button>
-                  </AlertDialogCancel>
-                  <AlertDialogAction asChild>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => void handleDelete()}
-                    >
-                      {deleteMutation.isPending ? (
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                      Delete transaction
-                    </Button>
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </section>
+        <aside className="hidden space-y-3 lg:block">
+          <DangerZone
+            transactionId={transaction.id}
+            isDeleting={deleteMutation.isPending}
+            onDelete={handleDelete}
+          />
         </aside>
       </div>
 
       <MobileActionBar>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => void handleSuggest()}
-          disabled={isSuggesting}
-        >
-          {isSuggesting ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          Suggest category
-        </Button>
         <Button type="submit" disabled={updateMutation.isPending || !hasUnsavedChanges}>
           {updateMutation.isPending ? (
             <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -672,6 +664,162 @@ export function TransactionDetailPageView({
         </Button>
       </MobileActionBar>
     </form>
+  );
+}
+
+function MobileTransactionSummary({
+  amount,
+  type,
+  when,
+  recipient,
+}: {
+  amount: string;
+  type: TransactionRecord["type"];
+  when: string;
+  recipient: string;
+}) {
+  return (
+    <section className={cn(mobileSurfaceClassName, "px-4 py-3.5")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-secondary-foreground">Amount</p>
+          <p className="mt-1 text-[1.75rem] font-semibold leading-tight tabular-nums text-primary">
+            {amount}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+          {type}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 border-t border-border/35 pt-3 text-sm">
+        <SummaryRow label="Date and Time" value={when} />
+        <SummaryRow label="Recipient" value={recipient} />
+      </div>
+    </section>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-secondary-foreground">{label}</span>
+      <span className="overflow-wrap-anywhere min-w-0 text-right font-medium text-foreground">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function MobileDangerZone({
+  transactionId,
+  isDeleting,
+  onDelete,
+}: {
+  transactionId: number;
+  isDeleting: boolean;
+  onDelete: () => Promise<void>;
+}) {
+  return (
+    <details className={cn(dashboardPanelClassName, "group px-4 py-3 lg:hidden")}>
+      <summary className={disclosureSummaryClassName}>
+        <span>Danger zone</span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-secondary-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="pt-3">
+        <DangerZoneContent
+          transactionId={transactionId}
+          isDeleting={isDeleting}
+          onDelete={onDelete}
+        />
+      </div>
+    </details>
+  );
+}
+
+function DangerZone({
+  transactionId,
+  isDeleting,
+  onDelete,
+}: {
+  transactionId: number;
+  isDeleting: boolean;
+  onDelete: () => Promise<void>;
+}) {
+  return (
+    <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
+      <h2 className="text-[1.05rem] font-semibold text-foreground">Danger zone</h2>
+      <DangerZoneContent
+        transactionId={transactionId}
+        isDeleting={isDeleting}
+        onDelete={onDelete}
+      />
+    </section>
+  );
+}
+
+function DangerZoneContent({
+  transactionId,
+  isDeleting,
+  onDelete,
+}: {
+  transactionId: number;
+  isDeleting: boolean;
+  onDelete: () => Promise<void>;
+}) {
+  return (
+    <>
+      <p className="mt-3 text-sm leading-6 text-secondary-foreground">
+        Deleting this transaction removes it from the ledger and unlinks any raw-message reference.
+      </p>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="destructive"
+            className="mt-4 w-full"
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Delete transaction
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes TXN-{transactionId} from the ledger and unlinks any
+              raw-message reference. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button type="button" variant="secondary">
+                Cancel
+              </Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isDeleting}
+                onClick={() => void onDelete()}
+              >
+                {isDeleting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Delete transaction
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -699,13 +847,15 @@ function ReadOnlyActionField({
   label,
   value,
   action,
+  className,
 }: {
   label: string;
   value: string;
   action: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={className}>
       <span className="mb-2 block text-sm font-medium text-secondary-foreground">{label}</span>
       <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-border/50 bg-background/10">
         <div className="overflow-wrap-anywhere flex min-w-0 flex-1 items-center px-3.5 py-3 text-sm text-foreground">
@@ -720,7 +870,6 @@ function ReadOnlyActionField({
 function getSummaryLine(input: {
   timestamp: string;
   fallbackTimestamp: string;
-  type: TransactionRecord["type"];
 }) {
   const parsedTimestamp = input.timestamp.trim()
     ? parseDateTimeLocalAsIst(input.timestamp)
@@ -729,9 +878,7 @@ function getSummaryLine(input: {
     parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime())
       ? parsedTimestamp.toISOString()
       : input.fallbackTimestamp;
-  const value = formatTransactionDateTime(timestamp);
-
-  return `${input.type} payment • ${value}`;
+  return formatTransactionDateTime(timestamp);
 }
 
 function applyServerErrors(
