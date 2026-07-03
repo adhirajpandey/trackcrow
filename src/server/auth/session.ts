@@ -13,12 +13,22 @@ export async function requireSessionUser(): Promise<
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.uuid) {
+      logger.warn({
+        event: "auth.failed",
+        message: "Session user is missing",
+      });
       return fail("UNAUTHORIZED");
     }
 
     return ok({ userUuid: session.user.uuid });
   } catch (error) {
-    logger.error("requireSessionUser - Failed to resolve session", error as Error);
+    logger.error(
+      {
+        event: "auth.session_resolution_failed",
+        message: "Failed to resolve session user",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -46,7 +56,13 @@ async function getPageSession() {
   try {
     return await getServerSession(authOptions);
   } catch (error) {
-    logger.error("requirePageSessionUser - Failed to resolve session", error as Error);
+    logger.error(
+      {
+        event: "auth.page_session_resolution_failed",
+        message: "Failed to resolve page session",
+      },
+      error
+    );
     redirect("/login");
   }
 }

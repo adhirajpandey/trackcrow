@@ -1,4 +1,5 @@
 import type { CategoryOption } from "@/common/types";
+import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
 
@@ -26,14 +27,16 @@ async function parseJsonBody(request: Request) {
   try {
     return await request.json();
   } catch {
+    logInvalidJson(new URL(request.url).pathname);
     return jsonError("Invalid JSON body", 400);
   }
 }
 
-async function parseId(context: RouteContext) {
+async function parseId(context: RouteContext, path: string) {
   const params = await context.params;
   const parsed = categoryIdParamsSchema.safeParse(params);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400);
   }
 
@@ -56,6 +59,7 @@ export async function getCategories() {
 }
 
 export async function postCategory(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -68,6 +72,7 @@ export async function postCategory(request: Request) {
 
   const parsed = categorySchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -80,12 +85,13 @@ export async function postCategory(request: Request) {
 }
 
 export async function patchCategory(request: Request, context: RouteContext) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const categoryId = await parseId(context);
+  const categoryId = await parseId(context, path);
   if (categoryId instanceof Response) {
     return categoryId;
   }
@@ -97,6 +103,7 @@ export async function patchCategory(request: Request, context: RouteContext) {
 
   const parsed = categorySchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -109,13 +116,14 @@ export async function patchCategory(request: Request, context: RouteContext) {
   return data instanceof Response ? data : jsonOk(data);
 }
 
-export async function removeCategory(_request: Request, context: RouteContext) {
+export async function removeCategory(request: Request, context: RouteContext) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const categoryId = await parseId(context);
+  const categoryId = await parseId(context, path);
   if (categoryId instanceof Response) {
     return categoryId;
   }
@@ -129,6 +137,7 @@ export async function removeCategory(_request: Request, context: RouteContext) {
 }
 
 export async function postSubcategory(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -141,6 +150,7 @@ export async function postSubcategory(request: Request) {
 
   const parsed = subcategorySchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -153,12 +163,13 @@ export async function postSubcategory(request: Request) {
 }
 
 export async function patchSubcategory(request: Request, context: RouteContext) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const subcategoryId = await parseId(context);
+  const subcategoryId = await parseId(context, path);
   if (subcategoryId instanceof Response) {
     return subcategoryId;
   }
@@ -170,6 +181,7 @@ export async function patchSubcategory(request: Request, context: RouteContext) 
 
   const parsed = subcategorySchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -183,15 +195,16 @@ export async function patchSubcategory(request: Request, context: RouteContext) 
 }
 
 export async function removeSubcategory(
-  _request: Request,
+  request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const subcategoryId = await parseId(context);
+  const subcategoryId = await parseId(context, path);
   if (subcategoryId instanceof Response) {
     return subcategoryId;
   }

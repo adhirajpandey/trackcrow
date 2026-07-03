@@ -7,6 +7,9 @@ jest.mock("@/lib/prisma-rewrite", () => ({
       findFirst: jest.fn(),
       findMany: jest.fn(),
     },
+    transaction: {
+      groupBy: jest.fn(),
+    },
     recipientIdentifier: {
       create: jest.fn(),
       findFirst: jest.fn(),
@@ -43,6 +46,7 @@ function recipientRecord(overrides: Record<string, unknown> = {}) {
 describe("recipient service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPrisma.transaction.groupBy.mockResolvedValue([]);
   });
 
   it("filters by recipient and identifier fields, paginates, and sorts by display name", async () => {

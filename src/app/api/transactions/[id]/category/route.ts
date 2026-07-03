@@ -1,3 +1,4 @@
-import { patchTransactionCategory as PATCH } from "@/server/modules/transactions/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { patchTransactionCategory as patchTransactionCategoryHandler } from "@/server/modules/transactions/controller";
 
-export { PATCH };
+export const PATCH = withRouteLogging(patchTransactionCategoryHandler);

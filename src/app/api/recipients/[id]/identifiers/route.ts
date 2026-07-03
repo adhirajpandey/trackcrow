@@ -1,3 +1,4 @@
-import { postRecipientIdentifier as POST } from "@/server/modules/recipients/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { postRecipientIdentifier as postRecipientIdentifierHandler } from "@/server/modules/recipients/controller";
 
-export { POST };
+export const POST = withRouteLogging(postRecipientIdentifierHandler);

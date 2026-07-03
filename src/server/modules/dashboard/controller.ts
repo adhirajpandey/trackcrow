@@ -1,3 +1,4 @@
+import { logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
 
@@ -14,6 +15,7 @@ async function requireUserUuid() {
 }
 
 export async function getSummary(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -25,6 +27,7 @@ export async function getSummary(request: Request) {
     endDate: searchParams.get("endDate") ?? undefined,
   });
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -37,6 +40,7 @@ export async function getSummary(request: Request) {
 }
 
 export async function getCategorySpending(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -48,6 +52,7 @@ export async function getCategorySpending(request: Request) {
     endDate: searchParams.get("endDate") ?? undefined,
   });
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -60,6 +65,7 @@ export async function getCategorySpending(request: Request) {
 }
 
 export async function getPeriodSpending(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -72,6 +78,7 @@ export async function getPeriodSpending(request: Request) {
     granularity: searchParams.get("granularity") ?? undefined,
   });
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 

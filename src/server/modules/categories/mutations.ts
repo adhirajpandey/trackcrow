@@ -17,7 +17,15 @@ export async function createCategory(
 
     return ok(category);
   } catch (error: any) {
-    logger.error("createCategory - Failed to create category", error as Error, { userUuid });
+    logger.error(
+      {
+        event: "category.create.db_failed",
+        userId: userUuid,
+        prismaCode: error?.code,
+        message: "Failed to create category",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -49,10 +57,16 @@ export async function updateCategory(
 
     return ok(category);
   } catch (error: any) {
-    logger.error("updateCategory - Failed to update category", error as Error, {
-      userUuid,
-      categoryId,
-    });
+    logger.error(
+      {
+        event: "category.update.db_failed",
+        userId: userUuid,
+        categoryId,
+        prismaCode: error?.code,
+        message: "Failed to update category",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -76,10 +90,15 @@ export async function deleteCategory(
     await prisma.category.delete({ where: { id: categoryId } });
     return ok({ id: categoryId });
   } catch (error) {
-    logger.error("deleteCategory - Failed to delete category", error as Error, {
-      userUuid,
-      categoryId,
-    });
+    logger.error(
+      {
+        event: "category.delete.db_failed",
+        userId: userUuid,
+        categoryId,
+        message: "Failed to delete category",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -108,10 +127,16 @@ export async function createSubcategory(
 
     return ok(subcategory);
   } catch (error: any) {
-    logger.error("createSubcategory - Failed to create subcategory", error as Error, {
-      userUuid,
-      categoryId: input.categoryId,
-    });
+    logger.error(
+      {
+        event: "subcategory.create.db_failed",
+        userId: userUuid,
+        categoryId: input.categoryId,
+        prismaCode: error?.code,
+        message: "Failed to create subcategory",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -153,10 +178,16 @@ export async function updateSubcategory(
 
     return ok(updated);
   } catch (error: any) {
-    logger.error("updateSubcategory - Failed to update subcategory", error as Error, {
-      userUuid,
-      subcategoryId,
-    });
+    logger.error(
+      {
+        event: "subcategory.update.db_failed",
+        userId: userUuid,
+        subcategoryId,
+        prismaCode: error?.code,
+        message: "Failed to update subcategory",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -180,10 +211,15 @@ export async function deleteSubcategory(
     await prisma.subcategory.delete({ where: { id: subcategoryId } });
     return ok({ id: subcategoryId });
   } catch (error) {
-    logger.error("deleteSubcategory - Failed to delete subcategory", error as Error, {
-      userUuid,
-      subcategoryId,
-    });
+    logger.error(
+      {
+        event: "subcategory.delete.db_failed",
+        userId: userUuid,
+        subcategoryId,
+        message: "Failed to delete subcategory",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

@@ -1,4 +1,5 @@
 import { TransactionSource } from "@/generated/prisma-rewrite";
+import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
 
@@ -25,6 +26,7 @@ async function parseJsonBody(request: Request) {
   try {
     return await request.json();
   } catch {
+    logInvalidJson(new URL(request.url).pathname);
     return jsonError("Invalid JSON body", 400);
   }
 }
@@ -34,10 +36,11 @@ async function requireUserUuid() {
   return unwrapOrResponse(session);
 }
 
-async function parseTransactionId(context: RouteContext) {
+async function parseTransactionId(context: RouteContext, path: string) {
   const params = await context.params;
   const parsed = transactionIdParamsSchema.safeParse(params);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400);
   }
 
@@ -45,6 +48,7 @@ async function parseTransactionId(context: RouteContext) {
 }
 
 export async function getTransactions(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -84,6 +88,7 @@ export async function getTransactions(request: Request) {
     subcategories: subcategories.length > 0 ? subcategories : undefined,
   });
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -96,6 +101,7 @@ export async function getTransactions(request: Request) {
 }
 
 export async function postTransaction(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -108,6 +114,7 @@ export async function postTransaction(request: Request) {
 
   const parsed = createTransactionSchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -121,15 +128,16 @@ export async function postTransaction(request: Request) {
 }
 
 export async function getTransaction(
-  _request: Request,
+  request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context);
+  const transactionId = await parseTransactionId(context, path);
   if (transactionId instanceof Response) {
     return transactionId;
   }
@@ -146,12 +154,13 @@ export async function patchTransaction(
   request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context);
+  const transactionId = await parseTransactionId(context, path);
   if (transactionId instanceof Response) {
     return transactionId;
   }
@@ -163,6 +172,7 @@ export async function patchTransaction(
 
   const parsed = updateTransactionSchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -180,12 +190,13 @@ export async function patchTransactionCategory(
   request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context);
+  const transactionId = await parseTransactionId(context, path);
   if (transactionId instanceof Response) {
     return transactionId;
   }
@@ -197,6 +208,7 @@ export async function patchTransactionCategory(
 
   const parsed = updateTransactionCategorySchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -211,15 +223,16 @@ export async function patchTransactionCategory(
 }
 
 export async function removeTransaction(
-  _request: Request,
+  request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context);
+  const transactionId = await parseTransactionId(context, path);
   if (transactionId instanceof Response) {
     return transactionId;
   }
@@ -233,15 +246,16 @@ export async function removeTransaction(
 }
 
 export async function getTransactionSuggestion(
-  _request: Request,
+  request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context);
+  const transactionId = await parseTransactionId(context, path);
   if (transactionId instanceof Response) {
     return transactionId;
   }

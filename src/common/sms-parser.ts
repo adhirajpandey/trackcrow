@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 export type ParsedTransactionDetails = {
   amount: number | null;
   recipient: string | null;
@@ -110,21 +112,31 @@ export function parseTransactionMessage(message: string): ParsedTransactionDetai
       if (match && match.groups) {
         try {
           const result = parser.mapper(match);
-          console.log(`Successfully parsed message with parser "${parser.name}":`, {
-            amount: result.amount,
-            recipient: result.recipient,
+          logger.debug({
+            event: "sms_parser.matched",
+            parserName: parser.name,
             type: result.type,
-            account: result.account
+            account: result.account,
+            hasAmount: result.amount != null,
+            hasRecipient: result.recipient != null,
           });
           return result;
         } catch (error) {
-          console.error(`Error mapping with parser "${parser.name}":`, error);
+          logger.warn({
+            event: "sms_parser.mapping_failed",
+            parserName: parser.name,
+            message: "SMS parser mapper failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
           // Continue to the next parser
         } 
       }
     }
   }
   
-  console.log("No parser matched the message:", message);
+  logger.debug({
+    event: "sms_parser.no_match",
+    message: "No SMS parser matched the message",
+  });
   return null;
 }

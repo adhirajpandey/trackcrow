@@ -113,9 +113,14 @@ export async function getDashboardSummary(
       averageSpend: Number(aggregate._avg.amount ?? 0),
     });
   } catch (error) {
-    logger.error("getDashboardSummary - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.summary.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load dashboard summary",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -215,9 +220,14 @@ export async function getSpendingByCategory(
         .sort((left, right) => right.totalSpend - left.totalSpend)
     );
   } catch (error) {
-    logger.error("getSpendingByCategory - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.category_spending.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load spending by category",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -266,9 +276,14 @@ export async function getSpendingByPeriod(
       }))
     );
   } catch (error) {
-    logger.error("getSpendingByPeriod - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.period_spending.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load spending by period",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -299,9 +314,14 @@ export async function getImportHealth(
 
     return ok({ parsedCount, failedCount, unparseableCount });
   } catch (error) {
-    logger.error("getImportHealth - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.import_health.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load import health",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -321,10 +341,15 @@ export async function getLargeTransactionCount(
     const count = await prisma.transaction.count({ where });
     return ok(count);
   } catch (error) {
-    logger.error("getLargeTransactionCount - Failed", error as Error, {
-      userUuid: input.userUuid,
-      minimumAmount: input.minimumAmount,
-    });
+    logger.error(
+      {
+        event: "dashboard.large_transaction_count.db_failed",
+        userId: input.userUuid,
+        minimumAmount: input.minimumAmount,
+        message: "Failed to load large transaction count",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -388,9 +413,14 @@ export async function getRecentLargeTransactions(
       }))
     );
   } catch (error) {
-    logger.error("getRecentLargeTransactions - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.recent_large_transactions.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load recent large transactions",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -454,9 +484,14 @@ export async function getRecentTransactions(
       }))
     );
   } catch (error) {
-    logger.error("getRecentTransactions - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.recent_transactions.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load recent transactions",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -528,9 +563,14 @@ export async function getFrequentRecipients(
         .slice(0, input.take ?? 5)
     );
   } catch (error) {
-    logger.error("getFrequentRecipients - Failed", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "dashboard.frequent_recipients.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load frequent recipients",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

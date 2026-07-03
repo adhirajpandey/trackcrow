@@ -1,3 +1,4 @@
-import { postResetCategories as POST } from "@/server/modules/categories/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { postResetCategories as postResetCategoriesHandler } from "@/server/modules/categories/controller";
 
-export { POST };
+export const POST = withRouteLogging(postResetCategoriesHandler);

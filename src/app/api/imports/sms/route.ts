@@ -1,3 +1,4 @@
-import { postSmsImport as POST } from "@/server/modules/imports/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { postSmsImport as postSmsImportHandler } from "@/server/modules/imports/controller";
 
-export { POST };
+export const POST = withRouteLogging(postSmsImportHandler);

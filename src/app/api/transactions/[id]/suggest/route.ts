@@ -1,3 +1,4 @@
-import { getTransactionSuggestion as GET } from "@/server/modules/transactions/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { getTransactionSuggestion as getTransactionSuggestionHandler } from "@/server/modules/transactions/controller";
 
-export { GET };
+export const GET = withRouteLogging(getTransactionSuggestionHandler);

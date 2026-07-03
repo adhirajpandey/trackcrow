@@ -1,3 +1,4 @@
-import { getPeriodSpending as GET } from "@/server/modules/dashboard/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { getPeriodSpending as getPeriodSpendingHandler } from "@/server/modules/dashboard/controller";
 
-export { GET };
+export const GET = withRouteLogging(getPeriodSpendingHandler);

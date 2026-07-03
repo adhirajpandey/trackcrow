@@ -396,9 +396,14 @@ export async function listRecipients(
       hasPrev: page > 1 && totalPages > 0,
     });
   } catch (error) {
-    logger.error("listRecipients - Failed to list recipients", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "recipient.list.db_failed",
+        userId: input.userUuid,
+        message: "Failed to list recipients",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -447,10 +452,15 @@ export async function getRecipient(
       })
     );
   } catch (error) {
-    logger.error("getRecipient - Failed to get recipient", error as Error, {
-      userUuid: input.userUuid,
-      recipientId: input.recipientId,
-    });
+    logger.error(
+      {
+        event: "recipient.read.db_failed",
+        userId: input.userUuid,
+        recipientId: input.recipientId,
+        message: "Failed to get recipient",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -503,10 +513,15 @@ export async function getRecipientDetail(
 
     return ok(toRecipientDetailDto(recipient));
   } catch (error) {
-    logger.error("getRecipientDetail - Failed to get recipient detail", error as Error, {
-      userUuid: input.userUuid,
-      recipientId: input.recipientId,
-    });
+    logger.error(
+      {
+        event: "recipient.detail.db_failed",
+        userId: input.userUuid,
+        recipientId: input.recipientId,
+        message: "Failed to get recipient detail",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -556,6 +571,14 @@ export async function addRecipientIdentifier(
           value: true,
           normalizedValue: true,
         },
+      });
+
+      logger.info({
+        event: "recipient.identifier_added",
+        userId: input.userUuid,
+        recipientId: input.recipientId,
+        identifierKind: kind,
+        status: "created",
       });
 
       return ok({
@@ -638,6 +661,15 @@ export async function addRecipientIdentifier(
       return updatedIdentifier;
     });
 
+    logger.info({
+      event: "recipient.identifier_added",
+      userId: input.userUuid,
+      recipientId: input.recipientId,
+      identifierKind: kind,
+      status: "moved",
+      movedTransactionCount: matchingTransactionIds.length,
+    });
+
     return ok({
       status: "moved",
       identifier: toIdentifierDto(movedIdentifier),
@@ -645,11 +677,16 @@ export async function addRecipientIdentifier(
       movedTransactionTotalAmount,
     });
   } catch (error) {
-    logger.error("addRecipientIdentifier - Failed to add recipient identifier", error as Error, {
-      userUuid: input.userUuid,
-      recipientId: input.recipientId,
-      kind,
-    });
+    logger.error(
+      {
+        event: "recipient.identifier_add.db_failed",
+        userId: input.userUuid,
+        recipientId: input.recipientId,
+        identifierKind: kind,
+        message: "Failed to add recipient identifier",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -722,10 +759,14 @@ export async function resolveRecipient(
       displayName: recipient.displayName,
     });
   } catch (error) {
-    logger.error("resolveRecipient - Failed to resolve recipient", error as Error, {
-      userUuid: input.userUuid,
-      recipientRaw,
-    });
+    logger.error(
+      {
+        event: "recipient.resolve.db_failed",
+        userId: input.userUuid,
+        message: "Failed to resolve recipient",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

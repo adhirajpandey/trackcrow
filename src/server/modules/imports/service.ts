@@ -17,6 +17,10 @@ export async function importSmsTransaction(
   >
 > {
   if (!input.token) {
+    logger.warn({
+      event: "auth.failed",
+      message: "SMS import rejected because the device token is missing",
+    });
     return fail("UNAUTHORIZED");
   }
 
@@ -33,6 +37,10 @@ export async function importSmsTransaction(
     });
 
     if (!tokenRecord) {
+      logger.warn({
+        event: "auth.failed",
+        message: "SMS import rejected because the device token is invalid",
+      });
       return fail("UNAUTHORIZED");
     }
 
@@ -53,6 +61,14 @@ export async function importSmsTransaction(
           parsedPayload: parsed ?? undefined,
           locationRaw: input.location ?? null,
         },
+      });
+
+      logger.warn({
+        event: "sms_import.parse_failed",
+        userId: tokenRecord.userUuid,
+        hasAmount: Boolean(parsed?.amount),
+        hasRecipient: Boolean(parsed?.recipient),
+        message: "SMS import could not extract required fields",
       });
 
       return fail("UNPROCESSABLE", {
@@ -91,6 +107,11 @@ export async function importSmsTransaction(
         },
       });
       if (transaction.error === "VALIDATION_ERROR") {
+        logger.warn({
+          event: "sms_import.transaction_failed",
+          userId: tokenRecord.userUuid,
+          message: "SMS import produced an unprocessable transaction",
+        });
         return fail("UNPROCESSABLE");
       }
       return fail("INTERNAL_ERROR");
@@ -108,9 +129,22 @@ export async function importSmsTransaction(
       },
     });
 
+    logger.info({
+      event: "sms_import.created",
+      userId: tokenRecord.userUuid,
+      transactionId: transaction.data.id,
+      source: TransactionSource.SMS,
+    });
+
     return ok(transaction.data);
   } catch (error) {
-    logger.error("importSmsTransaction - Failed to import SMS transaction", error as Error);
+    logger.error(
+      {
+        event: "sms_import.db_failed",
+        message: "Failed to import SMS transaction",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

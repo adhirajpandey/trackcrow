@@ -1,3 +1,4 @@
+import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
 
@@ -23,6 +24,7 @@ export async function getDeviceTokens() {
 }
 
 export async function postDeviceToken(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -32,11 +34,13 @@ export async function postDeviceToken(request: Request) {
   try {
     json = await request.json();
   } catch {
+    logInvalidJson(path);
     return jsonError("Invalid JSON body", 400);
   }
 
   const parsed = createDeviceTokenSchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -49,9 +53,10 @@ export async function postDeviceToken(request: Request) {
 }
 
 export async function removeDeviceToken(
-  _request: Request,
+  request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -60,6 +65,7 @@ export async function removeDeviceToken(
   const params = await context.params;
   const parsed = deviceTokenIdParamsSchema.safeParse(params);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400);
   }
 

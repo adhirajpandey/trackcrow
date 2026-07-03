@@ -51,9 +51,14 @@ export async function listDeviceTokens(
 
     return ok(tokens.map(toDeviceTokenDto));
   } catch (error) {
-    logger.error("listDeviceTokens - Failed to list tokens", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "device_token.list.db_failed",
+        userId: input.userUuid,
+        message: "Failed to list device tokens",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -89,14 +94,25 @@ export async function createDeviceToken(
       },
     });
 
+    logger.info({
+      event: "device_token.created",
+      userId: input.userUuid,
+      tokenId: tokenRecord.id,
+    });
+
     return ok({
       token: plainToken,
       record: toDeviceTokenDto(tokenRecord),
     });
   } catch (error) {
-    logger.error("createDeviceToken - Failed to create token", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "device_token.create.db_failed",
+        userId: input.userUuid,
+        message: "Failed to create device token",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -123,12 +139,23 @@ export async function revokeDeviceToken(
       data: { revokedAt: new Date() },
     });
 
-    return ok({ revoked: true });
-  } catch (error) {
-    logger.error("revokeDeviceToken - Failed to revoke token", error as Error, {
-      userUuid: input.userUuid,
+    logger.info({
+      event: "device_token.revoked",
+      userId: input.userUuid,
       tokenId: input.tokenId,
     });
+
+    return ok({ revoked: true });
+  } catch (error) {
+    logger.error(
+      {
+        event: "device_token.revoke.db_failed",
+        userId: input.userUuid,
+        tokenId: input.tokenId,
+        message: "Failed to revoke device token",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

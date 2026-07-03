@@ -1,6 +1,8 @@
+import { withRouteLogging } from "@/server/api/logging";
 import {
-  getTransactions as GET,
-  postTransaction as POST,
+  getTransactions as getTransactionsHandler,
+  postTransaction as postTransactionHandler,
 } from "@/server/modules/transactions/controller";
 
-export { GET, POST };
+export const GET = withRouteLogging(getTransactionsHandler);
+export const POST = withRouteLogging(postTransactionHandler);

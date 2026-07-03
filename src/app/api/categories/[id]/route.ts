@@ -1,6 +1,8 @@
+import { withRouteLogging } from "@/server/api/logging";
 import {
-  patchCategory as PATCH,
-  removeCategory as DELETE,
+  patchCategory as patchCategoryHandler,
+  removeCategory as removeCategoryHandler,
 } from "@/server/modules/categories/controller";
 
-export { DELETE, PATCH };
+export const PATCH = withRouteLogging(patchCategoryHandler);
+export const DELETE = withRouteLogging(removeCategoryHandler);

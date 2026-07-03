@@ -1,3 +1,4 @@
-import { getRecipientById as GET } from "@/server/modules/recipients/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { getRecipientById as getRecipientByIdHandler } from "@/server/modules/recipients/controller";
 
-export { GET };
+export const GET = withRouteLogging(getRecipientByIdHandler);

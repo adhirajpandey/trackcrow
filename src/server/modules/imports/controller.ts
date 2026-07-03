@@ -1,3 +1,4 @@
+import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 
 import { importSmsRequestSchema } from "./schemas";
@@ -13,17 +14,20 @@ function parseTokenFromAuthHeader(headerValue: string | null): string | null {
 }
 
 export async function postSmsImport(request: Request) {
+  const path = new URL(request.url).pathname;
   const token = parseTokenFromAuthHeader(request.headers.get("authorization"));
 
   let json: unknown;
   try {
     json = await request.json();
   } catch {
+    logInvalidJson(path);
     return jsonError("Invalid JSON body", 400);
   }
 
   const parsed = importSmsRequestSchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid payload", 400, { issues: parsed.error.issues });
   }
 

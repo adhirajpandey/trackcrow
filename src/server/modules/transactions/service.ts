@@ -241,9 +241,14 @@ export async function listTransactions(
       lastTxnDate: lastTxn?.timestamp.toISOString() ?? null,
     });
   } catch (error) {
-    logger.error("listTransactions - Failed to list transactions", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "transaction.list.db_failed",
+        userId: input.userUuid,
+        message: "Failed to list transactions",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -259,10 +264,15 @@ export async function getTransactionById(
 
     return ok(toTransactionDto(transaction as unknown as TransactionRecord));
   } catch (error) {
-    logger.error("getTransactionById - Failed to load transaction", error as Error, {
-      userUuid: input.userUuid,
-      transactionId: input.transactionId,
-    });
+    logger.error(
+      {
+        event: "transaction.read.db_failed",
+        userId: input.userUuid,
+        transactionId: input.transactionId,
+        message: "Failed to load transaction",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -295,9 +305,14 @@ export async function listTransactionsForRange(
       records.map((record) => toTransactionDto(record as unknown as TransactionRecord))
     );
   } catch (error) {
-    logger.error("listTransactionsForRange - Failed to load transactions", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "transaction.range_list.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load transactions for range",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -355,11 +370,24 @@ export async function createTransaction(
       },
     });
 
+    logger.info({
+      event: "transaction.created",
+      userId: input.userUuid,
+      transactionId: created.id,
+      source: input.source,
+    });
+
     return ok(created);
   } catch (error) {
-    logger.error("createTransaction - Failed to create transaction", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "transaction.create.db_failed",
+        userId: input.userUuid,
+        source: input.source,
+        message: "Failed to create transaction",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -419,12 +447,25 @@ export async function updateTransaction(
       },
     });
 
+    logger.info({
+      event: "transaction.updated",
+      userId: input.userUuid,
+      transactionId: input.transactionId,
+      source: input.source,
+    });
+
     return ok({ id: input.transactionId });
   } catch (error) {
-    logger.error("updateTransaction - Failed to update transaction", error as Error, {
-      userUuid: input.userUuid,
-      transactionId: input.transactionId,
-    });
+    logger.error(
+      {
+        event: "transaction.update.db_failed",
+        userId: input.userUuid,
+        transactionId: input.transactionId,
+        source: input.source,
+        message: "Failed to update transaction",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -476,6 +517,14 @@ export async function updateTransactionCategory(
       },
     });
 
+    logger.info({
+      event: "transaction.category_changed",
+      userId: input.userUuid,
+      transactionId: input.transactionId,
+      categoryId: updated.categoryId,
+      subcategoryId: updated.subcategoryId,
+    });
+
     return ok({
       id: updated.id,
       categoryId: updated.categoryId,
@@ -484,11 +533,16 @@ export async function updateTransactionCategory(
       subcategory: updated.subcategory?.name ?? null,
     });
   } catch (error) {
-    logger.error("updateTransactionCategory - Failed to update transaction category", error as Error, {
-      userUuid: input.userUuid,
-      transactionId: input.transactionId,
-      categoryId: input.categoryId,
-    });
+    logger.error(
+      {
+        event: "transaction.category_change.db_failed",
+        userId: input.userUuid,
+        transactionId: input.transactionId,
+        categoryId: input.categoryId,
+        message: "Failed to update transaction category",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -506,12 +560,22 @@ export async function deleteTransaction(
     }
 
     await prisma.transaction.delete({ where: { id: input.transactionId } });
-    return ok({ id: input.transactionId });
-  } catch (error) {
-    logger.error("deleteTransaction - Failed to delete transaction", error as Error, {
-      userUuid: input.userUuid,
+    logger.info({
+      event: "transaction.deleted",
+      userId: input.userUuid,
       transactionId: input.transactionId,
     });
+    return ok({ id: input.transactionId });
+  } catch (error) {
+    logger.error(
+      {
+        event: "transaction.delete.db_failed",
+        userId: input.userUuid,
+        transactionId: input.transactionId,
+        message: "Failed to delete transaction",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -568,10 +632,15 @@ export async function suggestTransactionCategory(
 
     return ok({ suggestedCategory, suggestedSubCategory });
   } catch (error) {
-    logger.error("suggestTransactionCategory - Failed to build suggestion", error as Error, {
-      userUuid: input.userUuid,
-      transactionId: input.transactionId,
-    });
+    logger.error(
+      {
+        event: "transaction.suggestion.db_failed",
+        userId: input.userUuid,
+        transactionId: input.transactionId,
+        message: "Failed to build transaction category suggestion",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

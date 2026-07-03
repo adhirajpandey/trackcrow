@@ -1,3 +1,4 @@
+import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
 
@@ -19,14 +20,16 @@ async function parseJsonBody(request: Request) {
   try {
     return await request.json();
   } catch {
+    logInvalidJson(new URL(request.url).pathname);
     return jsonError("Invalid JSON body", 400);
   }
 }
 
-async function parseRecipientId(context: RouteContext) {
+async function parseRecipientId(context: RouteContext, path: string) {
   const params = await context.params;
   const parsed = recipientIdParamsSchema.safeParse(params);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400);
   }
 
@@ -34,6 +37,7 @@ async function parseRecipientId(context: RouteContext) {
 }
 
 export async function getRecipients(request: Request) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -48,6 +52,7 @@ export async function getRecipients(request: Request) {
     sortOrder: searchParams.get("sortOrder") ?? undefined,
   });
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
@@ -60,9 +65,10 @@ export async function getRecipients(request: Request) {
 }
 
 export async function getRecipientById(
-  _request: Request,
+  request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
@@ -71,6 +77,7 @@ export async function getRecipientById(
   const params = await context.params;
   const parsed = recipientIdParamsSchema.safeParse(params);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400);
   }
 
@@ -86,12 +93,13 @@ export async function postRecipientIdentifier(
   request: Request,
   context: RouteContext
 ) {
+  const path = new URL(request.url).pathname;
   const sessionData = await requireUserUuid();
   if (sessionData instanceof Response) {
     return sessionData;
   }
 
-  const recipientId = await parseRecipientId(context);
+  const recipientId = await parseRecipientId(context, path);
   if (recipientId instanceof Response) {
     return recipientId;
   }
@@ -103,6 +111,7 @@ export async function postRecipientIdentifier(
 
   const parsed = addRecipientIdentifierSchema.safeParse(json);
   if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 

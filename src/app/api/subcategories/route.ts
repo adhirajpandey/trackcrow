@@ -1,3 +1,4 @@
-import { postSubcategory as POST } from "@/server/modules/categories/controller";
+import { withRouteLogging } from "@/server/api/logging";
+import { postSubcategory as postSubcategoryHandler } from "@/server/modules/categories/controller";
 
-export { POST };
+export const POST = withRouteLogging(postSubcategoryHandler);

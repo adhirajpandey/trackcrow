@@ -39,9 +39,14 @@ export async function ensureUserBootstrap(
 
     return ok(user);
   } catch (error) {
-    logger.error("ensureUserBootstrap - Failed to bootstrap user", error as Error, {
-      email: input.email,
-    });
+    logger.error(
+      {
+        event: "user.bootstrap.db_failed",
+        provider: input.provider,
+        message: "Failed to bootstrap user",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -68,9 +73,14 @@ export async function getMe(
 
     return ok(user);
   } catch (error) {
-    logger.error("getMe - Failed to load current user", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "user.read.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load current user",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

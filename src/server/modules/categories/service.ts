@@ -63,9 +63,14 @@ export async function ensureDefaultCategoriesForUser(
 
     return ok({ created: true });
   } catch (error) {
-    logger.error("ensureDefaultCategoriesForUser - Failed to seed categories", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "category.seed.db_failed",
+        userId: input.userUuid,
+        message: "Failed to seed default categories",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -86,9 +91,14 @@ export async function listCategoriesForUser(
 
     return ok(categories.map(toCategoryDto));
   } catch (error) {
-    logger.error("listCategoriesForUser - Failed to read categories", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "category.list.db_failed",
+        userId: input.userUuid,
+        message: "Failed to list categories",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -119,11 +129,21 @@ export async function resetCategoriesToDefault(
       }
     });
 
+    logger.info({
+      event: "category.reset",
+      userId: input.userUuid,
+    });
+
     return ok({ reset: true });
   } catch (error) {
-    logger.error("resetCategoriesToDefault - Failed to reset categories", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "category.reset.db_failed",
+        userId: input.userUuid,
+        message: "Failed to reset categories to default",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -140,11 +160,23 @@ export async function createCategory(
       select: { id: true, uuid: true },
     });
 
+    logger.info({
+      event: "category.created",
+      userId: input.userUuid,
+      categoryId: category.id,
+    });
+
     return ok(category);
   } catch (error: any) {
-    logger.error("createCategory - Failed to create category", error as Error, {
-      userUuid: input.userUuid,
-    });
+    logger.error(
+      {
+        event: "category.create.db_failed",
+        userId: input.userUuid,
+        prismaCode: error?.code,
+        message: "Failed to create category",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -172,12 +204,24 @@ export async function updateCategory(
       select: { id: true, uuid: true },
     });
 
-    return ok(category);
-  } catch (error: any) {
-    logger.error("updateCategory - Failed to update category", error as Error, {
-      userUuid: input.userUuid,
+    logger.info({
+      event: "category.updated",
+      userId: input.userUuid,
       categoryId: input.categoryId,
     });
+
+    return ok(category);
+  } catch (error: any) {
+    logger.error(
+      {
+        event: "category.update.db_failed",
+        userId: input.userUuid,
+        categoryId: input.categoryId,
+        prismaCode: error?.code,
+        message: "Failed to update category",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -198,12 +242,22 @@ export async function deleteCategory(
     }
 
     await prisma.category.delete({ where: { id: input.categoryId } });
-    return ok({ id: input.categoryId });
-  } catch (error) {
-    logger.error("deleteCategory - Failed to delete category", error as Error, {
-      userUuid: input.userUuid,
+    logger.info({
+      event: "category.deleted",
+      userId: input.userUuid,
       categoryId: input.categoryId,
     });
+    return ok({ id: input.categoryId });
+  } catch (error) {
+    logger.error(
+      {
+        event: "category.delete.db_failed",
+        userId: input.userUuid,
+        categoryId: input.categoryId,
+        message: "Failed to delete category",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }
@@ -229,12 +283,25 @@ export async function createSubcategory(
       select: { id: true, uuid: true },
     });
 
+    logger.info({
+      event: "subcategory.created",
+      userId: input.userUuid,
+      categoryId: input.categoryId,
+      subcategoryId: subcategory.id,
+    });
+
     return ok(subcategory);
   } catch (error: any) {
-    logger.error("createSubcategory - Failed to create subcategory", error as Error, {
-      userUuid: input.userUuid,
-      categoryId: input.categoryId,
-    });
+    logger.error(
+      {
+        event: "subcategory.create.db_failed",
+        userId: input.userUuid,
+        categoryId: input.categoryId,
+        prismaCode: error?.code,
+        message: "Failed to create subcategory",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -272,12 +339,25 @@ export async function updateSubcategory(
       select: { id: true, uuid: true },
     });
 
-    return ok(updated);
-  } catch (error: any) {
-    logger.error("updateSubcategory - Failed to update subcategory", error as Error, {
-      userUuid: input.userUuid,
+    logger.info({
+      event: "subcategory.updated",
+      userId: input.userUuid,
+      categoryId: input.categoryId,
       subcategoryId: input.subcategoryId,
     });
+
+    return ok(updated);
+  } catch (error: any) {
+    logger.error(
+      {
+        event: "subcategory.update.db_failed",
+        userId: input.userUuid,
+        subcategoryId: input.subcategoryId,
+        prismaCode: error?.code,
+        message: "Failed to update subcategory",
+      },
+      error
+    );
     if (error?.code === "P2002") {
       return fail("CONFLICT");
     }
@@ -298,12 +378,22 @@ export async function deleteSubcategory(
     }
 
     await prisma.subcategory.delete({ where: { id: input.subcategoryId } });
-    return ok({ id: input.subcategoryId });
-  } catch (error) {
-    logger.error("deleteSubcategory - Failed to delete subcategory", error as Error, {
-      userUuid: input.userUuid,
+    logger.info({
+      event: "subcategory.deleted",
+      userId: input.userUuid,
       subcategoryId: input.subcategoryId,
     });
+    return ok({ id: input.subcategoryId });
+  } catch (error) {
+    logger.error(
+      {
+        event: "subcategory.delete.db_failed",
+        userId: input.userUuid,
+        subcategoryId: input.subcategoryId,
+        message: "Failed to delete subcategory",
+      },
+      error
+    );
     return fail("INTERNAL_ERROR");
   }
 }

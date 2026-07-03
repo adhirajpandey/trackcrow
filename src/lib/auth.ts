@@ -43,7 +43,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn(params) {
       if (!params.user.email) {
-        logger.info("signIn - Missing user email");
+        logger.warn({
+          event: "auth.failed",
+          message: "Sign-in denied because the user email is missing",
+        });
         return false;
       }
 
@@ -55,8 +58,9 @@ export const authOptions: NextAuthOptions = {
       });
 
       if (!bootstrap.ok) {
-        logger.error("signIn - Failed to bootstrap user", undefined, {
-          email: params.user.email,
+        logger.error({
+          event: "auth.bootstrap_failed",
+          message: "Failed to bootstrap user during sign-in",
         });
         return false;
       }
