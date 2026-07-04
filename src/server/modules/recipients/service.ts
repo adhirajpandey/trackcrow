@@ -162,11 +162,11 @@ function toAliasDto(identifier: {
 
 function transactionMatchesAlias(
   transaction: { recipientRaw: string; recipientName: string | null },
-  normalizedValue: string
+  alias: { kind: string; normalizedValue: string }
 ) {
   return (
-    normalizeValue(transaction.recipientRaw) === normalizedValue ||
-    (transaction.recipientName ? normalizeValue(transaction.recipientName) === normalizedValue : false)
+    detectAliasType(transaction.recipientRaw) === alias.kind &&
+    normalizeValue(transaction.recipientRaw) === alias.normalizedValue
   );
 }
 
@@ -194,7 +194,7 @@ async function buildAliasTransferImpact(input: {
     },
   });
   const matchingTransactions = transactions.filter((transaction) =>
-    transactionMatchesAlias(transaction, input.alias.normalizedValue)
+    transactionMatchesAlias(transaction, input.alias)
   );
   const totalAmount = matchingTransactions.reduce(
     (sum, transaction) => sum + transaction.amount.toNumber(),
@@ -698,7 +698,10 @@ export async function addRecipientAlias(
       },
     });
     const matchingTransactions = sourceTransactions.filter((transaction) =>
-      transactionMatchesAlias(transaction, normalizedValue)
+      transactionMatchesAlias(transaction, {
+        kind,
+        normalizedValue,
+      })
     );
     const matchingTransactionIds = matchingTransactions.map((transaction) => transaction.id);
     const movedTransactionTotalAmount = matchingTransactions.reduce(

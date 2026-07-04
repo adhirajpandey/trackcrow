@@ -1,7 +1,7 @@
 import { buildRecipientDetailPageData } from "./recipient-detail-model";
 
 describe("buildRecipientDetailPageData", () => {
-  it("sorts aliases by transaction count descending", () => {
+  it("sorts aliases by transaction count descending without double-counting overlap", () => {
     const pageData = buildRecipientDetailPageData({
       uuid: "rcp-7",
       displayName: "Sample Recipient",
@@ -105,12 +105,12 @@ describe("buildRecipientDetailPageData", () => {
 
     expect(pageData.aliases.map((alias) => alias.id)).toEqual([
       "rid-high",
-      "rid-mid",
       "rid-low",
+      "rid-mid",
     ]);
     expect(pageData.aliases.map((alias) => alias.transactionCount)).toEqual([
       3,
-      2,
+      1,
       1,
     ]);
   });

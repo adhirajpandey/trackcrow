@@ -31,6 +31,35 @@ function formatAliasSource(aliasType: string) {
       return "Alias - from import";
   }
 }
+
+function normalizeAliasValue(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function detectAliasType(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.includes("@")) {
+    return "UPI_ID";
+  }
+
+  if (trimmed === trimmed.toUpperCase() && trimmed.length > 4) {
+    return "CARD_MERCHANT";
+  }
+
+  return "TEXT";
+}
+
+function transactionMatchesAlias(input: {
+  aliasType: string;
+  normalizedAliasValue: string;
+  recipientRaw: string;
+}) {
+  return (
+    detectAliasType(input.recipientRaw) === input.aliasType &&
+    normalizeAliasValue(input.recipientRaw) === input.normalizedAliasValue
+  );
+}
+
 function formatSourceMixValue(sourceCounts: Map<string, number>) {
   if (sourceCounts.size === 0) {
     return "No transactions yet";
@@ -155,18 +184,11 @@ export function buildRecipientDetailPageData(
         typeLabel: formatAliasType(alias.aliasType),
         value: alias.value,
         transactionCount: recipient.linkedTransactions.filter((transaction) => {
-          const normalizedRecipientRaw = transaction.recipientRaw
-            .trim()
-            .toLowerCase()
-            .replace(/\s+/g, " ");
-          const normalizedRecipientName = transaction.recipientName
-            ? transaction.recipientName.trim().toLowerCase().replace(/\s+/g, " ")
-            : null;
-
-          return (
-            normalizedRecipientRaw === alias.normalizedValue ||
-            normalizedRecipientName === alias.normalizedValue
-          );
+          return transactionMatchesAlias({
+            aliasType: alias.aliasType,
+            normalizedAliasValue: alias.normalizedValue,
+            recipientRaw: transaction.recipientRaw,
+          });
         }).length,
         sourceLabel: formatAliasSource(alias.aliasType),
       }))
