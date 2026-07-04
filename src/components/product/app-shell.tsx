@@ -8,7 +8,6 @@ import {
   ClipboardList,
   Gauge,
   LogOut,
-  Menu,
   ReceiptText,
   ScrollText,
   Settings,
@@ -65,23 +64,20 @@ export function AppShell({
       <div className="min-w-0 max-w-full overflow-x-hidden">
         <header className="sticky top-0 z-20 flex min-h-16 items-center border-b border-border/70 bg-background/95 px-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] backdrop-blur lg:hidden">
           <div className="flex items-center gap-3.5">
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 rounded-[12px] border border-transparent bg-transparent text-secondary-foreground/88 hover:bg-white/4 hover:text-foreground"
+              className="-ml-1 rounded-[14px] px-1 py-1 transition-colors hover:bg-white/4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               onClick={() => setIsOpen(true)}
               aria-label="Open navigation"
               title="Open navigation"
             >
-              <Menu className="h-[18px] w-[18px]" />
-            </Button>
-            <BrandMark
-              className="gap-4"
-              size="compact"
-              markClassName="h-11 w-11 rounded-[12px]"
-              textClassName="pt-px text-base tracking-normal text-foreground"
-            />
+              <BrandMark
+                className="gap-4"
+                size="compact"
+                markClassName="h-11 w-11 rounded-[12px]"
+                textClassName="pt-px text-base tracking-normal text-foreground"
+              />
+            </button>
           </div>
         </header>
 
