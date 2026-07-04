@@ -42,8 +42,8 @@ export type TransactionRecord = {
   type: TransactionType;
   source: TransactionSource;
   recipientUuid: string;
-  recipientRaw: string;
-  recipientName: string | null;
+  recipientRaw?: string;
+  recipientName?: string | null;
   recipientDisplayName: string;
   reference: string | null;
   accountLabel: string | null;

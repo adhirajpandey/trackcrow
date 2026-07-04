@@ -1,15 +1,17 @@
 import type { ServiceResult } from "@/server/shared/result";
 import type { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 
+export type RecipientAliasType = RecipientIdentifierKind;
+
 export type RecipientDto = {
   uuid: string;
   displayName: string;
   normalizedName: string;
   transactionCount: number;
   totalAmount: number;
-  identifiers: Array<{
+  aliases: Array<{
     uuid: string;
-    kind: string;
+    aliasType: string;
     value: string;
     normalizedValue: string;
   }>;
@@ -47,9 +49,9 @@ export type RecipientDetailDto = {
   createdAt: string;
   updatedAt: string;
   transactionCount: number;
-  identifiers: Array<{
+  aliases: Array<{
     uuid: string;
-    kind: string;
+    aliasType: string;
     value: string;
     normalizedValue: string;
   }>;
@@ -67,13 +69,17 @@ export type RecipientLookupInput = {
   recipientUuid: string;
 };
 
-export type RecipientIdentifierWriteInput = RecipientLookupInput & {
+export type RecipientUpdateInput = RecipientLookupInput & {
+  displayName: string;
+};
+
+export type RecipientAliasWriteInput = RecipientLookupInput & {
   value: string;
-  kind?: RecipientIdentifierKind | "AUTO";
+  aliasType?: RecipientAliasType | "AUTO";
   transfer?: boolean;
 };
 
-export type RecipientIdentifierTransferImpact = {
+export type RecipientAliasTransferImpact = {
   sourceRecipient: {
     uuid: string;
     displayName: string;
@@ -82,9 +88,9 @@ export type RecipientIdentifierTransferImpact = {
     uuid: string;
     displayName: string;
   };
-  identifier: {
+  alias: {
     uuid: string;
-    kind: string;
+    aliasType: string;
     value: string;
     normalizedValue: string;
   };
@@ -92,11 +98,11 @@ export type RecipientIdentifierTransferImpact = {
   totalAmount: number;
 };
 
-export type RecipientIdentifierWriteDto = {
+export type RecipientAliasWriteDto = {
   status: "created" | "already_linked" | "moved";
-  identifier: {
+  alias: {
     uuid: string;
-    kind: string;
+    aliasType: string;
     value: string;
     normalizedValue: string;
   };
@@ -115,7 +121,11 @@ export type RecipientListInput = {
 };
 
 export type RecipientListResult = ServiceResult<RecipientListDto, "INTERNAL_ERROR">;
-export type RecipientIdentifierWriteResult = ServiceResult<
-  RecipientIdentifierWriteDto,
+export type RecipientUpdateResult = ServiceResult<
+  RecipientDto,
+  "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR"
+>;
+export type RecipientAliasWriteResult = ServiceResult<
+  RecipientAliasWriteDto,
   "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR"
 >;

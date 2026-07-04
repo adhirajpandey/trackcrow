@@ -1,5 +1,4 @@
 import type { CategoryOption, TransactionListResponse, TransactionRecord } from "@/common/types";
-import { formatRecipientDisplayLabel } from "@/common/recipient-display";
 import {
   getDashboardRangeState,
   type DashboardRangeValue,
@@ -165,12 +164,7 @@ function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
   return {
     uuid: transaction.uuid,
     recipientUuid: transaction.recipientUuid,
-    recipient: formatRecipientDisplayLabel({
-      recipientName: transaction.recipientName,
-      recipientDisplayName: transaction.recipientDisplayName,
-      recipientRaw: transaction.recipientRaw,
-      fallbackLabel: "Unknown recipient",
-    }),
+    recipient: transaction.recipientDisplayName,
     amount: transaction.amount,
     category: transaction.category,
     subcategory: transaction.subcategory,

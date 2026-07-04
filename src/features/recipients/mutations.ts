@@ -2,35 +2,60 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { apiPost } from "@/lib/api/client";
+import { apiPatch, apiPost } from "@/lib/api/client";
 import { dashboardQueryKeys } from "@/features/dashboard/query-keys";
 import { transactionsQueryKeys } from "@/features/transactions/query-keys";
 
 import { recipientsQueryKeys } from "./query-keys";
 import type {
-  RecipientIdentifierTransferImpact,
-  RecipientIdentifierWriteDto,
+  RecipientAliasTransferImpact,
+  RecipientAliasWriteDto,
+  RecipientListItemDto,
 } from "./types";
 
-export type AddRecipientIdentifierInput = {
+export type AddRecipientAliasInput = {
   recipientUuid: string;
   value: string;
-  kind?: string;
+  aliasType?: string;
   transfer?: boolean;
 };
 
-export type AddRecipientIdentifierResponse = RecipientIdentifierWriteDto;
-export type IdentifierTransferImpact = RecipientIdentifierTransferImpact;
+export type AddRecipientAliasResponse = RecipientAliasWriteDto;
+export type AliasTransferImpact = RecipientAliasTransferImpact;
 
-export function useAddRecipientIdentifierMutation() {
+export function useAddRecipientAliasMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ recipientUuid, ...input }: AddRecipientIdentifierInput) =>
-      apiPost<AddRecipientIdentifierResponse>(
-        `/api/recipients/${recipientUuid}/identifiers`,
+    mutationFn: ({ recipientUuid, ...input }: AddRecipientAliasInput) =>
+      apiPost<AddRecipientAliasResponse>(
+        `/api/recipients/${recipientUuid}/aliases`,
         input
       ),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: recipientsQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+      ]);
+    },
+  });
+}
+
+export function useUpdateRecipientMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      recipientUuid,
+      displayName,
+    }: {
+      recipientUuid: string;
+      displayName: string;
+    }) =>
+      apiPatch<RecipientListItemDto>(`/api/recipients/${recipientUuid}`, {
+        displayName,
+      }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: recipientsQueryKeys.all }),

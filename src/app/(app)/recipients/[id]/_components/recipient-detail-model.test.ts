@@ -1,7 +1,7 @@
 import { buildRecipientDetailPageData } from "./recipient-detail-model";
 
 describe("buildRecipientDetailPageData", () => {
-  it("sorts identifiers by transaction count descending", () => {
+  it("sorts aliases by transaction count descending", () => {
     const pageData = buildRecipientDetailPageData({
       uuid: "rcp-7",
       displayName: "Sample Recipient",
@@ -9,22 +9,22 @@ describe("buildRecipientDetailPageData", () => {
       createdAt: "2026-06-01T00:00:00.000Z",
       updatedAt: "2026-06-30T00:00:00.000Z",
       transactionCount: 5,
-      identifiers: [
+      aliases: [
         {
           uuid: "rid-low",
-          kind: "UPI_ID",
+          aliasType: "UPI_ID",
           value: "low@upi",
           normalizedValue: "low@upi",
         },
         {
           uuid: "rid-high",
-          kind: "CARD_MERCHANT",
+          aliasType: "CARD_MERCHANT",
           value: "HIGH CARD",
           normalizedValue: "high card",
         },
         {
           uuid: "rid-mid",
-          kind: "TEXT",
+          aliasType: "TEXT",
           value: "mid text",
           normalizedValue: "mid text",
         },
@@ -103,12 +103,12 @@ describe("buildRecipientDetailPageData", () => {
       ],
     });
 
-    expect(pageData.identifiers.map((identifier) => identifier.id)).toEqual([
+    expect(pageData.aliases.map((alias) => alias.id)).toEqual([
       "rid-high",
       "rid-mid",
       "rid-low",
     ]);
-    expect(pageData.identifiers.map((identifier) => identifier.transactionCount)).toEqual([
+    expect(pageData.aliases.map((alias) => alias.transactionCount)).toEqual([
       3,
       2,
       1,
@@ -138,7 +138,7 @@ describe("buildRecipientDetailPageData", () => {
       createdAt: "2026-06-01T00:00:00.000Z",
       updatedAt: "2026-06-30T00:00:00.000Z",
       transactionCount: linkedTransactions.length,
-      identifiers: [],
+      aliases: [],
       linkedTransactions,
     });
 

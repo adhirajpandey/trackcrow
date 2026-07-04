@@ -11,6 +11,7 @@ import type {
   TransactionCreateResult,
   TransactionDeleteResult,
   TransactionDto,
+  TransactionListItemDto,
   TransactionGetResult,
   TransactionListRangeInput,
   TransactionListResult,
@@ -77,6 +78,31 @@ function toTransactionDto(record: TransactionRecord): TransactionDto {
     subcategory: record.subcategory?.name ?? null,
     categoryUuid: record.category?.uuid ?? null,
     subcategoryUuid: record.subcategory?.uuid ?? null,
+  };
+}
+
+function toTransactionListItemDto(record: TransactionRecord): TransactionListItemDto {
+  const dto = toTransactionDto(record);
+  return {
+    uuid: dto.uuid,
+    userUuid: dto.userUuid,
+    amount: dto.amount,
+    currency: dto.currency,
+    type: dto.type,
+    source: dto.source,
+    recipientUuid: dto.recipientUuid,
+    recipientDisplayName: dto.recipientDisplayName,
+    reference: dto.reference,
+    accountLabel: dto.accountLabel,
+    remarks: dto.remarks,
+    locationRaw: dto.locationRaw,
+    timestamp: dto.timestamp,
+    createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt,
+    category: dto.category,
+    subcategory: dto.subcategory,
+    categoryUuid: dto.categoryUuid,
+    subcategoryUuid: dto.subcategoryUuid,
   };
 }
 
@@ -166,6 +192,40 @@ async function getOwnedTransaction(userUuid: string, transactionUuid: string) {
       },
     },
   });
+}
+
+async function resolveExistingRecipient(input: {
+  userUuid: string;
+  recipientUuid: string;
+}) {
+  try {
+    const recipient = await prisma.recipient.findFirst({
+      where: { uuid: input.recipientUuid, userUuid: input.userUuid },
+      select: { id: true, displayName: true },
+    });
+
+    if (!recipient) {
+      return fail("VALIDATION_ERROR" as const, [
+        { path: ["recipientUuid"], message: "Unknown recipient" },
+      ]);
+    }
+
+    return ok({
+      recipientId: recipient.id,
+      displayName: recipient.displayName,
+    });
+  } catch (error) {
+    logger.error(
+      {
+        event: "transaction.recipient_resolve.db_failed",
+        userId: input.userUuid,
+        recipientUuid: input.recipientUuid,
+        message: "Failed to resolve transaction recipient",
+      },
+      error
+    );
+    return fail("INTERNAL_ERROR" as const);
+  }
 }
 
 export async function listTransactions(
@@ -268,7 +328,7 @@ export async function listTransactions(
 
     return ok({
       transactions: records.map((record) =>
-        toTransactionDto(record as unknown as TransactionRecord)
+        toTransactionListItemDto(record as unknown as TransactionRecord)
       ),
       page,
       pageSize,
@@ -369,14 +429,25 @@ export async function createTransaction(
       return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
-    const recipientResult = await resolveRecipient({
-      userUuid: input.userUuid,
-      recipientRaw: input.recipientRaw,
-      recipientName: input.recipientName,
-    });
+    const recipientResult =
+      "recipientUuid" in input
+        ? await resolveExistingRecipient({
+            userUuid: input.userUuid,
+            recipientUuid: input.recipientUuid,
+          })
+        : await resolveRecipient({
+            userUuid: input.userUuid,
+            recipientRaw: input.recipientRaw,
+            recipientName: input.recipientName,
+          });
     if (!recipientResult.ok) {
       return recipientResult;
     }
+
+    const recipientRaw =
+      "recipientRaw" in input ? input.recipientRaw.trim() : recipientResult.data.displayName;
+    const recipientName =
+      "recipientName" in input ? input.recipientName?.trim() || null : recipientResult.data.displayName;
 
     const created = await prisma.transaction.create({
       data: {
@@ -388,8 +459,8 @@ export async function createTransaction(
         currency: "INR",
         type: input.type,
         source: input.source,
-        recipientRaw: input.recipientRaw.trim(),
-        recipientName: input.recipientName?.trim() || null,
+        recipientRaw,
+        recipientName,
         reference: input.reference?.trim() || null,
         accountLabel: input.accountLabel?.trim() || null,
         remarks: input.remarks?.trim() || null,
@@ -445,25 +516,13 @@ export async function updateTransaction(
       return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
-    const recipientResult = await resolveRecipient({
-      userUuid: input.userUuid,
-      recipientRaw: input.recipientRaw,
-      recipientName: input.recipientName,
-    });
-    if (!recipientResult.ok) {
-      return recipientResult;
-    }
-
     await prisma.transaction.update({
       where: { id: existing.id },
       data: {
-        recipientId: recipientResult.data.recipientId,
         categoryId: categorySelection.data.categoryId,
         subcategoryId: categorySelection.data.subcategoryId,
         amount: input.amount,
         type: input.type,
-        recipientRaw: input.recipientRaw.trim(),
-        recipientName: input.recipientName?.trim() || null,
         reference: input.reference?.trim() || null,
         accountLabel: input.accountLabel?.trim() || null,
         remarks: input.remarks?.trim() || null,

@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
-import { formatRecipientDisplayLabel } from "@/common/recipient-display";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
 import type { DashboardRangeInput, SpendingByPeriodInput } from "./types";
@@ -68,6 +67,20 @@ function getPeriodKey(date: Date, granularity: NonNullable<SpendingByPeriodInput
   }
 
   return `${ist.year}-${formatPeriodPart(ist.month)}`;
+}
+
+function getCanonicalRecipientLabel(input: {
+  recipientDisplayName?: string | null;
+  recipientName?: string | null;
+  recipientRaw?: string | null;
+  fallbackLabel: string;
+}) {
+  return (
+    input.recipientDisplayName?.trim() ||
+    input.recipientName?.trim() ||
+    input.recipientRaw?.trim() ||
+    input.fallbackLabel
+  );
 }
 
 export async function getDashboardSummary(
@@ -396,7 +409,7 @@ export async function getRecentLargeTransactions(
     return ok(
       transactions.map((transaction) => ({
         uuid: transaction.uuid,
-        recipient: formatRecipientDisplayLabel({
+        recipient: getCanonicalRecipientLabel({
           recipientName: transaction.recipientName,
           recipientDisplayName: transaction.recipient?.displayName,
           recipientRaw: transaction.recipientRaw,
@@ -464,7 +477,7 @@ export async function getRecentTransactions(
     return ok(
       transactions.map((transaction) => ({
         uuid: transaction.uuid,
-        recipient: formatRecipientDisplayLabel({
+        recipient: getCanonicalRecipientLabel({
           recipientName: transaction.recipientName,
           recipientDisplayName: transaction.recipient?.displayName,
           recipientRaw: transaction.recipientRaw,
@@ -524,13 +537,12 @@ export async function getFrequentRecipients(
       { recipientUuid: string | null; recipient: string; paymentCount: number; totalAmount: number }
     >();
     for (const transaction of transactions) {
-      const recipient =
-        formatRecipientDisplayLabel({
-          recipientName: transaction.recipientName,
-          recipientDisplayName: transaction.recipient?.displayName,
-          recipientRaw: transaction.recipientRaw,
-          fallbackLabel: "Unknown payee",
-        });
+      const recipient = getCanonicalRecipientLabel({
+        recipientName: transaction.recipientName,
+        recipientDisplayName: transaction.recipient?.displayName,
+        recipientRaw: transaction.recipientRaw,
+        fallbackLabel: "Unknown payee",
+      });
       const key = transaction.recipient?.uuid
         ? `uuid:${transaction.recipient.uuid}`
         : `label:${recipient}`;

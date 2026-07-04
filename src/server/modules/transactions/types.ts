@@ -9,8 +9,8 @@ export type TransactionDto = {
   type: TransactionType;
   source: TransactionSource;
   recipientUuid: string;
-  recipientRaw: string;
-  recipientName: string | null;
+  recipientRaw?: string;
+  recipientName?: string | null;
   recipientDisplayName: string;
   reference: string | null;
   accountLabel: string | null;
@@ -25,8 +25,10 @@ export type TransactionDto = {
   subcategoryUuid: string | null;
 };
 
+export type TransactionListItemDto = Omit<TransactionDto, "recipientRaw" | "recipientName">;
+
 export type TransactionListDto = {
-  transactions: TransactionDto[];
+  transactions: TransactionListItemDto[];
   page: number;
   pageSize: number;
   total: number;
@@ -56,11 +58,9 @@ export type TransactionListRangeInput = {
   endDate?: Date;
 };
 
-export type TransactionWriteInput = {
+export type TransactionWriteBaseInput = {
   userUuid: string;
   amount: number;
-  recipientRaw: string;
-  recipientName?: string | null;
   categoryUuid?: string | null;
   subcategoryUuid?: string | null;
   type: TransactionType;
@@ -72,7 +72,18 @@ export type TransactionWriteInput = {
   source: TransactionSource;
 };
 
-export type TransactionUpdateInput = TransactionWriteInput & {
+export type ManualTransactionWriteInput = TransactionWriteBaseInput & {
+  recipientUuid: string;
+};
+
+export type ImportedTransactionWriteInput = TransactionWriteBaseInput & {
+  recipientRaw: string;
+  recipientName?: string | null;
+};
+
+export type TransactionWriteInput = ManualTransactionWriteInput | ImportedTransactionWriteInput;
+
+export type TransactionUpdateInput = TransactionWriteBaseInput & {
   transactionUuid: string;
 };
 

@@ -43,7 +43,7 @@ import {
 } from "@/features/recipients/query-state";
 import { useRecipientsQuery } from "@/features/recipients/queries";
 import type {
-  RecipientIdentifierChip,
+  RecipientAliasChip,
   RecipientsPageInitialData,
   RecipientsPageRow,
 } from "@/features/recipients/types";
@@ -73,7 +73,7 @@ type ColumnMeta = {
   widthClassName?: string;
 };
 
-function getIdentifierChipClassName(tone: RecipientIdentifierChip["tone"]) {
+function getAliasChipClassName(tone: RecipientAliasChip["tone"]) {
   switch (tone) {
     case "upi":
       return "border-emerald-500/25 bg-emerald-500/12 text-emerald-300";
@@ -106,26 +106,26 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
     ),
   },
   {
-    accessorKey: "identifierChips",
+    accessorKey: "aliasChips",
     meta: { widthClassName: "w-[40%]" } satisfies ColumnMeta,
-    header: "Identifiers",
+    header: "Aliases",
     cell: ({ row }) => (
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {row.original.identifierChips.map((identifier) => (
+        {row.original.aliasChips.map((alias) => (
           <span
-            key={identifier.id}
+            key={alias.id}
             className={cn(
               "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
-              getIdentifierChipClassName(identifier.tone)
+              getAliasChipClassName(alias.tone)
             )}
-            title={identifier.value}
+            title={alias.value}
           >
-            <span className="truncate">{identifier.value}</span>
+            <span className="truncate">{alias.value}</span>
           </span>
         ))}
-        {row.original.overflowIdentifierCount > 0 ? (
+        {row.original.overflowAliasCount > 0 ? (
           <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
-            +{row.original.overflowIdentifierCount} more
+            +{row.original.overflowAliasCount} more
           </span>
         ) : null}
       </div>
@@ -243,13 +243,13 @@ export function RecipientsPageView({
       <MobilePageHeader
         eyebrow="Recipient workspace"
         title="Recipients"
-        description="Review resolved payees, identifiers, linked counts, and spend concentration."
+        description="Review resolved payees, aliases, linked counts, and spend concentration."
       />
       <div className="hidden lg:block">
         <AppPageHeader
           eyebrow="Recipient workspace"
           title="Recipients"
-          description="Review resolved payees, identifiers, linked counts, and spend concentration."
+          description="Review resolved payees, aliases, linked counts, and spend concentration."
         />
       </div>
 
@@ -269,7 +269,7 @@ export function RecipientsPageView({
       <section className={cn(mobileSurfaceClassName, "p-4 lg:hidden")}>
         <MobileSearchBar
           defaultValue={data.filters.q}
-          placeholder="Search recipient, normalized name, identifier..."
+          placeholder="Search recipient, normalized name, alias..."
           onChange={(nextValue) => {
             if (searchTimeoutRef.current !== null) {
               window.clearTimeout(searchTimeoutRef.current);
@@ -514,7 +514,7 @@ export function RecipientsPageView({
             <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 px-4 py-3.5">
               <DetailMetric
                 icon={<Hash className="h-4 w-4" />}
-                label="Identifiers"
+                label="Aliases"
                 value={drawerRow.secondaryLabel}
               />
               <DetailMetric
@@ -523,22 +523,22 @@ export function RecipientsPageView({
                 value={String(drawerRow.transactionCount)}
               />
             </div>
-            {drawerRow.identifierChips.length > 0 ? (
+            {drawerRow.aliasChips.length > 0 ? (
               <div className="grid gap-2 rounded-[8px] border border-border/35 bg-background/6 px-4 py-3.5">
-                {drawerRow.identifierChips.slice(0, 2).map((identifier, index) => (
+                {drawerRow.aliasChips.slice(0, 2).map((alias, index) => (
                   <div
-                    key={identifier.id}
+                    key={alias.id}
                     className="flex items-start justify-between gap-3"
                   >
                     <span className="shrink-0 text-sm text-secondary-foreground">
-                      Identifier {index + 1}
+                      Alias {index + 1}
                     </span>
-                    <MobileLongValue value={identifier.value} className="text-right" />
+                    <MobileLongValue value={alias.value} className="text-right" />
                   </div>
                 ))}
-                {drawerRow.overflowIdentifierCount > 0 ? (
+                {drawerRow.overflowAliasCount > 0 ? (
                   <p className="text-sm font-medium text-secondary-foreground">
-                    +{drawerRow.overflowIdentifierCount} more
+                    +{drawerRow.overflowAliasCount} more
                   </p>
                 ) : null}
               </div>

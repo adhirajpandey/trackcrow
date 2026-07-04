@@ -130,8 +130,7 @@ export async function getDeviceTokens() {
 
 export async function createManualTransaction(input: {
   amount: number;
-  recipientRaw: string;
-  recipientName?: string | null;
+  recipientUuid: string;
   categoryUuid?: string | null;
   subcategoryUuid?: string | null;
   type: TransactionType;
@@ -151,8 +150,6 @@ export async function updateManualTransaction(
   transactionUuid: string,
   input: {
     amount: number;
-    recipientRaw: string;
-    recipientName?: string | null;
     categoryUuid?: string | null;
     subcategoryUuid?: string | null;
     type: TransactionType;

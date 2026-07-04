@@ -8,7 +8,7 @@ import { dashboardQueryKeys } from "@/features/dashboard/query-keys";
 
 import { transactionsQueryKeys } from "./query-keys";
 import type {
-  TransactionMutationInput,
+  TransactionCreateInput,
   UpdateTransactionCategoryInput,
   UpdateTransactionInput,
 } from "./types";
@@ -36,7 +36,7 @@ export function useCreateTransactionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: TransactionMutationInput) =>
+    mutationFn: (input: TransactionCreateInput) =>
       apiPost<TransactionCreateResponse>("/api/transactions", input),
     onSuccess: async () => {
       await invalidateTransactionData(queryClient);

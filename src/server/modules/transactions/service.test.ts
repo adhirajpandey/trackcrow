@@ -286,7 +286,6 @@ describe("transaction service", () => {
         userUuid: "user-1",
         transactionUuid: "txn-other-user",
         amount: 25,
-        recipientRaw: "merchant@upi",
         type: TransactionType.UPI,
         timestamp: new Date(),
         source: TransactionSource.MANUAL,

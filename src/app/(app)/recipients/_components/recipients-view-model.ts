@@ -1,5 +1,5 @@
 import type {
-  RecipientIdentifierChip,
+  RecipientAliasChip,
   RecipientsControlState,
   RecipientsPageData,
   RecipientsQueryResult,
@@ -27,8 +27,8 @@ function toHref(params: URLSearchParams) {
   return query ? `/recipients?${query}` : "/recipients";
 }
 
-function getIdentifierTone(kind: string): RecipientIdentifierChip["tone"] {
-  switch (kind) {
+function getAliasTone(aliasType: string): RecipientAliasChip["tone"] {
+  switch (aliasType) {
     case "UPI_ID":
       return "upi";
     case "TEXT":
@@ -134,10 +134,10 @@ export function buildRecipientsPageData(input: {
     status: input.result.status,
     message: input.result.message,
     rows: input.result.recipients.map((recipient) => {
-      const identifierChips = recipient.identifiers.slice(0, 2).map((identifier) => ({
-        id: identifier.uuid,
-        tone: getIdentifierTone(identifier.kind),
-        value: identifier.value,
+      const aliasChips = recipient.aliases.slice(0, 2).map((alias) => ({
+        id: alias.uuid,
+        tone: getAliasTone(alias.aliasType),
+        value: alias.value,
       }));
 
       return {
@@ -146,11 +146,11 @@ export function buildRecipientsPageData(input: {
         transactionCount: recipient.transactionCount,
         totalAmount: recipient.totalAmount,
         secondaryLabel:
-          recipient.identifiers.length === 1
-            ? "1 identifier"
-            : `${recipient.identifiers.length} identifiers`,
-        identifierChips,
-        overflowIdentifierCount: Math.max(0, recipient.identifiers.length - identifierChips.length),
+          recipient.aliases.length === 1
+            ? "1 alias"
+            : `${recipient.aliases.length} aliases`,
+        aliasChips,
+        overflowAliasCount: Math.max(0, recipient.aliases.length - aliasChips.length),
       };
     }),
     filters: input.filters,

@@ -119,8 +119,6 @@ describe("transaction detail model", () => {
       })
     ).toEqual({
       amount: 1063,
-      recipientRaw: "742810776@kotakbank",
-      recipientName: "Kotak Bank UPI",
       categoryUuid: "cat-1",
       subcategoryUuid: "sub-11",
       type: "UPI",
@@ -197,7 +195,7 @@ describe("transaction detail model", () => {
   });
 
   it("formats the most readable recipient label from available transaction fields", () => {
-    expect(getTransactionDisplayRecipient(transaction)).toBe("Kotak Bank Upi");
+    expect(getTransactionDisplayRecipient(transaction)).toBe("Kotak Bank UPI");
 
     expect(
       getTransactionDisplayRecipient({
@@ -206,7 +204,7 @@ describe("transaction detail model", () => {
         recipientDisplayName: "upi merchant",
         recipientRaw: "acme.rent-9988@ybl",
       })
-    ).toBe("Acme Rent");
+    ).toBe("upi merchant");
   });
 
   it("builds a Google Maps search href from coordinate locations", () => {

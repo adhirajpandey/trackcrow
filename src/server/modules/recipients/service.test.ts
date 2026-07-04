@@ -109,13 +109,13 @@ describe("recipient service", () => {
     );
   });
 
-  it("maps identifier-label searches onto identifier kinds", async () => {
+  it("maps alias-label searches onto supported alias types", async () => {
     mockPrisma.recipient.count.mockResolvedValueOnce(1);
     mockPrisma.recipient.findMany.mockResolvedValueOnce([recipientRecord()]);
 
     await listRecipients({
       userUuid: "user-1",
-      q: "phone",
+      q: "text alias",
     });
 
     expect(mockPrisma.recipient.findMany).toHaveBeenCalledWith(
@@ -135,7 +135,7 @@ describe("recipient service", () => {
                   identifiers: {
                     some: {
                       OR: expect.arrayContaining([
-                        { kind: { in: [RecipientIdentifierKind.PHONE] } },
+                        { kind: { in: [RecipientIdentifierKind.TEXT] } },
                       ]),
                     },
                   },

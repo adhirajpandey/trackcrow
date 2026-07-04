@@ -3,11 +3,12 @@ import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionUser } from "@/server/auth/session";
 
 import {
-  addRecipientIdentifierSchema,
+  addRecipientAliasSchema,
   listRecipientsQuerySchema,
   recipientIdParamsSchema,
+  updateRecipientSchema,
 } from "./schemas";
-import { addRecipientIdentifier, getRecipient, listRecipients } from "./service";
+import { addRecipientAlias, getRecipient, listRecipients, updateRecipient } from "./service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -89,7 +90,7 @@ export async function getRecipientById(
   return data instanceof Response ? data : jsonOk(data);
 }
 
-export async function postRecipientIdentifier(
+export async function patchRecipient(
   request: Request,
   context: RouteContext
 ) {
@@ -109,19 +110,58 @@ export async function postRecipientIdentifier(
     return json;
   }
 
-  const parsed = addRecipientIdentifierSchema.safeParse(json);
+  const parsed = updateRecipientSchema.safeParse(json);
   if (!parsed.success) {
     logValidationFailure(path, parsed.error.issues);
     return jsonError("Invalid request", 400, { issues: parsed.error.issues });
   }
 
-  const result = await addRecipientIdentifier({
+  const result = await updateRecipient({
     userUuid: sessionData.userUuid,
     recipientUuid,
     ...parsed.data,
   });
   if (!result.ok && result.error === "CONFLICT") {
-    return jsonError("Identifier belongs to another recipient", 409, {
+    return jsonError("A recipient with this name already exists", 409);
+  }
+
+  const data = unwrapOrResponse(result);
+  return data instanceof Response ? data : jsonOk(data);
+}
+
+export async function postRecipientAlias(
+  request: Request,
+  context: RouteContext
+) {
+  const path = new URL(request.url).pathname;
+  const sessionData = await requireUserUuid();
+  if (sessionData instanceof Response) {
+    return sessionData;
+  }
+
+  const recipientUuid = await parseRecipientUuid(context, path);
+  if (recipientUuid instanceof Response) {
+    return recipientUuid;
+  }
+
+  const json = await parseJsonBody(request);
+  if (json instanceof Response) {
+    return json;
+  }
+
+  const parsed = addRecipientAliasSchema.safeParse(json);
+  if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
+    return jsonError("Invalid request", 400, { issues: parsed.error.issues });
+  }
+
+  const result = await addRecipientAlias({
+    userUuid: sessionData.userUuid,
+    recipientUuid,
+    ...parsed.data,
+  });
+  if (!result.ok && result.error === "CONFLICT") {
+    return jsonError("Alias belongs to another recipient", 409, {
       details: result.details,
     });
   }

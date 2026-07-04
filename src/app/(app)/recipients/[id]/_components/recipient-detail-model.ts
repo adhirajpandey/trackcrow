@@ -6,38 +6,31 @@ import type {
 } from "@/features/recipients/types";
 import type { RecipientDetailDto } from "@/server/modules/recipients/types";
 
-function formatIdentifierKind(kind: string) {
-  switch (kind) {
+function formatAliasType(aliasType: string) {
+  switch (aliasType) {
     case "UPI_ID":
       return "UPI";
     case "CARD_MERCHANT":
-      return "CARD";
-    case "BANK_ACCOUNT":
-      return "BANK";
-    case "PHONE":
-      return "PHONE";
-    default:
-      return kind.replace(/_/g, " ").toUpperCase();
-  }
-}
-
-function formatIdentifierSource(kind: string) {
-  switch (kind) {
-    case "UPI_ID":
-      return "UPI · from SMS";
-    case "CARD_MERCHANT":
-      return "Card merchant · from statement";
-    case "BANK_ACCOUNT":
-      return "Bank account · from transfer";
-    case "PHONE":
-      return "Phone · from SMS";
+      return "Card merchant";
     case "TEXT":
-      return "Text match · from narration";
+      return "Text alias";
     default:
-      return "Identifier · from import";
+      return aliasType.replace(/_/g, " ").toUpperCase();
   }
 }
 
+function formatAliasSource(aliasType: string) {
+  switch (aliasType) {
+    case "UPI_ID":
+      return "UPI - from SMS";
+    case "CARD_MERCHANT":
+      return "Card merchant - from statement";
+    case "TEXT":
+      return "Text alias - from narration";
+    default:
+      return "Alias - from import";
+  }
+}
 function formatSourceMixValue(sourceCounts: Map<string, number>) {
   if (sourceCounts.size === 0) {
     return "No transactions yet";
@@ -150,17 +143,17 @@ export function buildRecipientDetailPageData(
     displayName: recipient.displayName,
     normalizedName: recipient.normalizedName,
     transactionCount: recipient.transactionCount,
-    identifierCount: recipient.identifiers.length,
+    aliasCount: recipient.aliases.length,
     totalSpent,
     averagePayment,
     lastPaidAt,
     createdAt: recipient.createdAt,
     updatedAt: recipient.updatedAt,
-    identifiers: recipient.identifiers
-      .map((identifier) => ({
-        id: identifier.uuid,
-        kindLabel: formatIdentifierKind(identifier.kind),
-        value: identifier.value,
+    aliases: recipient.aliases
+      .map((alias) => ({
+        id: alias.uuid,
+        typeLabel: formatAliasType(alias.aliasType),
+        value: alias.value,
         transactionCount: recipient.linkedTransactions.filter((transaction) => {
           const normalizedRecipientRaw = transaction.recipientRaw
             .trim()
@@ -171,11 +164,11 @@ export function buildRecipientDetailPageData(
             : null;
 
           return (
-            normalizedRecipientRaw === identifier.normalizedValue ||
-            normalizedRecipientName === identifier.normalizedValue
+            normalizedRecipientRaw === alias.normalizedValue ||
+            normalizedRecipientName === alias.normalizedValue
           );
         }).length,
-        sourceLabel: formatIdentifierSource(identifier.kind),
+        sourceLabel: formatAliasSource(alias.aliasType),
       }))
       .sort(
         (left, right) =>
@@ -223,16 +216,12 @@ export function buildRecipientDetailPageData(
         copyValue: recipient.uuid,
       },
       {
-        label: "Normalized name",
-        value: recipient.normalizedName,
-      },
-      {
         label: "Transaction count",
         value: String(recipient.transactionCount),
       },
       {
-        label: "Identifier count",
-        value: String(recipient.identifiers.length),
+        label: "Alias count",
+        value: String(recipient.aliases.length),
       },
     ],
     quickChecks: [
@@ -243,10 +232,10 @@ export function buildRecipientDetailPageData(
         badgeLabel: recipient.transactionCount > 0 ? "Passed" : "Action needed",
       },
       {
-        id: "identifiers",
-        label: "Has identifiers",
-        status: recipient.identifiers.length > 0 ? "passed" : "attention",
-        badgeLabel: recipient.identifiers.length > 0 ? "Passed" : "Missing",
+        id: "aliases",
+        label: "Has aliases",
+        status: recipient.aliases.length > 0 ? "passed" : "attention",
+        badgeLabel: recipient.aliases.length > 0 ? "Passed" : "Missing",
       },
       {
         id: "categorization",
@@ -292,3 +281,4 @@ export function formatRecipientDate(value: string) {
 export function formatRecipientDateTime(value: string) {
   return formatDateTime(value);
 }
+

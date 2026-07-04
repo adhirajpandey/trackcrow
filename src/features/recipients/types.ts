@@ -1,8 +1,8 @@
 import type { CategoryOption } from "@/common/types";
 
-export type RecipientIdentifierDto = {
+export type RecipientAliasDto = {
   uuid: string;
-  kind: string;
+  aliasType: string;
   value: string;
   normalizedValue: string;
 };
@@ -13,10 +13,10 @@ export type RecipientListItemDto = {
   normalizedName: string;
   transactionCount: number;
   totalAmount: number;
-  identifiers: RecipientIdentifierDto[];
+  aliases: RecipientAliasDto[];
 };
 
-export type RecipientIdentifierTransferImpact = {
+export type RecipientAliasTransferImpact = {
   sourceRecipient: {
     uuid: string;
     displayName: string;
@@ -25,14 +25,14 @@ export type RecipientIdentifierTransferImpact = {
     uuid: string;
     displayName: string;
   };
-  identifier: RecipientIdentifierDto;
+  alias: RecipientAliasDto;
   transactionCount: number;
   totalAmount: number;
 };
 
-export type RecipientIdentifierWriteDto = {
+export type RecipientAliasWriteDto = {
   status: "created" | "already_linked" | "moved";
-  identifier: RecipientIdentifierDto;
+  alias: RecipientAliasDto;
   movedTransactionCount: number;
   movedTransactionTotalAmount: number;
   deletedSourceRecipient: boolean;
@@ -51,7 +51,7 @@ export type RecipientsApiQuery = {
 
 export type RecipientsControlState = RecipientsApiQuery;
 
-export type RecipientIdentifierChip = {
+export type RecipientAliasChip = {
   id: string;
   tone: "upi" | "text" | "card" | "default";
   value: string;
@@ -63,8 +63,8 @@ export type RecipientsPageRow = {
   transactionCount: number;
   totalAmount: number;
   secondaryLabel: string;
-  identifierChips: RecipientIdentifierChip[];
-  overflowIdentifierCount: number;
+  aliasChips: RecipientAliasChip[];
+  overflowAliasCount: number;
 };
 
 export type RecipientsPagination = {
@@ -107,9 +107,9 @@ export type RecipientsPageInitialData = {
   initialRecipientsData: RecipientsQueryResult;
 };
 
-export type RecipientDetailIdentifierRow = {
+export type RecipientDetailAliasRow = {
   id: string;
-  kindLabel: string;
+  typeLabel: string;
   value: string;
   transactionCount: number;
   sourceLabel: string;
@@ -185,13 +185,13 @@ export type RecipientDetailPageData = {
   displayName: string;
   normalizedName: string;
   transactionCount: number;
-  identifierCount: number;
+  aliasCount: number;
   totalSpent: number;
   averagePayment: number;
   lastPaidAt: string | null;
   createdAt: string;
   updatedAt: string;
-  identifiers: RecipientDetailIdentifierRow[];
+  aliases: RecipientDetailAliasRow[];
   categoryRows: RecipientDetailCategoryRow[];
   dominantCategory: RecipientDetailCategoryRow | null;
   dominantSubcategory: RecipientDetailSubcategoryPattern | null;

@@ -180,8 +180,6 @@ enum ParseStatus {
 
 enum RecipientIdentifierKind {
   UPI_ID
-  PHONE
   CARD_MERCHANT
-  BANK_ACCOUNT
   TEXT
 }

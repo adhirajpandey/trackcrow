@@ -92,10 +92,21 @@ export type TransactionDetailPageInitialData = {
   initialCategoriesData: CategoryOption[];
 };
 
+export type TransactionCreateInput = {
+  amount: number;
+  recipientUuid: string;
+  categoryUuid?: string | null;
+  subcategoryUuid?: string | null;
+  type: TransactionType;
+  remarks?: string | null;
+  timestamp: string;
+  reference?: string | null;
+  accountLabel?: string | null;
+  locationRaw?: string | null;
+};
+
 export type TransactionMutationInput = {
   amount: number;
-  recipientRaw: string;
-  recipientName?: string | null;
   categoryUuid?: string | null;
   subcategoryUuid?: string | null;
   type: TransactionType;

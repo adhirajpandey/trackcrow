@@ -26,24 +26,24 @@ const baseResult: RecipientsQueryResult = {
       normalizedName: "biraj borah",
       transactionCount: 19,
       totalAmount: 3200,
-      identifiers: [
+      aliases: [
         {
           uuid: "rid-11",
-          kind: "UPI_ID",
+          aliasType: "UPI_ID",
           value: "biraj@oksbi",
           normalizedValue: "biraj@oksbi",
         },
         {
           uuid: "rid-12",
-          kind: "TEXT",
+          aliasType: "TEXT",
           value: "biraj borah",
           normalizedValue: "biraj borah",
         },
         {
           uuid: "rid-13",
-          kind: "PHONE",
-          value: "9876543210",
-          normalizedValue: "9876543210",
+          aliasType: "TEXT",
+          value: "biraj",
+          normalizedValue: "biraj",
         },
       ],
     },
@@ -53,10 +53,10 @@ const baseResult: RecipientsQueryResult = {
       normalizedName: "luxmi enterprises",
       transactionCount: 4,
       totalAmount: 900,
-      identifiers: [
+      aliases: [
         {
           uuid: "rid-21",
-          kind: "CARD_MERCHANT",
+          aliasType: "CARD_MERCHANT",
           value: "LUXMI ENTERPRISES",
           normalizedValue: "luxmi enterprises",
         },
@@ -86,13 +86,13 @@ describe("recipients view model", () => {
     );
   });
 
-  it("maps paged rows and collapses identifier overflow", () => {
+  it("maps paged rows and collapses alias overflow", () => {
     const pageData = buildRecipientsPageData({
       filters: { ...baseFilters, q: "", page: 2 },
       result: baseResult,
     });
 
-    expect(pageData.rows[0]?.identifierChips).toEqual([
+    expect(pageData.rows[0]?.aliasChips).toEqual([
       {
         id: "rid-11",
         tone: "upi",
@@ -104,14 +104,14 @@ describe("recipients view model", () => {
         value: "biraj borah",
       },
     ]);
-    expect(pageData.rows[1]?.identifierChips).toEqual([
+    expect(pageData.rows[1]?.aliasChips).toEqual([
       {
         id: "rid-21",
         tone: "card",
         value: "LUXMI ENTERPRISES",
       },
     ]);
-    expect(pageData.rows[0]?.overflowIdentifierCount).toBe(1);
+    expect(pageData.rows[0]?.overflowAliasCount).toBe(1);
     expect(pageData.pagination).toEqual(baseResult.pagination);
     expect(buildFooterSummary(pageData.pagination)).toBe("Showing 11 to 11 of 11 recipients");
   });

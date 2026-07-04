@@ -14,8 +14,21 @@ export const listRecipientsQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
-export const addRecipientIdentifierSchema = z.object({
+export const updateRecipientSchema = z.object({
+  displayName: z.string().trim().min(1).max(200),
+});
+
+export const aliasTypeSchema = z.union([
+  z.enum([
+    RecipientIdentifierKind.UPI_ID,
+    RecipientIdentifierKind.CARD_MERCHANT,
+    RecipientIdentifierKind.TEXT,
+  ]),
+  z.literal("AUTO"),
+]);
+
+export const addRecipientAliasSchema = z.object({
   value: z.string().trim().min(1),
-  kind: z.union([z.nativeEnum(RecipientIdentifierKind), z.literal("AUTO")]).optional(),
+  aliasType: aliasTypeSchema.optional(),
   transfer: z.boolean().optional(),
 });

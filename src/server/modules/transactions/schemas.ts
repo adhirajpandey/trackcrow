@@ -58,8 +58,7 @@ const optionalEndDateParam = z.preprocess(
 
 export const createTransactionSchema = z.object({
   amount: z.coerce.number().positive(),
-  recipientRaw: z.string().trim().min(1),
-  recipientName: z.string().trim().min(1).optional().nullable(),
+  recipientUuid: z.string().uuid(),
   categoryUuid: optionalNullableUuid,
   subcategoryUuid: optionalNullableUuid,
   type: z.nativeEnum(TransactionType),
@@ -70,7 +69,9 @@ export const createTransactionSchema = z.object({
   locationRaw: optionalNullableString,
 });
 
-export const updateTransactionSchema = createTransactionSchema;
+export const updateTransactionSchema = createTransactionSchema.omit({
+  recipientUuid: true,
+});
 
 export const updateTransactionCategorySchema = z.object({
   categoryUuid: optionalNullableUuid,

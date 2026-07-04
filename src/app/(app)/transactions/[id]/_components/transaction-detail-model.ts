@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import type { CategoryOption, TransactionRecord } from "@/common/types";
 import { formatDateTime, numberToINR, toDate } from "@/common/utils";
-import { formatRecipientDisplayLabel } from "@/common/recipient-display";
 import type {
   TransactionDetailFormValues,
   TransactionDetailSuggestion,
@@ -106,8 +105,6 @@ export function mapFormValuesToTransactionPayload(
 ): TransactionMutationInput {
   return {
     amount: Number(values.amount),
-    recipientRaw: transaction.recipientRaw.trim(),
-    recipientName: toNullableTrimmedString(transaction.recipientName ?? ""),
     categoryUuid: toNullableUuid(values.categoryUuid),
     subcategoryUuid: toNullableUuid(values.subcategoryUuid),
     type: values.type,
@@ -211,11 +208,7 @@ export function shouldIgnoreTransactionDetailShortcut(
 }
 
 export function getTransactionDisplayRecipient(transaction: TransactionRecord) {
-  return formatRecipientDisplayLabel({
-    recipientName: transaction.recipientName,
-    recipientDisplayName: transaction.recipientDisplayName,
-    recipientRaw: transaction.recipientRaw,
-  });
+  return transaction.recipientDisplayName;
 }
 
 export function getRecipientDetailHref(transaction: TransactionRecord) {
@@ -238,8 +231,6 @@ function mapTransactionToMutationPayload(
 ): TransactionMutationInput {
   return {
     amount: transaction.amount,
-    recipientRaw: transaction.recipientRaw.trim(),
-    recipientName: toNullableTrimmedString(transaction.recipientName ?? ""),
     categoryUuid: transaction.categoryUuid,
     subcategoryUuid: transaction.subcategoryUuid,
     type: transaction.type,

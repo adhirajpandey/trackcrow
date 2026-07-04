@@ -1,5 +1,4 @@
 import type { CategoryOption, TransactionListResponse } from "@/common/types";
-import { formatRecipientDisplayLabel } from "@/common/recipient-display";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 export type DashboardCategoryFilterValue = "all" | "uncategorized" | string;
@@ -65,12 +64,7 @@ export function mapTransactionListToDashboardItems(
 ): DashboardRecentTransactionItem[] {
   return response.transactions.map((transaction) => ({
     uuid: transaction.uuid,
-    recipient: formatRecipientDisplayLabel({
-      recipientName: transaction.recipientName,
-      recipientDisplayName: transaction.recipientDisplayName,
-      recipientRaw: transaction.recipientRaw,
-      fallbackLabel: "Unknown recipient",
-    }),
+    recipient: transaction.recipientDisplayName,
     category: transaction.category,
     subcategory: transaction.subcategory,
     amount: transaction.amount,

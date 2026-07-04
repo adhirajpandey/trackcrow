@@ -51,8 +51,9 @@ import { Select, type SelectOption } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import {
-  type IdentifierTransferImpact,
-  useAddRecipientIdentifierMutation,
+  type AliasTransferImpact,
+  useAddRecipientAliasMutation,
+  useUpdateRecipientMutation,
 } from "@/features/recipients/mutations";
 import type {
   RecipientDetailCleanupSuggestion,
@@ -86,13 +87,11 @@ import {
 const fieldClassName =
   "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 
-const identifierKindOptions: SelectOption[] = [
-  { value: "AUTO", label: "Auto-detect" },
+const aliasTypeOptions: SelectOption[] = [
+  { value: "AUTO", label: "Auto-detect type" },
   { value: "UPI_ID", label: "UPI ID" },
-  { value: "PHONE", label: "Phone" },
   { value: "CARD_MERCHANT", label: "Card merchant" },
-  { value: "BANK_ACCOUNT", label: "Bank account" },
-  { value: "TEXT", label: "Text" },
+  { value: "TEXT", label: "Text alias" },
 ];
 
 export function RecipientDetailPageView({
@@ -104,12 +103,14 @@ export function RecipientDetailPageView({
   const categoriesQuery = useCategoriesQuery({ initialData: initialCategoriesData });
   const categories = categoriesQuery.data ?? initialCategoriesData;
   const updateCategoryMutation = useUpdateTransactionCategoryMutation();
-  const addIdentifierMutation = useAddRecipientIdentifierMutation();
+  const addAliasMutation = useAddRecipientAliasMutation();
+  const updateRecipientMutation = useUpdateRecipientMutation();
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
-  const [identifierDialogOpen, setIdentifierDialogOpen] = useState(false);
-  const [identifierValue, setIdentifierValue] = useState("");
-  const [identifierKind, setIdentifierKind] = useState("AUTO");
-  const [pendingTransfer, setPendingTransfer] = useState<IdentifierTransferImpact | null>(null);
+  const [aliasDialogOpen, setAliasDialogOpen] = useState(false);
+  const [aliasValue, setAliasValue] = useState("");
+  const [aliasType, setAliasType] = useState("AUTO");
+  const [pendingTransfer, setPendingTransfer] = useState<AliasTransferImpact | null>(null);
+  const [recipientName, setRecipientName] = useState(data.displayName);
   const [relatedTransactionsPage, setRelatedTransactionsPage] = useState(1);
   const [relatedTransactionsSort, setRelatedTransactionsSort] = useState<{
     sortBy: TransactionSortBy;
@@ -206,25 +207,59 @@ export function RecipientDetailPageView({
     }
   }
 
-  async function handleAddIdentifier(transfer = false) {
-    const trimmedValue = identifierValue.trim();
+  async function handleRenameRecipient() {
+    const trimmedName = recipientName.trim();
+    if (!trimmedName || trimmedName === data.displayName) {
+      setRecipientName(data.displayName);
+      return;
+    }
+
+    try {
+      await updateRecipientMutation.mutateAsync({
+        recipientUuid: data.recipientUuid,
+        displayName: trimmedName,
+      });
+      setRecipientName(trimmedName);
+      toast({
+        tone: "success",
+        title: "Recipient renamed",
+        description: "Canonical recipient name updated.",
+        durationMs: 3200,
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        tone: "warning",
+        title: "Name unavailable",
+        description: getApiClientErrorMessage(
+          error,
+          "Unable to rename this recipient right now."
+        ),
+        durationMs: 4200,
+      });
+      setRecipientName(data.displayName);
+    }
+  }
+
+  async function handleAddAlias(transfer = false) {
+    const trimmedValue = aliasValue.trim();
     if (!trimmedValue) {
       return;
     }
 
     try {
-      const result = await addIdentifierMutation.mutateAsync({
+      const result = await addAliasMutation.mutateAsync({
         recipientUuid: data.recipientUuid,
         value: trimmedValue,
-        kind: identifierKind,
+        aliasType,
         transfer,
       });
       toast({
         tone: "success",
-        title: result.status === "moved" ? "Identifier moved" : "Identifier added",
+        title: result.status === "moved" ? "Alias moved" : "Alias added",
         description:
           result.status === "moved"
-            ? `Identifier moved. ${result.movedTransactionCount} transaction${
+            ? `Alias moved. ${result.movedTransactionCount} transaction${
                 result.movedTransactionCount === 1 ? "" : "s"
               } totaling ${formatRecipientTotal(result.movedTransactionTotalAmount)} moved.${
                 result.deletedSourceRecipient ? " Empty source recipient removed." : ""
@@ -232,10 +267,10 @@ export function RecipientDetailPageView({
             : "Recipient matching has been updated.",
         durationMs: 3600,
       });
-      setIdentifierDialogOpen(false);
+      setAliasDialogOpen(false);
       setPendingTransfer(null);
-      setIdentifierValue("");
-      setIdentifierKind("AUTO");
+      setAliasValue("");
+      setAliasType("AUTO");
       router.refresh();
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 409) {
@@ -248,10 +283,10 @@ export function RecipientDetailPageView({
 
       toast({
         tone: "warning",
-        title: "Identifier unavailable",
+        title: "Alias unavailable",
         description: getApiClientErrorMessage(
           error,
-          "Unable to add this identifier right now."
+          "Unable to add this alias right now."
         ),
         durationMs: 4200,
       });
@@ -263,7 +298,7 @@ export function RecipientDetailPageView({
       <MobilePageHeader
         eyebrow="Recipient workspace"
         title="Recipient detail"
-        description="Fix categorization gaps, manage matching identifiers, and trace linked payments."
+        description="Fix categorization gaps, manage matching aliases, and trace linked payments."
         actions={
           <Button asChild variant="secondary" className="w-full min-w-0">
             <Link href="/recipients">
@@ -277,7 +312,7 @@ export function RecipientDetailPageView({
         <AppPageHeader
           eyebrow="Recipient workspace"
           title="Recipient detail"
-          description="Fix categorization gaps, manage matching identifiers, and trace linked payments."
+          description="Fix categorization gaps, manage matching aliases, and trace linked payments."
           actions={
             <Button asChild variant="secondary" className="min-w-[176px]">
               <Link href="/recipients">
@@ -316,7 +351,30 @@ export function RecipientDetailPageView({
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
             <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient details</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <ReadOnlyDetailField label="Name" value={data.displayName} />
+              <Field label="Name">
+                <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-input bg-background/18 focus-within:ring-2 focus-within:ring-ring">
+                  <input
+                    className="min-w-0 flex-1 bg-transparent px-3.5 text-sm text-foreground outline-none"
+                    value={recipientName}
+                    onChange={(event) => setRecipientName(event.target.value)}
+                    onBlur={() => void handleRenameRecipient()}
+                    disabled={updateRecipientMutation.isPending}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-11 shrink-0 rounded-none border-l border-border/55"
+                    onClick={() => void handleRenameRecipient()}
+                    disabled={
+                      updateRecipientMutation.isPending ||
+                      !recipientName.trim() ||
+                      recipientName.trim() === data.displayName
+                    }
+                  >
+                    Save
+                  </Button>
+                </div>
+              </Field>
               <ReadOnlyDetailField
                 label="Total spent"
                 value={formatRecipientTotal(data.totalSpent)}
@@ -331,15 +389,15 @@ export function RecipientDetailPageView({
                 value={data.lastPaidAt ? formatRecipientDate(data.lastPaidAt) : "No payments"}
               />
               <ReadOnlyDetailField
-                label="Identifier count"
-                value={String(data.identifierCount)}
+                label="Alias count"
+                value={String(data.aliasCount)}
               />
             </div>
           </section>
 
           <MobileSectionPreview
-            title="Identifiers"
-            description="Identifiers match incoming SMS payments to this recipient."
+            title="Aliases"
+            description="Aliases match incoming SMS payments to this recipient."
             href={undefined}
             className="lg:hidden"
           >
@@ -349,38 +407,38 @@ export function RecipientDetailPageView({
                 variant="secondary"
                 size="sm"
                 className="w-full"
-                onClick={() => setIdentifierDialogOpen(true)}
+                onClick={() => setAliasDialogOpen(true)}
               >
                 <Plus className="h-4 w-4" />
-                Add identifier
+                Add alias
               </Button>
-              {data.identifiers.length > 0 ? (
+              {data.aliases.length > 0 ? (
                 <div className="grid gap-3">
-                  {data.identifiers.map((identifier) => (
-                    <div key={identifier.id} className={cn(mobileCardClassName, "p-4")}>
+                  {data.aliases.map((alias) => (
+                    <div key={alias.id} className={cn(mobileCardClassName, "p-4")}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-primary">
-                            {identifier.kindLabel}
+                            {alias.typeLabel}
                           </p>
-                          <MobileLongValue value={identifier.value} className="mt-2" />
+                          <MobileLongValue value={alias.value} className="mt-2" />
                         </div>
                         <CopyButton
-                          label="Copy identifier"
-                          onClick={() => void handleCopy(identifier.value)}
-                          copied={copiedValue === identifier.value}
+                          label="Copy alias"
+                          onClick={() => void handleCopy(alias.value)}
+                          copied={copiedValue === alias.value}
                         />
                       </div>
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <span className="text-sm text-secondary-foreground">Transactions</span>
                         <span className="shrink-0 text-sm font-medium text-foreground">
-                          {identifier.transactionCount}
+                          {alias.transactionCount}
                         </span>
                       </div>
                       <div className="mt-2 flex items-start justify-between gap-3">
                         <span className="text-sm text-secondary-foreground">Source</span>
                         <span className="min-w-0 text-right text-sm font-medium text-foreground">
-                          {identifier.sourceLabel}
+                          {alias.sourceLabel}
                         </span>
                       </div>
                     </div>
@@ -388,7 +446,7 @@ export function RecipientDetailPageView({
                 </div>
               ) : (
                 <p className="text-sm text-secondary-foreground">
-                  No identifiers recorded for this recipient.
+                  No aliases recorded for this recipient.
                 </p>
               )}
             </div>
@@ -398,20 +456,20 @@ export function RecipientDetailPageView({
             <div className="flex flex-col gap-3 px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-[1.05rem] font-semibold leading-tight text-foreground">
-                  Identifiers
+                  Aliases
                 </h2>
                 <p className="mt-1.5 text-sm leading-5 text-secondary-foreground">
-                  Identifiers match incoming SMS payments to this recipient.
+                  Aliases match incoming SMS payments to this recipient.
                 </p>
               </div>
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => setIdentifierDialogOpen(true)}
+                onClick={() => setAliasDialogOpen(true)}
               >
                 <Plus className="h-4 w-4" />
-                Add identifier
+                Add alias
               </Button>
             </div>
             <div className="overflow-x-auto px-5 pb-5">
@@ -419,7 +477,7 @@ export function RecipientDetailPageView({
                 <Table className="min-w-[780px] table-fixed">
                   <TableHeader className="border-b border-border/40 bg-background/16">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[14%]">Kind</TableHead>
+                      <TableHead className="w-[14%]">Type</TableHead>
                       <TableHead className="w-[30%]">Value</TableHead>
                       <TableHead className="w-[16%] text-right">Transactions</TableHead>
                       <TableHead className="w-[24%]">Source</TableHead>
@@ -427,26 +485,26 @@ export function RecipientDetailPageView({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.identifiers.length > 0 ? (
-                      data.identifiers.map((identifier) => (
-                        <TableRow key={identifier.id}>
+                    {data.aliases.length > 0 ? (
+                      data.aliases.map((alias) => (
+                        <TableRow key={alias.id}>
                           <TableCell className="py-4 font-medium text-primary">
-                            {identifier.kindLabel}
+                            {alias.typeLabel}
                           </TableCell>
                           <TableCell className="min-w-0 break-all py-4 font-medium text-foreground">
-                            {identifier.value}
+                            {alias.value}
                           </TableCell>
                           <TableCell className="py-4 text-right font-medium tabular-nums text-foreground">
-                            {identifier.transactionCount}
+                            {alias.transactionCount}
                           </TableCell>
                           <TableCell className="py-4 text-secondary-foreground">
-                            {identifier.sourceLabel}
+                            {alias.sourceLabel}
                           </TableCell>
                           <TableCell className="py-4 text-right">
                             <CopyButton
-                              label="Copy identifier"
-                              onClick={() => void handleCopy(identifier.value)}
-                              copied={copiedValue === identifier.value}
+                              label="Copy alias"
+                              onClick={() => void handleCopy(alias.value)}
+                              copied={copiedValue === alias.value}
                             />
                           </TableCell>
                         </TableRow>
@@ -454,7 +512,7 @@ export function RecipientDetailPageView({
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="py-8 text-sm text-secondary-foreground">
-                          No identifiers recorded for this recipient.
+                          No aliases recorded for this recipient.
                         </TableCell>
                       </TableRow>
                     )}
@@ -558,35 +616,35 @@ export function RecipientDetailPageView({
         </aside>
       </div>
 
-      <Dialog open={identifierDialogOpen} onOpenChange={setIdentifierDialogOpen}>
+      <Dialog open={aliasDialogOpen} onOpenChange={setAliasDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add identifier</DialogTitle>
+            <DialogTitle>Add alias</DialogTitle>
             <DialogDescription>
-              Identifiers match incoming SMS payments to this recipient.
+              Aliases match incoming SMS payments to this recipient.
             </DialogDescription>
           </DialogHeader>
           <form
             className="mt-5 space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void handleAddIdentifier(false);
+              void handleAddAlias(false);
             }}
           >
-            <Field label="Identifier value">
+            <Field label="Alias value">
               <input
                 className={fieldClassName}
-                value={identifierValue}
-                onChange={(event) => setIdentifierValue(event.target.value)}
+                value={aliasValue}
+                onChange={(event) => setAliasValue(event.target.value)}
                 placeholder="merchant@upi or narration text"
               />
             </Field>
-            <Field label="Kind">
+            <Field label="Type">
               <Select
-                ariaLabel="Identifier kind"
-                value={identifierKind}
-                onValueChange={setIdentifierKind}
-                options={identifierKindOptions}
+                ariaLabel="Alias type"
+                value={aliasType}
+                onValueChange={setAliasType}
+                options={aliasTypeOptions}
                 triggerClassName={fieldClassName}
               />
             </Field>
@@ -594,18 +652,18 @@ export function RecipientDetailPageView({
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setIdentifierDialogOpen(false)}
+                onClick={() => setAliasDialogOpen(false)}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={!identifierValue.trim() || addIdentifierMutation.isPending}
+                disabled={!aliasValue.trim() || addAliasMutation.isPending}
               >
-                {addIdentifierMutation.isPending ? (
+                {addAliasMutation.isPending ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                 ) : null}
-                Add identifier
+                Add alias
               </Button>
             </DialogFooter>
           </form>
@@ -622,11 +680,11 @@ export function RecipientDetailPageView({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Move identifier?</AlertDialogTitle>
+            <AlertDialogTitle>Move alias?</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingTransfer ? (
                 <>
-                  This identifier is linked to {pendingTransfer.sourceRecipient.displayName}.
+                  This alias is linked to {pendingTransfer.sourceRecipient.displayName}.
                   Moving it to {pendingTransfer.targetRecipient.displayName} will also move{" "}
                   {pendingTransfer.transactionCount} transaction
                   {pendingTransfer.transactionCount === 1 ? "" : "s"} totaling{" "}
@@ -646,10 +704,10 @@ export function RecipientDetailPageView({
               <Button
                 type="button"
                 variant="destructive"
-                onClick={() => void handleAddIdentifier(true)}
-                disabled={addIdentifierMutation.isPending}
+                onClick={() => void handleAddAlias(true)}
+                disabled={addAliasMutation.isPending}
               >
-                Move identifier
+                Move alias
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -659,12 +717,12 @@ export function RecipientDetailPageView({
   );
 }
 
-function parseTransferImpact(value: unknown): IdentifierTransferImpact | null {
+function parseTransferImpact(value: unknown): AliasTransferImpact | null {
   if (!value || typeof value !== "object") {
     return null;
   }
 
-  const impact = value as Partial<IdentifierTransferImpact>;
+  const impact = value as Partial<AliasTransferImpact>;
   if (
     !impact.sourceRecipient ||
     !impact.targetRecipient ||
@@ -674,7 +732,7 @@ function parseTransferImpact(value: unknown): IdentifierTransferImpact | null {
     return null;
   }
 
-  return impact as IdentifierTransferImpact;
+  return impact as AliasTransferImpact;
 }
 
 function CategoryPatternPanel({

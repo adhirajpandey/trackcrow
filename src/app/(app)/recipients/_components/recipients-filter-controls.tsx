@@ -53,7 +53,7 @@ export function RecipientsFilterControls({
               updateTransactionsUrl(nextHref, "replace");
             }, 300);
           }}
-          placeholder="Search recipient, normalized name, identifier..."
+          placeholder="Search recipient, normalized name, alias..."
           className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/85"
         />
       </label>

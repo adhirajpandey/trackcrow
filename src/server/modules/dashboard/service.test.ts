@@ -193,7 +193,7 @@ describe("dashboard service", () => {
         source: "SMS",
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { displayName: "vivek.pandey5@oksbi" },
+        recipient: { displayName: "Vivek Pandey" },
         category: { name: "Food" },
       },
       {
@@ -229,7 +229,7 @@ describe("dashboard service", () => {
         },
         {
           uuid: "txn-1",
-          recipient: "Power Bill",
+          recipient: "Utility",
           category: null,
           subcategory: null,
           amount: 2500,
@@ -266,7 +266,7 @@ describe("dashboard service", () => {
         amount: 900,
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { uuid: "rcp-vivek", displayName: "vivek.pandey5@oksbi" },
+        recipient: { uuid: "rcp-vivek", displayName: "Vivek Pandey" },
       },
       {
         amount: 250,
@@ -278,7 +278,7 @@ describe("dashboard service", () => {
         amount: 600,
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { uuid: "rcp-vivek", displayName: "vivek.pandey5@oksbi" },
+        recipient: { uuid: "rcp-vivek", displayName: "Vivek Pandey" },
       },
     ]);
 
@@ -298,7 +298,7 @@ describe("dashboard service", () => {
         },
         {
           recipientUuid: "rcp-power",
-          recipient: "Power Bill",
+          recipient: "Utility",
           paymentCount: 1,
           totalAmount: 250,
         },

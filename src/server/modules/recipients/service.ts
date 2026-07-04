@@ -7,12 +7,14 @@ import type {
   RecipientDetailDto,
   RecipientDetailTransactionDto,
   RecipientDto,
-  RecipientIdentifierTransferImpact,
-  RecipientIdentifierWriteInput,
-  RecipientIdentifierWriteResult,
+  RecipientAliasTransferImpact,
+  RecipientAliasWriteInput,
+  RecipientAliasWriteResult,
   RecipientListInput,
   RecipientListResult,
   RecipientLookupInput,
+  RecipientUpdateInput,
+  RecipientUpdateResult,
   ResolveRecipientInput,
 } from "./types";
 
@@ -41,7 +43,7 @@ function toRecipientDto(record: {
     normalizedName: record.normalizedName,
     transactionCount: record._count.transactions,
     totalAmount: record.totalAmount,
-    identifiers: record.identifiers,
+    aliases: record.identifiers.map(toAliasDto),
   };
 }
 
@@ -112,7 +114,7 @@ function toRecipientDetailDto(record: {
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     transactionCount: record.transactions.length,
-    identifiers: record.identifiers,
+    aliases: record.identifiers.map(toAliasDto),
     linkedTransactions: record.transactions.map(toRecipientDetailTransactionDto),
   };
 }
@@ -131,14 +133,10 @@ function buildNonEmptyRecipientWhere(userUuid: string) {
   };
 }
 
-function detectIdentifierKind(value: string): RecipientIdentifierKind {
+function detectAliasType(value: string): RecipientIdentifierKind {
   const trimmed = value.trim();
   if (trimmed.includes("@")) {
     return RecipientIdentifierKind.UPI_ID;
-  }
-
-  if (/^[0-9]{10,}$/.test(trimmed.replace(/\D/g, ""))) {
-    return RecipientIdentifierKind.PHONE;
   }
 
   if (trimmed === trimmed.toUpperCase() && trimmed.length > 4) {
@@ -148,7 +146,7 @@ function detectIdentifierKind(value: string): RecipientIdentifierKind {
   return RecipientIdentifierKind.TEXT;
 }
 
-function toIdentifierDto(identifier: {
+function toAliasDto(identifier: {
   uuid: string;
   kind: string;
   value: string;
@@ -156,13 +154,13 @@ function toIdentifierDto(identifier: {
 }) {
   return {
     uuid: identifier.uuid,
-    kind: identifier.kind,
+    aliasType: identifier.kind,
     value: identifier.value,
     normalizedValue: identifier.normalizedValue,
   };
 }
 
-function transactionMatchesIdentifier(
+function transactionMatchesAlias(
   transaction: { recipientRaw: string; recipientName: string | null },
   normalizedValue: string
 ) {
@@ -172,18 +170,18 @@ function transactionMatchesIdentifier(
   );
 }
 
-async function buildIdentifierTransferImpact(input: {
+async function buildAliasTransferImpact(input: {
   userUuid: string;
   targetRecipient: { id: number; uuid: string; displayName: string };
   sourceRecipient: { id: number; uuid: string; displayName: string };
-  identifier: {
+  alias: {
     id: number;
     uuid: string;
     kind: string;
     value: string;
     normalizedValue: string;
   };
-}): Promise<RecipientIdentifierTransferImpact> {
+}): Promise<RecipientAliasTransferImpact> {
   const transactions = await prisma.transaction.findMany({
     where: {
       userUuid: input.userUuid,
@@ -196,7 +194,7 @@ async function buildIdentifierTransferImpact(input: {
     },
   });
   const matchingTransactions = transactions.filter((transaction) =>
-    transactionMatchesIdentifier(transaction, input.identifier.normalizedValue)
+    transactionMatchesAlias(transaction, input.alias.normalizedValue)
   );
   const totalAmount = matchingTransactions.reduce(
     (sum, transaction) => sum + transaction.amount.toNumber(),
@@ -212,7 +210,7 @@ async function buildIdentifierTransferImpact(input: {
       uuid: input.targetRecipient.uuid,
       displayName: input.targetRecipient.displayName,
     },
-    identifier: toIdentifierDto(input.identifier),
+    alias: toAliasDto(input.alias),
     transactionCount: matchingTransactions.length,
     totalAmount,
   };
@@ -236,10 +234,7 @@ export async function listRecipients(
   if (normalizedSearch.includes("card")) {
     kindMatches.add(RecipientIdentifierKind.CARD_MERCHANT);
   }
-  if (normalizedSearch.includes("phone")) {
-    kindMatches.add(RecipientIdentifierKind.PHONE);
-  }
-  if (normalizedSearch.includes("text")) {
+  if (normalizedSearch.includes("text") || normalizedSearch.includes("alias")) {
     kindMatches.add(RecipientIdentifierKind.TEXT);
   }
 
@@ -552,12 +547,60 @@ export async function getRecipientDetail(
   }
 }
 
-export async function addRecipientIdentifier(
-  input: RecipientIdentifierWriteInput
-): Promise<RecipientIdentifierWriteResult> {
+export async function updateRecipient(
+  input: RecipientUpdateInput
+): Promise<RecipientUpdateResult> {
+  const displayName = input.displayName.trim();
+  const normalizedName = normalizeValue(displayName);
+
+  try {
+    const existing = await prisma.recipient.findFirst({
+      where: { uuid: input.recipientUuid, userUuid: input.userUuid },
+      select: { id: true },
+    });
+    if (!existing) {
+      return fail("NOT_FOUND");
+    }
+
+    const duplicate = await prisma.recipient.findFirst({
+      where: {
+        userUuid: input.userUuid,
+        normalizedName,
+        id: { not: existing.id },
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      return fail("CONFLICT");
+    }
+
+    await prisma.recipient.update({
+      where: { id: existing.id },
+      data: { displayName, normalizedName },
+    });
+
+    return getRecipient(input);
+  } catch (error) {
+    logger.error(
+      {
+        event: "recipient.update.db_failed",
+        userId: input.userUuid,
+        recipientUuid: input.recipientUuid,
+        message: "Failed to update recipient",
+      },
+      error
+    );
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function addRecipientAlias(
+  input: RecipientAliasWriteInput
+): Promise<RecipientAliasWriteResult> {
   const value = input.value.trim();
   const normalizedValue = normalizeValue(value);
-  const kind = input.kind && input.kind !== "AUTO" ? input.kind : detectIdentifierKind(value);
+  const kind =
+    input.aliasType && input.aliasType !== "AUTO" ? input.aliasType : detectAliasType(value);
 
   try {
     const targetRecipient = await prisma.recipient.findFirst({
@@ -600,16 +643,16 @@ export async function addRecipientIdentifier(
       });
 
       logger.info({
-        event: "recipient.identifier_added",
+        event: "recipient.alias_added",
         userId: input.userUuid,
         recipientId: targetRecipient.id,
-        identifierKind: kind,
+        aliasType: kind,
         status: "created",
       });
 
       return ok({
         status: "created",
-        identifier: toIdentifierDto(created),
+        alias: toAliasDto(created),
         movedTransactionCount: 0,
         movedTransactionTotalAmount: 0,
         deletedSourceRecipient: false,
@@ -619,7 +662,7 @@ export async function addRecipientIdentifier(
     if (existingIdentifier.recipientId === targetRecipient.id) {
       return ok({
         status: "already_linked",
-        identifier: toIdentifierDto(existingIdentifier),
+        alias: toAliasDto(existingIdentifier),
         movedTransactionCount: 0,
         movedTransactionTotalAmount: 0,
         deletedSourceRecipient: false,
@@ -631,11 +674,11 @@ export async function addRecipientIdentifier(
       uuid: existingIdentifier.recipient.uuid,
       displayName: existingIdentifier.recipient.displayName,
     };
-    const impact = await buildIdentifierTransferImpact({
+    const impact = await buildAliasTransferImpact({
       userUuid: input.userUuid,
       targetRecipient,
       sourceRecipient,
-      identifier: existingIdentifier,
+      alias: existingIdentifier,
     });
 
     if (!input.transfer) {
@@ -655,7 +698,7 @@ export async function addRecipientIdentifier(
       },
     });
     const matchingTransactions = sourceTransactions.filter((transaction) =>
-      transactionMatchesIdentifier(transaction, normalizedValue)
+      transactionMatchesAlias(transaction, normalizedValue)
     );
     const matchingTransactionIds = matchingTransactions.map((transaction) => transaction.id);
     const movedTransactionTotalAmount = matchingTransactions.reduce(
@@ -717,17 +760,17 @@ export async function addRecipientIdentifier(
     });
 
     logger.info({
-      event: "recipient.identifier_added",
+      event: "recipient.alias_added",
       userId: input.userUuid,
       recipientId: targetRecipient.id,
-      identifierKind: kind,
+      aliasType: kind,
       status: "moved",
       movedTransactionCount: matchingTransactionIds.length,
     });
 
     return ok({
       status: "moved",
-      identifier: toIdentifierDto(moveResult.identifier),
+      alias: toAliasDto(moveResult.identifier),
       movedTransactionCount: matchingTransactionIds.length,
       movedTransactionTotalAmount,
       deletedSourceRecipient: moveResult.deletedSourceRecipient,
@@ -735,11 +778,11 @@ export async function addRecipientIdentifier(
   } catch (error) {
     logger.error(
       {
-        event: "recipient.identifier_add.db_failed",
+        event: "recipient.alias_add.db_failed",
         userId: input.userUuid,
         recipientUuid: input.recipientUuid,
-        identifierKind: kind,
-        message: "Failed to add recipient identifier",
+        aliasType: kind,
+        message: "Failed to add recipient alias",
       },
       error
     );
@@ -762,13 +805,13 @@ export async function resolveRecipient(
   const normalizedRaw = normalizeValue(recipientRaw);
   const displayName = (input.recipientName?.trim() || recipientRaw).trim();
   const normalizedName = normalizeValue(displayName);
-  const identifierKind = detectIdentifierKind(recipientRaw);
+  const aliasType = detectAliasType(recipientRaw);
 
   try {
     const existingIdentifier = await prisma.recipientIdentifier.findFirst({
       where: {
         userUuid: input.userUuid,
-        kind: identifierKind,
+        kind: aliasType,
         normalizedValue: normalizedRaw,
       },
       include: {
@@ -804,7 +847,7 @@ export async function resolveRecipient(
       data: {
         userUuid: input.userUuid,
         recipientId: recipient.id,
-        kind: identifierKind,
+        kind: aliasType,
         value: recipientRaw,
         normalizedValue: normalizedRaw,
       },
