@@ -338,27 +338,6 @@ export function RecipientsPageView({
                         {numberToINR(row.totalAmount)}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {row.identifierChips.slice(0, 2).map((identifier) => (
-                        <span
-                          key={identifier.id}
-                          className={cn(
-                            "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
-                            getIdentifierChipClassName(identifier.tone)
-                          )}
-                          title={identifier.value}
-                        >
-                          <span className="overflow-wrap-anywhere break-words">
-                            {identifier.value}
-                          </span>
-                        </span>
-                      ))}
-                      {row.overflowIdentifierCount > 0 ? (
-                        <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
-                          +{row.overflowIdentifierCount} more
-                        </span>
-                      ) : null}
-                    </div>
                   </div>
                 </button>
               ))}
