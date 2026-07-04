@@ -121,6 +121,16 @@ function normalizeValue(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function buildNonEmptyRecipientWhere(userUuid: string) {
+  return {
+    userUuid,
+    OR: [
+      { identifiers: { some: {} } },
+      { transactions: { some: {} } },
+    ],
+  };
+}
+
 function detectIdentifierKind(value: string): RecipientIdentifierKind {
   const trimmed = value.trim();
   if (trimmed.includes("@")) {
@@ -233,7 +243,9 @@ export async function listRecipients(
     kindMatches.add(RecipientIdentifierKind.TEXT);
   }
 
-  const where: Record<string, unknown> = { userUuid: input.userUuid };
+  const where: Record<string, unknown> = {
+    AND: [buildNonEmptyRecipientWhere(input.userUuid)],
+  };
 
   if (q) {
     const identifierOrFilters: Array<Record<string, unknown>> = [
@@ -245,17 +257,19 @@ export async function listRecipients(
       identifierOrFilters.push({ kind: { in: [...kindMatches] } });
     }
 
-    where.OR = [
-      { displayName: { contains: q, mode: "insensitive" } },
-      { normalizedName: { contains: normalizedSearch, mode: "insensitive" } },
-      {
-        identifiers: {
-          some: {
-            OR: identifierOrFilters,
+    (where.AND as Array<Record<string, unknown>>).push({
+      OR: [
+        { displayName: { contains: q, mode: "insensitive" } },
+        { normalizedName: { contains: normalizedSearch, mode: "insensitive" } },
+        {
+          identifiers: {
+            some: {
+              OR: identifierOrFilters,
+            },
           },
         },
-      },
-    ];
+      ],
+    });
   }
 
   try {
@@ -273,6 +287,19 @@ export async function listRecipients(
               AND t."user_uuid" = r."user_uuid"
             WHERE
               r."user_uuid" = ${input.userUuid}
+              AND (
+                EXISTS (
+                  SELECT 1
+                  FROM "recipient_identifier" ri_non_empty
+                  WHERE ri_non_empty."recipient_id" = r.id
+                )
+                OR EXISTS (
+                  SELECT 1
+                  FROM "transaction" t_non_empty
+                  WHERE t_non_empty."recipient_id" = r.id
+                    AND t_non_empty."user_uuid" = r."user_uuid"
+                )
+              )
               ${q
                 ? Prisma.sql`
                     AND (
@@ -316,7 +343,7 @@ export async function listRecipients(
             where:
               sortBy === "totalAmount"
                 ? {
-                    userUuid: input.userUuid,
+                    ...buildNonEmptyRecipientWhere(input.userUuid),
                     id: { in: aggregateSortedRecipientIds },
                   }
                 : where,
@@ -585,6 +612,7 @@ export async function addRecipientIdentifier(
         identifier: toIdentifierDto(created),
         movedTransactionCount: 0,
         movedTransactionTotalAmount: 0,
+        deletedSourceRecipient: false,
       });
     }
 
@@ -594,6 +622,7 @@ export async function addRecipientIdentifier(
         identifier: toIdentifierDto(existingIdentifier),
         movedTransactionCount: 0,
         movedTransactionTotalAmount: 0,
+        deletedSourceRecipient: false,
       });
     }
 
@@ -634,7 +663,7 @@ export async function addRecipientIdentifier(
       0
     );
 
-    const movedIdentifier = await prisma.$transaction(async (tx) => {
+    const moveResult = await prisma.$transaction(async (tx) => {
       const updatedIdentifier = await tx.recipientIdentifier.update({
         where: { id: existingIdentifier.id },
         data: { recipientId: targetRecipient.id },
@@ -658,7 +687,33 @@ export async function addRecipientIdentifier(
         });
       }
 
-      return updatedIdentifier;
+      const [remainingIdentifiers, remainingTransactions] = await Promise.all([
+        tx.recipientIdentifier.count({
+          where: {
+            userUuid: input.userUuid,
+            recipientId: sourceRecipient.id,
+          },
+        }),
+        tx.transaction.count({
+          where: {
+            userUuid: input.userUuid,
+            recipientId: sourceRecipient.id,
+          },
+        }),
+      ]);
+      const deletedSourceRecipient =
+        remainingIdentifiers === 0 && remainingTransactions === 0;
+
+      if (deletedSourceRecipient) {
+        await tx.recipient.delete({
+          where: { id: sourceRecipient.id },
+        });
+      }
+
+      return {
+        identifier: updatedIdentifier,
+        deletedSourceRecipient,
+      };
     });
 
     logger.info({
@@ -672,9 +727,10 @@ export async function addRecipientIdentifier(
 
     return ok({
       status: "moved",
-      identifier: toIdentifierDto(movedIdentifier),
+      identifier: toIdentifierDto(moveResult.identifier),
       movedTransactionCount: matchingTransactionIds.length,
       movedTransactionTotalAmount,
+      deletedSourceRecipient: moveResult.deletedSourceRecipient,
     });
   } catch (error) {
     logger.error(

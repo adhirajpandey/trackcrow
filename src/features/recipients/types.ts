@@ -35,6 +35,7 @@ export type RecipientIdentifierWriteDto = {
   identifier: RecipientIdentifierDto;
   movedTransactionCount: number;
   movedTransactionTotalAmount: number;
+  deletedSourceRecipient: boolean;
 };
 
 export type RecipientSortBy = "displayName" | "transactionCount" | "totalAmount";

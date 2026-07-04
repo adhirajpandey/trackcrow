@@ -102,6 +102,7 @@ export type RecipientIdentifierWriteDto = {
   };
   movedTransactionCount: number;
   movedTransactionTotalAmount: number;
+  deletedSourceRecipient: boolean;
 };
 
 export type RecipientListInput = {

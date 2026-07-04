@@ -76,20 +76,30 @@ describe("recipient service", () => {
     expect(mockPrisma.recipient.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          userUuid: "user-1",
-          OR: expect.arrayContaining([
-            { displayName: { contains: "oksbi", mode: "insensitive" } },
-            { normalizedName: { contains: "oksbi", mode: "insensitive" } },
-            {
-              identifiers: {
-                some: {
-                  OR: expect.arrayContaining([
-                    { value: { contains: "oksbi", mode: "insensitive" } },
-                    { normalizedValue: { contains: "oksbi", mode: "insensitive" } },
-                  ]),
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              userUuid: "user-1",
+              OR: expect.arrayContaining([
+                { identifiers: { some: {} } },
+                { transactions: { some: {} } },
+              ]),
+            }),
+            expect.objectContaining({
+              OR: expect.arrayContaining([
+                { displayName: { contains: "oksbi", mode: "insensitive" } },
+                { normalizedName: { contains: "oksbi", mode: "insensitive" } },
+                {
+                  identifiers: {
+                    some: {
+                      OR: expect.arrayContaining([
+                        { value: { contains: "oksbi", mode: "insensitive" } },
+                        { normalizedValue: { contains: "oksbi", mode: "insensitive" } },
+                      ]),
+                    },
+                  },
                 },
-              },
-            },
+              ]),
+            }),
           ]),
         }),
         orderBy: [{ displayName: "desc" }, { id: "asc" }],
@@ -111,16 +121,27 @@ describe("recipient service", () => {
     expect(mockPrisma.recipient.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          OR: expect.arrayContaining([
-            {
-              identifiers: {
-                some: {
-                  OR: expect.arrayContaining([
-                    { kind: { in: [RecipientIdentifierKind.PHONE] } },
-                  ]),
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              userUuid: "user-1",
+              OR: expect.arrayContaining([
+                { identifiers: { some: {} } },
+                { transactions: { some: {} } },
+              ]),
+            }),
+            expect.objectContaining({
+              OR: expect.arrayContaining([
+                {
+                  identifiers: {
+                    some: {
+                      OR: expect.arrayContaining([
+                        { kind: { in: [RecipientIdentifierKind.PHONE] } },
+                      ]),
+                    },
+                  },
                 },
-              },
-            },
+              ]),
+            }),
           ]),
         }),
       })

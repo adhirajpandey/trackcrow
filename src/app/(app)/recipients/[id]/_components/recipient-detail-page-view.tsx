@@ -224,9 +224,11 @@ export function RecipientDetailPageView({
         title: result.status === "moved" ? "Identifier moved" : "Identifier added",
         description:
           result.status === "moved"
-            ? `${result.movedTransactionCount} transaction${
+            ? `Identifier moved. ${result.movedTransactionCount} transaction${
                 result.movedTransactionCount === 1 ? "" : "s"
-              } totaling ${formatRecipientTotal(result.movedTransactionTotalAmount)} moved.`
+              } totaling ${formatRecipientTotal(result.movedTransactionTotalAmount)} moved.${
+                result.deletedSourceRecipient ? " Empty source recipient removed." : ""
+              }`
             : "Recipient matching has been updated.",
         durationMs: 3600,
       });
