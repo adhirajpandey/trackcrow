@@ -480,6 +480,8 @@ export function RecipientDetailPageView({
             </div>
           </section>
 
+          <div id="transactions" className="scroll-mt-20" />
+
           <MobileSectionPreview
             title="Related transactions"
             description="Trace the transactions behind this recipient pattern."

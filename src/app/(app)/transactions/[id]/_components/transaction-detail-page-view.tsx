@@ -23,17 +23,6 @@ import {
   MobilePageHeader,
   mobileSurfaceClassName,
 } from "@/components/product/mobile/mobile-primitives";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
@@ -68,6 +57,7 @@ import {
   transactionDetailFormSchema,
   type TransactionDetailFormSchema,
 } from "./transaction-detail-model";
+import { TransactionDeleteDialog } from "../../_components/transaction-delete-dialog";
 
 const fieldClassName =
   "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
@@ -773,8 +763,11 @@ function DangerZoneContent({
       <p className="mt-3 text-sm leading-6 text-secondary-foreground">
         Deleting this transaction removes it from the ledger and unlinks any raw-message reference.
       </p>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
+      <TransactionDeleteDialog
+        transactionId={transactionId}
+        isDeleting={isDeleting}
+        onDelete={onDelete}
+        trigger={
           <Button
             type="button"
             variant="destructive"
@@ -788,39 +781,8 @@ function DangerZoneContent({
             )}
             Delete transaction
           </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes TXN-{transactionId} from the ledger and unlinks any
-              raw-message reference. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel asChild>
-              <Button type="button" variant="secondary">
-                Cancel
-              </Button>
-            </AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={isDeleting}
-                onClick={() => void onDelete()}
-              >
-                {isDeleting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-                Delete transaction
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        }
+      />
     </>
   );
 }

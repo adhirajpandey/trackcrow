@@ -496,12 +496,14 @@ export function RecipientsPageView({
             ? `${drawerRow.transactionCount} transactions linked`
             : undefined
         }
-        href={drawerRow ? `/recipients/${drawerRow.id}` : "/recipients"}
-        hrefLabel="Open recipient detail"
+        primaryHref={drawerRow ? `/recipients/${drawerRow.id}` : "/recipients"}
+        primaryLabel="Open Recipient"
+        secondaryHref={drawerRow ? `/recipients/${drawerRow.id}#transactions` : undefined}
+        secondaryLabel="View Transactions"
       >
         {drawerRow ? (
-          <div className="space-y-4 pb-3">
-            <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
+          <div className="space-y-3 pb-2">
+            <div className="rounded-[8px] border border-border/45 bg-background/12 px-4 py-3.5">
               <p className="text-xs font-semibold text-secondary-foreground">
                 Total sent
               </p>
@@ -509,7 +511,7 @@ export function RecipientsPageView({
                 {numberToINR(drawerRow.totalAmount)}
               </p>
             </div>
-            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 p-4">
+            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 px-4 py-3.5">
               <DetailMetric
                 icon={<Hash className="h-4 w-4" />}
                 label="Identifiers"
@@ -521,25 +523,26 @@ export function RecipientsPageView({
                 value={String(drawerRow.transactionCount)}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {drawerRow.identifierChips.map((identifier) => (
-                <span
-                  key={identifier.id}
-                  className={cn(
-                    "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
-                    getIdentifierChipClassName(identifier.tone)
-                  )}
-                  title={identifier.value}
-                >
-                  <MobileLongValue value={identifier.value} />
-                </span>
-              ))}
-              {drawerRow.overflowIdentifierCount > 0 ? (
-                <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
-                  +{drawerRow.overflowIdentifierCount} more
-                </span>
-              ) : null}
-            </div>
+            {drawerRow.identifierChips.length > 0 ? (
+              <div className="grid gap-2 rounded-[8px] border border-border/35 bg-background/6 px-4 py-3.5">
+                {drawerRow.identifierChips.slice(0, 2).map((identifier, index) => (
+                  <div
+                    key={identifier.id}
+                    className="flex items-start justify-between gap-3"
+                  >
+                    <span className="shrink-0 text-sm text-secondary-foreground">
+                      Identifier {index + 1}
+                    </span>
+                    <MobileLongValue value={identifier.value} className="text-right" />
+                  </div>
+                ))}
+                {drawerRow.overflowIdentifierCount > 0 ? (
+                  <p className="text-sm font-medium text-secondary-foreground">
+                    +{drawerRow.overflowIdentifierCount} more
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </MobileRowDetailDrawer>

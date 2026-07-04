@@ -165,6 +165,7 @@ function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
   return {
     id: transaction.id,
     uuid: transaction.uuid,
+    recipientId: transaction.recipientId,
     recipient: formatRecipientDisplayLabel({
       recipientName: transaction.recipientName,
       recipientDisplayName: transaction.recipientDisplayName,

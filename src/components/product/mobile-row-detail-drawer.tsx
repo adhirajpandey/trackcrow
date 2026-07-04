@@ -6,48 +6,57 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { cn } from "@/lib/utils";
 
 export function MobileRowDetailDrawer({
   open,
   onOpenChange,
   title,
   description,
-  href,
-  hrefLabel,
+  primaryHref,
+  primaryLabel,
+  secondaryHref,
+  secondaryLabel,
+  headerAction,
   children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  href: string;
-  hrefLabel: string;
+  primaryHref: string;
+  primaryLabel: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+  headerAction?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="md:hidden">
-        <DrawerHeader>
-          <DrawerTitle>{title}</DrawerTitle>
-          {description ? <DrawerDescription>{description}</DrawerDescription> : null}
+        <DrawerHeader className={cn(headerAction && "grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3")}>
+          <div className="min-w-0">
+            <DrawerTitle className="overflow-wrap-anywhere break-words">{title}</DrawerTitle>
+            {description ? <DrawerDescription>{description}</DrawerDescription> : null}
+          </div>
+          {headerAction ? <div className="shrink-0 pt-0.5">{headerAction}</div> : null}
         </DrawerHeader>
         <div className="max-w-full overflow-y-auto px-5 pb-1">{children}</div>
         <DrawerFooter>
           <Button asChild className="w-full">
-            <Link href={href}>{hrefLabel}</Link>
+            <Link href={primaryHref}>{primaryLabel}</Link>
           </Button>
-          <DrawerClose asChild>
-            <Button variant="secondary" className="w-full">
-              Close
+          {secondaryHref && secondaryLabel ? (
+            <Button asChild variant="secondary" className="w-full">
+              <Link href={secondaryHref}>{secondaryLabel}</Link>
             </Button>
-          </DrawerClose>
+          ) : null}
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

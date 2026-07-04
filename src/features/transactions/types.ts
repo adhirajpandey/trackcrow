@@ -14,6 +14,7 @@ export type TransactionStatus = "uncategorized";
 export type TransactionsQueryRow = {
   id: number;
   uuid: string;
+  recipientId: number;
   recipient: string;
   amount: number;
   category: string | null;

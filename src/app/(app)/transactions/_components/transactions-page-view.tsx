@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarDays, ChevronDown, SlidersHorizontal, Tag } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  LoaderCircle,
+  SlidersHorizontal,
+  Tag,
+  Trash2,
+} from "lucide-react";
 
 import { formatNumber } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import { AppPageHeader } from "@/components/product/app-page-header";
@@ -17,8 +24,10 @@ import {
 } from "@/components/product/mobile/mobile-primitives";
 import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
 import { dashboardRangeCookieName } from "@/features/dashboard/query-state";
+import { useDeleteTransactionMutation } from "@/features/transactions/mutations";
 import {
   buildTransactionsPageData,
   getTransactionsPageState,
@@ -49,6 +58,7 @@ import {
 import { TransactionsFilterControls } from "./transactions-filter-controls";
 import { TransactionsTable } from "./transactions-table";
 import { TransactionsTimeframePicker } from "./transactions-timeframe-picker";
+import { TransactionDeleteDialog } from "./transaction-delete-dialog";
 
 function toSearchParamsObject(searchParams: Pick<URLSearchParams, "keys" | "getAll">) {
   const result: TransactionsSearchParams = {};
@@ -81,6 +91,7 @@ export function TransactionsPageView({
     initialQuery: initialTransactionsQuery,
     initialData: initialTransactionsData,
   });
+  const deleteMutation = useDeleteTransactionMutation();
   const isInitialQuery = isSameTransactionsQuery(
     state.query,
     initialTransactionsQuery
@@ -135,6 +146,34 @@ export function TransactionsPageView({
 
   function persistRange(range: typeof mobileDraftFilters.range) {
     document.cookie = `${dashboardRangeCookieName}=${range}; path=/; max-age=31536000; samesite=lax`;
+  }
+
+  async function handleDrawerDelete() {
+    if (!drawerRow) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync({ transactionId: drawerRow.id });
+      setDrawerRow(null);
+      await transactionsQuery.refetch();
+      toast({
+        tone: "success",
+        title: "Transaction deleted",
+        description: "The transaction was removed from the ledger.",
+        durationMs: 3200,
+      });
+    } catch (error) {
+      toast({
+        tone: "warning",
+        title: "Delete unavailable",
+        description: getApiClientErrorMessage(
+          error,
+          "Unable to delete this transaction right now."
+        ),
+        durationMs: 4200,
+      });
+    }
   }
 
   return (
@@ -381,20 +420,51 @@ export function TransactionsPageView({
               )}`
             : undefined
         }
-        href={drawerRow ? `/transactions/${drawerRow.id}` : "/transactions"}
-        hrefLabel="Open transaction detail"
+        primaryHref={drawerRow ? `/transactions/${drawerRow.id}` : "/transactions"}
+        primaryLabel="Open Transaction"
+        secondaryHref={drawerRow ? `/recipients/${drawerRow.recipientId}` : undefined}
+        secondaryLabel="Open Recipient"
+        headerAction={
+          drawerRow ? (
+            <TransactionDeleteDialog
+              transactionId={drawerRow.id}
+              isDeleting={deleteMutation.isPending}
+              onDelete={handleDrawerDelete}
+              trigger={
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  aria-label="Delete transaction"
+                  title="Delete transaction"
+                  disabled={deleteMutation.isPending}
+                  className="border-destructive/55 bg-destructive/10 text-destructive hover:bg-destructive/18"
+                >
+                  {deleteMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              }
+            />
+          ) : null
+        }
       >
         {drawerRow ? (
-          <div className="space-y-4 pb-3">
-            <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
+          <div className="space-y-3 pb-2">
+            <div className="rounded-[8px] border border-border/45 bg-background/12 px-4 py-3.5">
               <p className="text-xs font-semibold text-secondary-foreground">
                 Amount
               </p>
               <p className="mt-2 text-[1.65rem] font-semibold leading-none tabular-nums text-foreground">
                 {formatTransactionAmount(drawerRow.amount)}
               </p>
+              {!drawerRow.category ? (
+                <p className="mt-3 text-sm font-medium text-accent">Needs category</p>
+              ) : null}
             </div>
-            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 p-4">
+            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 px-4 py-3.5">
               <DetailMetric
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="When"
