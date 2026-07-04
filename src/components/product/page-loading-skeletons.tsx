@@ -20,6 +20,9 @@ const defaultTableColumns: TableSkeletonColumn[] = [
   { className: "w-[12%]" },
 ];
 
+const mobileSurfaceClassName =
+  "w-full max-w-full min-w-0 overflow-hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] shadow-[0_8px_24px_rgba(0,0,0,0.16)]";
+
 export function WorkspaceListPageSkeleton({
   eyebrowWidth = "w-36",
   titleWidth = "w-64",
@@ -41,7 +44,7 @@ export function WorkspaceListPageSkeleton({
 }) {
   return (
     <div className="space-y-3.5">
-      <PageHeaderSkeleton
+      <AppPageHeaderSkeleton
         eyebrowWidth={eyebrowWidth}
         titleWidth={titleWidth}
         descriptionWidth={descriptionWidth}
@@ -74,7 +77,7 @@ export function WorkspaceDetailPageSkeleton({
 
   return (
     <div className="space-y-3.5">
-      <PageHeaderSkeleton
+      <AppPageHeaderSkeleton
         eyebrowWidth="w-40"
         titleWidth="w-72"
         descriptionWidth="w-[38rem]"
@@ -125,14 +128,45 @@ export function PageHeaderSkeleton({
   actionWidths?: string[];
 }) {
   return (
+    <AppPageHeaderSkeleton
+      eyebrowWidth={eyebrowWidth}
+      titleWidth={titleWidth}
+      descriptionWidth={descriptionWidth}
+      actionWidths={actionWidths}
+    />
+  );
+}
+
+export function AppPageHeaderSkeleton({
+  eyebrowWidth,
+  titleWidth,
+  descriptionWidth,
+  metaWidth,
+  actionWidths = [],
+}: {
+  eyebrowWidth: string;
+  titleWidth: string;
+  descriptionWidth?: string;
+  metaWidth?: string;
+  actionWidths?: string[];
+}) {
+  return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 space-y-3">
         <Skeleton className={cn("h-4 rounded-[8px]", eyebrowWidth)} />
         <Skeleton className={cn("h-12 max-w-full rounded-[8px]", titleWidth)} />
-        <Skeleton className={cn("h-5 max-w-full rounded-[8px]", descriptionWidth)} />
+        {descriptionWidth ? (
+          <Skeleton className={cn("h-5 max-w-full rounded-[8px]", descriptionWidth)} />
+        ) : null}
+        {metaWidth ? (
+          <div className="flex items-center gap-2">
+            <Skeleton className={cn("h-4 rounded-[8px]", metaWidth)} />
+            <Skeleton className="h-3.5 w-3.5 rounded-full" />
+          </div>
+        ) : null}
       </div>
       {actionWidths.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2 lg:w-auto">
           {actionWidths.map((width, index) => (
             <Skeleton key={`${width}-${index}`} className={cn("h-10 rounded-[8px]", width)} />
           ))}
@@ -142,19 +176,165 @@ export function PageHeaderSkeleton({
   );
 }
 
+export function MobilePageHeaderSkeleton({
+  titleWidth,
+  eyebrowWidth,
+  descriptionWidth,
+  metaWidth,
+  actionWidth,
+  showEyebrow = false,
+}: {
+  titleWidth: string;
+  eyebrowWidth?: string;
+  descriptionWidth?: string;
+  metaWidth?: string;
+  actionWidth?: string;
+  showEyebrow?: boolean;
+}) {
+  return (
+    <section className="space-y-2.5 border-b border-border pb-3.5 lg:hidden">
+      <div className="min-w-0 space-y-2">
+        <div className="min-w-0">
+          {showEyebrow && eyebrowWidth ? (
+            <Skeleton className={cn("h-3 w-24 rounded-[8px]", eyebrowWidth)} />
+          ) : null}
+          <Skeleton
+            className={cn(
+              "h-10 max-w-full rounded-[8px]",
+              showEyebrow ? "mt-1" : "",
+              titleWidth
+            )}
+          />
+          {descriptionWidth ? (
+            <Skeleton className={cn("mt-1.5 h-5 max-w-full rounded-[8px]", descriptionWidth)} />
+          ) : null}
+        </div>
+        {metaWidth ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className={cn("h-4 rounded-[8px]", metaWidth)} />
+            <Skeleton className="h-4 w-20 rounded-[8px]" />
+          </div>
+        ) : null}
+      </div>
+      {actionWidth ? (
+        <div className="flex flex-col gap-2 pt-1">
+          <Skeleton className={cn("h-10 max-w-full rounded-[8px]", actionWidth)} />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+export function MobileSurfaceSkeleton({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <section className={cn(mobileSurfaceClassName, className)}>{children}</section>;
+}
+
+export function MobileSearchSurfaceSkeleton({
+  showChips = false,
+}: {
+  showChips?: boolean;
+}) {
+  return (
+    <MobileSurfaceSkeleton className="p-4 lg:hidden">
+      <MobileSearchBarSkeleton />
+      {showChips ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Skeleton className="h-11 w-36 rounded-[999px]" />
+        </div>
+      ) : null}
+    </MobileSurfaceSkeleton>
+  );
+}
+
+export function MobileSearchBarSkeleton() {
+  return (
+    <div className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
+      <Skeleton className="h-4 w-4 rounded-full" />
+      <Skeleton className="h-4 w-56 max-w-full rounded-[8px]" />
+    </div>
+  );
+}
+
+export function MobileListCardSkeleton({
+  badge = true,
+  amount = true,
+  detailRows = 1,
+}: {
+  badge?: boolean;
+  amount?: boolean;
+  detailRows?: number;
+}) {
+  return (
+    <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-4/5 rounded-[8px]" />
+          <Skeleton className="h-4 w-3/5 rounded-[8px]" />
+        </div>
+        {amount ? <Skeleton className="h-5 w-20 rounded-[8px]" /> : null}
+      </div>
+      <div className="mt-4 space-y-3">
+        {badge || detailRows > 0 ? (
+          <div className="flex items-start justify-between gap-3">
+            {badge ? <Skeleton className="h-11 w-28 rounded-[999px]" /> : <div />}
+            <div className="min-w-0 flex-1 space-y-2">
+              {Array.from({ length: detailRows }).map((_, index) => (
+                <Skeleton
+                  key={index}
+                  className={cn(
+                    "ml-auto h-4 rounded-[8px]",
+                    index === 0 ? "w-24" : "w-20"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function MobilePaginationSkeleton() {
+  return (
+    <div className="flex items-center justify-between gap-3 lg:hidden">
+      <Skeleton className="h-9 w-24 rounded-[8px]" />
+      <Skeleton className="h-4 w-24 rounded-[8px]" />
+      <Skeleton className="h-9 w-20 rounded-[8px]" />
+    </div>
+  );
+}
+
 export function FilterPanelSkeleton({
   controlCount = 5,
   controlClassNames,
+  desktopBreakpoint = "lg",
 }: {
   controlCount?: number;
   controlClassNames?: string[];
+  desktopBreakpoint?: "lg" | "xl";
 }) {
+  const gridClassName =
+    controlClassNames
+      ? desktopBreakpoint === "xl"
+        ? "xl:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]"
+        : "lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]"
+      : desktopBreakpoint === "xl"
+        ? "xl:grid-cols-5"
+        : "lg:grid-cols-5";
+
   return (
     <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
       <div
         className={cn(
           "grid gap-3 md:grid-cols-2",
-          controlClassNames ? "lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]" : "xl:grid-cols-5"
+          gridClassName
         )}
       >
         {Array.from({ length: controlCount }).map((_, index) => (
@@ -180,15 +360,21 @@ export function DataTableSkeleton({
   rowCount = 8,
   mobileRowCount = 5,
   minWidth = "min-w-[860px]",
+  mobileBreakpoint = "md",
+  includeShell = true,
+  includeFooter = true,
 }: {
   columns?: TableSkeletonColumn[];
   rowCount?: number;
   mobileRowCount?: number;
   minWidth?: string;
+  mobileBreakpoint?: "md" | "lg";
+  includeShell?: boolean;
+  includeFooter?: boolean;
 }) {
-  return (
-    <DataTableShell>
-      <div className="grid gap-3 p-4 md:hidden">
+  const content = (
+    <>
+      <div className={cn("grid gap-3 p-4", mobileBreakpoint === "lg" ? "lg:hidden" : "md:hidden")}>
         {Array.from({ length: mobileRowCount }).map((_, index) => (
           <div
             key={index}
@@ -209,7 +395,7 @@ export function DataTableSkeleton({
         ))}
       </div>
 
-      <div className="hidden md:block">
+      <div className={cn(mobileBreakpoint === "lg" ? "hidden lg:block" : "hidden md:block")}>
         <div className="overflow-x-auto">
           <div className={cn("w-full", minWidth)}>
             <div className="flex border-b border-border/40 bg-background/16">
@@ -255,16 +441,24 @@ export function DataTableSkeleton({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-border/45 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-        <Skeleton className="h-5 w-52 rounded-[8px]" />
-        <div className="flex gap-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-9 w-9 rounded-[8px]" />
-          ))}
+      {includeFooter ? (
+        <div className="flex flex-col gap-4 border-t border-border/45 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+          <Skeleton className="h-5 w-52 rounded-[8px]" />
+          <div className="flex gap-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-9 w-9 rounded-[8px]" />
+            ))}
+          </div>
         </div>
-      </div>
-    </DataTableShell>
+      ) : null}
+    </>
   );
+
+  if (!includeShell) {
+    return content;
+  }
+
+  return <DataTableShell>{content}</DataTableShell>;
 }
 
 function SummaryPanelSkeleton() {

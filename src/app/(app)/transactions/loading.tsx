@@ -1,17 +1,20 @@
 import { DataTableShell } from "@/components/product/data-table-shell";
 import {
+  AppPageHeaderSkeleton,
   DataTableSkeleton,
   FilterPanelSkeleton,
-  PageHeaderSkeleton,
+  MobilePageHeaderSkeleton,
+  MobilePaginationSkeleton,
+  MobileSearchBarSkeleton,
 } from "@/components/product/page-loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function MobileTransactionsControlsSkeleton() {
   return (
     <section className="space-y-3 lg:hidden">
-      <Skeleton className="h-12 rounded-[8px]" />
+      <MobileSearchBarSkeleton />
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <Skeleton className="h-9 max-w-full rounded-[8px] w-[12.5rem]" />
+        <Skeleton className="h-11 max-w-full rounded-[8px] w-[12.5rem]" />
         <Skeleton className="h-4 w-28 rounded-[8px]" />
       </div>
     </section>
@@ -20,7 +23,7 @@ function MobileTransactionsControlsSkeleton() {
 
 function MobileTransactionsListSkeleton() {
   return (
-    <div className="grid gap-3 md:hidden">
+    <div className="grid gap-3 lg:hidden">
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
@@ -46,12 +49,21 @@ function MobileTransactionsListSkeleton() {
 export default function TransactionsLoading() {
   return (
     <div className="space-y-3.5">
-      <PageHeaderSkeleton
-        eyebrowWidth="w-44"
-        titleWidth="w-64"
-        descriptionWidth="w-[34rem]"
-        actionWidths={["w-64", "w-40"]}
+      <MobilePageHeaderSkeleton
+        titleWidth="w-48"
+        descriptionWidth="w-[18rem]"
+        showEyebrow
+        eyebrowWidth="w-36"
       />
+
+      <div className="hidden lg:block">
+        <AppPageHeaderSkeleton
+          eyebrowWidth="w-44"
+          titleWidth="w-64"
+          descriptionWidth="w-[34rem]"
+          actionWidths={["w-64"]}
+        />
+      </div>
 
       <MobileTransactionsControlsSkeleton />
 
@@ -59,13 +71,14 @@ export default function TransactionsLoading() {
         <FilterPanelSkeleton
           controlCount={4}
           controlClassNames={["", "", "", "flex items-end lg:justify-end"]}
+          desktopBreakpoint="lg"
         />
       </div>
 
       <DataTableShell>
         <MobileTransactionsListSkeleton />
 
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <DataTableSkeleton
             columns={[
               { className: "w-[20%]" },
@@ -75,9 +88,13 @@ export default function TransactionsLoading() {
               { className: "w-[12%]" },
             ]}
             minWidth="min-w-[860px]"
+            mobileBreakpoint="lg"
+            includeShell={false}
           />
         </div>
       </DataTableShell>
+
+      <MobilePaginationSkeleton />
     </div>
   );
 }

@@ -1,3 +1,7 @@
+import {
+  AppPageHeaderSkeleton,
+  MobilePageHeaderSkeleton,
+} from "@/components/product/page-loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function DashboardPanelSkeleton({
@@ -100,16 +104,19 @@ function TablePanelSkeleton({
 export default function DashboardLoading() {
   return (
     <div className="space-y-3.5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-8 w-40 rounded-[8px]" />
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-44" />
-            <Skeleton className="h-3.5 w-3.5 rounded-full" />
-          </div>
-        </div>
-        <Skeleton className="h-10 w-44 rounded-[8px]" />
+      <MobilePageHeaderSkeleton titleWidth="w-44" metaWidth="w-32" />
+
+      <div className="lg:hidden">
+        <Skeleton className="h-11 w-full rounded-[8px]" />
+      </div>
+
+      <div className="hidden lg:block">
+        <AppPageHeaderSkeleton
+          eyebrowWidth="w-28"
+          titleWidth="w-44"
+          metaWidth="w-32"
+          actionWidths={["w-44"]}
+        />
       </div>
 
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
