@@ -20,7 +20,7 @@ function buildTokenPrefix(token: string) {
 }
 
 function toDeviceTokenDto(token: {
-  id: number;
+  id?: number;
   uuid: string;
   label: string | null;
   tokenPrefix: string;
@@ -28,7 +28,14 @@ function toDeviceTokenDto(token: {
   lastUsedAt: Date | null;
   revokedAt: Date | null;
 }): DeviceTokenDto {
-  return token;
+  return {
+    uuid: token.uuid,
+    label: token.label,
+    tokenPrefix: token.tokenPrefix,
+    createdAt: token.createdAt,
+    lastUsedAt: token.lastUsedAt,
+    revokedAt: token.revokedAt,
+  };
 }
 
 export async function listDeviceTokens(
@@ -38,7 +45,6 @@ export async function listDeviceTokens(
     const tokens = await prisma.deviceToken.findMany({
       where: { userUuid: input.userUuid },
       select: {
-        id: true,
         uuid: true,
         label: true,
         tokenPrefix: true,
@@ -123,11 +129,11 @@ export async function revokeDeviceToken(
   try {
     const existing = await prisma.deviceToken.findFirst({
       where: {
-        id: input.tokenId,
+        uuid: input.tokenUuid,
         userUuid: input.userUuid,
         revokedAt: null,
       },
-      select: { id: true },
+      select: { id: true, uuid: true },
     });
 
     if (!existing) {
@@ -135,14 +141,14 @@ export async function revokeDeviceToken(
     }
 
     await prisma.deviceToken.update({
-      where: { id: input.tokenId },
+      where: { id: existing.id },
       data: { revokedAt: new Date() },
     });
 
     logger.info({
       event: "device_token.revoked",
       userId: input.userUuid,
-      tokenId: input.tokenId,
+      tokenId: existing.id,
     });
 
     return ok({ revoked: true });
@@ -151,7 +157,7 @@ export async function revokeDeviceToken(
       {
         event: "device_token.revoke.db_failed",
         userId: input.userUuid,
-        tokenId: input.tokenId,
+        tokenUuid: input.tokenUuid,
         message: "Failed to revoke device token",
       },
       error

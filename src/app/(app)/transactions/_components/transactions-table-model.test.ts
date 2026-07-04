@@ -9,7 +9,6 @@ import {
 
 const rows: TransactionTableRow[] = [
   {
-    id: 2,
     uuid: "txn-2",
     recipient: "Beta",
     amount: 50,
@@ -18,7 +17,6 @@ const rows: TransactionTableRow[] = [
     timestamp: "2026-06-29T10:00:00.000Z",
   },
   {
-    id: 1,
     uuid: "txn-1",
     recipient: "Alpha",
     amount: 100,
@@ -27,7 +25,6 @@ const rows: TransactionTableRow[] = [
     timestamp: "2026-06-30T10:00:00.000Z",
   },
   {
-    id: 3,
     uuid: "txn-3",
     recipient: "Gamma",
     amount: 75,

@@ -37,47 +37,42 @@ function createShortcutTarget(
 
       return null;
     },
-  } as EventTarget;
+  } as unknown as EventTarget;
 }
 
 const categories: CategoryOption[] = [
   {
-    id: 1,
     uuid: "cat-1",
     name: "Food",
     subcategories: [
       {
-        id: 11,
         uuid: "sub-11",
         name: "Dinner",
-        categoryId: 1,
+        categoryUuid: "cat-1",
       },
     ],
   },
   {
-    id: 2,
     uuid: "cat-2",
     name: "Transport",
     subcategories: [
       {
-        id: 21,
         uuid: "sub-21",
         name: "Cab",
-        categoryId: 2,
+        categoryUuid: "cat-2",
       },
     ],
   },
 ];
 
 const transaction: TransactionRecord = {
-  id: 42,
   uuid: "txn-42",
   userUuid: "usr-42",
   amount: 1063,
   currency: "INR",
   type: "UPI",
   source: "SMS",
-  recipientId: 30,
+  recipientUuid: "rcp-30",
   recipientRaw: "742810776@kotakbank",
   recipientName: "Kotak Bank UPI",
   recipientDisplayName: "Kotak Bank UPI",
@@ -90,16 +85,16 @@ const transaction: TransactionRecord = {
   updatedAt: "2026-06-24T17:35:00.000Z",
   category: null,
   subcategory: null,
-  categoryId: null,
-  subcategoryId: null,
+  categoryUuid: null,
+  subcategoryUuid: null,
 };
 
 describe("transaction detail model", () => {
   it("maps transaction records into form defaults with IST datetime-local values", () => {
     expect(mapTransactionToFormValues(transaction)).toEqual({
       amount: "1063",
-      categoryId: "",
-      subcategoryId: "",
+      categoryUuid: "",
+      subcategoryUuid: "",
       type: "UPI",
       timestamp: "2026-06-24T23:01",
       reference: "",
@@ -113,8 +108,8 @@ describe("transaction detail model", () => {
     expect(
       mapFormValuesToTransactionPayload(transaction, {
         amount: "1063",
-        categoryId: "1",
-        subcategoryId: "11",
+        categoryUuid: "cat-1",
+        subcategoryUuid: "sub-11",
         type: "UPI",
         timestamp: "2026-06-24T23:01",
         reference: " ",
@@ -126,8 +121,8 @@ describe("transaction detail model", () => {
       amount: 1063,
       recipientRaw: "742810776@kotakbank",
       recipientName: "Kotak Bank UPI",
-      categoryId: 1,
-      subcategoryId: 11,
+      categoryUuid: "cat-1",
+      subcategoryUuid: "sub-11",
       type: "UPI",
       timestamp: "2026-06-24T17:31:00.000Z",
       reference: null,
@@ -165,8 +160,8 @@ describe("transaction detail model", () => {
     expect(
       hasTransactionDetailChanges(transaction, {
         ...mapTransactionToFormValues(transaction),
-        categoryId: "1",
-        subcategoryId: "11",
+        categoryUuid: "cat-1",
+        subcategoryUuid: "sub-11",
       })
     ).toBe(true);
   });
@@ -192,13 +187,13 @@ describe("transaction detail model", () => {
   });
 
   it("filters subcategories by category and validates the selected subcategory", () => {
-    expect(getSubcategoryOptions(categories, "1")).toEqual(categories[0]?.subcategories);
-    expect(isValidSubcategorySelection(categories, "1", "11")).toBe(true);
-    expect(isValidSubcategorySelection(categories, "1", "21")).toBe(false);
+    expect(getSubcategoryOptions(categories, "cat-1")).toEqual(categories[0]?.subcategories);
+    expect(isValidSubcategorySelection(categories, "cat-1", "sub-11")).toBe(true);
+    expect(isValidSubcategorySelection(categories, "cat-1", "sub-21")).toBe(false);
   });
 
   it("builds the canonical recipient detail href from the linked recipient id", () => {
-    expect(getRecipientDetailHref(transaction)).toBe("/recipients/30");
+    expect(getRecipientDetailHref(transaction)).toBe("/recipients/rcp-30");
   });
 
   it("formats the most readable recipient label from available transaction fields", () => {
@@ -236,8 +231,8 @@ describe("transaction detail model", () => {
         suggestedSubCategory: "Cab",
       })
     ).toEqual({
-      categoryId: "2",
-      subcategoryId: "21",
+      categoryUuid: "cat-2",
+      subcategoryUuid: "sub-21",
       matched: true,
     });
 
@@ -247,8 +242,8 @@ describe("transaction detail model", () => {
         suggestedSubCategory: null,
       })
     ).toEqual({
-      categoryId: "",
-      subcategoryId: "",
+      categoryUuid: "",
+      subcategoryUuid: "",
       matched: false,
     });
   });

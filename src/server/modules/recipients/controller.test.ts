@@ -3,16 +3,18 @@ jest.mock("@/server/auth/session", () => ({
 }));
 
 jest.mock("./service", () => ({
+  addRecipientIdentifier: jest.fn(),
   getRecipient: jest.fn(),
   listRecipients: jest.fn(),
 }));
 
 import { requireSessionUser } from "@/server/auth/session";
 
-import { getRecipients } from "./controller";
-import { listRecipients } from "./service";
+import { getRecipientById, getRecipients } from "./controller";
+import { getRecipient, listRecipients } from "./service";
 
 const requireSessionUserMock = jest.mocked(requireSessionUser);
+const getRecipientMock = jest.mocked(getRecipient);
 const listRecipientsMock = jest.mocked(listRecipients);
 
 describe("recipients controller", () => {
@@ -74,5 +76,18 @@ describe("recipients controller", () => {
       message: "Invalid request",
       issues: expect.any(Array),
     });
+  });
+
+  it("returns a clean 400 for numeric recipient route params", async () => {
+    const response = await getRecipientById(
+      new Request("http://localhost/api/recipients/123"),
+      { params: Promise.resolve({ id: "123" }) }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      message: "Invalid request",
+    });
+    expect(getRecipientMock).not.toHaveBeenCalled();
   });
 });

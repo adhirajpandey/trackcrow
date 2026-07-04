@@ -51,7 +51,6 @@ export async function postSmsImport(request: Request) {
   return jsonOk(
     {
       message: "Transaction created",
-      id: data.id,
       uuid: data.uuid,
     },
     201

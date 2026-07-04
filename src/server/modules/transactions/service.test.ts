@@ -64,9 +64,9 @@ function transactionRecord(overrides: Record<string, unknown> = {}) {
     updatedAt: now,
     categoryId: 10,
     subcategoryId: 20,
-    recipient: { displayName: "Merchant" },
-    category: { name: "Food" },
-    subcategory: { name: "Dinner" },
+    recipient: { uuid: "rcp-30", displayName: "Merchant" },
+    category: { uuid: "cat-food", name: "Food" },
+    subcategory: { uuid: "sub-dinner", name: "Dinner" },
     ...overrides,
   };
 }
@@ -83,7 +83,7 @@ describe("transaction service", () => {
       userUuid: "user-1",
       amount: 25,
       recipientRaw: "merchant@upi",
-      categoryId: 10,
+      categoryUuid: "cat-food",
       type: TransactionType.UPI,
       timestamp: new Date(),
       source: TransactionSource.MANUAL,
@@ -92,7 +92,7 @@ describe("transaction service", () => {
     expect(missingCategory).toMatchObject({
       ok: false,
       error: "VALIDATION_ERROR",
-      details: [{ path: ["categoryId"], message: "Unknown category" }],
+      details: [{ path: ["categoryUuid"], message: "Unknown category" }],
     });
     expect(resolveRecipientMock).not.toHaveBeenCalled();
 
@@ -103,8 +103,8 @@ describe("transaction service", () => {
       userUuid: "user-1",
       amount: 25,
       recipientRaw: "merchant@upi",
-      categoryId: 10,
-      subcategoryId: 20,
+      categoryUuid: "cat-food",
+      subcategoryUuid: "sub-dinner",
       type: TransactionType.UPI,
       timestamp: new Date(),
       source: TransactionSource.MANUAL,
@@ -113,13 +113,41 @@ describe("transaction service", () => {
     expect(missingSubcategory).toMatchObject({
       ok: false,
       error: "VALIDATION_ERROR",
-      details: [{ path: ["subcategoryId"], message: "Unknown subcategory" }],
+      details: [{ path: ["subcategoryUuid"], message: "Unknown subcategory" }],
     });
+  });
+
+  it("rejects a subcategory UUID that belongs to a different category", async () => {
+    mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 10 });
+    mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20, categoryId: 99 });
+
+    await expect(
+      createTransaction({
+        userUuid: "user-1",
+        amount: 25,
+        recipientRaw: "merchant@upi",
+        categoryUuid: "cat-food",
+        subcategoryUuid: "sub-utilities",
+        type: TransactionType.UPI,
+        timestamp: new Date(),
+        source: TransactionSource.MANUAL,
+      })
+    ).resolves.toMatchObject({
+      ok: false,
+      error: "VALIDATION_ERROR",
+      details: [
+        {
+          path: ["subcategoryUuid"],
+          message: "Subcategory does not belong to category",
+        },
+      ],
+    });
+    expect(resolveRecipientMock).not.toHaveBeenCalled();
   });
 
   it("trims nullable text fields before creating a transaction", async () => {
     mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 10 });
-    mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20 });
+    mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20, categoryId: 10 });
     resolveRecipientMock.mockResolvedValueOnce({
       ok: true,
       data: { recipientId: 30, displayName: "Merchant" },
@@ -132,8 +160,8 @@ describe("transaction service", () => {
       amount: 25,
       recipientRaw: " merchant@upi ",
       recipientName: " Merchant ",
-      categoryId: 10,
-      subcategoryId: 20,
+      categoryUuid: "cat-food",
+      subcategoryUuid: "sub-dinner",
       type: TransactionType.UPI,
       remarks: " dinner ",
       timestamp,
@@ -143,7 +171,7 @@ describe("transaction service", () => {
       source: TransactionSource.MANUAL,
     });
 
-    expect(result).toEqual({ ok: true, data: { id: 1, uuid: "txn-1" } });
+    expect(result).toEqual({ ok: true, data: { uuid: "txn-1" } });
     expect(mockPrisma.transaction.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         recipientRaw: "merchant@upi",
@@ -212,16 +240,16 @@ describe("transaction service", () => {
     );
   });
 
-  it("includes recipientId in transaction DTOs for detail and list flows", async () => {
+  it("includes recipient UUIDs in transaction DTOs for detail and list flows", async () => {
     mockPrisma.transaction.findFirst.mockResolvedValueOnce(transactionRecord({ id: 7, recipientId: 44 }));
 
     await expect(
-      getTransactionById({ userUuid: "user-1", transactionId: 7 })
+      getTransactionById({ userUuid: "user-1", transactionUuid: "txn-7" })
     ).resolves.toEqual({
       ok: true,
       data: expect.objectContaining({
-        id: 7,
-        recipientId: 44,
+        uuid: "txn-1",
+        recipientUuid: "rcp-30",
       }),
     });
 
@@ -242,7 +270,7 @@ describe("transaction service", () => {
     ).resolves.toEqual({
       ok: true,
       data: expect.objectContaining({
-        transactions: [expect.objectContaining({ id: 8, recipientId: 52 })],
+        transactions: [expect.objectContaining({ uuid: "txn-1", recipientUuid: "rcp-30" })],
       }),
     });
   });
@@ -251,12 +279,12 @@ describe("transaction service", () => {
     mockPrisma.transaction.findFirst.mockResolvedValue(null);
 
     await expect(
-      getTransactionById({ userUuid: "user-1", transactionId: 99 })
+      getTransactionById({ userUuid: "user-1", transactionUuid: "txn-other-user" })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
     await expect(
       updateTransaction({
         userUuid: "user-1",
-        transactionId: 99,
+        transactionUuid: "txn-other-user",
         amount: 25,
         recipientRaw: "merchant@upi",
         type: TransactionType.UPI,
@@ -265,8 +293,13 @@ describe("transaction service", () => {
       })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
     await expect(
-      deleteTransaction({ userUuid: "user-1", transactionId: 99 })
+      deleteTransaction({ userUuid: "user-1", transactionUuid: "txn-other-user" })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
+    expect(mockPrisma.transaction.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { uuid: "txn-other-user", userUuid: "user-1" },
+      })
+    );
   });
 
   it("updates only the transaction category and clears subcategory on change", async () => {
@@ -274,25 +307,26 @@ describe("transaction service", () => {
     mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 11 });
     mockPrisma.transaction.update.mockResolvedValueOnce({
       id: 1,
+      uuid: "txn-1",
       categoryId: 11,
       subcategoryId: null,
-      category: { name: "Shopping" },
+      category: { uuid: "cat-shopping", name: "Shopping" },
       subcategory: null,
     });
 
     await expect(
       updateTransactionCategory({
         userUuid: "user-1",
-        transactionId: 1,
-        categoryId: 11,
+        transactionUuid: "txn-1",
+        categoryUuid: "cat-shopping",
       })
     ).resolves.toEqual({
       ok: true,
       data: {
-        id: 1,
-        categoryId: 11,
+        uuid: "txn-1",
+        categoryUuid: "cat-shopping",
         category: "Shopping",
-        subcategoryId: null,
+        subcategoryUuid: null,
         subcategory: null,
       },
     });
@@ -301,8 +335,8 @@ describe("transaction service", () => {
       where: { id: 1 },
       data: { categoryId: 11, subcategoryId: null },
       include: {
-        category: { select: { name: true } },
-        subcategory: { select: { name: true } },
+        category: { select: { uuid: true, name: true } },
+        subcategory: { select: { uuid: true, name: true } },
       },
     });
   });
@@ -313,8 +347,8 @@ describe("transaction service", () => {
     await expect(
       updateTransactionCategory({
         userUuid: "user-1",
-        transactionId: 9,
-        categoryId: 11,
+        transactionUuid: "txn-missing",
+        categoryUuid: "cat-shopping",
       })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
 
@@ -324,13 +358,13 @@ describe("transaction service", () => {
     await expect(
       updateTransactionCategory({
         userUuid: "user-1",
-        transactionId: 1,
-        categoryId: 77,
+        transactionUuid: "txn-1",
+        categoryUuid: "cat-missing",
       })
     ).resolves.toMatchObject({
       ok: false,
       error: "VALIDATION_ERROR",
-      details: [{ path: ["categoryId"], message: "Unknown category" }],
+      details: [{ path: ["categoryUuid"], message: "Unknown category" }],
     });
   });
 
@@ -345,7 +379,7 @@ describe("transaction service", () => {
 
     const result = await suggestTransactionCategory({
       userUuid: "user-1",
-      transactionId: 99,
+      transactionUuid: "txn-99",
     });
 
     expect(result).toEqual({

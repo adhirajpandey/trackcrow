@@ -46,19 +46,17 @@ describe("transactions query state", () => {
     }, {
       categories: [
         {
-          id: 1,
           uuid: "cat-1",
           name: "Food",
           subcategories: [
-            { id: 10, uuid: "sub-10", name: "Lunch", categoryId: 1 },
-            { id: 11, uuid: "sub-11", name: "Dinner", categoryId: 1 },
+            { uuid: "sub-10", name: "Lunch", categoryUuid: "cat-1" },
+            { uuid: "sub-11", name: "Dinner", categoryUuid: "cat-1" },
           ],
         },
         {
-          id: 2,
           uuid: "cat-2",
           name: "Travel",
-          subcategories: [{ id: 20, uuid: "sub-20", name: "Cab", categoryId: 2 }],
+          subcategories: [{ uuid: "sub-20", name: "Cab", categoryUuid: "cat-2" }],
         },
       ],
     });
@@ -100,16 +98,14 @@ describe("transactions query state", () => {
       {
         categories: [
           {
-            id: 1,
             uuid: "cat-1",
             name: "Food",
-            subcategories: [{ id: 10, uuid: "sub-10", name: "Lunch", categoryId: 1 }],
+            subcategories: [{ uuid: "sub-10", name: "Lunch", categoryUuid: "cat-1" }],
           },
           {
-            id: 2,
             uuid: "cat-2",
             name: "Travel",
-            subcategories: [{ id: 20, uuid: "sub-20", name: "Cab", categoryId: 2 }],
+            subcategories: [{ uuid: "sub-20", name: "Cab", categoryUuid: "cat-2" }],
           },
         ],
       }

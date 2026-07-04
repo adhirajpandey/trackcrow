@@ -378,7 +378,7 @@ function LargestTransactionsPanel({
             rows={transactions}
             columns={["recipient", "timestamp", "amount"]}
             variant="compact"
-            rowHref={(transaction) => buildLargestTransactionHref(transaction.id)}
+            rowHref={(transaction) => buildLargestTransactionHref(transaction.uuid)}
             onNavigate={router.push}
             emptyTitle="No large transactions in this period."
           />
@@ -424,7 +424,7 @@ function RecentTransactionsPanel({
             rows={transactions}
             columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
             variant="embedded"
-            rowHref={(transaction) => `/transactions/${transaction.id}`}
+            rowHref={(transaction) => `/transactions/${transaction.uuid}`}
             onNavigate={router.push}
             emptyTitle="No recent transactions in this period."
           />

@@ -266,13 +266,11 @@ describe("dashboard view model", () => {
     expect(
       buildRecentTransactionsSummary({
         transactionCount: 10,
-        uncategorizedCount: 8,
       })
     ).toBe("10 recent");
     expect(
       buildRecentTransactionsSummary({
         transactionCount: 4,
-        uncategorizedCount: 0,
       })
     ).toBe("4 recent");
   });
@@ -646,22 +644,22 @@ describe("dashboard view model", () => {
     expect(
       buildSuggestedRules({
         recipients: [
-          { recipient: "B ten cafe sec 56", paymentCount: 5, totalAmount: 2450 },
-          { recipient: "Hamanthi Devi", paymentCount: 4, totalAmount: 1600 },
+          { recipientUuid: "rcp-cafe", recipient: "B ten cafe sec 56", paymentCount: 5, totalAmount: 2450 },
+          { recipientUuid: "rcp-devi", recipient: "Hamanthi Devi", paymentCount: 4, totalAmount: 1600 },
         ],
       })
     ).toEqual([
       {
         recipient: "B ten cafe sec 56",
         action: "Create rule",
-        href: "/recipients",
+        href: "/recipients/rcp-cafe",
         paymentCount: 5,
         totalAmount: 2450,
       },
       {
         recipient: "Hamanthi Devi",
         action: "Create rule",
-        href: "/recipients",
+        href: "/recipients/rcp-devi",
         paymentCount: 4,
         totalAmount: 1600,
       },
@@ -906,7 +904,7 @@ describe("dashboard view model", () => {
       buildMostFrequentRecipient({
         recipients: [
           {
-            recipientId: 4,
+            recipientUuid: "rcp-electric",
             recipient: "Electric Co",
             paymentCount: 3,
             totalAmount: 2400,
@@ -915,7 +913,7 @@ describe("dashboard view model", () => {
       })
     ).toMatchObject({
       action: "Create rule",
-      href: "/recipients/4",
+      href: "/recipients/rcp-electric",
       helper: "Good candidate for a rule",
     });
   });

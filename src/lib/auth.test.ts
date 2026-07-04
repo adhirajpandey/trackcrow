@@ -29,7 +29,10 @@ describe("authOptions callbacks.jwt", () => {
       email: "user@example.com",
       name: "User Name",
       image: "https://lh3.googleusercontent.com/a/profile-image",
+      provider: "google",
       subscription: 0,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     });
 
     const jwt = authOptions.callbacks?.jwt;
@@ -74,7 +77,10 @@ describe("authOptions callbacks.jwt", () => {
       email: "user@example.com",
       name: "User Name",
       image: null,
+      provider: "google",
       subscription: 0,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     });
 
     const jwt = authOptions.callbacks?.jwt;

@@ -1,5 +1,4 @@
 export type DeviceTokenDto = {
-  id: number;
   uuid: string;
   label: string | null;
   tokenPrefix: string;
@@ -19,5 +18,5 @@ export type CreateDeviceTokenInput = {
 
 export type RevokeDeviceTokenInput = {
   userUuid: string;
-  tokenId: number;
+  tokenUuid: string;
 };

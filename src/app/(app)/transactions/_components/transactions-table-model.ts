@@ -16,7 +16,6 @@ export type TransactionTableColumn =
   | "status";
 
 export type TransactionTableRow = {
-  id: number;
   uuid: string;
   recipient?: string;
   amount: number;
@@ -78,7 +77,7 @@ export function sortTransactionTableRows<T extends TransactionTableRow>(
       return comparison * direction;
     }
 
-    return left.id - right.id;
+    return left.uuid.localeCompare(right.uuid);
   });
 }
 

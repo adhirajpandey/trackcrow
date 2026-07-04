@@ -55,14 +55,14 @@ export function buildRecipientDetailPageData(
   let totalSpent = 0;
   const categoryMap = new Map<
     string,
-    { categoryId: number | null; transactionCount: number; totalAmount: number }
+    { categoryUuid: string | null; transactionCount: number; totalAmount: number }
   >();
   const subcategoryMap = new Map<
     string,
-    { category: string; subcategory: string; subcategoryId: number; transactionCount: number }
+    { category: string; subcategory: string; subcategoryUuid: string; transactionCount: number }
   >();
   const sourceCounts = new Map<string, number>();
-  const uncategorizedTransactionIds: number[] = [];
+  const uncategorizedTransactionUuids: string[] = [];
   const amounts = recipient.linkedTransactions.map((transaction) => transaction.amount);
   const averageAmount =
     amounts.length > 0 ? amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length : 0;
@@ -76,25 +76,25 @@ export function buildRecipientDetailPageData(
 
     const category = transaction.category ?? "Uncategorized";
     const currentCategory = categoryMap.get(category) ?? {
-      categoryId: transaction.categoryId,
+      categoryUuid: transaction.categoryUuid,
       transactionCount: 0,
       totalAmount: 0,
     };
-    currentCategory.categoryId = currentCategory.categoryId ?? transaction.categoryId;
+    currentCategory.categoryUuid = currentCategory.categoryUuid ?? transaction.categoryUuid;
     currentCategory.transactionCount += 1;
     currentCategory.totalAmount += transaction.amount;
     categoryMap.set(category, currentCategory);
 
-    if (!transaction.categoryId) {
-      uncategorizedTransactionIds.push(transaction.id);
+    if (!transaction.categoryUuid) {
+      uncategorizedTransactionUuids.push(transaction.uuid);
     }
 
-    if (transaction.subcategory && transaction.subcategoryId) {
+    if (transaction.subcategory && transaction.subcategoryUuid) {
       const subcategoryKey = `${category}|||${transaction.subcategory}`;
       const currentSubcategory = subcategoryMap.get(subcategoryKey) ?? {
         category,
         subcategory: transaction.subcategory,
-        subcategoryId: transaction.subcategoryId,
+        subcategoryUuid: transaction.subcategoryUuid,
         transactionCount: 0,
       };
       currentSubcategory.transactionCount += 1;
@@ -108,7 +108,7 @@ export function buildRecipientDetailPageData(
     .map(([category, value]) => ({
       id: category,
       category,
-      categoryId: value.categoryId,
+      categoryUuid: value.categoryUuid,
       transactionCount: value.transactionCount,
       totalAmount: value.totalAmount,
       consistencyPercent:
@@ -121,14 +121,14 @@ export function buildRecipientDetailPageData(
         right.transactionCount - left.transactionCount || right.totalAmount - left.totalAmount
     );
   const dominantCategory =
-    categoryRows.find((row) => row.category !== "Uncategorized" && row.categoryId != null) ?? null;
+    categoryRows.find((row) => row.category !== "Uncategorized" && row.categoryUuid != null) ?? null;
   const dominantSubcategory: RecipientDetailSubcategoryPattern | null = dominantCategory
     ? [...subcategoryMap.values()]
         .filter((value) => value.category === dominantCategory.category)
         .map((value) => ({
           id: value.subcategory,
           subcategory: value.subcategory,
-          subcategoryId: value.subcategoryId,
+          subcategoryUuid: value.subcategoryUuid,
           transactionCount: value.transactionCount,
         }))
         .sort((left, right) => right.transactionCount - left.transactionCount)[0] ?? null
@@ -146,7 +146,7 @@ export function buildRecipientDetailPageData(
     : null;
 
   return {
-    recipientId: recipient.id,
+    recipientUuid: recipient.uuid,
     displayName: recipient.displayName,
     normalizedName: recipient.normalizedName,
     transactionCount: recipient.transactionCount,
@@ -188,29 +188,28 @@ export function buildRecipientDetailPageData(
     dominantSubcategory,
     cleanupSuggestion: {
       category: dominantCategory?.category ?? null,
-      categoryId: dominantCategory?.categoryId ?? null,
+      categoryUuid: dominantCategory?.categoryUuid ?? null,
       subcategory: dominantSubcategory?.subcategory ?? null,
-      subcategoryId: dominantSubcategory?.subcategoryId ?? null,
+      subcategoryUuid: dominantSubcategory?.subcategoryUuid ?? null,
       consistencyPercent: dominantCategory?.consistencyPercent ?? 0,
       categorizedTransactionCount: dominantCategory?.transactionCount ?? 0,
       totalTransactionCount: recipient.transactionCount,
       totalAmount: dominantCategory?.totalAmount ?? 0,
       uncategorizedCount,
-      uncategorizedTransactionIds,
-      reviewTransactionId: uncategorizedTransactionIds[0] ?? null,
+      uncategorizedTransactionUuids,
+      reviewTransactionUuid: uncategorizedTransactionUuids[0] ?? null,
       applyLabel: suggestionLabel ? `Apply ${suggestionLabel}` : null,
     },
     recentTransactions: recipient.linkedTransactions.map((transaction) => ({
-      id: transaction.id,
       uuid: transaction.uuid,
       amount: transaction.amount,
       category: transaction.category,
-      categoryId: transaction.categoryId,
+      categoryUuid: transaction.categoryUuid,
       subcategory: transaction.subcategory,
-      subcategoryId: transaction.subcategoryId,
+      subcategoryUuid: transaction.subcategoryUuid,
       source: transaction.source,
       timestamp: transaction.timestamp,
-      status: transaction.categoryId ? "categorized" : "uncategorized",
+      status: transaction.categoryUuid ? "categorized" : "uncategorized",
       isLarge: transaction.amount >= largeThreshold && transaction.amount > averageAmount,
       isRecent:
         newestTimestamp == null
@@ -218,11 +217,6 @@ export function buildRecipientDetailPageData(
           : newestTimestamp - new Date(transaction.timestamp).getTime() <= 30 * 24 * 60 * 60 * 1000,
     })),
     metadata: [
-      {
-        label: "Recipient ID",
-        value: `rcp_${recipient.id}`,
-        copyValue: `rcp_${recipient.id}`,
-      },
       {
         label: "Recipient UUID",
         value: recipient.uuid,

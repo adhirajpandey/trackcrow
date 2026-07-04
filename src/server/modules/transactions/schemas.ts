@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TransactionType } from "@/generated/prisma-rewrite";
 
 const optionalNullableString = z.string().trim().optional().nullable();
-const optionalNullablePositiveInt = z.coerce.number().int().positive().optional().nullable();
+const optionalNullableUuid = z.string().uuid().optional().nullable();
 const IST_OFFSET_MINUTES = 330;
 
 function parseDateOnly(value: unknown) {
@@ -60,8 +60,8 @@ export const createTransactionSchema = z.object({
   amount: z.coerce.number().positive(),
   recipientRaw: z.string().trim().min(1),
   recipientName: z.string().trim().min(1).optional().nullable(),
-  categoryId: optionalNullablePositiveInt,
-  subcategoryId: optionalNullablePositiveInt,
+  categoryUuid: optionalNullableUuid,
+  subcategoryUuid: optionalNullableUuid,
   type: z.nativeEnum(TransactionType),
   remarks: optionalNullableString,
   timestamp: z.coerce.date(),
@@ -73,12 +73,12 @@ export const createTransactionSchema = z.object({
 export const updateTransactionSchema = createTransactionSchema;
 
 export const updateTransactionCategorySchema = z.object({
-  categoryId: optionalNullablePositiveInt,
-  subcategoryId: optionalNullablePositiveInt,
+  categoryUuid: optionalNullableUuid,
+  subcategoryUuid: optionalNullableUuid,
 });
 
 export const transactionIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.string().uuid(),
 });
 
 export const listTransactionsQuerySchema = z.object({

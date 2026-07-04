@@ -2,14 +2,12 @@ import type { ServiceResult } from "@/server/shared/result";
 import type { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 
 export type RecipientDto = {
-  id: number;
   uuid: string;
   displayName: string;
   normalizedName: string;
   transactionCount: number;
   totalAmount: number;
   identifiers: Array<{
-    id: number;
     uuid: string;
     kind: string;
     value: string;
@@ -28,7 +26,6 @@ export type RecipientListDto = {
 };
 
 export type RecipientDetailTransactionDto = {
-  id: number;
   uuid: string;
   amount: number;
   currency: string;
@@ -39,12 +36,11 @@ export type RecipientDetailTransactionDto = {
   timestamp: string;
   category: string | null;
   subcategory: string | null;
-  categoryId: number | null;
-  subcategoryId: number | null;
+  categoryUuid: string | null;
+  subcategoryUuid: string | null;
 };
 
 export type RecipientDetailDto = {
-  id: number;
   uuid: string;
   displayName: string;
   normalizedName: string;
@@ -52,7 +48,6 @@ export type RecipientDetailDto = {
   updatedAt: string;
   transactionCount: number;
   identifiers: Array<{
-    id: number;
     uuid: string;
     kind: string;
     value: string;
@@ -69,7 +64,7 @@ export type ResolveRecipientInput = {
 
 export type RecipientLookupInput = {
   userUuid: string;
-  recipientId: number;
+  recipientUuid: string;
 };
 
 export type RecipientIdentifierWriteInput = RecipientLookupInput & {
@@ -80,15 +75,14 @@ export type RecipientIdentifierWriteInput = RecipientLookupInput & {
 
 export type RecipientIdentifierTransferImpact = {
   sourceRecipient: {
-    id: number;
+    uuid: string;
     displayName: string;
   };
   targetRecipient: {
-    id: number;
+    uuid: string;
     displayName: string;
   };
   identifier: {
-    id: number;
     uuid: string;
     kind: string;
     value: string;
@@ -101,7 +95,6 @@ export type RecipientIdentifierTransferImpact = {
 export type RecipientIdentifierWriteDto = {
   status: "created" | "already_linked" | "moved";
   identifier: {
-    id: number;
     uuid: string;
     kind: string;
     value: string;

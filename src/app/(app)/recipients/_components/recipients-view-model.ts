@@ -141,7 +141,6 @@ export function buildRecipientsPageData(input: {
       }));
 
       return {
-        id: recipient.id,
         uuid: recipient.uuid,
         displayName: recipient.displayName,
         transactionCount: recipient.transactionCount,

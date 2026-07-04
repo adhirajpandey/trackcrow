@@ -60,7 +60,6 @@ export type DashboardSectionStatus = {
 };
 
 export type DashboardRecentTransactionDto = {
-  id: number;
   uuid: string;
   recipient: string;
   category: string | null;
@@ -71,7 +70,7 @@ export type DashboardRecentTransactionDto = {
 };
 
 export type DashboardFrequentRecipientDto = {
-  recipientId: number | null;
+  recipientUuid: string | null;
   recipient: string;
   paymentCount: number;
   totalAmount: number;

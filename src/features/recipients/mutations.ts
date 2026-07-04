@@ -13,7 +13,7 @@ import type {
 } from "./types";
 
 export type AddRecipientIdentifierInput = {
-  recipientId: number;
+  recipientUuid: string;
   value: string;
   kind?: string;
   transfer?: boolean;
@@ -26,9 +26,9 @@ export function useAddRecipientIdentifierMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ recipientId, ...input }: AddRecipientIdentifierInput) =>
+    mutationFn: ({ recipientUuid, ...input }: AddRecipientIdentifierInput) =>
       apiPost<AddRecipientIdentifierResponse>(
-        `/api/recipients/${recipientId}/identifiers`,
+        `/api/recipients/${recipientUuid}/identifiers`,
         input
       ),
     onSuccess: async () => {

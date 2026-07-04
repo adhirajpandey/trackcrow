@@ -25,7 +25,7 @@ async function parseJsonBody(request: Request) {
   }
 }
 
-async function parseRecipientId(context: RouteContext, path: string) {
+async function parseRecipientUuid(context: RouteContext, path: string) {
   const params = await context.params;
   const parsed = recipientIdParamsSchema.safeParse(params);
   if (!parsed.success) {
@@ -83,7 +83,7 @@ export async function getRecipientById(
 
   const result = await getRecipient({
     userUuid: sessionData.userUuid,
-    recipientId: parsed.data.id,
+    recipientUuid: parsed.data.id,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
@@ -99,9 +99,9 @@ export async function postRecipientIdentifier(
     return sessionData;
   }
 
-  const recipientId = await parseRecipientId(context, path);
-  if (recipientId instanceof Response) {
-    return recipientId;
+  const recipientUuid = await parseRecipientUuid(context, path);
+  if (recipientUuid instanceof Response) {
+    return recipientUuid;
   }
 
   const json = await parseJsonBody(request);
@@ -117,7 +117,7 @@ export async function postRecipientIdentifier(
 
   const result = await addRecipientIdentifier({
     userUuid: sessionData.userUuid,
-    recipientId,
+    recipientUuid,
     ...parsed.data,
   });
   if (!result.ok && result.error === "CONFLICT") {

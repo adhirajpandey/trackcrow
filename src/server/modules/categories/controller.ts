@@ -32,7 +32,7 @@ async function parseJsonBody(request: Request) {
   }
 }
 
-async function parseId(context: RouteContext, path: string) {
+async function parseUuidParam(context: RouteContext, path: string) {
   const params = await context.params;
   const parsed = categoryIdParamsSchema.safeParse(params);
   if (!parsed.success) {
@@ -91,9 +91,9 @@ export async function patchCategory(request: Request, context: RouteContext) {
     return sessionData;
   }
 
-  const categoryId = await parseId(context, path);
-  if (categoryId instanceof Response) {
-    return categoryId;
+  const categoryUuid = await parseUuidParam(context, path);
+  if (categoryUuid instanceof Response) {
+    return categoryUuid;
   }
 
   const json = await parseJsonBody(request);
@@ -109,7 +109,7 @@ export async function patchCategory(request: Request, context: RouteContext) {
 
   const result = await updateCategory({
     userUuid: sessionData.userUuid,
-    categoryId,
+    categoryUuid,
     ...parsed.data,
   });
   const data = unwrapOrResponse(result);
@@ -123,14 +123,14 @@ export async function removeCategory(request: Request, context: RouteContext) {
     return sessionData;
   }
 
-  const categoryId = await parseId(context, path);
-  if (categoryId instanceof Response) {
-    return categoryId;
+  const categoryUuid = await parseUuidParam(context, path);
+  if (categoryUuid instanceof Response) {
+    return categoryUuid;
   }
 
   const result = await deleteCategory({
     userUuid: sessionData.userUuid,
-    categoryId,
+    categoryUuid,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
@@ -169,9 +169,9 @@ export async function patchSubcategory(request: Request, context: RouteContext) 
     return sessionData;
   }
 
-  const subcategoryId = await parseId(context, path);
-  if (subcategoryId instanceof Response) {
-    return subcategoryId;
+  const subcategoryUuid = await parseUuidParam(context, path);
+  if (subcategoryUuid instanceof Response) {
+    return subcategoryUuid;
   }
 
   const json = await parseJsonBody(request);
@@ -187,7 +187,7 @@ export async function patchSubcategory(request: Request, context: RouteContext) 
 
   const result = await updateSubcategory({
     userUuid: sessionData.userUuid,
-    subcategoryId,
+    subcategoryUuid,
     ...parsed.data,
   });
   const data = unwrapOrResponse(result);
@@ -204,14 +204,14 @@ export async function removeSubcategory(
     return sessionData;
   }
 
-  const subcategoryId = await parseId(context, path);
-  if (subcategoryId instanceof Response) {
-    return subcategoryId;
+  const subcategoryUuid = await parseUuidParam(context, path);
+  if (subcategoryUuid instanceof Response) {
+    return subcategoryUuid;
   }
 
   const result = await deleteSubcategory({
     userUuid: sessionData.userUuid,
-    subcategoryId,
+    subcategoryUuid,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);

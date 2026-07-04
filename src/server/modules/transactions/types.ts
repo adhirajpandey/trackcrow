@@ -2,14 +2,13 @@ import { TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
 import type { ServiceResult } from "@/server/shared/result";
 
 export type TransactionDto = {
-  id: number;
   uuid: string;
   userUuid: string;
   amount: number;
   currency: string;
   type: TransactionType;
   source: TransactionSource;
-  recipientId: number;
+  recipientUuid: string;
   recipientRaw: string;
   recipientName: string | null;
   recipientDisplayName: string;
@@ -22,8 +21,8 @@ export type TransactionDto = {
   updatedAt: string;
   category: string | null;
   subcategory: string | null;
-  categoryId: number | null;
-  subcategoryId: number | null;
+  categoryUuid: string | null;
+  subcategoryUuid: string | null;
 };
 
 export type TransactionListDto = {
@@ -62,8 +61,8 @@ export type TransactionWriteInput = {
   amount: number;
   recipientRaw: string;
   recipientName?: string | null;
-  categoryId?: number | null;
-  subcategoryId?: number | null;
+  categoryUuid?: string | null;
+  subcategoryUuid?: string | null;
   type: TransactionType;
   remarks?: string | null;
   timestamp: Date;
@@ -74,19 +73,19 @@ export type TransactionWriteInput = {
 };
 
 export type TransactionUpdateInput = TransactionWriteInput & {
-  transactionId: number;
+  transactionUuid: string;
 };
 
 export type TransactionCategoryUpdateInput = {
   userUuid: string;
-  transactionId: number;
-  categoryId: number | null;
-  subcategoryId?: number | null;
+  transactionUuid: string;
+  categoryUuid: string | null;
+  subcategoryUuid?: string | null;
 };
 
 export type TransactionLookupInput = {
   userUuid: string;
-  transactionId: number;
+  transactionUuid: string;
 };
 
 export type SuggestTransactionCategoryDto = {
@@ -100,25 +99,25 @@ export type TransactionGetResult = ServiceResult<
   "NOT_FOUND" | "INTERNAL_ERROR"
 >;
 export type TransactionCreateResult = ServiceResult<
-  { id: number; uuid: string },
+  { uuid: string },
   "VALIDATION_ERROR" | "INTERNAL_ERROR"
 >;
 export type TransactionUpdateResult = ServiceResult<
-  { id: number },
+  { uuid: string },
   "NOT_FOUND" | "VALIDATION_ERROR" | "INTERNAL_ERROR"
 >;
 export type TransactionCategoryUpdateResult = ServiceResult<
   {
-    id: number;
-    categoryId: number | null;
+    uuid: string;
+    categoryUuid: string | null;
     category: string | null;
-    subcategoryId: number | null;
+    subcategoryUuid: string | null;
     subcategory: string | null;
   },
   "NOT_FOUND" | "VALIDATION_ERROR" | "INTERNAL_ERROR"
 >;
 export type TransactionDeleteResult = ServiceResult<
-  { id: number },
+  { uuid: string },
   "NOT_FOUND" | "INTERNAL_ERROR"
 >;
 export type TransactionSuggestResult = ServiceResult<

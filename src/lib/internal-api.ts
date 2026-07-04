@@ -120,8 +120,8 @@ export async function getRecipients(pathnameQuery: string) {
   return internalApiRequest<RecipientListResponse>(`/api/recipients${pathnameQuery}`);
 }
 
-export async function getTransaction(transactionId: number) {
-  return internalApiRequest<TransactionRecord>(`/api/transactions/${transactionId}`);
+export async function getTransaction(transactionUuid: string) {
+  return internalApiRequest<TransactionRecord>(`/api/transactions/${transactionUuid}`);
 }
 
 export async function getDeviceTokens() {
@@ -132,8 +132,8 @@ export async function createManualTransaction(input: {
   amount: number;
   recipientRaw: string;
   recipientName?: string | null;
-  categoryId?: number | null;
-  subcategoryId?: number | null;
+  categoryUuid?: string | null;
+  subcategoryUuid?: string | null;
   type: TransactionType;
   remarks?: string | null;
   timestamp: string;
@@ -141,20 +141,20 @@ export async function createManualTransaction(input: {
   accountLabel?: string | null;
   locationRaw?: string | null;
 }) {
-  return internalApiRequest<{ id: number; uuid: string }>(
+  return internalApiRequest<{ uuid: string }>(
     "/api/transactions",
     jsonRequestInit("POST", input)
   );
 }
 
 export async function updateManualTransaction(
-  transactionId: number,
+  transactionUuid: string,
   input: {
     amount: number;
     recipientRaw: string;
     recipientName?: string | null;
-    categoryId?: number | null;
-    subcategoryId?: number | null;
+    categoryUuid?: string | null;
+    subcategoryUuid?: string | null;
     type: TransactionType;
     remarks?: string | null;
     timestamp: string;
@@ -164,36 +164,36 @@ export async function updateManualTransaction(
     source?: TransactionSource;
   }
 ) {
-  return internalApiRequest<{ id: number }>(
-    `/api/transactions/${transactionId}`,
+  return internalApiRequest<{ uuid: string }>(
+    `/api/transactions/${transactionUuid}`,
     jsonRequestInit("PATCH", input)
   );
 }
 
-export async function deleteManualTransaction(transactionId: number) {
-  return internalApiRequest<{ id: number }>(
-    `/api/transactions/${transactionId}`,
+export async function deleteManualTransaction(transactionUuid: string) {
+  return internalApiRequest<{ uuid: string }>(
+    `/api/transactions/${transactionUuid}`,
     jsonRequestInit("DELETE")
   );
 }
 
 export async function createCategoryRecord(input: { name: string }) {
-  return internalApiRequest<{ id: number; uuid: string }>(
+  return internalApiRequest<{ uuid: string }>(
     "/api/categories",
     jsonRequestInit("POST", input)
   );
 }
 
-export async function updateCategoryRecord(categoryId: number, input: { name: string }) {
-  return internalApiRequest<{ id: number; uuid: string }>(
-    `/api/categories/${categoryId}`,
+export async function updateCategoryRecord(categoryUuid: string, input: { name: string }) {
+  return internalApiRequest<{ uuid: string }>(
+    `/api/categories/${categoryUuid}`,
     jsonRequestInit("PATCH", input)
   );
 }
 
-export async function deleteCategoryRecord(categoryId: number) {
-  return internalApiRequest<{ id: number }>(
-    `/api/categories/${categoryId}`,
+export async function deleteCategoryRecord(categoryUuid: string) {
+  return internalApiRequest<{ uuid: string }>(
+    `/api/categories/${categoryUuid}`,
     jsonRequestInit("DELETE")
   );
 }
@@ -206,31 +206,31 @@ export async function resetCategoryDefaults() {
 }
 
 export async function createSubcategoryRecord(input: {
-  categoryId: number;
+  categoryUuid: string;
   name: string;
 }) {
-  return internalApiRequest<{ id: number; uuid: string }>(
+  return internalApiRequest<{ uuid: string }>(
     "/api/subcategories",
     jsonRequestInit("POST", input)
   );
 }
 
 export async function updateSubcategoryRecord(
-  subcategoryId: number,
+  subcategoryUuid: string,
   input: {
-    categoryId: number;
+    categoryUuid: string;
     name: string;
   }
 ) {
-  return internalApiRequest<{ id: number; uuid: string }>(
-    `/api/subcategories/${subcategoryId}`,
+  return internalApiRequest<{ uuid: string }>(
+    `/api/subcategories/${subcategoryUuid}`,
     jsonRequestInit("PATCH", input)
   );
 }
 
-export async function deleteSubcategoryRecord(subcategoryId: number) {
-  return internalApiRequest<{ id: number }>(
-    `/api/subcategories/${subcategoryId}`,
+export async function deleteSubcategoryRecord(subcategoryUuid: string) {
+  return internalApiRequest<{ uuid: string }>(
+    `/api/subcategories/${subcategoryUuid}`,
     jsonRequestInit("DELETE")
   );
 }

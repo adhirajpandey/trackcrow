@@ -163,9 +163,8 @@ function getSelectedCategorySubcategories(
 
 function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
   return {
-    id: transaction.id,
     uuid: transaction.uuid,
-    recipientId: transaction.recipientId,
+    recipientUuid: transaction.recipientUuid,
     recipient: formatRecipientDisplayLabel({
       recipientName: transaction.recipientName,
       recipientDisplayName: transaction.recipientDisplayName,

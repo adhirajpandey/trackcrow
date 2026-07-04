@@ -8,6 +8,9 @@ jest.mock("@/lib/prisma-rewrite", () => ({
     rawMessage: {
       create: jest.fn(),
     },
+    transaction: {
+      findFirst: jest.fn(),
+    },
   }),
 }));
 
@@ -70,8 +73,9 @@ describe("importSmsTransaction", () => {
     });
     createTransactionMock.mockResolvedValueOnce({
       ok: true,
-      data: { id: 99, uuid: "txn-uuid" },
+      data: { uuid: "txn-uuid" },
     });
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 99 });
 
     const result = await importSmsTransaction({
       token: "good-token",
@@ -79,7 +83,7 @@ describe("importSmsTransaction", () => {
       location: "Bangalore",
     });
 
-    expect(result).toEqual({ ok: true, data: { id: 99, uuid: "txn-uuid" } });
+    expect(result).toEqual({ ok: true, data: { uuid: "txn-uuid" } });
     expect(mockPrisma.deviceToken.update).toHaveBeenCalledWith({
       where: { id: 7 },
       data: { lastUsedAt: expect.any(Date) },
@@ -105,6 +109,10 @@ describe("importSmsTransaction", () => {
         parseStatus: ParseStatus.PARSED,
         locationRaw: "Bangalore",
       }),
+    });
+    expect(mockPrisma.transaction.findFirst).toHaveBeenCalledWith({
+      where: { uuid: "txn-uuid", userUuid: "user-1" },
+      select: { id: true },
     });
   });
 

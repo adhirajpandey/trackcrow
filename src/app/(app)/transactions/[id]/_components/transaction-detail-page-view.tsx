@@ -76,7 +76,7 @@ const inlineDisclosureButtonClassName =
   "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[8px] px-0 text-sm font-semibold text-primary transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function TransactionDetailPageView({
-  transactionId,
+  transactionUuid,
   initialTransactionData,
   initialCategoriesData,
 }: TransactionDetailPageInitialData) {
@@ -96,7 +96,7 @@ export function TransactionDetailPageView({
   const saveShortcutRef = useRef<() => void>(() => undefined);
   const suggestShortcutRef = useRef<() => void>(() => undefined);
   const transactionQuery = useTransactionQuery({
-    transactionId,
+    transactionUuid,
     initialData: initialTransactionData,
   });
   const categoriesQuery = useCategoriesQuery({
@@ -112,8 +112,8 @@ export function TransactionDetailPageView({
     defaultValues: mapTransactionToFormValues(transaction),
   });
 
-  const selectedCategoryId = form.watch("categoryId");
-  const selectedSubcategoryId = form.watch("subcategoryId");
+  const selectedCategoryUuid = form.watch("categoryUuid");
+  const selectedSubcategoryUuid = form.watch("subcategoryUuid");
   const currentAmount = form.watch("amount");
   const currentTimestamp = form.watch("timestamp");
   const currentType = form.watch("type");
@@ -121,12 +121,12 @@ export function TransactionDetailPageView({
   const currentReference = form.watch("reference");
   const currentAccountLabel = form.watch("accountLabel");
   const currentRemarks = form.watch("remarks");
-  const subcategoryOptions = getSubcategoryOptions(categories, selectedCategoryId);
+  const subcategoryOptions = getSubcategoryOptions(categories, selectedCategoryUuid);
   const googleMapsHref = getTransactionGoogleMapsHref(currentLocationRaw);
   const hasUnsavedChanges = hasTransactionDetailChanges(transaction, {
     amount: currentAmount,
-    categoryId: selectedCategoryId,
-    subcategoryId: selectedSubcategoryId,
+    categoryUuid: selectedCategoryUuid,
+    subcategoryUuid: selectedSubcategoryUuid,
     type: currentType,
     timestamp: currentTimestamp,
     reference: currentReference,
@@ -150,28 +150,28 @@ export function TransactionDetailPageView({
       const nextSuggestedSubcategory = pendingSuggestedSubcategoryRef.current;
       const matchesSuggestedOption =
         nextSuggestedSubcategory === "" ||
-        subcategoryOptions.some((subcategory) => String(subcategory.id) === nextSuggestedSubcategory);
+        subcategoryOptions.some((subcategory) => subcategory.uuid === nextSuggestedSubcategory);
 
       if (matchesSuggestedOption) {
-        form.setValue("subcategoryId", nextSuggestedSubcategory, { shouldDirty: true });
+        form.setValue("subcategoryUuid", nextSuggestedSubcategory, { shouldDirty: true });
       }
 
       pendingSuggestedSubcategoryRef.current = null;
       return;
     }
 
-    if (!isValidSubcategorySelection(categories, selectedCategoryId, selectedSubcategoryId)) {
-      form.setValue("subcategoryId", "", { shouldDirty: true });
+    if (!isValidSubcategorySelection(categories, selectedCategoryUuid, selectedSubcategoryUuid)) {
+      form.setValue("subcategoryUuid", "", { shouldDirty: true });
     }
-  }, [categories, form, selectedCategoryId, selectedSubcategoryId, subcategoryOptions]);
+  }, [categories, form, selectedCategoryUuid, selectedSubcategoryUuid, subcategoryOptions]);
 
   const previewTransaction = {
     ...transaction,
     amount: Number(currentAmount) || transaction.amount,
     type: currentType,
     timestamp: transaction.timestamp,
-    categoryId: selectedCategoryId ? Number(selectedCategoryId) : null,
-    subcategoryId: selectedSubcategoryId ? Number(selectedSubcategoryId) : null,
+    categoryUuid: selectedCategoryUuid || null,
+    subcategoryUuid: selectedSubcategoryUuid || null,
   } satisfies TransactionRecord;
 
   async function handleSubmit(values: TransactionDetailFormSchema) {
@@ -180,7 +180,7 @@ export function TransactionDetailPageView({
 
     try {
       await updateMutation.mutateAsync({
-        transactionId,
+        transactionUuid,
         ...mapFormValuesToTransactionPayload(transaction, values),
       });
 
@@ -207,7 +207,7 @@ export function TransactionDetailPageView({
     setIsSuggesting(true);
 
     try {
-      const suggestion = await getTransactionSuggestionData(transactionId);
+      const suggestion = await getTransactionSuggestionData(transactionUuid);
       const resolved = applyTransactionSuggestion(categories, suggestion);
 
       if (!resolved.matched) {
@@ -220,9 +220,9 @@ export function TransactionDetailPageView({
         return;
       }
 
-      pendingSuggestedSubcategoryRef.current = resolved.subcategoryId;
-      form.setValue("categoryId", resolved.categoryId, { shouldDirty: true });
-      form.setValue("subcategoryId", "", { shouldDirty: true });
+      pendingSuggestedSubcategoryRef.current = resolved.subcategoryUuid;
+      form.setValue("categoryUuid", resolved.categoryUuid, { shouldDirty: true });
+      form.setValue("subcategoryUuid", "", { shouldDirty: true });
       toast({
         tone: "success",
         title: "Suggestion applied",
@@ -280,7 +280,7 @@ export function TransactionDetailPageView({
 
   async function handleDelete() {
     try {
-      await deleteMutation.mutateAsync({ transactionId });
+      await deleteMutation.mutateAsync({ transactionUuid });
       router.push("/transactions");
     } catch (error) {
       setBanner({
@@ -298,12 +298,6 @@ export function TransactionDetailPageView({
       <MobilePageHeader
         eyebrow="Transaction workspace"
         title="Transaction detail"
-        meta={
-          <>
-            <span className="font-medium text-foreground">TXN-{transaction.id}</span>
-            <span className="text-secondary-foreground">{transaction.source}</span>
-          </>
-        }
         actions={
           <Button asChild variant="secondary" className="w-full min-w-0">
             <Link href="/transactions">
@@ -318,12 +312,6 @@ export function TransactionDetailPageView({
           eyebrow="Transaction workspace"
           title="Transaction detail"
           description="Review, classify, and correct a single transaction without leaving the ledger workspace."
-          meta={
-            <>
-              <span className="font-medium text-foreground">TXN-{transaction.id}</span>
-              <span className="text-secondary-foreground">{transaction.source}</span>
-            </>
-          }
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="secondary" className="min-w-[180px]">
@@ -386,7 +374,7 @@ export function TransactionDetailPageView({
         <div className="space-y-3">
           <section
             className={cn(
-              selectedCategoryId ? dashboardPanelClassName : dashboardAttentionPanelClassName,
+              selectedCategoryUuid ? dashboardPanelClassName : dashboardAttentionPanelClassName,
               "relative z-10 overflow-visible px-5 py-5"
             )}
           >
@@ -396,12 +384,12 @@ export function TransactionDetailPageView({
                 <span
                   className={cn(
                     badgeClassName,
-                    selectedCategoryId
+                    selectedCategoryUuid
                       ? "border-primary/20 bg-primary/10 text-primary"
                       : "border-accent/30 bg-accent/12 text-accent"
                   )}
                 >
-                  {selectedCategoryId ? "Category set" : "Needs category"}
+                  {selectedCategoryUuid ? "Category set" : "Needs category"}
                 </span>
               </div>
 
@@ -424,11 +412,11 @@ export function TransactionDetailPageView({
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field
                 label="Category"
-                error={form.formState.errors.categoryId?.message}
+                error={form.formState.errors.categoryUuid?.message}
               >
                 <Controller
                   control={form.control}
-                  name="categoryId"
+                  name="categoryUuid"
                   render={({ field }) => (
                     <Select
                       ariaLabel="Category"
@@ -437,7 +425,7 @@ export function TransactionDetailPageView({
                       options={[
                         { value: "", label: "Uncategorized" },
                         ...categories.map((category) => ({
-                          value: String(category.id),
+                          value: category.uuid,
                           label: category.name,
                         })),
                       ]}
@@ -449,26 +437,26 @@ export function TransactionDetailPageView({
 
               <Field
                 label="Subcategory"
-                error={form.formState.errors.subcategoryId?.message}
+                error={form.formState.errors.subcategoryUuid?.message}
               >
                 <Controller
                   control={form.control}
-                  name="subcategoryId"
+                  name="subcategoryUuid"
                   render={({ field }) => (
                     <Select
                       ariaLabel="Subcategory"
                       value={field.value}
                       onValueChange={field.onChange}
-                      disabled={!selectedCategoryId || subcategoryOptions.length === 0}
+                      disabled={!selectedCategoryUuid || subcategoryOptions.length === 0}
                       options={[
                         {
                           value: "",
-                          label: selectedCategoryId
+                          label: selectedCategoryUuid
                             ? "Select subcategory"
                             : "Choose a category first",
                         },
                         ...subcategoryOptions.map((subcategory) => ({
-                          value: String(subcategory.id),
+                          value: subcategory.uuid,
                           label: subcategory.name,
                         })),
                       ]}
@@ -630,7 +618,7 @@ export function TransactionDetailPageView({
           </section>
 
           <MobileDangerZone
-            transactionId={transaction.id}
+            transactionUuid={transaction.uuid}
             isDeleting={deleteMutation.isPending}
             onDelete={handleDelete}
           />
@@ -638,7 +626,7 @@ export function TransactionDetailPageView({
 
         <aside className="hidden space-y-3 lg:block">
           <DangerZone
-            transactionId={transaction.id}
+            transactionUuid={transaction.uuid}
             isDeleting={deleteMutation.isPending}
             onDelete={handleDelete}
           />
@@ -703,11 +691,11 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 function MobileDangerZone({
-  transactionId,
+  transactionUuid,
   isDeleting,
   onDelete,
 }: {
-  transactionId: number;
+  transactionUuid: string;
   isDeleting: boolean;
   onDelete: () => Promise<void>;
 }) {
@@ -719,7 +707,7 @@ function MobileDangerZone({
       </summary>
       <div className="pt-3">
         <DangerZoneContent
-          transactionId={transactionId}
+          transactionUuid={transactionUuid}
           isDeleting={isDeleting}
           onDelete={onDelete}
         />
@@ -729,11 +717,11 @@ function MobileDangerZone({
 }
 
 function DangerZone({
-  transactionId,
+  transactionUuid,
   isDeleting,
   onDelete,
 }: {
-  transactionId: number;
+  transactionUuid: string;
   isDeleting: boolean;
   onDelete: () => Promise<void>;
 }) {
@@ -741,7 +729,7 @@ function DangerZone({
     <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
       <h2 className="text-[1.05rem] font-semibold text-foreground">Danger zone</h2>
       <DangerZoneContent
-        transactionId={transactionId}
+        transactionUuid={transactionUuid}
         isDeleting={isDeleting}
         onDelete={onDelete}
       />
@@ -750,11 +738,11 @@ function DangerZone({
 }
 
 function DangerZoneContent({
-  transactionId,
+  transactionUuid,
   isDeleting,
   onDelete,
 }: {
-  transactionId: number;
+  transactionUuid: string;
   isDeleting: boolean;
   onDelete: () => Promise<void>;
 }) {
@@ -764,7 +752,7 @@ function DangerZoneContent({
         Deleting this transaction removes it from the ledger and unlinks any raw-message reference.
       </p>
       <TransactionDeleteDialog
-        transactionId={transactionId}
+        transactionUuid={transactionUuid}
         isDeleting={isDeleting}
         onDelete={onDelete}
         trigger={
@@ -880,8 +868,8 @@ function applyServerErrors(
 function isTransactionDetailField(value: string): value is keyof TransactionDetailFormValues {
   return [
     "amount",
-    "categoryId",
-    "subcategoryId",
+    "categoryUuid",
+    "subcategoryUuid",
     "type",
     "timestamp",
     "reference",

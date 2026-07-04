@@ -28,7 +28,6 @@ function toRecipientDto(record: {
   normalizedName: string;
   totalAmount: number;
   identifiers: Array<{
-    id: number;
     uuid: string;
     kind: string;
     value: string;
@@ -37,7 +36,6 @@ function toRecipientDto(record: {
   _count: { transactions: number };
 }): RecipientDto {
   return {
-    id: record.id,
     uuid: record.uuid,
     displayName: record.displayName,
     normalizedName: record.normalizedName,
@@ -59,11 +57,10 @@ function toRecipientDetailTransactionDto(record: {
   timestamp: Date;
   categoryId: number | null;
   subcategoryId: number | null;
-  category: { name: string } | null;
-  subcategory: { name: string } | null;
+  category: { uuid: string; name: string } | null;
+  subcategory: { uuid: string; name: string } | null;
 }): RecipientDetailTransactionDto {
   return {
-    id: record.id,
     uuid: record.uuid,
     amount: record.amount.toNumber(),
     currency: record.currency,
@@ -74,8 +71,8 @@ function toRecipientDetailTransactionDto(record: {
     timestamp: record.timestamp.toISOString(),
     category: record.category?.name ?? null,
     subcategory: record.subcategory?.name ?? null,
-    categoryId: record.categoryId,
-    subcategoryId: record.subcategoryId,
+    categoryUuid: record.category?.uuid ?? null,
+    subcategoryUuid: record.subcategory?.uuid ?? null,
   };
 }
 
@@ -87,7 +84,6 @@ function toRecipientDetailDto(record: {
   createdAt: Date;
   updatedAt: Date;
   identifiers: Array<{
-    id: number;
     uuid: string;
     kind: string;
     value: string;
@@ -105,12 +101,11 @@ function toRecipientDetailDto(record: {
     timestamp: Date;
     categoryId: number | null;
     subcategoryId: number | null;
-    category: { name: string } | null;
-    subcategory: { name: string } | null;
+    category: { uuid: string; name: string } | null;
+    subcategory: { uuid: string; name: string } | null;
   }>;
 }): RecipientDetailDto {
   return {
-    id: record.id,
     uuid: record.uuid,
     displayName: record.displayName,
     normalizedName: record.normalizedName,
@@ -144,14 +139,12 @@ function detectIdentifierKind(value: string): RecipientIdentifierKind {
 }
 
 function toIdentifierDto(identifier: {
-  id: number;
   uuid: string;
   kind: string;
   value: string;
   normalizedValue: string;
 }) {
   return {
-    id: identifier.id,
     uuid: identifier.uuid,
     kind: identifier.kind,
     value: identifier.value,
@@ -171,8 +164,8 @@ function transactionMatchesIdentifier(
 
 async function buildIdentifierTransferImpact(input: {
   userUuid: string;
-  targetRecipient: { id: number; displayName: string };
-  sourceRecipient: { id: number; displayName: string };
+  targetRecipient: { id: number; uuid: string; displayName: string };
+  sourceRecipient: { id: number; uuid: string; displayName: string };
   identifier: {
     id: number;
     uuid: string;
@@ -201,8 +194,14 @@ async function buildIdentifierTransferImpact(input: {
   );
 
   return {
-    sourceRecipient: input.sourceRecipient,
-    targetRecipient: input.targetRecipient,
+    sourceRecipient: {
+      uuid: input.sourceRecipient.uuid,
+      displayName: input.sourceRecipient.displayName,
+    },
+    targetRecipient: {
+      uuid: input.targetRecipient.uuid,
+      displayName: input.targetRecipient.displayName,
+    },
     identifier: toIdentifierDto(input.identifier),
     transactionCount: matchingTransactions.length,
     totalAmount,
@@ -413,7 +412,7 @@ export async function getRecipient(
 ): Promise<ServiceResult<RecipientDto, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
     const recipient = await prisma.recipient.findFirst({
-      where: { id: input.recipientId, userUuid: input.userUuid },
+      where: { uuid: input.recipientUuid, userUuid: input.userUuid },
       include: {
         identifiers: {
           orderBy: { createdAt: "asc" },
@@ -456,7 +455,7 @@ export async function getRecipient(
       {
         event: "recipient.read.db_failed",
         userId: input.userUuid,
-        recipientId: input.recipientId,
+        recipientUuid: input.recipientUuid,
         message: "Failed to get recipient",
       },
       error
@@ -470,7 +469,7 @@ export async function getRecipientDetail(
 ): Promise<ServiceResult<RecipientDetailDto, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
     const recipient = await prisma.recipient.findFirst({
-      where: { id: input.recipientId, userUuid: input.userUuid },
+      where: { uuid: input.recipientUuid, userUuid: input.userUuid },
       include: {
         identifiers: {
           orderBy: { createdAt: "asc" },
@@ -497,10 +496,10 @@ export async function getRecipientDetail(
             categoryId: true,
             subcategoryId: true,
             category: {
-              select: { name: true },
+              select: { uuid: true, name: true },
             },
             subcategory: {
-              select: { name: true },
+              select: { uuid: true, name: true },
             },
           },
         },
@@ -517,7 +516,7 @@ export async function getRecipientDetail(
       {
         event: "recipient.detail.db_failed",
         userId: input.userUuid,
-        recipientId: input.recipientId,
+        recipientUuid: input.recipientUuid,
         message: "Failed to get recipient detail",
       },
       error
@@ -535,8 +534,8 @@ export async function addRecipientIdentifier(
 
   try {
     const targetRecipient = await prisma.recipient.findFirst({
-      where: { id: input.recipientId, userUuid: input.userUuid },
-      select: { id: true, displayName: true },
+      where: { uuid: input.recipientUuid, userUuid: input.userUuid },
+      select: { id: true, uuid: true, displayName: true },
     });
     if (!targetRecipient) {
       return fail("NOT_FOUND");
@@ -550,7 +549,7 @@ export async function addRecipientIdentifier(
       },
       include: {
         recipient: {
-          select: { id: true, displayName: true },
+          select: { id: true, uuid: true, displayName: true },
         },
       },
     });
@@ -576,7 +575,7 @@ export async function addRecipientIdentifier(
       logger.info({
         event: "recipient.identifier_added",
         userId: input.userUuid,
-        recipientId: input.recipientId,
+        recipientId: targetRecipient.id,
         identifierKind: kind,
         status: "created",
       });
@@ -600,6 +599,7 @@ export async function addRecipientIdentifier(
 
     const sourceRecipient = {
       id: existingIdentifier.recipient.id,
+      uuid: existingIdentifier.recipient.uuid,
       displayName: existingIdentifier.recipient.displayName,
     };
     const impact = await buildIdentifierTransferImpact({
@@ -664,7 +664,7 @@ export async function addRecipientIdentifier(
     logger.info({
       event: "recipient.identifier_added",
       userId: input.userUuid,
-      recipientId: input.recipientId,
+      recipientId: targetRecipient.id,
       identifierKind: kind,
       status: "moved",
       movedTransactionCount: matchingTransactionIds.length,
@@ -681,7 +681,7 @@ export async function addRecipientIdentifier(
       {
         event: "recipient.identifier_add.db_failed",
         userId: input.userUuid,
-        recipientId: input.recipientId,
+        recipientUuid: input.recipientUuid,
         identifierKind: kind,
         message: "Failed to add recipient identifier",
       },

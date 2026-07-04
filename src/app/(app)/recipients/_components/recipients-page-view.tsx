@@ -394,14 +394,14 @@ export function RecipientsPageView({
                       onClick={(event) => {
                         handleLinkRowClick(
                           event,
-                          `/recipients/${row.original.id}`,
+                          `/recipients/${row.original.uuid}`,
                           router.push
                         );
                       }}
                       onKeyDown={(event) => {
                         handleLinkRowKeyDown(
                           event,
-                          `/recipients/${row.original.id}`,
+                          `/recipients/${row.original.uuid}`,
                           router.push
                         );
                       }}
@@ -419,7 +419,7 @@ export function RecipientsPageView({
                           >
                             {cell.column.id === "displayName" ? (
                               <Link
-                                href={`/recipients/${row.original.id}`}
+                                href={`/recipients/${row.original.uuid}`}
                                 className="block rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 onClick={(event) => event.stopPropagation()}
                               >
@@ -496,9 +496,9 @@ export function RecipientsPageView({
             ? `${drawerRow.transactionCount} transactions linked`
             : undefined
         }
-        primaryHref={drawerRow ? `/recipients/${drawerRow.id}` : "/recipients"}
+        primaryHref={drawerRow ? `/recipients/${drawerRow.uuid}` : "/recipients"}
         primaryLabel="Open Recipient"
-        secondaryHref={drawerRow ? `/recipients/${drawerRow.id}#transactions` : undefined}
+        secondaryHref={drawerRow ? `/recipients/${drawerRow.uuid}#transactions` : undefined}
         secondaryLabel="View Transactions"
       >
         {drawerRow ? (

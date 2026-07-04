@@ -5,10 +5,10 @@ export const categorySchema = z.object({
 });
 
 export const categoryIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.string().uuid(),
 });
 
 export const subcategorySchema = z.object({
   name: z.string().trim().min(1).max(100),
-  categoryId: z.coerce.number().int().positive(),
+  categoryUuid: z.string().uuid(),
 });

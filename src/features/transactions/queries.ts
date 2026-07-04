@@ -30,12 +30,12 @@ export async function getTransactionsQueryData(
   });
 }
 
-export function getTransactionQueryData(transactionId: number) {
-  return apiGet<TransactionRecord>(`/api/transactions/${transactionId}`);
+export function getTransactionQueryData(transactionUuid: string) {
+  return apiGet<TransactionRecord>(`/api/transactions/${transactionUuid}`);
 }
 
-export function getTransactionSuggestionData(transactionId: number) {
-  return apiGet<TransactionDetailSuggestion>(`/api/transactions/${transactionId}/suggest`);
+export function getTransactionSuggestionData(transactionUuid: string) {
+  return apiGet<TransactionDetailSuggestion>(`/api/transactions/${transactionUuid}/suggest`);
 }
 
 export function useTransactionsQuery(input: {
@@ -57,12 +57,12 @@ export function useTransactionsQuery(input: {
 }
 
 export function useTransactionQuery(input: {
-  transactionId: number;
+  transactionUuid: string;
   initialData: TransactionRecord;
 }) {
   return useQuery({
-    queryKey: transactionsQueryKeys.detail(input.transactionId),
-    queryFn: () => getTransactionQueryData(input.transactionId),
+    queryKey: transactionsQueryKeys.detail(input.transactionUuid),
+    queryFn: () => getTransactionQueryData(input.transactionUuid),
     initialData: input.initialData,
     staleTime: 0,
   });

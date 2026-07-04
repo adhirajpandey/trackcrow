@@ -93,46 +93,47 @@ describe("transactions controller", () => {
     updateTransactionCategoryMock.mockResolvedValueOnce({
       ok: true,
       data: {
-        id: 12,
-        categoryId: 9,
+        uuid: "txn-12",
+        categoryUuid: "cat-food",
         category: "Food",
-        subcategoryId: null,
+        subcategoryUuid: null,
         subcategory: null,
       },
     });
 
     const response = await patchTransactionCategory(
-      new Request("http://localhost/api/transactions/12/category", {
+      new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000/category", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryId: 9 }),
+        body: JSON.stringify({ categoryUuid: "550e8400-e29b-41d4-a716-446655440001" }),
       }),
-      { params: Promise.resolve({ id: "12" }) }
+      { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) }
     );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      id: 12,
-      categoryId: 9,
+      uuid: "txn-12",
+      categoryUuid: "cat-food",
       category: "Food",
-      subcategoryId: null,
+      subcategoryUuid: null,
       subcategory: null,
     });
     expect(updateTransactionCategoryMock).toHaveBeenCalledWith({
-      transactionId: 12,
+      transactionUuid: "550e8400-e29b-41d4-a716-446655440000",
       userUuid: "user-1",
-      categoryId: 9,
+      categoryUuid: "550e8400-e29b-41d4-a716-446655440001",
+      subcategoryUuid: undefined,
     });
   });
 
   it("rejects malformed category payloads", async () => {
     const response = await patchTransactionCategory(
-      new Request("http://localhost/api/transactions/12/category", {
+      new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000/category", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryId: "oops" }),
+        body: JSON.stringify({ categoryUuid: "oops" }),
       }),
-      { params: Promise.resolve({ id: "12" }) }
+      { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) }
     );
 
     expect(response.status).toBe(400);
@@ -140,5 +141,22 @@ describe("transactions controller", () => {
       message: "Invalid request",
       issues: expect.any(Array),
     });
+  });
+
+  it("returns a clean 400 for numeric transaction route params", async () => {
+    const response = await patchTransactionCategory(
+      new Request("http://localhost/api/transactions/123/category", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryUuid: "550e8400-e29b-41d4-a716-446655440001" }),
+      }),
+      { params: Promise.resolve({ id: "123" }) }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      message: "Invalid request",
+    });
+    expect(updateTransactionCategoryMock).not.toHaveBeenCalled();
   });
 });

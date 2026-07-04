@@ -71,7 +71,7 @@ export async function removeDeviceToken(
 
   const result = await revokeDeviceToken({
     userUuid: sessionData.userUuid,
-    tokenId: parsed.data.id,
+    tokenUuid: parsed.data.id,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);

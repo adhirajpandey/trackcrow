@@ -3,7 +3,6 @@ import { buildRecipientDetailPageData } from "./recipient-detail-model";
 describe("buildRecipientDetailPageData", () => {
   it("sorts identifiers by transaction count descending", () => {
     const pageData = buildRecipientDetailPageData({
-      id: 7,
       uuid: "rcp-7",
       displayName: "Sample Recipient",
       normalizedName: "sample recipient",
@@ -12,21 +11,18 @@ describe("buildRecipientDetailPageData", () => {
       transactionCount: 5,
       identifiers: [
         {
-          id: 101,
           uuid: "rid-low",
           kind: "UPI_ID",
           value: "low@upi",
           normalizedValue: "low@upi",
         },
         {
-          id: 102,
           uuid: "rid-high",
           kind: "CARD_MERCHANT",
           value: "HIGH CARD",
           normalizedValue: "high card",
         },
         {
-          id: 103,
           uuid: "rid-mid",
           kind: "TEXT",
           value: "mid text",
@@ -35,7 +31,6 @@ describe("buildRecipientDetailPageData", () => {
       ],
       linkedTransactions: [
         {
-          id: 1,
           uuid: "txn-1",
           amount: 100,
           currency: "INR",
@@ -46,11 +41,10 @@ describe("buildRecipientDetailPageData", () => {
           timestamp: "2026-06-30T10:00:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         },
         {
-          id: 2,
           uuid: "txn-2",
           amount: 120,
           currency: "INR",
@@ -61,11 +55,10 @@ describe("buildRecipientDetailPageData", () => {
           timestamp: "2026-06-29T10:00:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         },
         {
-          id: 3,
           uuid: "txn-3",
           amount: 80,
           currency: "INR",
@@ -76,11 +69,10 @@ describe("buildRecipientDetailPageData", () => {
           timestamp: "2026-06-28T10:00:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         },
         {
-          id: 4,
           uuid: "txn-4",
           amount: 75,
           currency: "INR",
@@ -91,11 +83,10 @@ describe("buildRecipientDetailPageData", () => {
           timestamp: "2026-06-27T10:00:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         },
         {
-          id: 5,
           uuid: "txn-5",
           amount: 90,
           currency: "INR",
@@ -106,8 +97,8 @@ describe("buildRecipientDetailPageData", () => {
           timestamp: "2026-06-26T10:00:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         },
       ],
     });
@@ -126,7 +117,6 @@ describe("buildRecipientDetailPageData", () => {
 
   it("keeps all linked transactions for client-side pagination", () => {
     const linkedTransactions = Array.from({ length: 13 }, (_, index) => ({
-      id: index + 1,
       uuid: `txn-${index + 1}`,
       amount: 100 + index,
       currency: "INR",
@@ -137,12 +127,11 @@ describe("buildRecipientDetailPageData", () => {
       timestamp: `2026-06-${String(30 - index).padStart(2, "0")}T10:00:00.000Z`,
       category: "Food",
       subcategory: "Dinner",
-      categoryId: 1,
-      subcategoryId: 2,
+      categoryUuid: "cat-1",
+      subcategoryUuid: "sub-2",
     }));
 
     const pageData = buildRecipientDetailPageData({
-      id: 7,
       uuid: "rcp-7",
       displayName: "Sample Recipient",
       normalizedName: "sample recipient",

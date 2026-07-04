@@ -17,14 +17,13 @@ describe("recipients queries", () => {
         JSON.stringify({
           recipients: [
             {
-              id: 1,
               uuid: "rcp-1",
               displayName: "Biraj Borah",
               normalizedName: "biraj borah",
               transactionCount: 19,
+              totalAmount: 3200,
               identifiers: [
                 {
-                  id: 11,
                   uuid: "rid-11",
                   kind: "UPI_ID",
                   value: "biraj@oksbi",

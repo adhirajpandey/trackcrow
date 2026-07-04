@@ -359,7 +359,6 @@ export async function getRecentLargeTransactions(
 ): Promise<
   ServiceResult<
     Array<{
-      id: number;
       uuid: string;
       recipient: string;
       category: string | null;
@@ -382,7 +381,6 @@ export async function getRecentLargeTransactions(
       orderBy: [{ amount: "desc" }, { timestamp: "desc" }],
       take: input.take ?? 5,
       select: {
-        id: true,
         uuid: true,
         amount: true,
         timestamp: true,
@@ -397,7 +395,6 @@ export async function getRecentLargeTransactions(
 
     return ok(
       transactions.map((transaction) => ({
-        id: transaction.id,
         uuid: transaction.uuid,
         recipient: formatRecipientDisplayLabel({
           recipientName: transaction.recipientName,
@@ -430,7 +427,6 @@ export async function getRecentTransactions(
 ): Promise<
   ServiceResult<
     Array<{
-      id: number;
       uuid: string;
       recipient: string;
       category: string | null;
@@ -453,7 +449,6 @@ export async function getRecentTransactions(
       orderBy: { timestamp: "desc" },
       take: input.take ?? 10,
       select: {
-        id: true,
         uuid: true,
         amount: true,
         timestamp: true,
@@ -468,7 +463,6 @@ export async function getRecentTransactions(
 
     return ok(
       transactions.map((transaction) => ({
-        id: transaction.id,
         uuid: transaction.uuid,
         recipient: formatRecipientDisplayLabel({
           recipientName: transaction.recipientName,
@@ -501,7 +495,7 @@ export async function getFrequentRecipients(
 ): Promise<
   ServiceResult<
     Array<{
-      recipientId: number | null;
+      recipientUuid: string | null;
       recipient: string;
       paymentCount: number;
       totalAmount: number;
@@ -521,13 +515,13 @@ export async function getFrequentRecipients(
         amount: true,
         recipientName: true,
         recipientRaw: true,
-        recipient: { select: { id: true, displayName: true } },
+        recipient: { select: { uuid: true, displayName: true } },
       },
     });
 
     const groups = new Map<
       string,
-      { recipientId: number | null; recipient: string; paymentCount: number; totalAmount: number }
+      { recipientUuid: string | null; recipient: string; paymentCount: number; totalAmount: number }
     >();
     for (const transaction of transactions) {
       const recipient =
@@ -537,11 +531,11 @@ export async function getFrequentRecipients(
           recipientRaw: transaction.recipientRaw,
           fallbackLabel: "Unknown payee",
         });
-      const key = transaction.recipient?.id
-        ? `id:${transaction.recipient.id}`
+      const key = transaction.recipient?.uuid
+        ? `uuid:${transaction.recipient.uuid}`
         : `label:${recipient}`;
       const current = groups.get(key) ?? {
-        recipientId: transaction.recipient?.id ?? null,
+        recipientUuid: transaction.recipient?.uuid ?? null,
         recipient,
         paymentCount: 0,
         totalAmount: 0,

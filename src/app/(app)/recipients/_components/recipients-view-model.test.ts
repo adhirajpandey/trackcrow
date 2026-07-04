@@ -21,28 +21,25 @@ const baseResult: RecipientsQueryResult = {
   message: null,
   recipients: [
     {
-      id: 1,
       uuid: "rcp-1",
       displayName: "Biraj Borah",
       normalizedName: "biraj borah",
       transactionCount: 19,
+      totalAmount: 3200,
       identifiers: [
         {
-          id: 11,
           uuid: "rid-11",
           kind: "UPI_ID",
           value: "biraj@oksbi",
           normalizedValue: "biraj@oksbi",
         },
         {
-          id: 12,
           uuid: "rid-12",
           kind: "TEXT",
           value: "biraj borah",
           normalizedValue: "biraj borah",
         },
         {
-          id: 13,
           uuid: "rid-13",
           kind: "PHONE",
           value: "9876543210",
@@ -51,14 +48,13 @@ const baseResult: RecipientsQueryResult = {
       ],
     },
     {
-      id: 2,
       uuid: "rcp-2",
       displayName: "Luxmi Enterprises",
       normalizedName: "luxmi enterprises",
       transactionCount: 4,
+      totalAmount: 900,
       identifiers: [
         {
-          id: 21,
           uuid: "rid-21",
           kind: "CARD_MERCHANT",
           value: "LUXMI ENTERPRISES",

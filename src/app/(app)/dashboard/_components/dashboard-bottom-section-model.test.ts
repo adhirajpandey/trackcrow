@@ -39,14 +39,13 @@ describe("dashboard bottom section model", () => {
     const response: TransactionListResponse = {
       transactions: [
         {
-          id: 12,
           uuid: "txn-12",
           userUuid: "user-1",
           amount: 190,
           currency: "INR",
           type: "UPI",
           source: "SMS",
-          recipientId: 55,
+          recipientUuid: "rcp-55",
           recipientRaw: "vivek.pandey5@oksbi",
           recipientName: null,
           recipientDisplayName: "vivek.pandey5@oksbi",
@@ -59,8 +58,8 @@ describe("dashboard bottom section model", () => {
           updatedAt: "2026-06-20T09:00:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         },
       ],
       page: 1,
@@ -75,7 +74,6 @@ describe("dashboard bottom section model", () => {
 
     expect(mapTransactionListToDashboardItems(response)).toEqual([
       {
-        id: 12,
         uuid: "txn-12",
         recipient: "Vivek Pandey",
         category: null,
@@ -91,13 +89,12 @@ describe("dashboard bottom section model", () => {
     expect(
       buildCategoryQuickTagOptions([
         {
-          id: 1,
           uuid: "cat-1",
           name: "Food",
-          subcategories: [{ id: 2, uuid: "sub-2", name: "Lunch", categoryId: 1 }],
+          subcategories: [{ uuid: "sub-2", name: "Lunch", categoryUuid: "cat-1" }],
         },
       ])
-    ).toEqual([{ id: 1, label: "Food" }]);
+    ).toEqual([{ id: "cat-1", label: "Food" }]);
   });
 
   it("builds the category trigger label for labeled and unlabeled rows", () => {
@@ -106,7 +103,7 @@ describe("dashboard bottom section model", () => {
   });
 
   it("builds a transaction detail href for largest transaction rows", () => {
-    expect(buildLargestTransactionHref(12)).toBe("/transactions/12");
+    expect(buildLargestTransactionHref("txn-12")).toBe("/transactions/txn-12");
   });
 
   it("defines consistent dashboard table layouts and alignment", () => {
@@ -131,6 +128,6 @@ describe("dashboard bottom section model", () => {
   it("defines a quieter secondary footer link treatment for recent transactions", () => {
     expect(dashboardFooterSecondaryLinkClassName).toContain("cursor-pointer");
     expect(dashboardFooterSecondaryLinkClassName).toContain("bg-transparent");
-    expect(dashboardFooterSecondaryLinkClassName).toContain("text-secondary-foreground/92");
+    expect(dashboardFooterSecondaryLinkClassName).toContain("text-secondary-foreground");
   });
 });

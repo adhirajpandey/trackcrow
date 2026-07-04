@@ -52,6 +52,14 @@ describe("device token service", () => {
       return;
     }
     expect(result.data.token).toHaveLength(48);
+    expect(result.data.record).toEqual({
+      uuid: "token-uuid",
+      label: "Phone",
+      tokenPrefix: "ignored",
+      createdAt,
+      lastUsedAt: null,
+      revokedAt: null,
+    });
     expect(mockPrisma.deviceToken.create).toHaveBeenCalledWith({
       data: {
         userUuid: "user-1",
@@ -79,7 +87,6 @@ describe("device token service", () => {
     expect(mockPrisma.deviceToken.findMany).toHaveBeenCalledWith({
       where: { userUuid: "user-1" },
       select: {
-        id: true,
         uuid: true,
         label: true,
         tokenPrefix: true,
@@ -94,21 +101,30 @@ describe("device token service", () => {
   it("revokes only active user-owned tokens", async () => {
     mockPrisma.deviceToken.findFirst.mockResolvedValueOnce(null);
     await expect(
-      revokeDeviceToken({ userUuid: "user-1", tokenId: 10 })
+      revokeDeviceToken({
+        userUuid: "user-1",
+        tokenUuid: "550e8400-e29b-41d4-a716-446655440000",
+      })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
     expect(mockPrisma.deviceToken.update).not.toHaveBeenCalled();
 
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce({ id: 10 });
+    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce({
+      id: 10,
+      uuid: "550e8400-e29b-41d4-a716-446655440000",
+    });
     await expect(
-      revokeDeviceToken({ userUuid: "user-1", tokenId: 10 })
+      revokeDeviceToken({
+        userUuid: "user-1",
+        tokenUuid: "550e8400-e29b-41d4-a716-446655440000",
+      })
     ).resolves.toEqual({ ok: true, data: { revoked: true } });
     expect(mockPrisma.deviceToken.findFirst).toHaveBeenLastCalledWith({
       where: {
-        id: 10,
+        uuid: "550e8400-e29b-41d4-a716-446655440000",
         userUuid: "user-1",
         revokedAt: null,
       },
-      select: { id: true },
+      select: { id: true, uuid: true },
     });
     expect(mockPrisma.deviceToken.update).toHaveBeenCalledWith({
       where: { id: 10 },

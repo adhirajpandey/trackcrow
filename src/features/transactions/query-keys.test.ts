@@ -29,10 +29,10 @@ describe("transactions query keys", () => {
   });
 
   it("keeps detail keys separate from list keys", () => {
-    expect(transactionsQueryKeys.detail(42)).toEqual([
+    expect(transactionsQueryKeys.detail("txn-42")).toEqual([
       "transactions",
       "detail",
-      42,
+      "txn-42",
     ]);
   });
 });

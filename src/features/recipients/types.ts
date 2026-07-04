@@ -1,7 +1,6 @@
 import type { CategoryOption } from "@/common/types";
 
 export type RecipientIdentifierDto = {
-  id: number;
   uuid: string;
   kind: string;
   value: string;
@@ -9,7 +8,6 @@ export type RecipientIdentifierDto = {
 };
 
 export type RecipientListItemDto = {
-  id: number;
   uuid: string;
   displayName: string;
   normalizedName: string;
@@ -20,11 +18,11 @@ export type RecipientListItemDto = {
 
 export type RecipientIdentifierTransferImpact = {
   sourceRecipient: {
-    id: number;
+    uuid: string;
     displayName: string;
   };
   targetRecipient: {
-    id: number;
+    uuid: string;
     displayName: string;
   };
   identifier: RecipientIdentifierDto;
@@ -59,7 +57,6 @@ export type RecipientIdentifierChip = {
 };
 
 export type RecipientsPageRow = {
-  id: number;
   uuid: string;
   displayName: string;
   transactionCount: number;
@@ -120,7 +117,7 @@ export type RecipientDetailIdentifierRow = {
 export type RecipientDetailCategoryRow = {
   id: string;
   category: string;
-  categoryId: number | null;
+  categoryUuid: string | null;
   transactionCount: number;
   totalAmount: number;
   consistencyPercent: number;
@@ -129,18 +126,17 @@ export type RecipientDetailCategoryRow = {
 export type RecipientDetailSubcategoryPattern = {
   id: string;
   subcategory: string;
-  subcategoryId: number;
+  subcategoryUuid: string;
   transactionCount: number;
 };
 
 export type RecipientDetailTransactionRow = {
-  id: number;
   uuid: string;
   amount: number;
   category: string | null;
-  categoryId: number | null;
+  categoryUuid: string | null;
   subcategory: string | null;
-  subcategoryId: number | null;
+  subcategoryUuid: string | null;
   source: string;
   timestamp: string;
   status: "categorized" | "uncategorized";
@@ -150,16 +146,16 @@ export type RecipientDetailTransactionRow = {
 
 export type RecipientDetailCleanupSuggestion = {
   category: string | null;
-  categoryId: number | null;
+  categoryUuid: string | null;
   subcategory: string | null;
-  subcategoryId: number | null;
+  subcategoryUuid: string | null;
   consistencyPercent: number;
   categorizedTransactionCount: number;
   totalTransactionCount: number;
   totalAmount: number;
   uncategorizedCount: number;
-  uncategorizedTransactionIds: number[];
-  reviewTransactionId: number | null;
+  uncategorizedTransactionUuids: string[];
+  reviewTransactionUuid: string | null;
   applyLabel: string | null;
 };
 
@@ -184,7 +180,7 @@ export type RecipientDetailInsight = {
 };
 
 export type RecipientDetailPageData = {
-  recipientId: number;
+  recipientUuid: string;
   displayName: string;
   normalizedName: string;
   transactionCount: number;

@@ -154,7 +154,7 @@ export function TransactionsPageView({
     }
 
     try {
-      await deleteMutation.mutateAsync({ transactionId: drawerRow.id });
+      await deleteMutation.mutateAsync({ transactionUuid: drawerRow.uuid });
       setDrawerRow(null);
       await transactionsQuery.refetch();
       toast({
@@ -376,7 +376,7 @@ export function TransactionsPageView({
                   buildPageHref: (page) => buildPageHref(data.filters, page),
                   onNavigate: (href) => updateTransactionsUrl(href, "push"),
                 }}
-                rowHref={(row) => `/transactions/${row.id}`}
+                rowHref={(row) => `/transactions/${row.uuid}`}
                 onNavigate={router.push}
                 emptyTitle="No transactions matched the current filters."
               />
@@ -387,7 +387,7 @@ export function TransactionsPageView({
             rows={[] as TransactionsPageRow[]}
             columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
             variant="full"
-            rowHref={(row) => `/transactions/${row.id}`}
+            rowHref={(row) => `/transactions/${row.uuid}`}
             onNavigate={router.push}
             emptyTitle="No transactions matched the current filters."
           />
@@ -420,14 +420,14 @@ export function TransactionsPageView({
               )}`
             : undefined
         }
-        primaryHref={drawerRow ? `/transactions/${drawerRow.id}` : "/transactions"}
+        primaryHref={drawerRow ? `/transactions/${drawerRow.uuid}` : "/transactions"}
         primaryLabel="Open Transaction"
-        secondaryHref={drawerRow ? `/recipients/${drawerRow.recipientId}` : undefined}
+        secondaryHref={drawerRow ? `/recipients/${drawerRow.recipientUuid}` : undefined}
         secondaryLabel="Open Recipient"
         headerAction={
           drawerRow ? (
             <TransactionDeleteDialog
-              transactionId={drawerRow.id}
+              transactionUuid={drawerRow.uuid}
               isDeleting={deleteMutation.isPending}
               onDelete={handleDrawerDelete}
               trigger={

@@ -12,9 +12,8 @@ export type TransactionReview = "queue" | "large";
 export type TransactionStatus = "uncategorized";
 
 export type TransactionsQueryRow = {
-  id: number;
   uuid: string;
-  recipientId: number;
+  recipientUuid: string;
   recipient: string;
   amount: number;
   category: string | null;
@@ -88,7 +87,7 @@ export type TransactionDetailSuggestion = {
 };
 
 export type TransactionDetailPageInitialData = {
-  transactionId: number;
+  transactionUuid: string;
   initialTransactionData: TransactionRecord;
   initialCategoriesData: CategoryOption[];
 };
@@ -97,8 +96,8 @@ export type TransactionMutationInput = {
   amount: number;
   recipientRaw: string;
   recipientName?: string | null;
-  categoryId?: number | null;
-  subcategoryId?: number | null;
+  categoryUuid?: string | null;
+  subcategoryUuid?: string | null;
   type: TransactionType;
   remarks?: string | null;
   timestamp: string;
@@ -108,19 +107,19 @@ export type TransactionMutationInput = {
 };
 
 export type UpdateTransactionInput = TransactionMutationInput & {
-  transactionId: number;
+  transactionUuid: string;
 };
 
 export type UpdateTransactionCategoryInput = {
-  transactionId: number;
-  categoryId?: number | null;
-  subcategoryId?: number | null;
+  transactionUuid: string;
+  categoryUuid?: string | null;
+  subcategoryUuid?: string | null;
 };
 
 export type TransactionDetailFormValues = {
   amount: string;
-  categoryId: string;
-  subcategoryId: string;
+  categoryUuid: string;
+  subcategoryUuid: string;
   type: TransactionType;
   timestamp: string;
   reference: string;

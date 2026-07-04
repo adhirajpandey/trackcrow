@@ -1,9 +1,7 @@
 export type CategoryDto = {
-  id: number;
   uuid: string;
   name: string;
   subcategories: Array<{
-    id: number;
     uuid: string;
     name: string;
   }>;
@@ -19,25 +17,25 @@ export type CategoryWriteInput = {
 };
 
 export type CategoryUpdateInput = CategoryWriteInput & {
-  categoryId: number;
+  categoryUuid: string;
 };
 
 export type CategoryDeleteInput = {
   userUuid: string;
-  categoryId: number;
+  categoryUuid: string;
 };
 
 export type SubcategoryWriteInput = {
   userUuid: string;
-  categoryId: number;
+  categoryUuid: string;
   name: string;
 };
 
 export type SubcategoryUpdateInput = SubcategoryWriteInput & {
-  subcategoryId: number;
+  subcategoryUuid: string;
 };
 
 export type SubcategoryDeleteInput = {
   userUuid: string;
-  subcategoryId: number;
+  subcategoryUuid: string;
 };

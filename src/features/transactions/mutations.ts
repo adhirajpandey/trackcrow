@@ -13,8 +13,8 @@ import type {
   UpdateTransactionInput,
 } from "./types";
 
-type TransactionCreateResponse = { id: number; uuid: string };
-type TransactionUpdateResponse = { id: number };
+type TransactionCreateResponse = { uuid: string };
+type TransactionUpdateResponse = { uuid: string };
 
 async function invalidateTransactionData(
   queryClient: QueryClient,
@@ -48,13 +48,13 @@ export function useUpdateTransactionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ transactionId, ...input }: UpdateTransactionInput) =>
-      apiPatch<TransactionUpdateResponse>(`/api/transactions/${transactionId}`, input),
+    mutationFn: ({ transactionUuid, ...input }: UpdateTransactionInput) =>
+      apiPatch<TransactionUpdateResponse>(`/api/transactions/${transactionUuid}`, input),
     onSuccess: async (_data, variables) => {
       await Promise.all([
         invalidateTransactionData(queryClient),
         queryClient.invalidateQueries({
-          queryKey: transactionsQueryKeys.detail(variables.transactionId),
+          queryKey: transactionsQueryKeys.detail(variables.transactionUuid),
         }),
       ]);
     },
@@ -65,11 +65,11 @@ export function useDeleteTransactionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ transactionId }: { transactionId: number }) =>
-      apiDelete<TransactionUpdateResponse>(`/api/transactions/${transactionId}`),
+    mutationFn: ({ transactionUuid }: { transactionUuid: string }) =>
+      apiDelete<TransactionUpdateResponse>(`/api/transactions/${transactionUuid}`),
     onSuccess: (_data, variables) => {
       queryClient.removeQueries({
-        queryKey: transactionsQueryKeys.detail(variables.transactionId),
+        queryKey: transactionsQueryKeys.detail(variables.transactionUuid),
       });
       void invalidateTransactionData(queryClient, { refetchType: "none" });
     },
@@ -80,16 +80,16 @@ export function useUpdateTransactionCategoryMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ transactionId, categoryId, subcategoryId }: UpdateTransactionCategoryInput) =>
-      apiPatch<TransactionUpdateResponse>(`/api/transactions/${transactionId}/category`, {
-        categoryId: categoryId ?? null,
-        ...(subcategoryId !== undefined ? { subcategoryId } : {}),
+    mutationFn: ({ transactionUuid, categoryUuid, subcategoryUuid }: UpdateTransactionCategoryInput) =>
+      apiPatch<TransactionUpdateResponse>(`/api/transactions/${transactionUuid}/category`, {
+        categoryUuid: categoryUuid ?? null,
+        ...(subcategoryUuid !== undefined ? { subcategoryUuid } : {}),
       }),
     onSuccess: async (_data, variables) => {
       await Promise.all([
         invalidateTransactionData(queryClient),
         queryClient.invalidateQueries({
-          queryKey: transactionsQueryKeys.detail(variables.transactionId),
+          queryKey: transactionsQueryKeys.detail(variables.transactionUuid),
         }),
       ]);
     },

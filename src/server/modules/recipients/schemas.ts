@@ -3,7 +3,7 @@ import { z } from "zod";
 import { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 
 export const recipientIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.string().uuid(),
 });
 
 export const listRecipientsQuerySchema = z.object({

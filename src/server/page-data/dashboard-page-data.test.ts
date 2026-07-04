@@ -74,6 +74,7 @@ describe("getDashboardPageData", () => {
       ok: true,
       data: [
         {
+          recipientUuid: "rcp-grocer",
           recipient: "Grocer",
           paymentCount: 3,
           totalAmount: 1800,
@@ -84,7 +85,6 @@ describe("getDashboardPageData", () => {
       ok: true,
       data: [
         {
-          id: 1,
           uuid: "txn-1",
           recipient: "Rent",
           category: "Essentials",
@@ -99,7 +99,6 @@ describe("getDashboardPageData", () => {
       ok: true,
       data: [
         {
-          id: 2,
           uuid: "txn-2",
           recipient: "Grocer",
           category: "Food",
@@ -122,10 +121,9 @@ describe("getDashboardPageData", () => {
       ok: true,
       data: [
         {
-          id: 9,
           uuid: "cat-9",
           name: "Food",
-          subcategories: [{ id: 10, uuid: "sub-10", name: "Lunch" }],
+          subcategories: [{ uuid: "sub-10", name: "Lunch" }],
         },
       ],
     });
@@ -191,14 +189,14 @@ describe("getDashboardPageData", () => {
       ],
       categoryOptions: [
         {
-          id: 9,
           uuid: "cat-9",
           name: "Food",
-          subcategories: [{ id: 10, uuid: "sub-10", name: "Lunch", categoryId: 9 }],
+          subcategories: [{ uuid: "sub-10", name: "Lunch", categoryUuid: "cat-9" }],
         },
       ],
       frequentRecipients: [
         {
+          recipientUuid: "rcp-grocer",
           recipient: "Grocer",
           paymentCount: 3,
           totalAmount: 1800,
@@ -206,7 +204,6 @@ describe("getDashboardPageData", () => {
       ],
       recentTransactions: [
         {
-          id: 2,
           uuid: "txn-2",
           recipient: "Grocer",
           category: "Food",

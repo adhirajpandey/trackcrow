@@ -10,13 +10,13 @@ import { getRecipientDetail } from "@/server/modules/recipients/service";
 import { buildRecipientDetailPageData } from "@/app/(app)/recipients/[id]/_components/recipient-detail-model";
 
 export async function getRecipientDetailPageData(
-  recipientId: number
+  recipientUuid: string
 ): Promise<RecipientDetailPageInitialData> {
   const sessionUser = await requirePageSessionUser();
   const categoriesPromise = getCategories().catch(() => []);
   const result = await getRecipientDetail({
     userUuid: sessionUser.userUuid,
-    recipientId,
+    recipientUuid,
   });
 
   if (!result.ok) {

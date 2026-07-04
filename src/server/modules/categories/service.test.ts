@@ -57,7 +57,7 @@ describe("category service", () => {
     expect(mockPrisma.category.create).not.toHaveBeenCalled();
 
     mockPrisma.category.count.mockResolvedValueOnce(0);
-    mockPrisma.category.create.mockImplementation(({ data }) =>
+    mockPrisma.category.create.mockImplementation(({ data }: { data: { name: string } }) =>
       Promise.resolve({ id: data.name.length })
     );
 
@@ -81,20 +81,24 @@ describe("category service", () => {
 
     mockPrisma.category.findFirst.mockResolvedValueOnce(null);
     await expect(
-      updateCategory({ userUuid: "user-1", categoryId: 10, name: "Travel" })
+      updateCategory({ userUuid: "user-1", categoryUuid: "cat-travel", name: "Travel" })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
 
     mockPrisma.category.findFirst.mockResolvedValueOnce(null);
     await expect(
-      deleteCategory({ userUuid: "user-1", categoryId: 10 })
+      deleteCategory({ userUuid: "user-1", categoryUuid: "cat-travel" })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
+    expect(mockPrisma.category.findFirst).toHaveBeenCalledWith({
+      where: { uuid: "cat-travel", userUuid: "user-1" },
+      select: { id: true, uuid: true },
+    });
     expect(mockPrisma.category.delete).not.toHaveBeenCalled();
   });
 
   it("creates, moves, updates, and deletes only user-owned subcategories", async () => {
     mockPrisma.category.findFirst.mockResolvedValueOnce(null);
     await expect(
-      createSubcategory({ userUuid: "user-1", categoryId: 10, name: "Dinner" })
+      createSubcategory({ userUuid: "user-1", categoryUuid: "cat-food", name: "Dinner" })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
 
     mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20 });
@@ -102,24 +106,28 @@ describe("category service", () => {
     await expect(
       updateSubcategory({
         userUuid: "user-1",
-        subcategoryId: 20,
-        categoryId: 99,
+        subcategoryUuid: "sub-lunch",
+        categoryUuid: "cat-food",
         name: "Lunch",
       })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
 
     mockPrisma.subcategory.findFirst.mockResolvedValueOnce(null);
     await expect(
-      deleteSubcategory({ userUuid: "user-1", subcategoryId: 20 })
+      deleteSubcategory({ userUuid: "user-1", subcategoryUuid: "sub-lunch" })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
+    expect(mockPrisma.subcategory.findFirst).toHaveBeenCalledWith({
+      where: { uuid: "sub-lunch", userUuid: "user-1" },
+      select: { id: true, uuid: true },
+    });
     expect(mockPrisma.subcategory.delete).not.toHaveBeenCalled();
   });
 
   it("resets categories inside a Prisma transaction", async () => {
-    mockPrisma.$transaction.mockImplementation(async (callback) =>
+    mockPrisma.$transaction.mockImplementation(async (callback: (tx: typeof mockTransactionClient) => Promise<void>) =>
       callback(mockTransactionClient)
     );
-    mockTransactionClient.category.create.mockImplementation(({ data }) =>
+    mockTransactionClient.category.create.mockImplementation(({ data }: { data: { name: string } }) =>
       Promise.resolve({ id: data.name.length })
     );
 

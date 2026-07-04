@@ -117,21 +117,21 @@ export function RecipientDetailPageView({
   }>({ sortBy: "timestamp", sortOrder: "desc" });
 
   const cleanup = data.cleanupSuggestion;
-  const categoryExists = cleanup.categoryId
-    ? categories.some((category) => category.id === cleanup.categoryId)
+  const categoryExists = cleanup.categoryUuid
+    ? categories.some((category) => category.uuid === cleanup.categoryUuid)
     : false;
   const subcategoryExists =
-    cleanup.categoryId && cleanup.subcategoryId
+    cleanup.categoryUuid && cleanup.subcategoryUuid
       ? categories
-          .find((category) => category.id === cleanup.categoryId)
-          ?.subcategories.some((subcategory) => subcategory.id === cleanup.subcategoryId) ?? false
+          .find((category) => category.uuid === cleanup.categoryUuid)
+          ?.subcategories.some((subcategory) => subcategory.uuid === cleanup.subcategoryUuid) ?? false
       : false;
-  const effectiveSubcategoryId = subcategoryExists ? cleanup.subcategoryId : null;
+  const effectiveSubcategoryUuid = subcategoryExists ? cleanup.subcategoryUuid : null;
   const suggestionLabel = [cleanup.category, subcategoryExists ? cleanup.subcategory : null]
     .filter(Boolean)
     .join(" · ");
   const canApplySuggestion =
-    categoryExists && cleanup.categoryId != null && cleanup.uncategorizedTransactionIds.length > 0;
+    categoryExists && cleanup.categoryUuid != null && cleanup.uncategorizedTransactionUuids.length > 0;
   const sortedRelatedTransactions = useMemo(
     () =>
       sortTransactionTableRows(
@@ -170,25 +170,25 @@ export function RecipientDetailPageView({
   }
 
   async function handleApplySuggestion() {
-    if (!canApplySuggestion || cleanup.categoryId == null) {
+    if (!canApplySuggestion || cleanup.categoryUuid == null) {
       return;
     }
 
     try {
       await Promise.all(
-        cleanup.uncategorizedTransactionIds.map((transactionId) =>
+        cleanup.uncategorizedTransactionUuids.map((transactionUuid) =>
           updateCategoryMutation.mutateAsync({
-            transactionId,
-            categoryId: cleanup.categoryId,
-            ...(effectiveSubcategoryId ? { subcategoryId: effectiveSubcategoryId } : {}),
+            transactionUuid,
+            categoryUuid: cleanup.categoryUuid,
+            ...(effectiveSubcategoryUuid ? { subcategoryUuid: effectiveSubcategoryUuid } : {}),
           })
         )
       );
       toast({
         tone: "success",
         title: "Cleanup applied",
-        description: `${cleanup.uncategorizedTransactionIds.length} transaction${
-          cleanup.uncategorizedTransactionIds.length === 1 ? "" : "s"
+        description: `${cleanup.uncategorizedTransactionUuids.length} transaction${
+          cleanup.uncategorizedTransactionUuids.length === 1 ? "" : "s"
         } updated to ${suggestionLabel}.`,
         durationMs: 3400,
       });
@@ -214,7 +214,7 @@ export function RecipientDetailPageView({
 
     try {
       const result = await addIdentifierMutation.mutateAsync({
-        recipientId: data.recipientId,
+        recipientUuid: data.recipientUuid,
         value: trimmedValue,
         kind: identifierKind,
         transfer,
@@ -262,16 +262,6 @@ export function RecipientDetailPageView({
         eyebrow="Recipient workspace"
         title="Recipient detail"
         description="Fix categorization gaps, manage matching identifiers, and trace linked payments."
-        meta={
-          <>
-            <span className="overflow-wrap-anywhere font-medium text-foreground">
-              {data.displayName}
-            </span>
-            <span className="text-secondary-foreground">
-              {data.transactionCount} transactions linked
-            </span>
-          </>
-        }
         actions={
           <Button asChild variant="secondary" className="w-full min-w-0">
             <Link href="/recipients">
@@ -286,14 +276,6 @@ export function RecipientDetailPageView({
           eyebrow="Recipient workspace"
           title="Recipient detail"
           description="Fix categorization gaps, manage matching identifiers, and trace linked payments."
-          meta={
-            <>
-              <span className="break-all font-medium text-foreground">{data.displayName}</span>
-              <span className="text-secondary-foreground">
-                {data.transactionCount} transactions linked
-              </span>
-            </>
-          }
           actions={
             <Button asChild variant="secondary" className="min-w-[176px]">
               <Link href="/recipients">
@@ -485,7 +467,7 @@ export function RecipientDetailPageView({
           <MobileSectionPreview
             title="Related transactions"
             description="Trace the transactions behind this recipient pattern."
-            href={data.recentTransactions[0] ? `/transactions/${data.recentTransactions[0].id}` : undefined}
+            href={data.recentTransactions[0] ? `/transactions/${data.recentTransactions[0].uuid}` : undefined}
             hrefLabel="Open latest"
             className="lg:hidden"
           >
@@ -494,7 +476,7 @@ export function RecipientDetailPageView({
                 relatedTransactions.rows.map((transaction) => (
                   <Link
                     key={transaction.uuid}
-                    href={`/transactions/${transaction.id}`}
+                    href={`/transactions/${transaction.uuid}`}
                     className={cn(mobileCardClassName, "block p-4")}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -552,7 +534,7 @@ export function RecipientDetailPageView({
                 ...relatedTransactions.pagination,
                 onPageChange: setRelatedTransactionsPage,
               }}
-              rowHref={(transaction) => `/transactions/${transaction.id}`}
+              rowHref={(transaction) => `/transactions/${transaction.uuid}`}
               onNavigate={router.push}
               emptyTitle="No linked transactions found for this recipient."
             />

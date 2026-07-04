@@ -13,7 +13,6 @@ describe("categories queries", () => {
       new Response(
         JSON.stringify([
           {
-            id: 1,
             uuid: "cat-1",
             name: "Housing",
             subcategories: [],
@@ -28,7 +27,6 @@ describe("categories queries", () => {
 
     await expect(getCategoriesQueryData()).resolves.toEqual([
       {
-        id: 1,
         uuid: "cat-1",
         name: "Housing",
         subcategories: [],

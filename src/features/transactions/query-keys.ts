@@ -5,5 +5,5 @@ export const transactionsQueryKeys = {
   lists: ["transactions", "list"] as const,
   list: (query: TransactionsApiQuery) => ["transactions", "list", { query }] as const,
   details: ["transactions", "detail"] as const,
-  detail: (transactionId: number) => ["transactions", "detail", transactionId] as const,
+  detail: (transactionUuid: string) => ["transactions", "detail", transactionUuid] as const,
 };

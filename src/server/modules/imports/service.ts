@@ -12,7 +12,7 @@ export async function importSmsTransaction(
   input: ImportSmsInput
 ): Promise<
   ServiceResult<
-    { id: number; uuid: string },
+    { uuid: string },
     "UNAUTHORIZED" | "UNPROCESSABLE" | "INTERNAL_ERROR"
   >
 > {
@@ -117,10 +117,21 @@ export async function importSmsTransaction(
       return fail("INTERNAL_ERROR");
     }
 
+    const createdTransaction = await prisma.transaction.findFirst({
+      where: {
+        uuid: transaction.data.uuid,
+        userUuid: tokenRecord.userUuid,
+      },
+      select: { id: true },
+    });
+    if (!createdTransaction) {
+      return fail("INTERNAL_ERROR");
+    }
+
     await prisma.rawMessage.create({
       data: {
         userUuid: tokenRecord.userUuid,
-        transactionId: transaction.data.id,
+        transactionId: createdTransaction.id,
         body: input.message,
         parseStatus: ParseStatus.PARSED,
         parserName: null,
@@ -132,7 +143,7 @@ export async function importSmsTransaction(
     logger.info({
       event: "sms_import.created",
       userId: tokenRecord.userUuid,
-      transactionId: transaction.data.id,
+      transactionId: createdTransaction.id,
       source: TransactionSource.SMS,
     });
 

@@ -420,8 +420,8 @@ function getRecipientReviewAction(input: {
   return "Review" as const;
 }
 
-function getRecipientActionHref(recipientId: number | null = null) {
-  return recipientId ? `/recipients/${recipientId}` : "/recipients";
+function getRecipientActionHref(recipientUuid: string | null = null) {
+  return recipientUuid ? `/recipients/${recipientUuid}` : "/recipients";
 }
 
 export function formatCurrency(value: number) {
@@ -1104,7 +1104,7 @@ export function buildSuggestedRules(input: {
       return {
         recipient: recipient.recipient,
         action,
-        href: getRecipientActionHref(recipient.recipientId),
+        href: getRecipientActionHref(recipient.recipientUuid),
         paymentCount: recipient.paymentCount,
         totalAmount: recipient.totalAmount,
       };
@@ -1125,7 +1125,7 @@ export function buildMostFrequentRecipient(input: {
     paymentCount: recipient.paymentCount,
     totalAmount: recipient.totalAmount,
     action,
-    href: getRecipientActionHref(recipient.recipientId),
+    href: getRecipientActionHref(recipient.recipientUuid),
     helper:
       action === "Create rule"
         ? "Good candidate for a rule"
@@ -1142,7 +1142,7 @@ export function buildFrequentRecipientRows(input: {
     return {
       ...recipient,
       action,
-      href: getRecipientActionHref(recipient.recipientId),
+      href: getRecipientActionHref(recipient.recipientUuid),
     };
   });
 }

@@ -42,22 +42,27 @@ type TransactionRecord = {
   categoryId: number | null;
   subcategoryId: number | null;
   recipient: {
+    uuid: string;
     displayName: string;
   };
-  category: { name: string } | null;
-  subcategory: { name: string } | null;
+  category: { uuid: string; name: string } | null;
+  subcategory: { uuid: string; name: string } | null;
+};
+
+type ResolvedCategorySelection = {
+  categoryId: number | null;
+  subcategoryId: number | null;
 };
 
 function toTransactionDto(record: TransactionRecord): TransactionDto {
   return {
-    id: record.id,
     uuid: record.uuid,
     userUuid: record.userUuid,
     amount: record.amount.toNumber(),
     currency: record.currency,
     type: record.type,
     source: record.source,
-    recipientId: record.recipientId,
+    recipientUuid: record.recipient.uuid,
     recipientRaw: record.recipientRaw,
     recipientName: record.recipientName,
     recipientDisplayName: record.recipient.displayName,
@@ -70,60 +75,94 @@ function toTransactionDto(record: TransactionRecord): TransactionDto {
     updatedAt: record.updatedAt.toISOString(),
     category: record.category?.name ?? null,
     subcategory: record.subcategory?.name ?? null,
-    categoryId: record.categoryId,
-    subcategoryId: record.subcategoryId,
+    categoryUuid: record.category?.uuid ?? null,
+    subcategoryUuid: record.subcategory?.uuid ?? null,
   };
 }
 
-async function ensureOwnedCategory(
-  userUuid: string,
-  categoryId: number | null | undefined
-): Promise<boolean> {
-  if (categoryId == null) {
-    return true;
+async function resolveCategorySelection(input: {
+  userUuid: string;
+  categoryUuid?: string | null;
+  subcategoryUuid?: string | null;
+}): Promise<
+  | { ok: true; data: ResolvedCategorySelection }
+  | {
+      ok: false;
+      details: Array<{ path: string[]; message: string }>;
+    }
+> {
+  if (input.categoryUuid == null) {
+    if (input.subcategoryUuid != null) {
+      return {
+        ok: false,
+        details: [
+          {
+            path: ["categoryUuid"],
+            message: "Category is required when subcategory is set",
+          },
+        ],
+      };
+    }
+
+    return { ok: true, data: { categoryId: null, subcategoryId: null } };
   }
 
   const category = await prisma.category.findFirst({
-    where: { id: categoryId, userUuid },
+    where: { uuid: input.categoryUuid, userUuid: input.userUuid },
     select: { id: true },
   });
+  if (!category) {
+    return {
+      ok: false,
+      details: [{ path: ["categoryUuid"], message: "Unknown category" }],
+    };
+  }
 
-  return Boolean(category);
-}
-
-async function ensureOwnedSubcategory(
-  userUuid: string,
-  categoryId: number | null | undefined,
-  subcategoryId: number | null | undefined
-): Promise<boolean> {
-  if (subcategoryId == null) {
-    return true;
+  if (input.subcategoryUuid == null) {
+    return { ok: true, data: { categoryId: category.id, subcategoryId: null } };
   }
 
   const subcategory = await prisma.subcategory.findFirst({
-    where: {
-      id: subcategoryId,
-      userUuid,
-      ...(categoryId == null ? {} : { categoryId }),
-    },
-    select: { id: true },
+    where: { uuid: input.subcategoryUuid, userUuid: input.userUuid },
+    select: { id: true, categoryId: true },
   });
+  if (!subcategory) {
+    return {
+      ok: false,
+      details: [{ path: ["subcategoryUuid"], message: "Unknown subcategory" }],
+    };
+  }
 
-  return Boolean(subcategory);
+  if (subcategory.categoryId !== category.id) {
+    return {
+      ok: false,
+      details: [
+        {
+          path: ["subcategoryUuid"],
+          message: "Subcategory does not belong to category",
+        },
+      ],
+    };
+  }
+
+  return {
+    ok: true,
+    data: { categoryId: category.id, subcategoryId: subcategory.id },
+  };
 }
 
-async function getOwnedTransaction(userUuid: string, transactionId: number) {
+async function getOwnedTransaction(userUuid: string, transactionUuid: string) {
   return prisma.transaction.findFirst({
-    where: { id: transactionId, userUuid },
+    where: { uuid: transactionUuid, userUuid },
     include: {
       recipient: {
-        select: { displayName: true },
+        select: { uuid: true, displayName: true },
       },
       category: {
-        select: { name: true },
+        select: { uuid: true, name: true },
       },
       subcategory: {
-        select: { name: true },
+        select: { uuid: true, name: true },
       },
     },
   });
@@ -218,9 +257,9 @@ export async function listTransactions(
                 ? { amount: sortOrder }
                 : { timestamp: sortOrder },
             include: {
-              recipient: { select: { displayName: true } },
-              category: { select: { name: true } },
-              subcategory: { select: { name: true } },
+              recipient: { select: { uuid: true, displayName: true } },
+              category: { select: { uuid: true, name: true } },
+              subcategory: { select: { uuid: true, name: true } },
             },
             skip,
             take: pageSize,
@@ -257,7 +296,7 @@ export async function getTransactionById(
   input: TransactionLookupInput
 ): Promise<TransactionGetResult> {
   try {
-    const transaction = await getOwnedTransaction(input.userUuid, input.transactionId);
+    const transaction = await getOwnedTransaction(input.userUuid, input.transactionUuid);
     if (!transaction) {
       return fail("NOT_FOUND");
     }
@@ -268,7 +307,7 @@ export async function getTransactionById(
       {
         event: "transaction.read.db_failed",
         userId: input.userUuid,
-        transactionId: input.transactionId,
+        transactionUuid: input.transactionUuid,
         message: "Failed to load transaction",
       },
       error
@@ -294,9 +333,9 @@ export async function listTransactionsForRange(
           : {}),
       },
       include: {
-        recipient: { select: { displayName: true } },
-        category: { select: { name: true } },
-        subcategory: { select: { name: true } },
+        recipient: { select: { uuid: true, displayName: true } },
+        category: { select: { uuid: true, name: true } },
+        subcategory: { select: { uuid: true, name: true } },
       },
       orderBy: { timestamp: "desc" },
     });
@@ -321,20 +360,13 @@ export async function createTransaction(
   input: TransactionWriteInput
 ): Promise<TransactionCreateResult> {
   try {
-    const hasCategory = await ensureOwnedCategory(input.userUuid, input.categoryId);
-    if (!hasCategory) {
-      return fail("VALIDATION_ERROR", [{ path: ["categoryId"], message: "Unknown category" }]);
-    }
-
-    const hasSubcategory = await ensureOwnedSubcategory(
-      input.userUuid,
-      input.categoryId,
-      input.subcategoryId
-    );
-    if (!hasSubcategory) {
-      return fail("VALIDATION_ERROR", [
-        { path: ["subcategoryId"], message: "Unknown subcategory" },
-      ]);
+    const categorySelection = await resolveCategorySelection({
+      userUuid: input.userUuid,
+      categoryUuid: input.categoryUuid,
+      subcategoryUuid: input.subcategoryUuid,
+    });
+    if (!categorySelection.ok) {
+      return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
     const recipientResult = await resolveRecipient({
@@ -350,8 +382,8 @@ export async function createTransaction(
       data: {
         userUuid: input.userUuid,
         recipientId: recipientResult.data.recipientId,
-        categoryId: input.categoryId ?? null,
-        subcategoryId: input.subcategoryId ?? null,
+        categoryId: categorySelection.data.categoryId,
+        subcategoryId: categorySelection.data.subcategoryId,
         amount: input.amount,
         currency: "INR",
         type: input.type,
@@ -377,7 +409,7 @@ export async function createTransaction(
       source: input.source,
     });
 
-    return ok(created);
+    return ok({ uuid: created.uuid });
   } catch (error) {
     logger.error(
       {
@@ -397,27 +429,20 @@ export async function updateTransaction(
 ): Promise<TransactionUpdateResult> {
   try {
     const existing = await prisma.transaction.findFirst({
-      where: { id: input.transactionId, userUuid: input.userUuid },
+      where: { uuid: input.transactionUuid, userUuid: input.userUuid },
       select: { id: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
 
-    const hasCategory = await ensureOwnedCategory(input.userUuid, input.categoryId);
-    if (!hasCategory) {
-      return fail("VALIDATION_ERROR", [{ path: ["categoryId"], message: "Unknown category" }]);
-    }
-
-    const hasSubcategory = await ensureOwnedSubcategory(
-      input.userUuid,
-      input.categoryId,
-      input.subcategoryId
-    );
-    if (!hasSubcategory) {
-      return fail("VALIDATION_ERROR", [
-        { path: ["subcategoryId"], message: "Unknown subcategory" },
-      ]);
+    const categorySelection = await resolveCategorySelection({
+      userUuid: input.userUuid,
+      categoryUuid: input.categoryUuid,
+      subcategoryUuid: input.subcategoryUuid,
+    });
+    if (!categorySelection.ok) {
+      return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
     const recipientResult = await resolveRecipient({
@@ -430,11 +455,11 @@ export async function updateTransaction(
     }
 
     await prisma.transaction.update({
-      where: { id: input.transactionId },
+      where: { id: existing.id },
       data: {
         recipientId: recipientResult.data.recipientId,
-        categoryId: input.categoryId ?? null,
-        subcategoryId: input.subcategoryId ?? null,
+        categoryId: categorySelection.data.categoryId,
+        subcategoryId: categorySelection.data.subcategoryId,
         amount: input.amount,
         type: input.type,
         recipientRaw: input.recipientRaw.trim(),
@@ -450,17 +475,17 @@ export async function updateTransaction(
     logger.info({
       event: "transaction.updated",
       userId: input.userUuid,
-      transactionId: input.transactionId,
+      transactionId: existing.id,
       source: input.source,
     });
 
-    return ok({ id: input.transactionId });
+    return ok({ uuid: input.transactionUuid });
   } catch (error) {
     logger.error(
       {
         event: "transaction.update.db_failed",
         userId: input.userUuid,
-        transactionId: input.transactionId,
+        transactionUuid: input.transactionUuid,
         source: input.source,
         message: "Failed to update transaction",
       },
@@ -475,61 +500,54 @@ export async function updateTransactionCategory(
 ): Promise<TransactionCategoryUpdateResult> {
   try {
     const existing = await prisma.transaction.findFirst({
-      where: { id: input.transactionId, userUuid: input.userUuid },
+      where: { uuid: input.transactionUuid, userUuid: input.userUuid },
       select: { id: true, categoryId: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
 
-    const hasCategory = await ensureOwnedCategory(input.userUuid, input.categoryId);
-    if (!hasCategory) {
-      return fail("VALIDATION_ERROR", [{ path: ["categoryId"], message: "Unknown category" }]);
-    }
-
-    const hasSubcategory = await ensureOwnedSubcategory(
-      input.userUuid,
-      input.categoryId,
-      input.subcategoryId
-    );
-    if (!hasSubcategory) {
-      return fail("VALIDATION_ERROR", [
-        { path: ["subcategoryId"], message: "Unknown subcategory" },
-      ]);
+    const categorySelection = await resolveCategorySelection({
+      userUuid: input.userUuid,
+      categoryUuid: input.categoryUuid,
+      subcategoryUuid: input.subcategoryUuid,
+    });
+    if (!categorySelection.ok) {
+      return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
     const updated = await prisma.transaction.update({
-      where: { id: input.transactionId },
+      where: { id: existing.id },
       data: {
-        categoryId: input.categoryId,
+        categoryId: categorySelection.data.categoryId,
         subcategoryId:
-          input.categoryId == null
+          categorySelection.data.categoryId == null
             ? null
-            : input.subcategoryId !== undefined
-              ? input.subcategoryId
-              : existing.categoryId !== input.categoryId
+            : input.subcategoryUuid !== undefined
+              ? categorySelection.data.subcategoryId
+              : existing.categoryId !== categorySelection.data.categoryId
                 ? null
                 : undefined,
       },
       include: {
-        category: { select: { name: true } },
-        subcategory: { select: { name: true } },
+        category: { select: { uuid: true, name: true } },
+        subcategory: { select: { uuid: true, name: true } },
       },
     });
 
     logger.info({
       event: "transaction.category_changed",
       userId: input.userUuid,
-      transactionId: input.transactionId,
+      transactionId: existing.id,
       categoryId: updated.categoryId,
       subcategoryId: updated.subcategoryId,
     });
 
     return ok({
-      id: updated.id,
-      categoryId: updated.categoryId,
+      uuid: updated.uuid,
+      categoryUuid: updated.category?.uuid ?? null,
       category: updated.category?.name ?? null,
-      subcategoryId: updated.subcategoryId,
+      subcategoryUuid: updated.subcategory?.uuid ?? null,
       subcategory: updated.subcategory?.name ?? null,
     });
   } catch (error) {
@@ -537,8 +555,8 @@ export async function updateTransactionCategory(
       {
         event: "transaction.category_change.db_failed",
         userId: input.userUuid,
-        transactionId: input.transactionId,
-        categoryId: input.categoryId,
+        transactionUuid: input.transactionUuid,
+        categoryUuid: input.categoryUuid,
         message: "Failed to update transaction category",
       },
       error
@@ -552,26 +570,26 @@ export async function deleteTransaction(
 ): Promise<TransactionDeleteResult> {
   try {
     const existing = await prisma.transaction.findFirst({
-      where: { id: input.transactionId, userUuid: input.userUuid },
+      where: { uuid: input.transactionUuid, userUuid: input.userUuid },
       select: { id: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
 
-    await prisma.transaction.delete({ where: { id: input.transactionId } });
+    await prisma.transaction.delete({ where: { id: existing.id } });
     logger.info({
       event: "transaction.deleted",
       userId: input.userUuid,
-      transactionId: input.transactionId,
+      transactionId: existing.id,
     });
-    return ok({ id: input.transactionId });
+    return ok({ uuid: input.transactionUuid });
   } catch (error) {
     logger.error(
       {
         event: "transaction.delete.db_failed",
         userId: input.userUuid,
-        transactionId: input.transactionId,
+        transactionUuid: input.transactionUuid,
         message: "Failed to delete transaction",
       },
       error
@@ -585,7 +603,7 @@ export async function suggestTransactionCategory(
 ): Promise<TransactionSuggestResult> {
   try {
     const current = await prisma.transaction.findFirst({
-      where: { id: input.transactionId, userUuid: input.userUuid },
+      where: { uuid: input.transactionUuid, userUuid: input.userUuid },
       select: { id: true, recipientId: true },
     });
     if (!current) {
@@ -596,12 +614,12 @@ export async function suggestTransactionCategory(
       where: {
         userUuid: input.userUuid,
         recipientId: current.recipientId,
-        id: { not: input.transactionId },
+        id: { not: current.id },
         categoryId: { not: null },
       },
       include: {
-        category: { select: { name: true } },
-        subcategory: { select: { name: true } },
+        category: { select: { uuid: true, name: true } },
+        subcategory: { select: { uuid: true, name: true } },
       },
       orderBy: { timestamp: "desc" },
     });
@@ -636,7 +654,7 @@ export async function suggestTransactionCategory(
       {
         event: "transaction.suggestion.db_failed",
         userId: input.userUuid,
-        transactionId: input.transactionId,
+        transactionUuid: input.transactionUuid,
         message: "Failed to build transaction category suggestion",
       },
       error

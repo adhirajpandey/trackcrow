@@ -187,7 +187,6 @@ describe("dashboard service", () => {
     const endDate = new Date("2026-06-30T23:59:59.000Z");
     mockPrisma.transaction.findMany.mockResolvedValueOnce([
       {
-        id: 2,
         uuid: "txn-2",
         amount: 900,
         timestamp: new Date("2026-06-20T10:00:00.000Z"),
@@ -198,7 +197,6 @@ describe("dashboard service", () => {
         category: { name: "Food" },
       },
       {
-        id: 1,
         uuid: "txn-1",
         amount: 2500,
         timestamp: new Date("2026-06-18T10:00:00.000Z"),
@@ -221,7 +219,6 @@ describe("dashboard service", () => {
       ok: true,
       data: [
         {
-          id: 2,
           uuid: "txn-2",
           recipient: "Vivek Pandey",
           category: "Food",
@@ -231,7 +228,6 @@ describe("dashboard service", () => {
           source: "SMS",
         },
         {
-          id: 1,
           uuid: "txn-1",
           recipient: "Power Bill",
           category: null,
@@ -251,7 +247,6 @@ describe("dashboard service", () => {
       orderBy: { timestamp: "desc" },
       take: 10,
       select: {
-        id: true,
         uuid: true,
         amount: true,
         timestamp: true,
@@ -271,19 +266,19 @@ describe("dashboard service", () => {
         amount: 900,
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { id: 30, displayName: "vivek.pandey5@oksbi" },
+        recipient: { uuid: "rcp-vivek", displayName: "vivek.pandey5@oksbi" },
       },
       {
         amount: 250,
         recipientName: "Power bill",
         recipientRaw: "POWER BILL",
-        recipient: { id: 18, displayName: "Utility" },
+        recipient: { uuid: "rcp-power", displayName: "Utility" },
       },
       {
         amount: 600,
         recipientName: null,
         recipientRaw: "vivek.pandey5@oksbi",
-        recipient: { id: 30, displayName: "vivek.pandey5@oksbi" },
+        recipient: { uuid: "rcp-vivek", displayName: "vivek.pandey5@oksbi" },
       },
     ]);
 
@@ -296,13 +291,13 @@ describe("dashboard service", () => {
       ok: true,
       data: [
         {
-          recipientId: 30,
+          recipientUuid: "rcp-vivek",
           recipient: "Vivek Pandey",
           paymentCount: 2,
           totalAmount: 1500,
         },
         {
-          recipientId: 18,
+          recipientUuid: "rcp-power",
           recipient: "Power Bill",
           paymentCount: 1,
           totalAmount: 250,

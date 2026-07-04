@@ -11,17 +11,17 @@ import {
 import { requirePageSessionUser } from "@/server/auth/session";
 
 export async function getTransactionDetailPageData(
-  transactionId: number
+  transactionUuid: string
 ): Promise<TransactionDetailPageInitialData> {
   await requirePageSessionUser();
 
   const categoriesPromise = getCategories().catch(() => []);
 
   try {
-    const transaction = await getTransaction(transactionId);
+    const transaction = await getTransaction(transactionUuid);
 
     return {
-      transactionId,
+      transactionUuid,
       initialTransactionData: transaction,
       initialCategoriesData: await categoriesPromise,
     };

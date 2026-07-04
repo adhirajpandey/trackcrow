@@ -17,12 +17,11 @@ import {
 import { Button } from "@/components/ui/button";
 
 export function TransactionDeleteDialog({
-  transactionId,
   isDeleting,
   onDelete,
   trigger,
 }: {
-  transactionId: number;
+  transactionUuid: string;
   isDeleting: boolean;
   onDelete: () => Promise<void>;
   trigger: ReactNode;
@@ -34,8 +33,8 @@ export function TransactionDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes TXN-{transactionId} from the ledger and unlinks any
-            raw-message reference. This action cannot be undone.
+            This permanently removes this transaction from the ledger and unlinks any raw-message
+            reference. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

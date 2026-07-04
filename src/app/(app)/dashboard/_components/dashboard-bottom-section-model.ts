@@ -64,7 +64,6 @@ export function mapTransactionListToDashboardItems(
   response: TransactionListResponse
 ): DashboardRecentTransactionItem[] {
   return response.transactions.map((transaction) => ({
-    id: transaction.id,
     uuid: transaction.uuid,
     recipient: formatRecipientDisplayLabel({
       recipientName: transaction.recipientName,
@@ -82,13 +81,13 @@ export function mapTransactionListToDashboardItems(
 
 export function buildCategoryQuickTagOptions(categories: CategoryOption[]) {
   return categories.map((category) => ({
-    id: category.id,
+    id: category.uuid,
     label: category.name,
   }));
 }
 
-export function buildLargestTransactionHref(transactionId: number) {
-  return `/transactions/${transactionId}`;
+export function buildLargestTransactionHref(transactionUuid: string) {
+  return `/transactions/${transactionUuid}`;
 }
 
 export function getCategoryTriggerLabel(category: string | null) {

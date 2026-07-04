@@ -23,14 +23,13 @@ describe("transactions queries", () => {
           JSON.stringify({
             transactions: [
               {
-                id: 1,
                 uuid: "txn-1",
                 userUuid: "user-1",
                 amount: 2500,
                 currency: "INR",
                 type: "UPI",
                 source: "MANUAL",
-                recipientId: 18,
+                recipientUuid: "rcp-18",
                 recipientRaw: "ACME RENT",
                 recipientName: "Acme Rent",
                 recipientDisplayName: "Acme Rent",
@@ -43,8 +42,8 @@ describe("transactions queries", () => {
                 updatedAt: "2026-06-10T10:00:00.000Z",
                 category: "Housing",
                 subcategory: null,
-                categoryId: 12,
-                subcategoryId: null,
+                categoryUuid: "cat-12",
+                subcategoryUuid: null,
               },
             ],
             page: 1,
@@ -117,14 +116,13 @@ describe("transactions queries", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          id: 42,
           uuid: "txn-42",
           userUuid: "user-1",
           amount: 1063,
           currency: "INR",
           type: "UPI",
           source: "SMS",
-          recipientId: 30,
+          recipientUuid: "rcp-30",
           recipientRaw: "742810776@kotakbank",
           recipientName: "Kotak Bank UPI",
           recipientDisplayName: "Kotak Bank UPI",
@@ -137,8 +135,8 @@ describe("transactions queries", () => {
           updatedAt: "2026-06-24T17:35:00.000Z",
           category: null,
           subcategory: null,
-          categoryId: null,
-          subcategoryId: null,
+          categoryUuid: null,
+          subcategoryUuid: null,
         }),
         {
           status: 200,
@@ -147,16 +145,15 @@ describe("transactions queries", () => {
       )
     );
 
-    const data = await getTransactionQueryData(42);
+    const data = await getTransactionQueryData("txn-42");
 
     expect(data).toMatchObject({
-      id: 42,
       uuid: "txn-42",
       source: "SMS",
-      recipientId: 30,
+      recipientUuid: "rcp-30",
     });
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/transactions/42",
+      "/api/transactions/txn-42",
       expect.objectContaining({
         method: "GET",
         credentials: "include",
@@ -164,7 +161,7 @@ describe("transactions queries", () => {
     );
   });
 
-  it("fetches transaction category suggestions by id", async () => {
+  it("fetches transaction category suggestions by uuid", async () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -178,12 +175,12 @@ describe("transactions queries", () => {
       )
     );
 
-    await expect(getTransactionSuggestionData(42)).resolves.toEqual({
+    await expect(getTransactionSuggestionData("txn-42")).resolves.toEqual({
       suggestedCategory: "Food",
       suggestedSubCategory: "Dinner",
     });
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/transactions/42/suggest",
+      "/api/transactions/txn-42/suggest",
       expect.objectContaining({
         method: "GET",
         credentials: "include",

@@ -29,8 +29,8 @@ export const transactionDetailFormSchema = z.object({
     .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, {
       message: "Enter an amount greater than 0",
     }),
-  categoryId: z.string(),
-  subcategoryId: z.string(),
+  categoryUuid: z.string(),
+  subcategoryUuid: z.string(),
   type: z.enum(["UPI", "CARD", "CASH", "NETBANKING", "OTHER"]),
   timestamp: z
     .string()
@@ -89,8 +89,8 @@ export function mapTransactionToFormValues(
 ): TransactionDetailFormValues {
   return {
     amount: String(transaction.amount),
-    categoryId: transaction.categoryId == null ? "" : String(transaction.categoryId),
-    subcategoryId: transaction.subcategoryId == null ? "" : String(transaction.subcategoryId),
+    categoryUuid: transaction.categoryUuid ?? "",
+    subcategoryUuid: transaction.subcategoryUuid ?? "",
     type: transaction.type,
     timestamp: formatDateTimeLocalValue(transaction.timestamp),
     reference: transaction.reference ?? "",
@@ -108,8 +108,8 @@ export function mapFormValuesToTransactionPayload(
     amount: Number(values.amount),
     recipientRaw: transaction.recipientRaw.trim(),
     recipientName: toNullableTrimmedString(transaction.recipientName ?? ""),
-    categoryId: toNullableInteger(values.categoryId),
-    subcategoryId: toNullableInteger(values.subcategoryId),
+    categoryUuid: toNullableUuid(values.categoryUuid),
+    subcategoryUuid: toNullableUuid(values.subcategoryUuid),
     type: values.type,
     timestamp: parseDateTimeLocalAsIst(values.timestamp).toISOString(),
     reference: toNullableTrimmedString(values.reference),
@@ -128,8 +128,8 @@ export function hasTransactionDetailChanges(
 
   return (
     nextPayload.amount !== currentPayload.amount ||
-    nextPayload.categoryId !== currentPayload.categoryId ||
-    nextPayload.subcategoryId !== currentPayload.subcategoryId ||
+    nextPayload.categoryUuid !== currentPayload.categoryUuid ||
+    nextPayload.subcategoryUuid !== currentPayload.subcategoryUuid ||
     nextPayload.type !== currentPayload.type ||
     nextPayload.timestamp !== currentPayload.timestamp ||
     nextPayload.reference !== currentPayload.reference ||
@@ -141,33 +141,28 @@ export function hasTransactionDetailChanges(
 
 export function getSubcategoryOptions(
   categories: CategoryOption[],
-  categoryId: string
+  categoryUuid: string
 ) {
-  if (!categoryId) {
-    return [];
-  }
-
-  const selectedCategoryId = Number(categoryId);
-  if (!Number.isFinite(selectedCategoryId)) {
+  if (!categoryUuid) {
     return [];
   }
 
   return (
-    categories.find((category) => category.id === selectedCategoryId)?.subcategories ?? []
+    categories.find((category) => category.uuid === categoryUuid)?.subcategories ?? []
   );
 }
 
 export function isValidSubcategorySelection(
   categories: CategoryOption[],
-  categoryId: string,
-  subcategoryId: string
+  categoryUuid: string,
+  subcategoryUuid: string
 ) {
-  if (!subcategoryId) {
+  if (!subcategoryUuid) {
     return true;
   }
 
-  return getSubcategoryOptions(categories, categoryId).some(
-    (subcategory) => String(subcategory.id) === subcategoryId
+  return getSubcategoryOptions(categories, categoryUuid).some(
+    (subcategory) => subcategory.uuid === subcategoryUuid
   );
 }
 
@@ -184,8 +179,8 @@ export function applyTransactionSuggestion(
       : null;
 
   return {
-    categoryId: category ? String(category.id) : "",
-    subcategoryId: subcategory ? String(subcategory.id) : "",
+    categoryUuid: category?.uuid ?? "",
+    subcategoryUuid: subcategory?.uuid ?? "",
     matched: Boolean(category),
   };
 }
@@ -224,7 +219,7 @@ export function getTransactionDisplayRecipient(transaction: TransactionRecord) {
 }
 
 export function getRecipientDetailHref(transaction: TransactionRecord) {
-  return `/recipients/${transaction.recipientId}`;
+  return `/recipients/${transaction.recipientUuid}`;
 }
 
 export function getTransactionGoogleMapsHref(locationRaw: string | null | undefined) {
@@ -245,8 +240,8 @@ function mapTransactionToMutationPayload(
     amount: transaction.amount,
     recipientRaw: transaction.recipientRaw.trim(),
     recipientName: toNullableTrimmedString(transaction.recipientName ?? ""),
-    categoryId: transaction.categoryId,
-    subcategoryId: transaction.subcategoryId,
+    categoryUuid: transaction.categoryUuid,
+    subcategoryUuid: transaction.subcategoryUuid,
     type: transaction.type,
     timestamp: toDate(transaction.timestamp).toISOString(),
     reference: toNullableTrimmedString(transaction.reference ?? ""),
@@ -294,13 +289,8 @@ function isEditableShortcutTarget(target: EventTarget | null) {
   );
 }
 
-function toNullableInteger(value: string) {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+function toNullableUuid(value: string) {
+  return value || null;
 }
 
 function parseTransactionCoordinates(locationRaw: string | null | undefined) {

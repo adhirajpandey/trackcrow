@@ -15,17 +15,14 @@ import type {
 } from "./types";
 
 function toCategoryDto(category: {
-  id: number;
   uuid: string;
   name: string;
-  subcategories: Array<{ id: number; uuid: string; name: string }>;
+  subcategories: Array<{ uuid: string; name: string }>;
 }): CategoryDto {
   return {
-    id: category.id,
     uuid: category.uuid,
     name: category.name,
     subcategories: category.subcategories.map((subcategory) => ({
-      id: subcategory.id,
       uuid: subcategory.uuid,
       name: subcategory.name,
     })),
@@ -150,7 +147,7 @@ export async function resetCategoriesToDefault(
 
 export async function createCategory(
   input: CategoryWriteInput
-): Promise<ServiceResult<{ id: number; uuid: string }, "CONFLICT" | "INTERNAL_ERROR">> {
+): Promise<ServiceResult<{ uuid: string }, "CONFLICT" | "INTERNAL_ERROR">> {
   try {
     const category = await prisma.category.create({
       data: {
@@ -166,7 +163,7 @@ export async function createCategory(
       categoryId: category.id,
     });
 
-    return ok(category);
+    return ok({ uuid: category.uuid });
   } catch (error: any) {
     logger.error(
       {
@@ -187,11 +184,11 @@ export async function createCategory(
 export async function updateCategory(
   input: CategoryUpdateInput
 ): Promise<
-  ServiceResult<{ id: number; uuid: string }, "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR">
+  ServiceResult<{ uuid: string }, "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR">
 > {
   try {
     const existing = await prisma.category.findFirst({
-      where: { id: input.categoryId, userUuid: input.userUuid },
+      where: { uuid: input.categoryUuid, userUuid: input.userUuid },
       select: { id: true },
     });
     if (!existing) {
@@ -199,7 +196,7 @@ export async function updateCategory(
     }
 
     const category = await prisma.category.update({
-      where: { id: input.categoryId },
+      where: { id: existing.id },
       data: { name: input.name.trim() },
       select: { id: true, uuid: true },
     });
@@ -207,16 +204,16 @@ export async function updateCategory(
     logger.info({
       event: "category.updated",
       userId: input.userUuid,
-      categoryId: input.categoryId,
+      categoryId: existing.id,
     });
 
-    return ok(category);
+    return ok({ uuid: category.uuid });
   } catch (error: any) {
     logger.error(
       {
         event: "category.update.db_failed",
         userId: input.userUuid,
-        categoryId: input.categoryId,
+        categoryUuid: input.categoryUuid,
         prismaCode: error?.code,
         message: "Failed to update category",
       },
@@ -231,29 +228,29 @@ export async function updateCategory(
 
 export async function deleteCategory(
   input: CategoryDeleteInput
-): Promise<ServiceResult<{ id: number }, "NOT_FOUND" | "INTERNAL_ERROR">> {
+): Promise<ServiceResult<{ uuid: string }, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
     const existing = await prisma.category.findFirst({
-      where: { id: input.categoryId, userUuid: input.userUuid },
-      select: { id: true },
+      where: { uuid: input.categoryUuid, userUuid: input.userUuid },
+      select: { id: true, uuid: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
 
-    await prisma.category.delete({ where: { id: input.categoryId } });
+    await prisma.category.delete({ where: { id: existing.id } });
     logger.info({
       event: "category.deleted",
       userId: input.userUuid,
-      categoryId: input.categoryId,
+      categoryId: existing.id,
     });
-    return ok({ id: input.categoryId });
+    return ok({ uuid: existing.uuid });
   } catch (error) {
     logger.error(
       {
         event: "category.delete.db_failed",
         userId: input.userUuid,
-        categoryId: input.categoryId,
+        categoryUuid: input.categoryUuid,
         message: "Failed to delete category",
       },
       error
@@ -264,10 +261,10 @@ export async function deleteCategory(
 
 export async function createSubcategory(
   input: SubcategoryWriteInput
-): Promise<ServiceResult<{ id: number; uuid: string }, "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR">> {
+): Promise<ServiceResult<{ uuid: string }, "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR">> {
   try {
     const category = await prisma.category.findFirst({
-      where: { id: input.categoryId, userUuid: input.userUuid },
+      where: { uuid: input.categoryUuid, userUuid: input.userUuid },
       select: { id: true },
     });
     if (!category) {
@@ -277,7 +274,7 @@ export async function createSubcategory(
     const subcategory = await prisma.subcategory.create({
       data: {
         userUuid: input.userUuid,
-        categoryId: input.categoryId,
+        categoryId: category.id,
         name: input.name.trim(),
       },
       select: { id: true, uuid: true },
@@ -286,17 +283,17 @@ export async function createSubcategory(
     logger.info({
       event: "subcategory.created",
       userId: input.userUuid,
-      categoryId: input.categoryId,
+      categoryId: category.id,
       subcategoryId: subcategory.id,
     });
 
-    return ok(subcategory);
+    return ok({ uuid: subcategory.uuid });
   } catch (error: any) {
     logger.error(
       {
         event: "subcategory.create.db_failed",
         userId: input.userUuid,
-        categoryId: input.categoryId,
+        categoryUuid: input.categoryUuid,
         prismaCode: error?.code,
         message: "Failed to create subcategory",
       },
@@ -312,16 +309,16 @@ export async function createSubcategory(
 export async function updateSubcategory(
   input: SubcategoryUpdateInput
 ): Promise<
-  ServiceResult<{ id: number; uuid: string }, "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR">
+  ServiceResult<{ uuid: string }, "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR">
 > {
   try {
     const [subcategory, category] = await Promise.all([
       prisma.subcategory.findFirst({
-        where: { id: input.subcategoryId, userUuid: input.userUuid },
+        where: { uuid: input.subcategoryUuid, userUuid: input.userUuid },
         select: { id: true },
       }),
       prisma.category.findFirst({
-        where: { id: input.categoryId, userUuid: input.userUuid },
+        where: { uuid: input.categoryUuid, userUuid: input.userUuid },
         select: { id: true },
       }),
     ]);
@@ -331,9 +328,9 @@ export async function updateSubcategory(
     }
 
     const updated = await prisma.subcategory.update({
-      where: { id: input.subcategoryId },
+      where: { id: subcategory.id },
       data: {
-        categoryId: input.categoryId,
+        categoryId: category.id,
         name: input.name.trim(),
       },
       select: { id: true, uuid: true },
@@ -342,17 +339,17 @@ export async function updateSubcategory(
     logger.info({
       event: "subcategory.updated",
       userId: input.userUuid,
-      categoryId: input.categoryId,
-      subcategoryId: input.subcategoryId,
+      categoryId: category.id,
+      subcategoryId: subcategory.id,
     });
 
-    return ok(updated);
+    return ok({ uuid: updated.uuid });
   } catch (error: any) {
     logger.error(
       {
         event: "subcategory.update.db_failed",
         userId: input.userUuid,
-        subcategoryId: input.subcategoryId,
+        subcategoryUuid: input.subcategoryUuid,
         prismaCode: error?.code,
         message: "Failed to update subcategory",
       },
@@ -367,29 +364,29 @@ export async function updateSubcategory(
 
 export async function deleteSubcategory(
   input: SubcategoryDeleteInput
-): Promise<ServiceResult<{ id: number }, "NOT_FOUND" | "INTERNAL_ERROR">> {
+): Promise<ServiceResult<{ uuid: string }, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
     const existing = await prisma.subcategory.findFirst({
-      where: { id: input.subcategoryId, userUuid: input.userUuid },
-      select: { id: true },
+      where: { uuid: input.subcategoryUuid, userUuid: input.userUuid },
+      select: { id: true, uuid: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
 
-    await prisma.subcategory.delete({ where: { id: input.subcategoryId } });
+    await prisma.subcategory.delete({ where: { id: existing.id } });
     logger.info({
       event: "subcategory.deleted",
       userId: input.userUuid,
-      subcategoryId: input.subcategoryId,
+      subcategoryId: existing.id,
     });
-    return ok({ id: input.subcategoryId });
+    return ok({ uuid: existing.uuid });
   } catch (error) {
     logger.error(
       {
         event: "subcategory.delete.db_failed",
         userId: input.userUuid,
-        subcategoryId: input.subcategoryId,
+        subcategoryUuid: input.subcategoryUuid,
         message: "Failed to delete subcategory",
       },
       error

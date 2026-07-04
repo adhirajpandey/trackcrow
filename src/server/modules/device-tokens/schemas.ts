@@ -5,5 +5,5 @@ export const createDeviceTokenSchema = z.object({
 });
 
 export const deviceTokenIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.string().uuid(),
 });

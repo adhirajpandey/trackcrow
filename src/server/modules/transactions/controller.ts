@@ -36,7 +36,7 @@ async function requireUserUuid() {
   return unwrapOrResponse(session);
 }
 
-async function parseTransactionId(context: RouteContext, path: string) {
+async function parseTransactionUuid(context: RouteContext, path: string) {
   const params = await context.params;
   const parsed = transactionIdParamsSchema.safeParse(params);
   if (!parsed.success) {
@@ -137,14 +137,14 @@ export async function getTransaction(
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context, path);
-  if (transactionId instanceof Response) {
-    return transactionId;
+  const transactionUuid = await parseTransactionUuid(context, path);
+  if (transactionUuid instanceof Response) {
+    return transactionUuid;
   }
 
   const result = await getTransactionById({
     userUuid: sessionData.userUuid,
-    transactionId,
+    transactionUuid,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
@@ -160,9 +160,9 @@ export async function patchTransaction(
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context, path);
-  if (transactionId instanceof Response) {
-    return transactionId;
+  const transactionUuid = await parseTransactionUuid(context, path);
+  if (transactionUuid instanceof Response) {
+    return transactionUuid;
   }
 
   const json = await parseJsonBody(request);
@@ -177,7 +177,7 @@ export async function patchTransaction(
   }
 
   const result = await updateTransaction({
-    transactionId,
+    transactionUuid,
     userUuid: sessionData.userUuid,
     ...parsed.data,
     source: TransactionSource.MANUAL,
@@ -196,9 +196,9 @@ export async function patchTransactionCategory(
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context, path);
-  if (transactionId instanceof Response) {
-    return transactionId;
+  const transactionUuid = await parseTransactionUuid(context, path);
+  if (transactionUuid instanceof Response) {
+    return transactionUuid;
   }
 
   const json = await parseJsonBody(request);
@@ -213,10 +213,10 @@ export async function patchTransactionCategory(
   }
 
   const result = await updateTransactionCategory({
-    transactionId,
+    transactionUuid,
     userUuid: sessionData.userUuid,
-    categoryId: parsed.data.categoryId ?? null,
-    subcategoryId: parsed.data.subcategoryId,
+    categoryUuid: parsed.data.categoryUuid ?? null,
+    subcategoryUuid: parsed.data.subcategoryUuid,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
@@ -232,14 +232,14 @@ export async function removeTransaction(
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context, path);
-  if (transactionId instanceof Response) {
-    return transactionId;
+  const transactionUuid = await parseTransactionUuid(context, path);
+  if (transactionUuid instanceof Response) {
+    return transactionUuid;
   }
 
   const result = await deleteTransaction({
     userUuid: sessionData.userUuid,
-    transactionId,
+    transactionUuid,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
@@ -255,14 +255,14 @@ export async function getTransactionSuggestion(
     return sessionData;
   }
 
-  const transactionId = await parseTransactionId(context, path);
-  if (transactionId instanceof Response) {
-    return transactionId;
+  const transactionUuid = await parseTransactionUuid(context, path);
+  if (transactionUuid instanceof Response) {
+    return transactionUuid;
   }
 
   const result = await suggestTransactionCategory({
     userUuid: sessionData.userUuid,
-    transactionId,
+    transactionUuid,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);

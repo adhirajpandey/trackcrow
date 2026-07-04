@@ -13,14 +13,12 @@ export const TRANSACTION_SOURCES = ["SMS", "MANUAL"] as const;
 export type TransactionSource = (typeof TRANSACTION_SOURCES)[number];
 
 export type CategoryOption = {
-  id: number;
   uuid: string;
   name: string;
   subcategories: Array<{
-    id: number;
     uuid: string;
     name: string;
-    categoryId: number;
+    categoryUuid: string;
   }>;
 };
 
@@ -37,14 +35,13 @@ export function toUserCategorySummary(category: CategoryOption): UserCategorySum
 }
 
 export type TransactionRecord = {
-  id: number;
   uuid: string;
   userUuid: string;
   amount: number;
   currency: string;
   type: TransactionType;
   source: TransactionSource;
-  recipientId: number;
+  recipientUuid: string;
   recipientRaw: string;
   recipientName: string | null;
   recipientDisplayName: string;
@@ -57,8 +54,8 @@ export type TransactionRecord = {
   updatedAt: string;
   category: string | null;
   subcategory: string | null;
-  categoryId: number | null;
-  subcategoryId: number | null;
+  categoryUuid: string | null;
+  subcategoryUuid: string | null;
 };
 
 export type TransactionListResponse = {
@@ -74,7 +71,6 @@ export type TransactionListResponse = {
 };
 
 export type DeviceTokenRecord = {
-  id: number;
   uuid: string;
   label: string | null;
   tokenPrefix: string;
