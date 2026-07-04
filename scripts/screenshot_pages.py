@@ -7,6 +7,10 @@ Common commands:
   python scripts/screenshot_pages.py --all --sizes desktop
   python scripts/screenshot_pages.py --all --sizes mobile --browser-mode headless
   python scripts/screenshot_pages.py --all --sizes mobile --browser-mode headfull
+
+Detail-page environment variables keep their legacy `_ID` names but must now contain UUIDs:
+  TRACKCROW_AUTOMATION_TRANSACTION_ID
+  TRACKCROW_AUTOMATION_RECIPIENT_ID
 """
 
 from __future__ import annotations
@@ -57,6 +61,17 @@ def require_env(name: str) -> str:
   return value.strip()
 
 
+def require_env_text(name: str) -> str:
+  value = os.environ.get(name)
+  if value is None or not value.strip():
+    raise RuntimeError(
+      f"Missing required environment variable: {name}. "
+      "This legacy *_ID variable must contain a UUID string."
+    )
+
+  return value.strip()
+
+
 def env_flag(name: str, default: bool) -> bool:
   value = os.environ.get(name)
   if value is None:
@@ -70,11 +85,18 @@ def env_int(name: str, default: int) -> int:
   if value is None or not value.strip():
     return default
 
-  return int(value)
+  try:
+    return int(value)
+  except ValueError as error:
+    raise RuntimeError(f"Invalid integer value for environment variable {name}: {value!r}") from error
 
 
-TRANSACTION_ID = env_int("TRACKCROW_AUTOMATION_TRANSACTION_ID", 4941)
-RECIPIENT_ID = env_int("TRACKCROW_AUTOMATION_RECIPIENT_ID", 587)
+def get_transaction_uuid() -> str:
+  return require_env_text("TRACKCROW_AUTOMATION_TRANSACTION_ID")
+
+
+def get_recipient_uuid() -> str:
+  return require_env_text("TRACKCROW_AUTOMATION_RECIPIENT_ID")
 
 
 @dataclass(frozen=True)
@@ -132,70 +154,76 @@ VIEWPORT_PRESETS: dict[str, ViewportPreset] = {
   ),
 }
 
-PAGE_CAPTURES: dict[str, PageCapture] = {
-  "landing": PageCapture(
-    alias="landing",
-    path="/",
-    output_slug="landing",
-    heading="Turn every payment alert into spending clarity.",
-    click_target_name="See how it works",
-    clicked_output_slug="landing-workflow",
-    clicked_heading="The workflow",
-    clicked_wait_selector="#workflow",
-  ),
-  "dashboard": PageCapture(
-    alias="dashboard",
-    path="/dashboard",
-    output_slug="dashboard",
-    heading="Dashboard",
-  ),
-  "transactions": PageCapture(
-    alias="transactions",
-    path="/transactions",
-    output_slug="transactions",
-    heading="Transactions",
-  ),
-  "recipients": PageCapture(
-    alias="recipients",
-    path="/recipients",
-    output_slug="recipients",
-    heading="Recipients",
-  ),
-  "transaction": PageCapture(
-    alias="transaction",
-    path=f"/transactions/{TRANSACTION_ID}",
-    output_slug="transaction",
-    heading="Transaction detail",
-  ),
-  "recipient": PageCapture(
-    alias="recipient",
-    path=f"/recipients/{RECIPIENT_ID}",
-    output_slug="recipient",
-    heading="Recipient detail",
-  ),
-}
+
+def build_page_captures() -> dict[str, PageCapture]:
+  transaction_uuid = get_transaction_uuid()
+  recipient_uuid = get_recipient_uuid()
+
+  return {
+    "landing": PageCapture(
+      alias="landing",
+      path="/",
+      output_slug="landing",
+      heading="Turn every payment alert into spending clarity.",
+      click_target_name="See how it works",
+      clicked_output_slug="landing-workflow",
+      clicked_heading="The workflow",
+      clicked_wait_selector="#workflow",
+    ),
+    "dashboard": PageCapture(
+      alias="dashboard",
+      path="/dashboard",
+      output_slug="dashboard",
+      heading="Dashboard",
+    ),
+    "transactions": PageCapture(
+      alias="transactions",
+      path="/transactions",
+      output_slug="transactions",
+      heading="Transactions",
+    ),
+    "recipients": PageCapture(
+      alias="recipients",
+      path="/recipients",
+      output_slug="recipients",
+      heading="Recipients",
+    ),
+    "transaction": PageCapture(
+      alias="transaction",
+      path=f"/transactions/{transaction_uuid}",
+      output_slug="transaction",
+      heading="Transaction detail",
+    ),
+    "recipient": PageCapture(
+      alias="recipient",
+      path=f"/recipients/{recipient_uuid}",
+      output_slug="recipient",
+      heading="Recipient detail",
+    ),
+  }
 
 DETAIL_PAGE_ENV_HINTS = {
   "transaction": "TRACKCROW_AUTOMATION_TRANSACTION_ID",
   "recipient": "TRACKCROW_AUTOMATION_RECIPIENT_ID",
 }
 
-CONFIG = RuntimeConfig(
-  base_url=os.environ.get("TRACKCROW_UI_BASE_URL", DEFAULT_BASE_URL),
-  output_dir=ROOT_DIR / require_env("TRACKCROW_UI_IMAGE_OUTPUT_DIR"),
-  chrome_executable=Path(require_env("TRACKCROW_CHROME_EXECUTABLE")),
-  automation_user_data_dir=Path(require_env("TRACKCROW_AUTOMATION_USER_DATA_DIR")),
-  session_user_email=require_env("TRACKCROW_AUTOMATION_SESSION_USER_EMAIL"),
-  headless=env_flag("TRACKCROW_AUTOMATION_HEADLESS", False),
-  navigation_timeout_ms=env_int("TRACKCROW_AUTOMATION_NAVIGATION_TIMEOUT_MS", 30_000),
-  scroll_overlap_px=env_int("TRACKCROW_AUTOMATION_SCROLL_OVERLAP_PX", 140),
-  post_scroll_settle_ms=env_int("TRACKCROW_AUTOMATION_POST_SCROLL_SETTLE_MS", 400),
-  max_screenshots_per_page=env_int("TRACKCROW_AUTOMATION_MAX_SCREENSHOTS_PER_PAGE", 20),
-  terminate_existing_automation_browser=env_flag(
-    "TRACKCROW_AUTOMATION_TERMINATE_EXISTING_BROWSER",
-    True,
-  ),
-)
+def build_runtime_config() -> RuntimeConfig:
+  return RuntimeConfig(
+    base_url=os.environ.get("TRACKCROW_UI_BASE_URL", DEFAULT_BASE_URL),
+    output_dir=ROOT_DIR / require_env("TRACKCROW_UI_IMAGE_OUTPUT_DIR"),
+    chrome_executable=Path(require_env("TRACKCROW_CHROME_EXECUTABLE")),
+    automation_user_data_dir=Path(require_env("TRACKCROW_AUTOMATION_USER_DATA_DIR")),
+    session_user_email=require_env("TRACKCROW_AUTOMATION_SESSION_USER_EMAIL"),
+    headless=env_flag("TRACKCROW_AUTOMATION_HEADLESS", False),
+    navigation_timeout_ms=env_int("TRACKCROW_AUTOMATION_NAVIGATION_TIMEOUT_MS", 30_000),
+    scroll_overlap_px=env_int("TRACKCROW_AUTOMATION_SCROLL_OVERLAP_PX", 140),
+    post_scroll_settle_ms=env_int("TRACKCROW_AUTOMATION_POST_SCROLL_SETTLE_MS", 400),
+    max_screenshots_per_page=env_int("TRACKCROW_AUTOMATION_MAX_SCREENSHOTS_PER_PAGE", 20),
+    terminate_existing_automation_browser=env_flag(
+      "TRACKCROW_AUTOMATION_TERMINATE_EXISTING_BROWSER",
+      True,
+    ),
+  )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -241,24 +269,29 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
   try:
-    options = resolve_cli_options(parser, args, CONFIG)
+    config = build_runtime_config()
+    page_captures = build_page_captures()
+    options = resolve_cli_options(parser, args, config, page_captures)
   except ValueError as error:
     parser.error(str(error))
-
-  if not CONFIG.chrome_executable.exists():
-    print(f"Chrome executable not found: {CONFIG.chrome_executable}", file=sys.stderr)
+  except RuntimeError as error:
+    print(str(error), file=sys.stderr)
     return 1
 
-  ensure_runtime_directories(CONFIG)
-  session = build_session(CONFIG)
+  if not config.chrome_executable.exists():
+    print(f"Chrome executable not found: {config.chrome_executable}", file=sys.stderr)
+    return 1
+
+  ensure_runtime_directories(config)
+  session = build_session(config)
 
   try:
     with sync_playwright() as playwright:
-      if CONFIG.terminate_existing_automation_browser:
-        terminate_existing_automation_browser(CONFIG)
+      if config.terminate_existing_automation_browser:
+        terminate_existing_automation_browser(config)
 
       for size_preset in options.size_presets:
-        capture_for_size(playwright.chromium, size_preset, options.pages, session, CONFIG, options.headless)
+        capture_for_size(playwright.chromium, size_preset, options.pages, session, config, options.headless)
   except PlaywrightError as error:
     print(f"Playwright error: {error}", file=sys.stderr)
     return 1
@@ -284,10 +317,11 @@ def resolve_cli_options(
   parser: argparse.ArgumentParser,
   args: argparse.Namespace,
   config: RuntimeConfig,
+  page_captures: dict[str, PageCapture],
 ) -> CliOptions:
   validate_args(parser, args)
   return CliOptions(
-    pages=resolve_pages(args.pages, capture_all=args.all),
+    pages=resolve_pages(args.pages, page_captures, capture_all=args.all),
     size_presets=resolve_sizes(args.sizes),
     headless=resolve_headless_mode(args.browser_mode, config),
   )
@@ -305,15 +339,20 @@ def ensure_runtime_directories(config: RuntimeConfig) -> None:
   config.automation_user_data_dir.mkdir(parents=True, exist_ok=True)
 
 
-def resolve_pages(page_aliases: Sequence[str] | None, *, capture_all: bool) -> list[PageCapture]:
-  aliases = list(PAGE_CAPTURES) if capture_all else list(page_aliases or [])
-  unknown_aliases = find_unknown_aliases(aliases, PAGE_CAPTURES)
+def resolve_pages(
+  page_aliases: Sequence[str] | None,
+  page_captures: dict[str, PageCapture],
+  *,
+  capture_all: bool,
+) -> list[PageCapture]:
+  aliases = list(page_captures) if capture_all else list(page_aliases or [])
+  unknown_aliases = find_unknown_aliases(aliases, page_captures)
   if unknown_aliases:
     raise ValueError(
       f"Unknown page alias(es): {', '.join(unknown_aliases)}. Use --list to see supported pages."
     )
 
-  return [PAGE_CAPTURES[alias] for alias in aliases]
+  return [page_captures[alias] for alias in aliases]
 
 
 def resolve_sizes(size_aliases: Sequence[str]) -> list[ViewportPreset]:
@@ -333,10 +372,17 @@ def find_unknown_aliases(aliases: Sequence[str], registry: dict[str, object]) ->
 
 def print_available_options() -> None:
   print("Available pages:")
-  for page_capture in PAGE_CAPTURES.values():
-    detail_hint = DETAIL_PAGE_ENV_HINTS.get(page_capture.alias)
+  for alias, page_path in (
+    ("landing", "/"),
+    ("dashboard", "/dashboard"),
+    ("transactions", "/transactions"),
+    ("recipients", "/recipients"),
+    ("transaction", "/transactions/{TRACKCROW_AUTOMATION_TRANSACTION_ID}"),
+    ("recipient", "/recipients/{TRACKCROW_AUTOMATION_RECIPIENT_ID}"),
+  ):
+    detail_hint = DETAIL_PAGE_ENV_HINTS.get(alias)
     detail_suffix = f" (uses {detail_hint})" if detail_hint else ""
-    print(f"  - {page_capture.alias}: {page_capture.path}{detail_suffix}")
+    print(f"  - {alias}: {page_path}{detail_suffix}")
 
   print()
   print("Available sizes:")
@@ -519,7 +565,7 @@ def ensure_logged_in(page: Page, url: str) -> None:
 def wait_for_page_content(page: Page, expected_heading: str) -> None:
   try:
     page.locator("main").first.wait_for(state="visible")
-    page.get_by_role("heading", name=expected_heading).wait_for(state="visible")
+    page.get_by_role("heading", name=expected_heading, exact=True).wait_for(state="visible")
   except PlaywrightTimeoutError as error:
     raise RuntimeError(f"Timed out waiting for page content on {page.url}") from error
 
