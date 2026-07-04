@@ -75,6 +75,8 @@ const embeddedFieldClassName =
   "min-h-11 min-w-0 flex-1 bg-transparent px-3.5 text-sm text-foreground outline-none placeholder:text-secondary-foreground/85";
 const embeddedActionButtonClassName =
   "group h-11 shrink-0 rounded-none border-l border-border/55 bg-background/8 px-4 shadow-none transition-colors hover:border-border/75 hover:bg-secondary/18 hover:text-foreground";
+const readOnlyActionButtonClassName =
+  "group min-h-11 self-stretch rounded-none border-l border-border/55 bg-background/8 px-4 shadow-none transition-colors hover:border-border/75 hover:bg-secondary/18 hover:text-foreground";
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 const badgeClassName =
   "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
@@ -570,13 +572,13 @@ export function TransactionDetailPageView({
                     asChild
                     type="button"
                     variant="secondary"
-                    className={embeddedActionButtonClassName}
-                    >
-                      <Link href={getRecipientDetailHref(transaction)}>
-                        View recipient
+                    className={readOnlyActionButtonClassName}
+                  >
+                    <Link href={getRecipientDetailHref(transaction)}>
+                      View recipient
                       <UserRound className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                    </Link>
+                  </Button>
                 }
               />
               <Field
