@@ -552,7 +552,9 @@ export function buildReviewQueueHref(range: DashboardPageData["range"]) {
 
 export function buildLargeTransactionsHref(range: DashboardPageData["range"]) {
   return buildTransactionsHref({
-    ...getRangeParams(range),
+    range: range.value,
+    startDate: range.value === "custom" ? range.startDate : null,
+    endDate: range.value === "custom" ? range.endDate : null,
     review: "large",
     sortBy: "amount",
     sortOrder: "desc",

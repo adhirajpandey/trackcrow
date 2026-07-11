@@ -10,6 +10,7 @@ import {
   buildDashboardInsights,
   buildDashboardTimeframeTriggerLabel,
   buildImportIssuesHref,
+  buildLargeTransactionsHref,
   buildMetricComparisons,
   buildPeriodTransactionsHref,
   buildRecentTransactionMeta,
@@ -235,6 +236,36 @@ describe("dashboard view model", () => {
     );
   });
 
+  it("builds largest transaction links with the selected preset range", () => {
+    expect(buildLargeTransactionsHref(range)).toBe(
+      "/transactions?range=this-month&review=large&sortBy=amount&sortOrder=desc"
+    );
+  });
+
+  it("preserves custom dates in largest transaction links", () => {
+    expect(
+      buildLargeTransactionsHref({
+        ...range,
+        value: "custom",
+      })
+    ).toBe(
+      "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-21&review=large&sortBy=amount&sortOrder=desc"
+    );
+  });
+
+  it("omits dates from all-time largest transaction links", () => {
+    expect(
+      buildLargeTransactionsHref({
+        ...range,
+        value: "all-time",
+        startDate: null,
+        endDate: null,
+      })
+    ).toBe(
+      "/transactions?range=all-time&review=large&sortBy=amount&sortOrder=desc"
+    );
+  });
+
   it("builds recent transaction metadata without repeated uncategorized text", () => {
     expect(
       buildRecentTransactionMeta("Food", "2026-06-20T06:15:00.000Z", {
@@ -305,7 +336,7 @@ describe("dashboard view model", () => {
           label: "Large transactions",
           count: 3,
           tone: "info",
-          href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=large&sortBy=amount&sortOrder=desc",
+          href: "/transactions?range=this-month&review=large&sortBy=amount&sortOrder=desc",
         },
         {
           label: "Possible rule matches",

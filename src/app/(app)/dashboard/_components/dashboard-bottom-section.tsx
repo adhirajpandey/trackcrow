@@ -37,6 +37,7 @@ import {
 import { TransactionsTable } from "@/app/(app)/transactions/_components/transactions-table";
 import {
   buildFrequentRecipientRows,
+  buildLargeTransactionsHref,
   buildTransactionsHref,
   formatCurrency,
   getCategoryShare,
@@ -85,6 +86,7 @@ export function DashboardBottomSection({
         />
         <LargestTransactionsPanel
           transactions={data.recentLargeTransactions}
+          range={data.range}
           displayRange={displayRange}
         />
       </section>
@@ -356,9 +358,11 @@ function FrequentRecipientsPanel({
 
 function LargestTransactionsPanel({
   transactions,
+  range,
   displayRange,
 }: {
   transactions: DashboardPageData["recentLargeTransactions"];
+  range: DashboardPageData["range"];
   displayRange: string;
 }) {
   const router = useRouter();
@@ -368,7 +372,7 @@ function LargestTransactionsPanel({
       <AlignedPanelHeader
         title="Largest transactions"
         description={`Biggest payments in ${displayRange}.`}
-        href="/transactions"
+        href={buildLargeTransactionsHref(range)}
       />
       <CardContent className="flex flex-1 flex-col">
         {transactions.length === 0 ? (
