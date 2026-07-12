@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,13 +41,6 @@ export function CreateRecipientDialog({
     RecipientCreateConflict["existingRecipient"] | null
   >(null);
   const mutation = useCreateRecipientMutation();
-
-  useEffect(() => {
-    if (!open) return;
-    setDisplayName(suggestedName);
-    setError(null);
-    setConflict(null);
-  }, [open, suggestedName]);
 
   function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);
@@ -177,3 +170,5 @@ export function CreateRecipientDialog({
     </Dialog>
   );
 }
+
+

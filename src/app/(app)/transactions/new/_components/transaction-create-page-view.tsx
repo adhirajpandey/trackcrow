@@ -10,7 +10,7 @@ import {
   Plus,
   ReceiptText,
 } from "lucide-react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 
 import {
@@ -68,11 +68,11 @@ export function TransactionCreatePageView({
     defaultValues: getCreateTransactionDefaultValues(),
   });
 
-  const amount = form.watch("amount");
-  const categoryUuid = form.watch("categoryUuid");
-  const subcategoryUuid = form.watch("subcategoryUuid");
-  const transactionType = form.watch("type");
-  const timestamp = form.watch("timestamp");
+  const [amount = "", categoryUuid = "", subcategoryUuid = "", transactionType = "UPI", timestamp = ""] =
+    useWatch({
+      control: form.control,
+      name: ["amount", "categoryUuid", "subcategoryUuid", "type", "timestamp"],
+    });
   const subcategories = getSubcategoryOptions(categories, categoryUuid);
   const selectedCategory = categories.find(
     (item) => item.uuid === categoryUuid,
@@ -577,3 +577,6 @@ function applyServerErrors(
     }
   }
 }
+
+
+

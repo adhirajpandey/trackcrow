@@ -211,13 +211,16 @@ export function RecipientPicker({
           </p>
         ) : null}
       </div>
-
-      <CreateRecipientDialog
-        open={dialogOpen}
-        suggestedName={query.trim()}
-        onOpenChange={setDialogOpen}
-        onSelect={selectRecipient}
-      />
+      {dialogOpen ? (
+        <CreateRecipientDialog
+          open={dialogOpen}
+          suggestedName={query.trim()}
+          onOpenChange={setDialogOpen}
+          onSelect={selectRecipient}
+        />
+      ) : null}
     </>
   );
 }
+
+
