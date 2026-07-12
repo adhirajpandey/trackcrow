@@ -19,7 +19,7 @@ export function fromServiceError(result: ServiceFailure) {
     case "NOT_FOUND":
       return jsonError("Not found", 404);
     case "CONFLICT":
-      return jsonError("Conflict", 409);
+      return jsonError("Conflict", 409, result.details ? { details: result.details } : undefined);
     case "UNPROCESSABLE":
       return jsonError("Unprocessable entity", 422, result.details ? { details: result.details } : undefined);
     default:

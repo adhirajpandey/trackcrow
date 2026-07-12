@@ -10,8 +10,21 @@ import { recipientsQueryKeys } from "./query-keys";
 import type {
   RecipientAliasTransferImpact,
   RecipientAliasWriteDto,
+  RecipientCreateDto,
   RecipientListItemDto,
 } from "./types";
+
+export function useCreateRecipientMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { displayName: string }) =>
+      apiPost<RecipientCreateDto>("/api/recipients", input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: recipientsQueryKeys.all });
+    },
+  });
+}
 
 export type AddRecipientAliasInput = {
   recipientUuid: string;

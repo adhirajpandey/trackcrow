@@ -4,11 +4,18 @@ import { requireSessionUser } from "@/server/auth/session";
 
 import {
   addRecipientAliasSchema,
+  createRecipientSchema,
   listRecipientsQuerySchema,
   recipientIdParamsSchema,
   updateRecipientSchema,
 } from "./schemas";
-import { addRecipientAlias, getRecipient, listRecipients, updateRecipient } from "./service";
+import {
+  addRecipientAlias,
+  createRecipient,
+  getRecipient,
+  listRecipients,
+  updateRecipient,
+} from "./service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -63,6 +70,32 @@ export async function getRecipients(request: Request) {
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
+}
+
+export async function postRecipient(request: Request) {
+  const path = new URL(request.url).pathname;
+  const sessionData = await requireUserUuid();
+  if (sessionData instanceof Response) {
+    return sessionData;
+  }
+
+  const json = await parseJsonBody(request);
+  if (json instanceof Response) {
+    return json;
+  }
+
+  const parsed = createRecipientSchema.safeParse(json);
+  if (!parsed.success) {
+    logValidationFailure(path, parsed.error.issues);
+    return jsonError("Invalid request", 400, { issues: parsed.error.issues });
+  }
+
+  const result = await createRecipient({
+    userUuid: sessionData.userUuid,
+    displayName: parsed.data.displayName,
+  });
+  const data = unwrapOrResponse(result);
+  return data instanceof Response ? data : jsonOk(data, 201);
 }
 
 export async function getRecipientById(
