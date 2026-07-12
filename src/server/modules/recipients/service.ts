@@ -12,6 +12,8 @@ import type {
   RecipientAliasWriteResult,
   RecipientListInput,
   RecipientListResult,
+  RecipientCreateInput,
+  RecipientCreateResult,
   RecipientLookupInput,
   RecipientUpdateInput,
   RecipientUpdateResult,
@@ -121,6 +123,88 @@ function toRecipientDetailDto(record: {
 
 function normalizeValue(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeDisplayName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+async function findRecipientNameConflict(userUuid: string, normalizedName: string) {
+  return prisma.recipient.findFirst({
+    where: { userUuid, normalizedName },
+    select: { uuid: true, displayName: true },
+  });
+}
+
+export async function createRecipient(
+  input: RecipientCreateInput
+): Promise<RecipientCreateResult> {
+  const displayName = normalizeDisplayName(input.displayName);
+  const normalizedName = normalizeValue(displayName);
+
+  try {
+    const duplicate = await findRecipientNameConflict(input.userUuid, normalizedName);
+    if (duplicate) {
+      return fail("CONFLICT", { existingRecipient: duplicate });
+    }
+
+    const recipient = await prisma.$transaction(async (transaction) => {
+      const created = await transaction.recipient.create({
+        data: {
+          userUuid: input.userUuid,
+          displayName,
+          normalizedName,
+        },
+        select: {
+          id: true,
+          uuid: true,
+          displayName: true,
+          normalizedName: true,
+        },
+      });
+
+      await transaction.recipientIdentifier.create({
+        data: {
+          userUuid: input.userUuid,
+          recipientId: created.id,
+          kind: RecipientIdentifierKind.TEXT,
+          value: displayName,
+          normalizedValue: normalizedName,
+        },
+      });
+
+      return created;
+    });
+
+    logger.info({
+      event: "recipient.created",
+      userId: input.userUuid,
+      recipientId: recipient.id,
+    });
+
+    return ok({
+      uuid: recipient.uuid,
+      displayName: recipient.displayName,
+      normalizedName: recipient.normalizedName,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const duplicate = await findRecipientNameConflict(input.userUuid, normalizedName);
+      if (duplicate) {
+        return fail("CONFLICT", { existingRecipient: duplicate });
+      }
+    }
+
+    logger.error(
+      {
+        event: "recipient.create.db_failed",
+        userId: input.userUuid,
+        message: "Failed to create recipient",
+      },
+      error
+    );
+    return fail("INTERNAL_ERROR");
+  }
 }
 
 function buildNonEmptyRecipientWhere(userUuid: string) {

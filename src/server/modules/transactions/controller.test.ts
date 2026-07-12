@@ -3,18 +3,20 @@ jest.mock("@/server/auth/session", () => ({
 }));
 
 jest.mock("./service", () => ({
+  createTransaction: jest.fn(),
   listTransactions: jest.fn(),
   updateTransactionCategory: jest.fn(),
 }));
 
 import { requireSessionUser } from "@/server/auth/session";
 
-import { getTransactions, patchTransactionCategory } from "./controller";
-import { listTransactions, updateTransactionCategory } from "./service";
+import { getTransactions, patchTransactionCategory, postTransaction } from "./controller";
+import { createTransaction, listTransactions, updateTransactionCategory } from "./service";
 
 const requireSessionUserMock = jest.mocked(requireSessionUser);
 const listTransactionsMock = jest.mocked(listTransactions);
 const updateTransactionCategoryMock = jest.mocked(updateTransactionCategory);
+const createTransactionMock = jest.mocked(createTransaction);
 
 describe("transactions controller", () => {
   beforeEach(() => {
@@ -123,6 +125,36 @@ describe("transactions controller", () => {
       userUuid: "user-1",
       categoryUuid: "550e8400-e29b-41d4-a716-446655440001",
       subcategoryUuid: undefined,
+    });
+  });
+
+  it("creates a manual transaction for the authenticated user", async () => {
+    createTransactionMock.mockResolvedValueOnce({
+      ok: true,
+      data: { uuid: "txn-created" },
+    });
+
+    const response = await postTransaction(
+      new Request("http://localhost/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: 250,
+          recipientUuid: "550e8400-e29b-41d4-a716-446655440000",
+          type: "UPI",
+          timestamp: "2026-07-12T15:12:00.000Z",
+        }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(createTransactionMock).toHaveBeenCalledWith({
+      userUuid: "user-1",
+      amount: 250,
+      recipientUuid: "550e8400-e29b-41d4-a716-446655440000",
+      type: "UPI",
+      timestamp: new Date("2026-07-12T15:12:00.000Z"),
+      source: "MANUAL",
     });
   });
 

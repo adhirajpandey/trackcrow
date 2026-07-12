@@ -92,6 +92,11 @@ export type TransactionDetailPageInitialData = {
   initialCategoriesData: CategoryOption[];
 };
 
+export type TransactionCreatePageInitialData = {
+  initialCategoriesData: CategoryOption[];
+  initialRecipientsData: import("@/features/recipients/types").RecipientListItemDto[];
+};
+
 export type TransactionCreateInput = {
   amount: number;
   recipientUuid: string;
@@ -139,3 +144,6 @@ export type TransactionDetailFormValues = {
   locationRaw: string;
 };
 
+export type TransactionCreateFormValues = TransactionDetailFormValues & {
+  recipientUuid: string;
+};

@@ -11,10 +11,47 @@ import {
 } from "./query-state";
 import { recipientsQueryKeys } from "./query-keys";
 import type {
+  RecipientListItemDto,
   RecipientListResponse,
   RecipientsApiQuery,
   RecipientsQueryResult,
 } from "./types";
+
+const recipientPickerQuery = {
+  page: 1,
+  pageSize: 10,
+  sortBy: "transactionCount" as const,
+  sortOrder: "desc" as const,
+};
+
+export function useRecipientPickerQuery(input: {
+  q: string;
+  initialData: RecipientListItemDto[];
+}) {
+  const query = { ...recipientPickerQuery, q: input.q };
+
+  return useQuery({
+    queryKey: recipientsQueryKeys.list(query),
+    queryFn: () => getRecipientsQueryData(query),
+    initialData:
+      input.q === ""
+        ? {
+            status: "ready" as const,
+            message: null,
+            recipients: input.initialData,
+            pagination: {
+              page: 1,
+              pageSize: 10,
+              total: input.initialData.length,
+              totalPages: input.initialData.length > 0 ? 1 : 0,
+              hasNext: false,
+              hasPrev: false,
+            },
+          }
+        : undefined,
+    staleTime: 30_000,
+  });
+}
 
 export async function getRecipientsQueryData(
   query: RecipientsApiQuery

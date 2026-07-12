@@ -7,6 +7,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
       findFirst: jest.fn(),
       findMany: jest.fn(),
     },
+    $transaction: jest.fn(),
     transaction: {
       groupBy: jest.fn(),
     },
@@ -19,7 +20,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
 
 import { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 
-import { listRecipients } from "./service";
+import { createRecipient, listRecipients } from "./service";
 
 const mockPrisma = (globalThis as any).__recipientsPrismaMock;
 
@@ -47,6 +48,61 @@ describe("recipient service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPrisma.transaction.groupBy.mockResolvedValue([]);
+    mockPrisma.$transaction.mockImplementation(async (callback: (client: unknown) => unknown) =>
+      callback(mockPrisma)
+    );
+  });
+
+  it("creates a searchable recipient with a text identifier", async () => {
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.recipient.create.mockResolvedValueOnce({
+      id: 7,
+      uuid: "rcp-7",
+      displayName: "Uber India",
+      normalizedName: "uber india",
+    });
+    mockPrisma.recipientIdentifier.create.mockResolvedValueOnce({ id: 17 });
+
+    await expect(
+      createRecipient({ userUuid: "user-1", displayName: "  Uber   India  " })
+    ).resolves.toEqual({
+      ok: true,
+      data: {
+        uuid: "rcp-7",
+        displayName: "Uber India",
+        normalizedName: "uber india",
+      },
+    });
+    expect(mockPrisma.recipientIdentifier.create).toHaveBeenCalledWith({
+      data: {
+        userUuid: "user-1",
+        recipientId: 7,
+        kind: RecipientIdentifierKind.TEXT,
+        value: "Uber India",
+        normalizedValue: "uber india",
+      },
+    });
+  });
+
+  it("returns the matching recipient when a normalized name already exists", async () => {
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce({
+      uuid: "rcp-existing",
+      displayName: "Uber India",
+    });
+
+    await expect(
+      createRecipient({ userUuid: "user-1", displayName: " uber india " })
+    ).resolves.toEqual({
+      ok: false,
+      error: "CONFLICT",
+      details: {
+        existingRecipient: {
+          uuid: "rcp-existing",
+          displayName: "Uber India",
+        },
+      },
+    });
+    expect(mockPrisma.recipient.create).not.toHaveBeenCalled();
   });
 
   it("filters by recipient and identifier fields, paginates, and sorts by display name", async () => {

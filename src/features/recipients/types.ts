@@ -16,6 +16,15 @@ export type RecipientListItemDto = {
   aliases: RecipientAliasDto[];
 };
 
+export type RecipientCreateDto = Pick<
+  RecipientListItemDto,
+  "uuid" | "displayName" | "normalizedName"
+>;
+
+export type RecipientCreateConflict = {
+  existingRecipient: Pick<RecipientListItemDto, "uuid" | "displayName">;
+};
+
 export type RecipientAliasTransferImpact = {
   sourceRecipient: {
     uuid: string;

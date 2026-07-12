@@ -18,6 +18,8 @@ export const updateRecipientSchema = z.object({
   displayName: z.string().trim().min(1).max(200),
 });
 
+export const createRecipientSchema = updateRecipientSchema;
+
 export const aliasTypeSchema = z.union([
   z.enum([
     RecipientIdentifierKind.UPI_ID,

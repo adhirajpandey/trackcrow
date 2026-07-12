@@ -73,6 +73,17 @@ export type RecipientUpdateInput = RecipientLookupInput & {
   displayName: string;
 };
 
+export type RecipientCreateInput = {
+  userUuid: string;
+  displayName: string;
+};
+
+export type RecipientCreateDto = {
+  uuid: string;
+  displayName: string;
+  normalizedName: string;
+};
+
 export type RecipientAliasWriteInput = RecipientLookupInput & {
   value: string;
   aliasType?: RecipientAliasType | "AUTO";
@@ -121,6 +132,10 @@ export type RecipientListInput = {
 };
 
 export type RecipientListResult = ServiceResult<RecipientListDto, "INTERNAL_ERROR">;
+export type RecipientCreateResult = ServiceResult<
+  RecipientCreateDto,
+  "CONFLICT" | "INTERNAL_ERROR"
+>;
 export type RecipientUpdateResult = ServiceResult<
   RecipientDto,
   "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR"

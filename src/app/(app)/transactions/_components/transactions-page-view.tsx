@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   ChevronDown,
   LoaderCircle,
+  Plus,
   SlidersHorizontal,
   Tag,
   Trash2,
@@ -182,13 +184,29 @@ export function TransactionsPageView({
         eyebrow="Transaction workspace"
         title="Transactions"
         description="Search, filter, and review transactions."
+        actions={
+          <Button asChild className="w-full">
+            <Link href="/transactions/new">
+              <Plus className="h-4 w-4" /> Add Transaction
+            </Link>
+          </Button>
+        }
       />
       <div className="hidden lg:block">
         <AppPageHeader
           eyebrow="Transaction workspace"
           title="Transactions"
           description="Search, filter, and review transactions."
-          actions={<TransactionsTimeframePicker filters={data.filters} />}
+          actions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <TransactionsTimeframePicker filters={data.filters} />
+              <Button asChild>
+                <Link href="/transactions/new">
+                  <Plus className="h-4 w-4" /> Add Transaction
+                </Link>
+              </Button>
+            </div>
+          }
         />
       </div>
 
