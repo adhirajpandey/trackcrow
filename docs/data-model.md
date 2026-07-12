@@ -19,15 +19,9 @@ This document describes the Prisma schema and the business rules enforced around
 
 - categories are unique per user by `(userUuid, name)`
 - subcategories are unique inside a category by `(categoryId, name)`
+- `Subcategory` also carries `userUuid` for ownership checks and cascade cleanup
 - categories and subcategories are seeded for new users on first login
 - resetting defaults deletes all existing user categories and subcategories before reseeding
-
-Current seeded defaults:
-
-- Food
-- Essentials
-- Transport
-- Shopping
 
 ### Recipient And RecipientIdentifier
 
@@ -36,6 +30,7 @@ Recipients normalize transaction counterparties.
 - `Recipient` stores a user-owned display name and normalized name
 - `RecipientIdentifier` stores raw identifiers such as UPI ids, phone numbers, card merchants, or free text
 - identifiers are unique per user by `(userUuid, kind, normalizedValue)`
+- identifier kinds are `UPI_ID`, `CARD_MERCHANT`, and `TEXT`
 - transactions always point to a resolved recipient
 
 Service behavior:
@@ -55,13 +50,16 @@ Service behavior:
 - `type` is one of `UPI`, `CARD`, `CASH`, `NETBANKING`, `OTHER`
 - `source` is either `SMS` or `MANUAL`
 - `timestamp` is stored as `Timestamptz`
+- `recipientRaw` stores the original counterparty string from the source event
+- `recipientName` is optional source-provided display text
 
 Important service rules:
 
 - manual API creation always forces `source` to `MANUAL`
 - SMS import creation sets `source` to `SMS`
+- transaction create and update APIs use UUID references for recipient, category, and subcategory inputs
 - category and subcategory assignments are checked for user ownership
-- changing a transaction category through the narrow category endpoint clears the subcategory when the category changes or becomes `null`
+- changing a transaction category through the narrow category endpoint can update both category and subcategory, and clearing the category clears the subcategory as well
 - duplicate transactions are allowed
 
 ### RawMessage
@@ -105,6 +103,15 @@ User
   |- RawMessage -> Transaction?
   `- DeviceToken
 ```
+
+## Seeded Defaults
+
+The current bootstrap seed creates these top-level categories:
+
+- Food
+- Essentials
+- Transport
+- Shopping
 
 ## Delete Behavior
 

@@ -1,4 +1,4 @@
-> Historical artifact. This baseline reflects the pre-rewrite system shape and is preserved for context only. Use `docs/reference/` and `docs/status/` for current truth.
+> Historical artifact. This baseline reflects the pre-rewrite system shape and is preserved for context only. Use the active docs in `docs/` for current truth.
 
 # TrackCrow Project Baseline
 
@@ -149,3 +149,4 @@ Operational notes:
   - tool registry and renderer mapping.
 - For schema changes, include Prisma migration and backward-compatible read behavior.
 - For destructive actions, retain confirmation UI and explicit error surfaces.
+

@@ -68,11 +68,23 @@ Typical workflow:
 ## Code Organization
 
 - `src/app/` contains route groups, pages, layouts, and API entry points.
+- `src/features/` contains frontend query keys, query state, mutations, and DTO helpers.
 - `src/server/modules/*` contains controllers, services, schemas, and module tests.
 - `src/server/page-data/*` contains server-only page read models.
 - `src/components/` contains shared UI and layout components.
 - `src/common/` contains shared parser and frontend-facing domain helpers.
 - `src/lib/` contains auth, Prisma, logging, and API client utilities.
+
+## Frontend Maintenance Rules
+
+These are the current durable rules distilled from the archived frontend TRD:
+
+- Prefer server-first page reads: `page.tsx` should load from `src/server/page-data/*`.
+- Reuse `src/lib/internal-api.ts` when a server-rendered page should consume the same HTTP contract as the client.
+- Keep interactive client reads and mutations in `src/features/*` using TanStack Query where the page needs refetch, mutation state, or cache updates.
+- Treat URL search params as the source of truth for pageable and filterable list screens.
+- Use API routes for browser-owned mutations instead of adding new server actions by default.
+- Do not add top-level `dehydrate()` / `HydrationBoundary` plumbing unless a page actually benefits from it.
 
 ## Testing Conventions
 
@@ -84,6 +96,16 @@ Typical workflow:
 ## Current Runtime Notes
 
 - authenticated app pages use a shared shell from `src/app/(app)/layout.tsx`
-- implemented page-data reads currently back dashboard, transactions, transaction detail, recipients, and recipient detail routes
-- categories, settings, and import review still use placeholder pages
+- implemented page-data reads currently back dashboard, transactions, transaction detail, transaction create, recipients, and recipient detail routes
+- `/settings` is still a placeholder page
 - Next.js remote image loading is currently enabled for `lh3.googleusercontent.com`
+
+## Docs Maintenance
+
+- Keep active docs in `docs/` small and current.
+- Update `docs/api.md` with route contract changes.
+- Update `docs/data-model.md` with Prisma or ownership changes.
+- Update `docs/architecture.md` when route surfaces, module boundaries, or data flow changes.
+- Update `docs/development.md` when setup, scripts, or contributor workflow changes.
+- Update `docs/roadmap.md` when priorities or product status change.
+- Move superseded plans and reviews into `docs/archive/` instead of extending live docs with historical context.

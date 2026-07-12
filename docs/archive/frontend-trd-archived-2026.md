@@ -1,5 +1,8 @@
-# TrackCrow Frontend Rewrite TRD
+# Archived Frontend TRD
 
+This document is a historical frontend rewrite spec preserved for context. It is not the current source of truth. Use `docs/architecture.md`, `docs/development.md`, and `docs/roadmap.md` for active guidance.
+
+# TrackCrow Frontend Rewrite TRD
 ## 1. Document Status
 
 Status: Accepted
@@ -1443,4 +1446,5 @@ The following items are intentionally dropped or deferred from the v1 rewrite be
 * query hydration with `dehydrate()` and `HydrationBoundary` for top-level page surfaces that work cleanly with Mode A or Mode B
 * dashboard interactive refresh ownership under TanStack Query unless the product surface later requires it
 * backend query contract cleanup such as removing legacy CSV `categories` input or unifying all range readers to the same `endDate` bound semantics
+
 

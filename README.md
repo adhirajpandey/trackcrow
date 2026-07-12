@@ -49,8 +49,21 @@ pnpm dlx prisma generate
 ## Architecture Snapshot
 
 - `src/app/` contains App Router pages, layouts, and `/api/*` route entry points.
+- `src/features/` contains frontend query state, mutations, and DTO helpers for interactive product surfaces.
 - `src/server/modules/` contains controllers, services, schemas, types, and tests for backend domains.
 - `src/server/page-data/` contains server-only page read models.
 - `prisma/schema.prisma` defines the PostgreSQL data model.
 
-Canonical docs live in [docs/README.md](./docs/README.md). Historical rewrite and design artifacts live in `docs/plans/`.
+## Docs
+
+Active project docs live directly under `docs/`:
+
+| File | Purpose | Update when |
+| --- | --- | --- |
+| `docs/architecture.md` | runtime structure, route surfaces, and boundaries | app structure or ownership changes |
+| `docs/api.md` | current `/api/*` contract | request or response behavior changes |
+| `docs/data-model.md` | Prisma-backed entities and invariants | schema or ownership rules change |
+| `docs/development.md` | setup, commands, and contributor workflow | local workflow or tooling changes |
+| `docs/roadmap.md` | completed work, active work, and next priorities | product status or priorities change |
+
+Historical plans, reviews, and superseded specs live in `docs/archive/`. Design direction for the product UI remains in [design.md](./design.md).

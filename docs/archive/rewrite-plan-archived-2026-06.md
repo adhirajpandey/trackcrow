@@ -1,4 +1,4 @@
-> Historical artifact. This file preserves the migration-period rewrite plan and decision context. Use `docs/status/rewrite-status.md` for current state and `docs/reference/` for current implementation truth.
+> Historical artifact. This file preserves the migration-period rewrite plan and decision context. Use `docs/roadmap.md` for current state and the active docs in `docs/` for current implementation truth.
 
 # TrackCrow Rewrite Plan
 
@@ -564,3 +564,4 @@ Deferred until after the backend is running cleanly on the migrated rewrite data
 
 - This deferral is voluntary. These items are not current blockers for the frontend rewrite, and they are being postponed intentionally to keep work focused on the next highest-value phase.
 - repository/data-access separation for runtime modules such as `transactions`, `categories`, and `device-tokens`
+
