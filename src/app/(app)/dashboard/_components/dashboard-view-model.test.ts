@@ -1,5 +1,3 @@
-import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
-
 import {
   buildBiggestChangeCard,
   buildChartDisplayPeriods,
@@ -8,7 +6,6 @@ import {
   buildChartTicks,
   buildChartTooltip,
   buildDashboardInsights,
-  buildDashboardTimeframeTriggerLabel,
   buildImportIssuesHref,
   buildLargeTransactionsHref,
   buildMetricComparisons,
@@ -107,7 +104,7 @@ describe("dashboard view model", () => {
         endDate: "2026-06-21",
         granularity: "month",
       })
-    ).toBe("Jul 2025 - Jun 2026");
+    ).toBe("Last 12 months · Jul 1, 2025–Jun 21, 2026");
     expect(
       formatDashboardRangeLabel({
         value: "last-30-days",
@@ -116,7 +113,16 @@ describe("dashboard view model", () => {
         endDate: "2026-06-21",
         granularity: "day",
       })
-    ).toBe("23 May 2026 - 21 Jun 2026");
+    ).toBe("Last 30 days · May 23–Jun 21, 2026");
+    expect(
+      formatDashboardRangeLabel({
+        value: "this-month",
+        label: "This month",
+        startDate: "2026-07-01",
+        endDate: "2026-07-15",
+        granularity: "day",
+      })
+    ).toBe("This month · Jul 1–15, 2026");
     expect(
       formatDashboardRangeLabel({
         value: "all-time",
@@ -126,50 +132,6 @@ describe("dashboard view model", () => {
         granularity: "year",
       })
     ).toBe("All time");
-  });
-
-  it("shows selected more-range labels in the timeframe trigger", () => {
-    expect(
-      buildDashboardTimeframeTriggerLabel({
-        value: "all-time",
-        showQuickRanges: true,
-        showSelectedLabelInTrigger: false,
-      })
-    ).toBe("All time");
-    expect(
-      buildDashboardTimeframeTriggerLabel({
-        value: "last-6-months",
-        showQuickRanges: true,
-        showSelectedLabelInTrigger: false,
-      })
-    ).toBe("Last 6 months");
-    expect(
-      buildDashboardTimeframeTriggerLabel({
-        value: "custom",
-        showQuickRanges: true,
-        showSelectedLabelInTrigger: false,
-      })
-    ).toBe("Custom range");
-  });
-
-  it("keeps quick dashboard ranges behind the generic more-ranges trigger", () => {
-    expect(
-      buildDashboardTimeframeTriggerLabel({
-        value: "last-30-days",
-        showQuickRanges: true,
-        showSelectedLabelInTrigger: false,
-      })
-    ).toBe("More ranges");
-  });
-
-  it("keeps quick range labels visible when the picker has no quick button group", () => {
-    expect(
-      buildDashboardTimeframeTriggerLabel({
-        value: "last-30-days",
-        showQuickRanges: false,
-        showSelectedLabelInTrigger: true,
-      })
-    ).toBe("30D");
   });
 
   it("excludes uncategorized and transfer-style categories from biggest category", () => {
@@ -216,10 +178,11 @@ describe("dashboard view model", () => {
   });
 
   it("formats comparison deltas for metric cards", () => {
-    expect(formatComparisonDelta(1500, 1000)).toBe("+50% vs previous period");
-    expect(formatComparisonDelta(900, 1000)).toBe("-10% vs previous period");
-    expect(formatComparisonDelta(0, 0)).toBe("No previous data");
-    expect(formatComparisonDelta(500, null)).toBe("No previous data");
+    expect(formatComparisonDelta(1500, 1000)).toBe("50% higher");
+    expect(formatComparisonDelta(900, 1000)).toBe("10% lower");
+    expect(formatComparisonDelta(1000.04, 1000)).toBe("About the same");
+    expect(formatComparisonDelta(0, 0)).toBe("No spending in either period");
+    expect(formatComparisonDelta(500, null)).toBe("No comparison available");
   });
 
   it("builds dashboard drilldown links", () => {
@@ -306,7 +269,7 @@ describe("dashboard view model", () => {
     ).toBe("4 recent");
   });
 
-  it("derives compact review queue copy with the shared threshold", () => {
+  it("derives compact review queue copy without large transactions", () => {
     expect(
       buildReviewQueueCard({
         range,
@@ -318,13 +281,12 @@ describe("dashboard view model", () => {
           averageSpend: 100,
         },
         importHealth: { parsedCount: 5, failedCount: 1, unparseableCount: 2 },
-        largeTransactionCount: 3,
       })
     ).toMatchObject({
       title: "Needs review",
       action: "Review now",
       hasItems: true,
-      totalReviewCount: 6,
+      totalReviewCount: 3,
       tasks: [
         {
           label: "Need category",
@@ -333,19 +295,13 @@ describe("dashboard view model", () => {
           href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
         },
         {
-          label: "Large transactions",
-          count: 3,
-          tone: "info",
-          href: "/transactions?range=this-month&review=large&sortBy=amount&sortOrder=desc",
-        },
-        {
           label: "Possible rule matches",
           count: 0,
           tone: "info",
           href: "/recipients",
         },
       ],
-      helper: "6 transactions need review",
+      helper: "3 transactions need review",
     });
   });
 
@@ -361,14 +317,11 @@ describe("dashboard view model", () => {
           averageSpend: 100,
         },
         importHealth: { parsedCount: 5, failedCount: 0, unparseableCount: 0 },
-        largeTransactionCount: 0,
       })
     ).toMatchObject({
       action: "View transactions",
       hasItems: false,
-      helper: `No open review items. Nothing over ${formatCurrency(
-        LARGE_TRANSACTION_THRESHOLD
-      )} in this period.`,
+      helper: "No open review items in this period.",
     });
   });
 
@@ -420,7 +373,10 @@ describe("dashboard view model", () => {
           averageSpend: 375,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 1000,
             transactionCount: 3,
@@ -488,7 +444,10 @@ describe("dashboard view model", () => {
           averageSpend: 375,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 1000,
             transactionCount: 3,
@@ -505,9 +464,10 @@ describe("dashboard view model", () => {
         ],
       })
     ).toEqual({
-      title: "Vs previous period",
-      value: "+50% vs previous period",
-      helper: "Up by \u20b9500 compared with 2026-05-01 to 2026-05-31.",
+      title: "Vs May 1–31, 2026",
+      value: "50% higher",
+      helper: "Up by \u20b9500 compared with May 1–31, 2026.",
+      tone: "increase",
     });
   });
 
@@ -522,7 +482,10 @@ describe("dashboard view model", () => {
           averageSpend: 147,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 1000,
             transactionCount: 8,
@@ -541,10 +504,11 @@ describe("dashboard view model", () => {
         ],
       })
     ).toEqual({
-      title: "Vs previous period",
+      title: "Vs May 1–31, 2026",
       value: "Up, driven by one spike",
       helper:
-        "+47% vs previous period overall. Most of the lift came from 03 Jun 2026; latest closed at \u20b9160 vs \u20b9294 average.",
+        "47% higher overall. Most of the lift came from 03 Jun 2026; latest closed at \u20b9160 vs \u20b9294 average.",
+      tone: "increase",
     });
   });
 
@@ -559,7 +523,10 @@ describe("dashboard view model", () => {
           averageSpend: 250,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 1000,
             transactionCount: 4,
@@ -576,9 +543,10 @@ describe("dashboard view model", () => {
         ],
       })
     ).toEqual({
-      title: "Vs previous period",
-      value: "Flat vs previous period",
-      helper: "Spend matched 2026-05-01 to 2026-05-31.",
+      title: "Vs May 1–31, 2026",
+      value: "About the same",
+      helper: "About the same as May 1–31, 2026.",
+      tone: "neutral",
     });
   });
 
@@ -599,9 +567,10 @@ describe("dashboard view model", () => {
         ],
       })
     ).toEqual({
-      title: "Vs previous period",
-      value: "No previous period yet",
-      helper: "Add more history to compare this range with the previous one.",
+      title: "Comparison",
+      value: "Not available",
+      helper: "Add more history to compare this range.",
+      tone: "neutral",
     });
   });
 
@@ -616,7 +585,10 @@ describe("dashboard view model", () => {
           averageSpend: 250,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 0,
             transactionCount: 0,
@@ -632,9 +604,10 @@ describe("dashboard view model", () => {
         ],
       })
     ).toEqual({
-      title: "Vs previous period",
-      value: "New activity",
-      helper: "New spending activity compared with 2026-05-01 to 2026-05-31.",
+      title: "Vs May 1–31, 2026",
+      value: "New spending",
+      helper: "New spending activity compared with May 1–31, 2026.",
+      tone: "increase",
     });
   });
 
@@ -649,7 +622,10 @@ describe("dashboard view model", () => {
           averageSpend: 375,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 1000,
             transactionCount: 3,
@@ -743,6 +719,29 @@ describe("dashboard view model", () => {
     });
   });
 
+  it("keeps the final chart label clear of the preceding interval label", () => {
+    const periods = Array.from({ length: 14 }, (_, index) => ({
+      period: `2026-07-${String(index + 1).padStart(2, "0")}`,
+      totalSpend: index * 100,
+      transactionCount: index,
+      isFuture: false,
+      isPlaceholder: false,
+    }));
+
+    const buckets = buildChartBuckets({
+      periods,
+      peakPeriod: periods[13],
+      latestPeriod: periods[13],
+      chartMax: 1300,
+      periodLabelStep: 3,
+      granularity: "day",
+    });
+
+    expect(
+      buckets.flatMap((bucket, index) => (bucket.showLabel ? [index] : []))
+    ).toEqual([0, 3, 6, 9, 13]);
+  });
+
   it("keeps chart bucket heights truly proportional for small values", () => {
     const buckets = buildChartBuckets({
       periods: [
@@ -791,7 +790,10 @@ describe("dashboard view model", () => {
           averageSpend: 375,
         },
         comparison: {
+          kind: "previous-equal-length",
           rangeLabel: "2026-05-01 to 2026-05-31",
+          startDate: "2026-05-01",
+          endDate: "2026-05-31",
           summary: {
             totalSpend: 1000,
             transactionCount: 3,
@@ -804,8 +806,8 @@ describe("dashboard view model", () => {
         categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null }],
       })
     ).toEqual({
-      totalSpend: "+50% vs previous period",
-      averageSpend: "+25% vs previous period",
+      totalSpend: "50% higher than May 1–31, 2026",
+      averageSpend: "25% higher",
       biggestCategory: "Food to Travel",
     });
   });

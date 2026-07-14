@@ -111,10 +111,11 @@ function getTransactionsRangeState(
 ) {
   const requestedRange = firstParam(searchParams.range);
   const hasValidRange = dashboardRangeValues.has(requestedRange as DashboardRangeValue);
+  const customStartDate = parseDateParam(firstParam(searchParams.startDate));
+  const customEndDate = parseDateParam(firstParam(searchParams.endDate));
   const hasInvalidCustomRange =
     requestedRange === "custom" &&
-    (!parseDateParam(firstParam(searchParams.startDate)) ||
-      !parseDateParam(firstParam(searchParams.endDate)));
+    (!customStartDate || !customEndDate || customStartDate > customEndDate);
   const normalizedSearchParams =
     hasValidRange && !hasInvalidCustomRange
       ? searchParams

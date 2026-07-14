@@ -29,15 +29,6 @@ const dashboardDayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
-const monthYearFormatter = new Intl.DateTimeFormat("en-IN", {
-  month: "short",
-  year: "numeric",
-});
-const dayMonthYearFormatter = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
 const timeFormatter = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
   hour: "numeric",
@@ -100,6 +91,7 @@ export type DashboardChangeSummaryVm = {
   title: string;
   value: string;
   helper: string;
+  tone: DashboardComparisonTone;
 };
 
 type DashboardChangeSummarySignal = {
@@ -134,75 +126,144 @@ export type DashboardChartBucketVm = {
   ariaLabel: string;
 };
 
-export const quickDashboardRanges: Array<{
-  value: DashboardRangeValue;
-  label: string;
-}> = [
-  { value: "last-30-days", label: "30D" },
-  { value: "last-90-days", label: "90D" },
-  { value: "this-year", label: "YTD" },
-  { value: "last-12-months", label: "12M" },
-];
-
-export const secondaryDashboardRanges: Array<{
-  value: DashboardRangeValue;
-  label: string;
-}> = [
-  { value: "this-month", label: "This month" },
-  { value: "last-month", label: "Last month" },
-  { value: "last-3-months", label: "Last 3 months" },
-  { value: "last-6-months", label: "Last 6 months" },
-  { value: "all-time", label: "All time" },
-  { value: "custom", label: "Custom range" },
-];
-
-export function buildDashboardTimeframeTriggerLabel(input: {
-  value: DashboardRangeValue;
-  showQuickRanges: boolean;
-  showSelectedLabelInTrigger: boolean;
-  selectedLabel?: string;
-}) {
-  const secondaryLabel = secondaryDashboardRanges.find(
-    (range) => range.value === input.value
-  )?.label;
-
-  if (secondaryLabel) {
-    return secondaryLabel;
-  }
-
-  if (input.showSelectedLabelInTrigger && !input.showQuickRanges) {
-    return (
-      quickDashboardRanges.find((range) => range.value === input.value)?.label ??
-      input.selectedLabel ??
-      "More ranges"
-    );
-  }
-
-  return "More ranges";
-}
-
 export const chartLegendItems = [
   { label: "Normal", className: "bg-primary" },
   { label: "Peak", className: "bg-accent" },
   { label: "Latest", className: "bg-info" },
 ];
 
-export function formatComparisonDelta(current: number, previous: number | null | undefined) {
-  if (previous === null || previous === undefined) {
-    return "No previous data";
+export type DashboardComparisonTone = "increase" | "decrease" | "neutral";
+
+export type DashboardComparisonPresentation = {
+  title: string;
+  value: string;
+  full: string;
+  tone: DashboardComparisonTone;
+};
+
+function formatComparisonPercentage(change: number) {
+  const absolute = Math.abs(change);
+  return absolute < 10 ? absolute.toFixed(1) : String(Math.round(absolute));
+}
+
+export function formatComparisonRangeLabel(input: {
+  startDate?: string;
+  endDate?: string;
+  rangeLabel?: string;
+}) {
+  const [fallbackStart, fallbackEnd] = input.rangeLabel?.split(" to ") ?? [];
+  const startDate = input.startDate ?? fallbackStart;
+  const endDate = input.endDate ?? fallbackEnd;
+
+  if (!startDate || !endDate) {
+    return input.rangeLabel ?? "comparison period";
   }
 
+  return formatCompactDateRange(startDate, endDate);
+}
+
+export function getComparisonContextLabel(
+  comparison: DashboardPageData["comparison"]
+) {
+  if (!comparison) {
+    return "comparison period";
+  }
+
+  if (comparison.kind === "same-period-last-year") {
+    return "same period last year";
+  }
+
+  if (comparison.kind === "previous-month-to-date") {
+    return "same point last month";
+  }
+
+  if (comparison.kind === "previous-calendar-month") {
+    return "the previous month";
+  }
+
+  return formatComparisonRangeLabel(comparison);
+}
+
+export function buildComparisonPresentation(
+  current: number,
+  comparison: DashboardPageData["comparison"]
+): DashboardComparisonPresentation {
+  if (!comparison) {
+    return {
+      title: "Comparison",
+      value: "Not available",
+      full: "No comparison available",
+      tone: "neutral",
+    };
+  }
+
+  const previous = comparison.summary.totalSpend;
+  const rangeLabel = formatComparisonRangeLabel(comparison);
+  const contextLabel = getComparisonContextLabel(comparison);
+  const title = `Vs ${contextLabel}`;
+
   if (previous <= 0) {
-    return current > 0 ? "New activity" : "No previous data";
+    if (current > 0) {
+      return {
+        title,
+        value: "New spending",
+        full: `New spending vs ${rangeLabel}`,
+        tone: "increase",
+      };
+    }
+
+    return {
+      title,
+      value: "No spending",
+      full: "No spending in either period",
+      tone: "neutral",
+    };
   }
 
   const change = ((current - previous) / previous) * 100;
-  const rounded = Math.round(Math.abs(change));
-  if (rounded === 0) {
-    return "Flat vs previous period";
+  if (Math.abs(change) < 0.05) {
+    return {
+      title,
+      value: "About the same",
+      full: `About the same as ${rangeLabel}`,
+      tone: "neutral",
+    };
   }
 
-  return `${change > 0 ? "+" : "-"}${rounded}% vs previous period`;
+  const percentage = formatComparisonPercentage(change);
+  const direction = change > 0 ? "higher" : "lower";
+
+  return {
+    title,
+    value: `${percentage}% ${direction}`,
+    full: `${percentage}% ${direction} than ${contextLabel}`,
+    tone: change > 0 ? "increase" : "decrease",
+  };
+}
+
+export function formatComparisonDelta(
+  current: number,
+  previous: number | null | undefined,
+  comparison?: DashboardPageData["comparison"]
+) {
+  if (comparison) {
+    return buildComparisonPresentation(current, comparison).full;
+  }
+
+  if (previous === null || previous === undefined) {
+    return "No comparison available";
+  }
+
+  if (previous <= 0) {
+    return current > 0 ? "New spending" : "No spending in either period";
+  }
+
+  const change = ((current - previous) / previous) * 100;
+  if (Math.abs(change) < 0.05) {
+    return "About the same";
+  }
+
+  return `${formatComparisonPercentage(change)}% ${change > 0 ? "higher" : "lower"}`;
 }
 
 export function formatPeriodLabel(period: string) {
@@ -244,30 +305,70 @@ function parseDateOnlyForDisplay(value: string) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
-function isMonthFirst(value: string) {
-  return value.endsWith("-01");
+function formatCompactDateRange(startDate: string, endDate: string) {
+  const start = parseDateOnlyForDisplay(startDate);
+  const end = parseDateOnlyForDisplay(endDate);
+  const monthDayFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  const monthDayYearFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  if (
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth()
+  ) {
+    const monthFormatter = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      timeZone: "UTC",
+    });
+    if (start.getUTCDate() === end.getUTCDate()) {
+      return `${monthDayFormatter.format(start)}, ${end.getUTCFullYear()}`;
+    }
+
+    return `${monthFormatter.format(start)} ${start.getUTCDate()}–${end.getUTCDate()}, ${end.getUTCFullYear()}`;
+  }
+
+  if (start.getUTCFullYear() === end.getUTCFullYear()) {
+    return `${monthDayFormatter.format(start)}–${monthDayFormatter.format(end)}, ${end.getUTCFullYear()}`;
+  }
+
+  return `${monthDayYearFormatter.format(start)}–${monthDayYearFormatter.format(end)}`;
 }
 
-export function formatDashboardRangeLabel(range: DashboardPageData["range"]) {
+export function formatDashboardDateRange(range: DashboardPageData["range"]) {
   if (range.value === "all-time" || !range.startDate || !range.endDate) {
     return range.label;
   }
 
-  const start = parseDateOnlyForDisplay(range.startDate);
-  const end = parseDateOnlyForDisplay(range.endDate);
-  const formatMonthRange =
-    range.granularity === "month" ||
-    range.granularity === "year" ||
-    (isMonthFirst(range.startDate) &&
-      ["last-3-months", "last-6-months", "last-12-months", "this-year"].includes(
-        range.value
-      ));
+  return formatCompactDateRange(range.startDate, range.endDate);
+}
 
-  if (formatMonthRange) {
-    return `${monthYearFormatter.format(start)} - ${monthYearFormatter.format(end)}`;
+export function formatDashboardRangeLabel(range: DashboardPageData["range"]) {
+  if (range.value === "all-time" || !range.startDate || !range.endDate) {
+    return "All time";
   }
 
-  return `${dayMonthYearFormatter.format(start)} - ${dayMonthYearFormatter.format(end)}`;
+  const resultLabels: Record<DashboardRangeValue, string> = {
+    "this-month": "This month",
+    "last-30-days": "Last 30 days",
+    "last-90-days": "Last 90 days",
+    "last-month": "Last month",
+    "last-3-months": "Last 3 months",
+    "last-6-months": "Last 6 months",
+    "this-year": "Year to date",
+    "last-12-months": "Last 12 months",
+    "all-time": "All time",
+    custom: "Custom range",
+  };
+
+  return `${resultLabels[range.value]} · ${formatDashboardDateRange(range)}`;
 }
 
 export function getPeriodLabelStep(periodCount: number) {
@@ -687,7 +788,6 @@ export function buildChartDisplayPeriods(input: {
 export function buildReviewQueueCard(input: {
   summary: DashboardSummaryDto;
   importHealth: DashboardImportHealthDto;
-  largeTransactionCount: number;
   recipients?: DashboardPageData["frequentRecipients"];
   range: DashboardPageData["range"];
 }): ReviewQueueCardVm {
@@ -696,11 +796,9 @@ export function buildReviewQueueCard(input: {
     .reduce((sum, recipient) => sum + recipient.paymentCount, 0);
   const totalReviewCount =
     input.summary.uncategorizedCount +
-    input.largeTransactionCount +
     repeatedRecipientMatchCount;
   const hasItems =
     input.summary.uncategorizedCount > 0 ||
-    input.largeTransactionCount > 0 ||
     repeatedRecipientMatchCount > 0;
   const tasks: ReviewTaskVm[] = [
     {
@@ -709,13 +807,6 @@ export function buildReviewQueueCard(input: {
       tone: "attention",
       href: buildUncategorizedTransactionsHref(input.range),
       helper: "Transactions that still need a category.",
-    },
-    {
-      label: "Large transactions",
-      count: input.largeTransactionCount,
-      tone: "info",
-      href: buildLargeTransactionsHref(input.range),
-      helper: `Transactions over ${formatCurrency(LARGE_TRANSACTION_THRESHOLD)}.`,
     },
     {
       label: "Possible rule matches",
@@ -735,9 +826,7 @@ export function buildReviewQueueCard(input: {
     tasks,
     helper: hasItems
       ? `${formatNumber(totalReviewCount)} transactions need review`
-      : `No open review items. Nothing over ${formatCurrency(
-          LARGE_TRANSACTION_THRESHOLD
-        )} in this period.`,
+      : "No open review items in this period.",
   };
 }
 
@@ -758,10 +847,7 @@ export function buildMetricComparisons(input: {
     : null;
 
   return {
-    totalSpend: formatComparisonDelta(
-      input.summary.totalSpend,
-      input.comparison?.summary.totalSpend
-    ),
+    totalSpend: buildComparisonPresentation(input.summary.totalSpend, input.comparison).full,
     averageSpend: formatComparisonDelta(
       input.summary.averageSpend,
       input.comparison?.summary.averageSpend
@@ -783,15 +869,16 @@ export function buildWhatChangedSummary(input: {
 }) : DashboardChangeSummaryVm {
   if (!input.comparison) {
     return {
-      title: "Vs previous period",
-      value: "No previous period yet",
-      helper: "Add more history to compare this range with the previous one.",
+      title: "Comparison",
+      value: "Not available",
+      helper: "Add more history to compare this range.",
+      tone: "neutral",
     };
   }
 
-  const delta = formatComparisonDelta(
+  const comparisonPresentation = buildComparisonPresentation(
     input.summary.totalSpend,
-    input.comparison.summary.totalSpend
+    input.comparison
   );
   const previousTotalSpend = input.comparison.summary.totalSpend;
   const amountDelta = input.summary.totalSpend - input.comparison.summary.totalSpend;
@@ -799,20 +886,22 @@ export function buildWhatChangedSummary(input: {
 
   if (previousTotalSpend <= 0) {
     return {
-      title: "Vs previous period",
-      value: delta,
+      title: comparisonPresentation.title,
+      value: comparisonPresentation.value,
       helper:
         input.summary.totalSpend > 0
-          ? `New spending activity compared with ${input.comparison.rangeLabel}.`
-          : `No spending activity in either period.`,
+          ? `New spending activity compared with ${formatComparisonRangeLabel(input.comparison)}.`
+          : "No spending activity in either period.",
+      tone: comparisonPresentation.tone,
     };
   }
 
-  if (amountDelta === 0) {
+  if (comparisonPresentation.tone === "neutral") {
     return {
-      title: "Vs previous period",
-      value: delta,
-      helper: `Spend matched ${input.comparison.rangeLabel}.`,
+      title: comparisonPresentation.title,
+      value: comparisonPresentation.value,
+      helper: `${comparisonPresentation.full}.`,
+      tone: "neutral",
     };
   }
 
@@ -829,21 +918,23 @@ export function buildWhatChangedSummary(input: {
       : null;
 
     return {
-      title: "Vs previous period",
+      title: comparisonPresentation.title,
       value: "Up, driven by one spike",
       helper:
         latestLabel && averageLabel && peakDateLabel
-          ? `${delta} overall. Most of the lift came from ${peakDateLabel}; latest closed at ${latestLabel} vs ${averageLabel} average.`
-          : `${delta} overall, but the increase was concentrated in one bucket vs ${input.comparison.rangeLabel}.`,
+          ? `${comparisonPresentation.value} overall. Most of the lift came from ${peakDateLabel}; latest closed at ${latestLabel} vs ${averageLabel} average.`
+          : `${comparisonPresentation.value} overall, but the increase was concentrated in one bucket compared with ${formatComparisonRangeLabel(input.comparison)}.`,
+      tone: comparisonPresentation.tone,
     };
   }
 
   return {
-    title: "Vs previous period",
-    value: delta,
+    title: comparisonPresentation.title,
+    value: comparisonPresentation.value,
     helper: `${amountDelta > 0 ? "Up by" : "Down by"} ${formatCurrency(
       Math.abs(amountDelta)
-    )} compared with ${input.comparison.rangeLabel}.`,
+    )} compared with ${formatComparisonRangeLabel(input.comparison)}.`,
+    tone: comparisonPresentation.tone,
   };
 }
 
@@ -898,10 +989,12 @@ export function buildChartBuckets(input: {
     const label = formatPeriodLabel(item.period);
     const isPeak = input.peakPeriod?.period === item.period;
     const isLatest = input.latestPeriod?.period === item.period;
+    const lastIndex = input.periods.length - 1;
+    const isEndpoint = index === 0 || index === lastIndex;
+    const hasRoomBeforeFinalLabel = lastIndex - index >= input.periodLabelStep;
     const showLabel =
-      index === 0 ||
-      index === input.periods.length - 1 ||
-      index % input.periodLabelStep === 0;
+      isEndpoint ||
+      (index % input.periodLabelStep === 0 && hasRoomBeforeFinalLabel);
 
     const tooltip = buildChartTooltip({
       period: item,

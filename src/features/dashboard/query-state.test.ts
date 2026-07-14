@@ -77,11 +77,64 @@ describe("dashboard query state", () => {
     });
 
     expect(getPreviousDashboardRangeState(range)).toEqual({
+      kind: "previous-equal-length",
       label: "2026-05-02 to 2026-05-31",
       startDate: "2026-05-02",
       endDate: "2026-05-31",
       serviceStartDate: new Date("2026-05-01T18:30:00.000Z"),
       serviceEndDate: new Date("2026-05-31T18:29:59.999Z"),
     });
+  });
+
+  it("compares year to date with the same dates last year", () => {
+    const range = getDashboardRangeState({
+      searchParams: { range: "this-year" },
+      now: new Date("2024-02-29T10:00:00.000Z"),
+    });
+
+    expect(getPreviousDashboardRangeState(range)).toMatchObject({
+      kind: "same-period-last-year",
+      startDate: "2023-01-01",
+      endDate: "2023-02-28",
+    });
+  });
+
+  it("compares month to date with the same point in the previous month", () => {
+    const range = getDashboardRangeState({
+      searchParams: { range: "this-month" },
+      now: new Date("2026-03-31T10:00:00.000Z"),
+    });
+
+    expect(getPreviousDashboardRangeState(range)).toMatchObject({
+      kind: "previous-month-to-date",
+      startDate: "2026-02-01",
+      endDate: "2026-02-28",
+    });
+  });
+
+  it("compares last month with the preceding full calendar month", () => {
+    const range = getDashboardRangeState({
+      searchParams: { range: "last-month" },
+      now,
+    });
+
+    expect(getPreviousDashboardRangeState(range)).toMatchObject({
+      kind: "previous-calendar-month",
+      startDate: "2026-04-01",
+      endDate: "2026-04-30",
+    });
+  });
+
+  it("rejects reversed custom ranges", () => {
+    expect(
+      getDashboardRangeState({
+        searchParams: {
+          range: "custom",
+          startDate: "2026-06-30",
+          endDate: "2026-06-01",
+        },
+        now,
+      }).range
+    ).toBe("this-month");
   });
 });

@@ -30,6 +30,11 @@ export type DashboardRangeState = {
 };
 
 export type DashboardComparisonRangeState = {
+  kind:
+    | "same-period-last-year"
+    | "previous-month-to-date"
+    | "previous-calendar-month"
+    | "previous-equal-length";
   label: string;
   startDate: string;
   endDate: string;
@@ -111,6 +116,14 @@ function addDays(value: { year: number; monthIndex: number; day: number }, delta
   };
 }
 
+function daysInMonth(year: number, monthIndex: number) {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+function clampDay(year: number, monthIndex: number, day: number) {
+  return Math.min(day, daysInMonth(year, monthIndex));
+}
+
 function buildRange(
   range: DashboardRangeValue,
   start: { year: number; monthIndex: number; day: number } | null,
@@ -167,7 +180,12 @@ export function getDashboardRangeState(input: {
   if (range === "custom") {
     const start = parseDateOnly(firstParam(input.searchParams.startDate));
     const end = parseDateOnly(firstParam(input.searchParams.endDate));
-    if (start && end) {
+    if (
+      start &&
+      end &&
+      Date.UTC(start.year, start.monthIndex, start.day) <=
+        Date.UTC(end.year, end.monthIndex, end.day)
+    ) {
       const startDate = formatDateOnly(start.year, start.monthIndex, start.day);
       const endDate = formatDateOnly(end.year, end.monthIndex, end.day);
       const dayCount = daysBetween(startDate, endDate);
@@ -251,22 +269,65 @@ export function getPreviousDashboardRangeState(
     return null;
   }
 
+  if (range.range === "this-year") {
+    const previousStart = { year: start.year - 1, monthIndex: 0, day: 1 };
+    const previousEnd = {
+      year: end.year - 1,
+      monthIndex: end.monthIndex,
+      day: clampDay(end.year - 1, end.monthIndex, end.day),
+    };
+
+    return buildComparisonRange("same-period-last-year", previousStart, previousEnd);
+  }
+
+  if (range.range === "this-month") {
+    const previousMonth = addMonths(start.year, start.monthIndex, -1);
+    const previousStart = { ...previousMonth, day: 1 };
+    const previousEnd = {
+      ...previousMonth,
+      day: clampDay(previousMonth.year, previousMonth.monthIndex, end.day),
+    };
+
+    return buildComparisonRange("previous-month-to-date", previousStart, previousEnd);
+  }
+
+  if (range.range === "last-month") {
+    const previousMonth = addMonths(start.year, start.monthIndex, -1);
+    const previousStart = { ...previousMonth, day: 1 };
+    const previousEnd = addDays(
+      { year: start.year, monthIndex: start.monthIndex, day: 1 },
+      -1
+    );
+
+    return buildComparisonRange("previous-calendar-month", previousStart, previousEnd);
+  }
+
   const dayCount = daysBetween(range.startDate, range.endDate);
   const previousEnd = addDays(start, -1);
   const previousStart = addDays(start, -dayCount);
+
+  return buildComparisonRange("previous-equal-length", previousStart, previousEnd);
+}
+
+function buildComparisonRange(
+  kind: DashboardComparisonRangeState["kind"],
+  start: { year: number; monthIndex: number; day: number },
+  end: { year: number; monthIndex: number; day: number }
+): DashboardComparisonRangeState {
   const startDate = formatDateOnly(
-    previousStart.year,
-    previousStart.monthIndex,
-    previousStart.day
+    start.year,
+    start.monthIndex,
+    start.day
   );
-  const endDate = formatDateOnly(previousEnd.year, previousEnd.monthIndex, previousEnd.day);
+  const endDate = formatDateOnly(end.year, end.monthIndex, end.day);
 
   return {
+    kind,
     label: `${startDate} to ${endDate}`,
     startDate,
     endDate,
-    serviceStartDate: startOfIstDay(previousStart),
-    serviceEndDate: endOfIstDay(previousEnd),
+    serviceStartDate: startOfIstDay(start),
+    serviceEndDate: endOfIstDay(end),
   };
 }
 

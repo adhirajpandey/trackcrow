@@ -98,7 +98,10 @@ export type DashboardPageData = {
   importIssueCount: number;
   sectionStatus: DashboardSectionStatus;
   comparison: {
+    kind: "same-period-last-year" | "previous-month-to-date" | "previous-calendar-month" | "previous-equal-length";
     rangeLabel: string;
+    startDate: string;
+    endDate: string;
     summary: DashboardSummaryDto;
     spendingByCategory: DashboardCategorySpendDto[];
   } | null;
@@ -308,7 +311,10 @@ export async function getDashboardPageData(
 
     if (previousSummary.ok && previousSpendingByCategory.ok) {
       comparison = {
+        kind: previousRange.kind,
         rangeLabel: previousRange.label,
+        startDate: previousRange.startDate,
+        endDate: previousRange.endDate,
         summary: previousSummary.data,
         spendingByCategory: previousSpendingByCategory.data,
       };
