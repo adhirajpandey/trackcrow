@@ -766,7 +766,7 @@ function SpendingTrendPanel({
               Daily spend across {displayRange}.
             </p>
           </div>
-          <div className="grid gap-1.5 sm:grid-cols-2 xl:min-w-[386px] xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-1.5 xl:min-w-[386px] xl:grid-cols-4">
             <SummaryChip
               label="Daily average"
               value={formatCompactCurrency(averagePeriodSpend, { style: "chart" })}
