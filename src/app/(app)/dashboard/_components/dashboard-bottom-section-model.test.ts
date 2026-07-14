@@ -4,6 +4,7 @@ import {
   buildCategoryQuickTagOptions,
   buildLargestTransactionHref,
   buildRecentTransactionsApiHref,
+  dashboardCategoryColors,
   dashboardTableLayouts,
   getCategoryTriggerLabel,
   mapTransactionListToDashboardItems,
@@ -14,6 +15,11 @@ import {
 } from "./dashboard-style";
 
 describe("dashboard bottom section model", () => {
+  it("defines distinct theme-compatible colors for category rows", () => {
+    expect(dashboardCategoryColors).toHaveLength(5);
+    expect(new Set(dashboardCategoryColors).size).toBe(dashboardCategoryColors.length);
+  });
+
   it("builds filtered recent-transactions API URLs", () => {
     expect(
       buildRecentTransactionsApiHref({

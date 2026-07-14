@@ -1,6 +1,14 @@
 import type { CategoryOption, TransactionListResponse } from "@/common/types";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
+export const dashboardCategoryColors = [
+  "#2fae74",
+  "#d39a00",
+  "#438ac4",
+  "#7a5bb5",
+  "#6d645b",
+] as const;
+
 export type DashboardCategoryFilterValue = "all" | "uncategorized" | string;
 
 export type DashboardRecentTransactionItem = DashboardPageData["recentTransactions"][number];

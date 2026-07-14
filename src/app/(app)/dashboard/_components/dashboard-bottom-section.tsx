@@ -26,6 +26,7 @@ import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import {
   buildLargestTransactionHref,
+  dashboardCategoryColors,
   dashboardTableLayouts,
 } from "./dashboard-bottom-section-model";
 import {
@@ -198,7 +199,7 @@ function SpendingByCategoryPanel({
                 <TableBody>
                 {categories.slice(0, 5).map((item, index) => {
                   const share = getCategoryShare(item.totalSpend, categorizedSpendTotal);
-                  const isTop = item.category === topCategory;
+                  const categoryColor = dashboardCategoryColors[index];
 
                   return (
                     <TableRow
@@ -227,10 +228,13 @@ function SpendingByCategoryPanel({
                       <TableCell className="overflow-hidden py-4">
                         <div className="flex min-w-0 items-start gap-2">
                           <span
-                            className={cn(
-                              "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
-                              isTop ? "bg-primary" : "bg-primary/65"
-                            )}
+                            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: categoryColor }}
+                            title={
+                              item.category === topCategory
+                                ? "Top spending category"
+                                : undefined
+                            }
                           />
                           <Link
                             href={buildTransactionsHref({ category: item.category })}
@@ -242,8 +246,9 @@ function SpendingByCategoryPanel({
                         </div>
                         <div className="mt-2 h-1.5 rounded-full bg-secondary/20">
                           <div
-                            className="h-1.5 rounded-full bg-primary"
+                            className="h-1.5 rounded-full"
                             style={{
+                              backgroundColor: categoryColor,
                               width: `${Math.max(4, (item.totalSpend / maxCategorySpend) * 100)}%`,
                             }}
                           />
