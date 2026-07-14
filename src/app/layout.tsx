@@ -18,6 +18,11 @@ const kalam = Kalam({
 export const metadata: Metadata = {
   title: "TrackCrow",
   description: "Personal spending intelligence for transaction-heavy lives.",
+  icons: {
+    icon: "/favicon.ico?v=20260715",
+    shortcut: "/favicon.ico?v=20260715",
+    apple: "/brand/trackcrow-logo-2026.png",
+  },
 };
 
 export default function RootLayout({

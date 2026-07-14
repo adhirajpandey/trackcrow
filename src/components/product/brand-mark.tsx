@@ -37,7 +37,7 @@ export function BrandMark({
         )}
       >
         <Image
-          src="/brand/trackcrow-logo.png"
+          src="/brand/trackcrow-logo-2026.png"
           alt={showText ? "" : "TrackCrow"}
           fill
           sizes={size === "compact" ? "40px" : "56px"}
