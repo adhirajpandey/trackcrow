@@ -30,7 +30,7 @@ export default function RecipientsLoading() {
 
       <MobileSearchSurfaceSkeleton />
 
-      <section className="hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5 lg:block">
+      <section className="hidden rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5 lg:block">
         <FilterPanelSkeleton controlCount={1} desktopBreakpoint="lg" />
       </section>
 

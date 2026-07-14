@@ -76,13 +76,13 @@ type ColumnMeta = {
 function getAliasChipClassName(tone: RecipientAliasChip["tone"]) {
   switch (tone) {
     case "upi":
-      return "border-emerald-500/25 bg-emerald-500/12 text-emerald-300";
+      return "border-border bg-[var(--paper-mint)] text-foreground";
     case "card":
-      return "border-sky-500/25 bg-sky-500/12 text-sky-300";
+      return "border-border bg-[var(--paper-lilac)] text-foreground";
     case "text":
-      return "border-slate-400/20 bg-slate-400/10 text-slate-300";
+      return "border-border bg-[var(--paper-blush)] text-foreground";
     default:
-      return "border-border/45 bg-background/12 text-secondary-foreground";
+      return "border-border bg-card text-secondary-foreground";
   }
 }
 
@@ -96,7 +96,7 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
     header: "Recipient",
     cell: ({ row }) => (
       <div className="min-w-0">
-        <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
+        <p className="truncate font-semibold text-foreground transition-colors group-hover:text-foreground">
           {row.original.displayName}
         </p>
         <p className="mt-1 text-xs text-secondary-foreground/85">
@@ -115,7 +115,7 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
           <span
             key={alias.id}
             className={cn(
-              "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-xs font-medium",
+              "inline-flex min-h-11 max-w-full items-center rounded-[999px] border-2 px-3 text-xs font-semibold",
               getAliasChipClassName(alias.tone)
             )}
             title={alias.value}
@@ -124,7 +124,7 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
           </span>
         ))}
         {row.original.overflowAliasCount > 0 ? (
-          <span className="inline-flex min-h-11 items-center rounded-[999px] border border-border/45 bg-background/12 px-3 text-xs font-medium text-secondary-foreground">
+          <span className="inline-flex min-h-11 items-center rounded-[999px] border-2 border-border bg-card px-3 text-xs font-semibold text-secondary-foreground">
             +{row.original.overflowAliasCount} more
           </span>
         ) : null}
@@ -256,10 +256,10 @@ export function RecipientsPageView({
       {message ? (
         <section
           className={cn(
-            "rounded-[8px] border px-4 py-3 text-sm",
+            "rounded-[8px] border-2 px-4 py-3 text-sm",
             status === "error"
               ? "border-destructive/45 bg-destructive/10 text-foreground"
-              : "border-border/50 bg-background/16 text-secondary-foreground"
+              : "border-border bg-card text-secondary-foreground"
           )}
         >
           {message}
@@ -283,7 +283,7 @@ export function RecipientsPageView({
         <MobileFilterChips items={mobileFilterItems} className="mt-3" />
       </section>
 
-      <section className="hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5 lg:block">
+      <section className="hidden rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5 lg:block">
         <RecipientsFilterControls filters={data.filters} />
       </section>
 
@@ -310,9 +310,9 @@ export function RecipientsPageView({
                   onClick={() => setDrawerRow(row)}
                   className={cn(
                     mobileCardClassName,
-                    "p-4 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "p-4 text-left transition-colors hover:bg-[var(--paper-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     drawerRow?.uuid === row.uuid &&
-                      "border-primary/55 bg-primary/[0.07] ring-1 ring-inset ring-primary/35"
+                      "bg-primary/35 ring-2 ring-inset ring-border"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3 min-w-0">
@@ -324,7 +324,7 @@ export function RecipientsPageView({
                         {row.secondaryLabel}
                       </p>
                     </div>
-                    <span className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[999px] border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary">
+                    <span className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[999px] border-2 border-border bg-[var(--paper-mint)] px-3 text-sm font-semibold text-foreground">
                       <BadgeCheck className="h-3.5 w-3.5" />
                       <span>{row.transactionCount}</span>
                     </span>
@@ -345,7 +345,7 @@ export function RecipientsPageView({
 
             <div className="hidden lg:block">
               <Table className="min-w-[920px] table-fixed">
-                <TableHeader className="border-b border-border/40 bg-background/16">
+                <TableHeader className="border-b-2 border-border bg-secondary/55">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id} className="hover:bg-transparent">
                       {headerGroup.headers.map((header) => {
@@ -503,7 +503,7 @@ export function RecipientsPageView({
       >
         {drawerRow ? (
           <div className="space-y-3 pb-2">
-            <div className="rounded-[8px] border border-border/45 bg-background/12 px-4 py-3.5">
+            <div className="rounded-[8px] border-2 border-border bg-[var(--paper-mint)] px-4 py-3.5">
               <p className="text-xs font-semibold text-secondary-foreground">
                 Total sent
               </p>
@@ -511,7 +511,7 @@ export function RecipientsPageView({
                 {numberToINR(drawerRow.totalAmount)}
               </p>
             </div>
-            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 px-4 py-3.5">
+            <div className="grid gap-3 rounded-[8px] border-2 border-border bg-card px-4 py-3.5">
               <DetailMetric
                 icon={<Hash className="h-4 w-4" />}
                 label="Aliases"
@@ -524,7 +524,7 @@ export function RecipientsPageView({
               />
             </div>
             {drawerRow.aliasChips.length > 0 ? (
-              <div className="grid gap-2 rounded-[8px] border border-border/35 bg-background/6 px-4 py-3.5">
+              <div className="grid gap-2 rounded-[8px] border-2 border-border bg-[var(--paper-lilac)] px-4 py-3.5">
                 {drawerRow.aliasChips.slice(0, 2).map((alias, index) => (
                   <div
                     key={alias.id}
@@ -562,7 +562,7 @@ function DetailMetric({
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 text-secondary-foreground">
-        <span className="text-primary">{icon}</span>
+        <span className="text-foreground">{icon}</span>
         <span className="text-sm">{label}</span>
       </div>
       <span className="text-sm font-medium text-foreground">{value}</span>

@@ -37,7 +37,7 @@ export function RecipientsFilterControls({
 
   return (
     <div className="grid gap-3">
-      <label className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
+      <label className="flex min-h-12 items-center gap-3 rounded-[8px] border-2 border-border bg-card px-3.5">
         <Search className="h-4 w-4 text-secondary-foreground" />
         <input
           ref={searchInputRef}

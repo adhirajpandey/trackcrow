@@ -64,6 +64,7 @@ import { useUpdateTransactionCategoryMutation } from "@/features/transactions/mu
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import {
+  dashboardAttentionPanelClassName,
   dashboardInnerTableClassName,
   dashboardPanelClassName,
 } from "@/app/(app)/dashboard/_components/dashboard-style";
@@ -85,7 +86,7 @@ import {
 } from "./recipient-detail-model";
 
 const fieldClassName =
-  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 
 const aliasTypeOptions: SelectOption[] = [
   { value: "AUTO", label: "Auto-detect type" },
@@ -352,7 +353,7 @@ export function RecipientDetailPageView({
             <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient details</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Name">
-                <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-input bg-background/18 focus-within:ring-2 focus-within:ring-ring">
+                <div className="flex min-h-11 overflow-hidden rounded-[8px] border-2 border-input bg-card focus-within:ring-2 focus-within:ring-ring">
                   <input
                     className="min-w-0 flex-1 bg-transparent px-3.5 text-sm text-foreground outline-none"
                     value={recipientName}
@@ -363,7 +364,7 @@ export function RecipientDetailPageView({
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-11 shrink-0 rounded-none border-l border-border/55"
+                    className="h-11 shrink-0 rounded-none border-l-2 border-border bg-secondary/35 shadow-none hover:bg-secondary/65"
                     onClick={() => void handleRenameRecipient()}
                     disabled={
                       updateRecipientMutation.isPending ||
@@ -418,7 +419,7 @@ export function RecipientDetailPageView({
                     <div key={alias.id} className={cn(mobileCardClassName, "p-4")}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold text-primary">
+                          <p className="text-xs font-semibold text-[#238658]">
                             {alias.typeLabel}
                           </p>
                           <MobileLongValue value={alias.value} className="mt-2" />
@@ -475,7 +476,7 @@ export function RecipientDetailPageView({
             <div className="overflow-x-auto px-5 pb-5">
               <div className={dashboardInnerTableClassName}>
                 <Table className="min-w-[780px] table-fixed">
-                  <TableHeader className="border-b border-border/40 bg-background/16">
+                  <TableHeader className="border-b-2 border-border bg-secondary/55">
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="w-[14%]">Type</TableHead>
                       <TableHead className="w-[30%]">Value</TableHead>
@@ -488,7 +489,7 @@ export function RecipientDetailPageView({
                     {data.aliases.length > 0 ? (
                       data.aliases.map((alias) => (
                         <TableRow key={alias.id}>
-                          <TableCell className="py-4 font-medium text-primary">
+                          <TableCell className="py-4 font-semibold text-[#238658]">
                             {alias.typeLabel}
                           </TableCell>
                           <TableCell className="min-w-0 break-all py-4 font-medium text-foreground">
@@ -755,7 +756,12 @@ function CategoryPatternPanel({
   onApply: () => Promise<void>;
 }) {
   return (
-    <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
+    <section
+      className={cn(
+        uncategorizedCount > 0 ? dashboardAttentionPanelClassName : dashboardPanelClassName,
+        "px-5 py-5"
+      )}
+    >
       <div className="flex flex-col gap-4">
         <div className="min-w-0">
           <h2 className="text-[1.05rem] font-semibold text-foreground">Category pattern</h2>
@@ -763,7 +769,7 @@ function CategoryPatternPanel({
             {categoryLabel}
           </p>
           <p className="mt-2 text-sm leading-5 text-secondary-foreground">{metadata}</p>
-          <p className="mt-3 text-sm leading-5 text-accent">{cleanupMessage}</p>
+          <p className="mt-3 text-sm font-semibold leading-5 text-foreground">{cleanupMessage}</p>
         </div>
         <Button
           type="button"
@@ -829,15 +835,15 @@ function MobileRecipientSummary({
   latestTransaction: string;
 }) {
   return (
-    <section className={cn(mobileSurfaceClassName, "px-4 py-3.5")}>
+    <section className={cn(mobileSurfaceClassName, "bg-[var(--paper-mint)] px-4 py-3.5")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-secondary-foreground">Total spent</p>
-          <p className="mt-1 break-words text-[1.75rem] font-semibold leading-tight tabular-nums text-primary">
+          <p className="mt-1 break-words text-[1.75rem] font-semibold leading-tight tabular-nums text-foreground">
             {totalSpent}
           </p>
         </div>
-        <span className="shrink-0 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+        <span className="shrink-0 rounded-[999px] border-2 border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground">
           {transactionCount} txns
         </span>
       </div>
@@ -873,7 +879,7 @@ function ReadOnlyDetailField({ label, value }: { label: string; value: string })
   return (
     <div>
       <span className="mb-2 block text-sm font-medium text-secondary-foreground">{label}</span>
-      <div className="overflow-wrap-anywhere flex min-h-11 items-center rounded-[8px] border border-border/50 bg-background/10 px-3.5 py-3 text-sm text-foreground">
+      <div className="overflow-wrap-anywhere flex min-h-11 items-center rounded-[8px] border-2 border-border bg-card px-3.5 py-3 text-sm text-foreground">
         {value}
       </div>
     </div>
@@ -895,9 +901,9 @@ function CopyButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="inline-flex h-11 w-11 items-center justify-center rounded-[8px] border border-border/45 bg-background/10 text-secondary-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-[8px] border-2 border-border bg-card text-secondary-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {copied ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+      {copied ? <CheckCircle2 className="h-4 w-4 text-[#238658]" /> : <Copy className="h-4 w-4" />}
     </button>
   );
 }

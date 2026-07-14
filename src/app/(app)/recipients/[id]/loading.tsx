@@ -24,7 +24,7 @@ function RecipientPanelSkeleton({
       ) : null}
       <div className="mt-4 space-y-3">
         {Array.from({ length: rows }).map((_, index) => (
-          <div key={index} className="rounded-[8px] border border-border/45 bg-background/10 p-4">
+          <div key={index} className="rounded-[8px] border-2 border-border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-4 w-24 rounded-[8px]" />
