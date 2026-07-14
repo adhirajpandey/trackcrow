@@ -1,148 +1,64 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import {
+  ArrowDown,
   ArrowRight,
+  Banknote,
   BarChart3,
+  Check,
   CheckCircle2,
   ClipboardCheck,
-  Gauge,
-  Lightbulb,
+  Eye,
   LockKeyhole,
   MessageSquareText,
-  Radar,
+  PieChart,
   ReceiptText,
-  Search,
-  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
-  WalletCards,
-  Zap,
+  TrendingUp,
 } from "lucide-react";
 
 import { BrandMark } from "@/components/product/brand-mark";
-import { GoogleSignInButton } from "@/components/product/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Tone = "primary" | "accent" | "info";
+type WorkflowStep = {
+  number: string;
+  label: string;
+  title: string;
+  detail: string;
+  icon: ComponentType<{ className?: string }>;
+  surface: string;
+  note: string;
+};
 
-const trustNotes = [
+const workflowSteps: WorkflowStep[] = [
   {
-    label: "Private by default",
-    icon: LockKeyhole,
-  },
-  {
-    label: "You approve every AI suggestion",
-    icon: CheckCircle2,
-  },
-  {
-    label: "Built for SMS / UPI / bank payments",
-    icon: ShieldCheck,
-  },
-];
-
-const boardModules = [
-  {
-    label: "Insight",
-    title: "Food spend is up 18% this month",
-    detail: "TrackCrow spotted 9 more dining payments than usual.",
-    meta: "AI insight",
-    icon: Lightbulb,
-    tone: "info" as const,
-    rotate: "-rotate-1",
-  },
-  {
-    label: "Review queue",
-    title: "12 transactions need your approval",
-    detail: "Amounts, merchants, and likely categories are ready to confirm.",
-    meta: "Review first",
-    icon: ClipboardCheck,
-    tone: "accent" as const,
-    rotate: "rotate-[1.5deg]",
-  },
-  {
-    label: "Smart rule",
-    title: "Auto-categorize Swiggy as Food & Dining",
-    detail: "Apply the rule only after you approve the suggestion.",
-    meta: "Rule draft",
-    icon: SlidersHorizontal,
-    tone: "primary" as const,
-    rotate: "-rotate-[1.2deg]",
-  },
-  {
-    label: "Large spend",
-    title: "₹12,450 flight ticket detected",
-    detail: "Large and unusual payments stay visible in your queue.",
-    meta: "Needs glance",
-    icon: Gauge,
-    tone: "accent" as const,
-    rotate: "rotate-1",
-  },
-];
-
-const workflowSteps = [
-  {
-    title: "Import alerts",
-    detail: "Securely connect your SMS inbox and payment alerts.",
+    number: "01",
+    label: "Track",
+    title: "A payment ping lands.",
+    detail: "SMS, UPI, card and bank alerts come together in one clean view.",
     icon: MessageSquareText,
-    tone: "primary" as const,
+    surface: "bg-[var(--paper-mint)]",
+    note: "No copy-paste circus.",
   },
   {
-    title: "Review AI suggestions",
-    detail: "TrackCrow detects merchants, amounts, and likely categories.",
-    icon: Sparkles,
-    tone: "info" as const,
-  },
-  {
-    title: "Approve categories",
-    detail: "You review every suggestion before it changes your ledger.",
+    number: "02",
+    label: "Review",
+    title: "The unsure bits line up.",
+    detail: "₹2,140 to BESCOM looks like Utilities. TrackCrow asks; you make the call.",
     icon: ClipboardCheck,
-    tone: "primary" as const,
+    surface: "bg-[var(--paper-yellow)]",
+    note: "Your money. Your call.",
   },
   {
-    title: "Automate future transactions",
-    detail: "Create rules so repeat payments land correctly next time.",
-    icon: Zap,
-    tone: "accent" as const,
-  },
-];
-
-const features = [
-  {
-    title: "Track all payments in one place",
-    detail: "SMS, UPI, cards, and bank transfers become one readable history.",
-    icon: WalletCards,
-    tone: "primary" as const,
-  },
-  {
-    title: "Review what changed",
-    detail: "See uncategorized, edited, and suggested transactions clearly.",
-    icon: Search,
-    tone: "info" as const,
-  },
-  {
-    title: "Clean up missing categories",
-    detail: "AI suggestions help you classify transactions in seconds.",
-    icon: Sparkles,
-    tone: "primary" as const,
-  },
-  {
-    title: "Create rules for the future",
-    detail: "Teach TrackCrow once and keep repeat merchants organized.",
+    number: "03",
+    label: "Control",
+    title: "Repeats sort themselves.",
+    detail: "Approve a rule once. The next ₹299 Jio recharge knows where to go.",
     icon: SlidersHorizontal,
-    tone: "primary" as const,
-  },
-  {
-    title: "Spot large transactions",
-    detail: "Get quick visibility into big spends and unusual activity.",
-    icon: BarChart3,
-    tone: "accent" as const,
-  },
-  {
-    title: "Keep a readable spending trail",
-    detail: "Search, filter, and export a clean transaction record.",
-    icon: ReceiptText,
-    tone: "info" as const,
+    surface: "bg-[var(--paper-lilac)]",
+    note: "Only after you say yes.",
   },
 ];
 
@@ -151,43 +67,42 @@ export default function LandingPage() {
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <HeroSection />
       <WorkflowSection />
-      <FeaturesSection />
-      <PrivacySection />
-      <FinalCta />
+      <InsightsSection />
+      <ControlSection />
     </main>
   );
 }
 
 function HeroSection() {
   return (
-    <section className="relative isolate min-h-screen overflow-hidden px-5 pb-8 pt-5 sm:px-8">
-      <HeroBackground />
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-52px)] w-full max-w-7xl flex-col">
+    <section className="relative isolate px-4 pb-16 pt-4 sm:px-6 sm:pt-5 lg:min-h-screen lg:px-8 lg:pb-20">
+      <HeroDecorations />
+      <div className="relative z-10 mx-auto max-w-[1440px]">
         <MarketingTopNav />
 
-        <div className="grid flex-1 items-center gap-9 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10 lg:py-7 xl:gap-12">
-          <div className="landing-reveal max-w-[40rem]">
-            <p className="inline-flex min-h-8 items-center rounded-full border border-primary/25 bg-primary/8 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-              AI-powered expense tracker
+        <div className="grid items-center gap-12 pb-3 pt-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 lg:pt-14 xl:gap-16">
+          <div className="landing-reveal max-w-[620px]">
+            <p className="font-hand -rotate-2 text-xl leading-none text-destructive sm:text-2xl">
+              Your payments are already talking.
             </p>
-            <h1 className="mt-5 max-w-[12ch] text-5xl font-semibold leading-[0.98] tracking-normal text-foreground sm:text-6xl lg:text-[4.35rem] xl:text-[5rem]">
-              Turn every payment alert into spending clarity.
+            <h1 className="mt-5 max-w-[12ch] text-[clamp(3.15rem,5vw,5.75rem)] font-extrabold leading-[0.9] tracking-[-0.06em]">
+              Payments come in. TrackCrow sorts them out.
             </h1>
-            <p className="mt-5 max-w-[37rem] text-base leading-7 text-secondary-foreground/95 sm:text-lg">
-              TrackCrow reads SMS, UPI, card, and bank alerts, then builds a
-              clean review queue with AI insights, suggested categories, and
-              rules you approve.
+            <p className="mt-7 max-w-[39rem] text-base font-medium leading-7 text-secondary-foreground sm:text-lg sm:leading-8">
+              TrackCrow automatically detects payments from SMS, UPI, card and
+              bank alerts. AI suggests the category, you approve the rule, and
+              repeat spends get sorted—without tagging them one by one.
             </p>
 
-            <HeroActions className="mt-7" />
-            <p className="mt-4 max-w-[34rem] text-sm font-medium leading-6 text-muted-foreground">
-              Review first. Automate what repeats. Keep every transaction
-              readable.
-            </p>
-            <TrustNotes />
+            <HeroActions />
+
+            <div className="mt-7 grid gap-3 border-t-2 border-dashed border-border/50 pt-5 text-sm font-bold sm:grid-cols-2">
+              <TrustPoint icon={LockKeyhole}>Private by default</TrustPoint>
+              <TrustPoint icon={CheckCircle2}>Nothing changes without you</TrustPoint>
+            </div>
           </div>
 
-          <AIExpenseTrackerBoard className="landing-reveal [animation-delay:140ms]" />
+          <PaymentTransformation />
         </div>
       </div>
     </section>
@@ -195,250 +110,183 @@ function HeroSection() {
 }
 
 function MarketingTopNav() {
-  const navItems = [
-    { href: "#features", label: "Features" },
-    { href: "#workflow", label: "Workflow" },
-    { href: "#privacy", label: "Privacy" },
-  ];
-
   return (
-    <header className="flex min-h-13 items-center justify-between gap-4">
+    <header className="relative flex min-h-[72px] items-center justify-between gap-3 rounded-[10px] border-2 border-border bg-card px-3 py-2.5 shadow-[3px_4px_0_var(--foreground)] sm:px-4 lg:px-5">
       <Link
         href="/"
-        className="inline-flex w-fit items-center rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="TrackCrow home"
+        className="flex min-w-0 items-center gap-3 rounded-[8px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <BrandMark
           size="compact"
-          markClassName="h-9 w-9 rounded-[11px] border-primary/25"
-          textClassName="text-[11px] font-semibold tracking-[0.24em]"
+          showText={false}
+          markClassName="h-11 w-11 rounded-[12px] border shadow-none"
         />
+        <span className="min-w-0">
+          <span className="block truncate text-base font-black uppercase leading-none tracking-[0.08em]">
+            TrackCrow
+          </span>
+          <span className="mt-1.5 hidden truncate text-[0.78rem] font-semibold leading-tight text-secondary-foreground sm:block">
+            Spending, made clear.
+          </span>
+        </span>
       </Link>
 
-      <nav
-        aria-label="Primary"
-        className="flex items-center gap-1.5 sm:gap-2 lg:gap-3"
-      >
-        <div className="hidden items-center gap-1 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="inline-flex min-h-10 items-center rounded-[8px] px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-        <GoogleSignInButton
-          size="sm"
-          className="rounded-[8px] px-3 py-2 text-xs font-semibold text-secondary-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Sign in
-        </GoogleSignInButton>
-        <Button
-          asChild
-          size="sm"
-          className="hidden min-h-9 rounded-[8px] bg-primary px-3 text-xs font-semibold hover:bg-primary/95 sm:inline-flex"
-        >
-          <Link href="/dashboard">Start tracking free</Link>
+      <p className="absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-xs font-extrabold uppercase tracking-[0.14em] text-[#238658] md:block">
+        Track <span aria-hidden="true">·</span> Review <span aria-hidden="true">·</span> Control
+      </p>
+
+      <nav aria-label="Primary" className="shrink-0">
+        <Button asChild className="min-h-13 rounded-[7px] px-4 text-sm sm:px-6">
+          <Link href="/dashboard">
+            <span className="hidden sm:inline">Start tracking free</span>
+            <span className="sm:hidden">Start free</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </Button>
       </nav>
     </header>
   );
 }
 
-function HeroActions({ className }: { className?: string }) {
+function HeroActions() {
   return (
-    <div className={cn("flex flex-col gap-3 sm:flex-row sm:flex-wrap", className)}>
-      <Button
-        asChild
-        className="min-h-12 rounded-[8px] bg-primary px-6 text-sm shadow-[0_0_30px_rgba(104,211,145,0.22)] hover:bg-primary/95 sm:min-w-[194px]"
-      >
+    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      <Button asChild className="min-h-13 rounded-[7px] px-6 text-sm sm:min-w-[200px]">
         <Link href="/dashboard">
           Start tracking free
           <ArrowRight className="h-4 w-4" />
         </Link>
       </Button>
-      <Link
-        href="#workflow"
-        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[8px] border border-primary/24 bg-background/30 px-5 text-sm font-semibold text-secondary-foreground transition-colors hover:border-primary/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-w-[156px]"
+      <Button
+        asChild
+        variant="secondary"
+        className="min-h-13 rounded-[7px] bg-card px-6 text-sm sm:min-w-[174px]"
       >
-        <span className="grid h-7 w-7 place-items-center rounded-full border border-primary/35 bg-primary/10 text-primary">
-          <ArrowRight className="h-3.5 w-3.5" />
-        </span>
-        See how it works
-      </Link>
+        <Link href="#workflow">
+          See it in action
+          <ArrowDown className="h-4 w-4" />
+        </Link>
+      </Button>
     </div>
   );
 }
 
-function TrustNotes() {
+function TrustPoint({
+  icon: Icon,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  children: string;
+}) {
   return (
-    <div className="mt-8 grid gap-3 text-xs font-medium text-secondary-foreground/90 sm:grid-cols-3 lg:max-w-[34rem]">
-      {trustNotes.map((item) => (
-        <div key={item.label} className="flex items-center gap-2">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] border border-primary/18 bg-primary/8 text-primary">
-            <item.icon className="h-3.5 w-3.5" />
-          </span>
-          <span className="leading-5">{item.label}</span>
-        </div>
-      ))}
-    </div>
+    <span className="flex items-center gap-2">
+      <span className="grid h-8 w-8 place-items-center rounded-[7px] border-2 border-border bg-[var(--paper-mint)]">
+        <Icon className="h-4 w-4" />
+      </span>
+      {children}
+    </span>
   );
 }
 
-function AIExpenseTrackerBoard({ className }: { className?: string }) {
+function PaymentTransformation() {
   return (
     <section
-      aria-label="AI expense tracker preview"
-      className={cn(
-        "relative mx-auto w-full max-w-[690px] lg:justify-self-end",
-        className
-      )}
+      aria-label="An example payment moving from alert to sorted spending"
+      className="landing-reveal relative mx-auto w-full max-w-[720px] [animation-delay:120ms]"
     >
-      <div className="absolute -inset-5 rounded-[30px] bg-primary/10 blur-3xl" />
-      <div className="absolute -right-3 -top-7 hidden text-5xl leading-none text-primary/85 drop-shadow-[0_0_18px_rgba(104,211,145,0.28)] sm:block">
-        ••
-      </div>
-      <div className="relative rotate-[0.7deg] rounded-[24px] border-[3px] border-[#06110c] bg-[linear-gradient(180deg,rgba(19,32,25,0.98),rgba(6,15,11,0.98))] p-4 shadow-[12px_14px_0_rgba(0,0,0,0.56),0_0_0_1px_rgba(104,211,145,0.18),0_28px_76px_rgba(0,0,0,0.42)] sm:p-5">
-        <div className="pointer-events-none absolute inset-0 rounded-[21px] opacity-[0.18] [background-image:radial-gradient(rgba(237,245,239,0.5)_1px,transparent_1px)] [background-size:18px_18px]" />
-        <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[#06110c] bg-primary px-5 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-primary-foreground shadow-[0_8px_0_rgba(0,0,0,0.35)]">
-          AI Expense Tracker
+      <p className="font-hand absolute -right-1 -top-8 rotate-2 text-lg text-destructive sm:right-8 sm:text-xl">
+        one ping. zero guesswork.
+      </p>
+      <div className="relative rounded-[12px] border-2 border-border bg-[#fffaf0] p-3 shadow-[8px_9px_0_var(--foreground)] sm:p-5">
+        <div aria-hidden="true" className="absolute -top-3 left-[17%] h-6 w-20 -rotate-3 border border-border/30 bg-[#f1e1ad]/80" />
+        <div aria-hidden="true" className="absolute -top-3 right-[14%] h-6 w-20 rotate-2 border border-border/30 bg-[#f1e1ad]/80" />
+
+        <div className="flex items-center justify-between gap-4 border-b-2 border-dashed border-border/50 pb-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-secondary-foreground">Live example</p>
+            <p className="mt-1 text-sm font-extrabold">A fuel payment finds its place</p>
+          </div>
+          <span className="rounded-[999px] border-2 border-border bg-primary px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em]">
+            TrackCrow at work
+          </span>
         </div>
 
-        <div className="relative grid gap-3 pt-5">
-          {boardModules.map((item) => (
-            <BoardModule key={item.label} item={item} />
-          ))}
-        </div>
+        <div className="relative mt-4 grid gap-3 sm:grid-cols-2">
+          <article className="payment-stage payment-stage-1 relative -rotate-1 rounded-[9px] border-2 border-border bg-card p-4 shadow-[3px_4px_0_var(--foreground)] sm:col-span-2 sm:mx-8">
+            <span className="absolute -left-2 -top-2 grid h-7 w-7 place-items-center rounded-full border-2 border-border bg-destructive text-xs font-extrabold text-white">1</span>
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[8px] border-2 border-border bg-[var(--paper-mint)]">
+                <MessageSquareText className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-secondary-foreground">Bank alert · now</p>
+                <p className="mt-1 text-lg font-extrabold leading-tight">₹2,850 paid to IndianOil via UPI.</p>
+              </div>
+            </div>
+          </article>
 
-        <div className="relative mt-4 grid gap-3 border-t border-primary/18 pt-4 sm:grid-cols-3">
-          <BoardStat label="Reviewed" value="84%" tone="primary" />
-          <BoardStat label="Rules ready" value="7" tone="info" />
-          <BoardStat label="Unclear spend" value="12" tone="accent" />
+          <article className="payment-stage payment-stage-2 rounded-[9px] border-2 border-border bg-[#dcecfb] p-4 shadow-[3px_4px_0_var(--foreground)]">
+            <StageLabel number="2" label="Found" />
+            <p className="mt-5 text-xl font-extrabold tabular-nums">₹2,850 <span className="text-sm text-secondary-foreground">· IndianOil</span></p>
+            <p className="mt-2 text-sm font-bold text-secondary-foreground">Today, 8:42 PM</p>
+          </article>
+
+          <article className="payment-stage payment-stage-3 rotate-[0.8deg] rounded-[9px] border-2 border-border bg-[var(--paper-yellow)] p-4 shadow-[3px_4px_0_var(--foreground)]">
+            <StageLabel number="3" label="Review" />
+            <p className="mt-5 text-xl font-extrabold">Transport · Fuel?</p>
+            <div className="mt-3 flex gap-2">
+              <span className="inline-flex min-h-9 items-center gap-1 rounded-[6px] border-2 border-border bg-card px-3 text-xs font-extrabold"><Check className="h-3.5 w-3.5" /> Looks right</span>
+              <span className="inline-flex min-h-9 items-center rounded-[6px] border-2 border-border px-3 text-xs font-extrabold">Change</span>
+            </div>
+          </article>
+
+          <article className="payment-stage payment-stage-4 -rotate-[0.5deg] rounded-[9px] border-2 border-border bg-[var(--paper-mint)] p-4 shadow-[3px_4px_0_var(--foreground)]">
+            <StageLabel number="4" label="Control" />
+            <p className="mt-5 text-lg font-extrabold leading-tight">Use Fuel for this merchant next time?</p>
+            <p className="mt-2 text-sm font-bold text-[#238658]">Rule waits for your yes.</p>
+          </article>
+
+          <article className="payment-stage payment-stage-5 rounded-[9px] border-2 border-border bg-[var(--paper-blush)] p-4 shadow-[3px_4px_0_var(--foreground)]">
+            <StageLabel number="5" label="Sorted" />
+            <div className="mt-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-secondary-foreground">Transport this month</p>
+                <p className="mt-1 text-2xl font-extrabold tabular-nums">₹6,420</p>
+              </div>
+              <CheckCircle2 className="h-8 w-8 text-[#238658]" />
+            </div>
+          </article>
         </div>
       </div>
     </section>
   );
 }
 
-function BoardModule({
-  item,
-}: {
-  item: {
-    label: string;
-    title: string;
-    detail: string;
-    meta: string;
-    icon: ComponentType<{ className?: string }>;
-    tone: Tone;
-    rotate: string;
-  };
-}) {
-  const Icon = item.icon;
-
+function StageLabel({ number, label }: { number: string; label: string }) {
   return (
-    <article
-      className={cn(
-        "relative rounded-[15px] border-[3px] border-[#06110c] p-4 shadow-[6px_7px_0_rgba(0,0,0,0.38)] transition-transform hover:-translate-y-0.5 sm:p-5",
-        item.rotate,
-        item.tone === "primary" &&
-          "bg-[linear-gradient(135deg,rgba(104,211,145,0.95),rgba(41,115,74,0.96))] text-primary-foreground",
-        item.tone === "accent" &&
-          "bg-[linear-gradient(135deg,rgba(242,184,75,0.98),rgba(123,83,25,0.98))] text-accent-foreground",
-        item.tone === "info" &&
-          "bg-[linear-gradient(135deg,rgba(121,168,216,0.98),rgba(37,82,118,0.98))] text-[#04111d]"
-      )}
-    >
-      <span className="absolute left-1/2 top-0 h-5 w-20 -translate-x-1/2 -translate-y-1/2 rotate-[-2deg] border border-white/30 bg-white/45 shadow-[0_2px_8px_rgba(0,0,0,0.14)]" />
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] border-[2px] border-current/35 bg-white/18">
-          <Icon className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-[7px] border-[2px] border-current/45 bg-white/20 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em]">
-              {item.label}
-            </span>
-            <span className="text-[11px] font-bold opacity-75">{item.meta}</span>
-          </div>
-          <h2 className="mt-3 text-lg font-black leading-tight tracking-normal sm:text-xl">
-            {item.title}
-          </h2>
-          <p className="mt-2 max-w-[34rem] text-sm font-semibold leading-6 opacity-78">
-            {item.detail}
-          </p>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function BoardStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: Tone;
-}) {
-  return (
-    <div className="rounded-[12px] border border-border/60 bg-background/48 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <span
-        className={cn(
-          "mb-2 block h-1.5 w-10 rounded-full",
-          tone === "primary" && "bg-primary",
-          tone === "accent" && "bg-accent",
-          tone === "info" && "bg-info"
-        )}
-      />
-      <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold leading-none text-foreground">
-        {value}
-      </p>
+    <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.14em]">
+      <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-border bg-card">{number}</span>
+      {label}
     </div>
   );
 }
 
 function WorkflowSection() {
   return (
-    <section
-      id="workflow"
-      className="border-y border-border/32 bg-muted/24 px-5 py-12 sm:px-8 lg:py-14"
-    >
+    <section id="workflow" className="border-y-2 border-border bg-card px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
       <div className="mx-auto max-w-7xl">
         <SectionHeading
-          eyebrow="Workflow"
-          title="How TrackCrow works"
-          description="From raw payment alerts to a clean, organized dashboard in four simple steps."
-          align="center"
+          note="The whole routine, minus the faff."
+          label="How it works"
+          title="From payment ping to sorted spend."
+          description="TrackCrow does the reading. You keep the final say. The boring repeats get easier from there."
         />
 
-        <div className="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="absolute left-[10%] right-[10%] top-6 hidden h-px bg-primary/28 xl:block" />
-          {workflowSteps.map((step, index) => (
-            <article
-              key={step.title}
-              className="relative rounded-[12px] border border-border/60 bg-[linear-gradient(180deg,rgba(23,32,27,0.78),rgba(13,20,16,0.92))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-            >
-              <span
-                className={cn(
-                  "grid h-9 w-9 place-items-center rounded-[9px] border text-xs font-semibold tabular-nums",
-                  toneClasses(step.tone, "soft")
-                )}
-              >
-                {index + 1}
-              </span>
-              <step.icon className={cn("mt-5 h-5 w-5", toneClasses(step.tone))} />
-              <h3 className="mt-3 text-base font-semibold text-foreground">
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-secondary-foreground/90">
-                {step.detail}
-              </p>
-            </article>
+        <div className="relative mt-10 grid gap-6 lg:grid-cols-3">
+          <div aria-hidden="true" className="absolute left-[15%] right-[15%] top-12 hidden border-t-2 border-dashed border-border/50 lg:block" />
+          {workflowSteps.map((step) => (
+            <WorkflowCard key={step.label} step={step} />
           ))}
         </div>
       </div>
@@ -446,196 +294,290 @@ function WorkflowSection() {
   );
 }
 
-function FeaturesSection() {
+function WorkflowCard({ step }: { step: WorkflowStep }) {
+  const Icon = step.icon;
   return (
-    <section id="features" className="px-5 py-12 sm:px-8 lg:py-14">
-      <div className="mx-auto max-w-7xl">
-        <SectionHeading
-          eyebrow="Features"
-          title="Everything you need to stay on top of spending"
-          description="Compact tools for importing, reviewing, correcting, and searching your transaction history."
-        />
-
-        <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className="group rounded-[12px] border border-border/58 bg-card/38 p-4 transition-colors hover:border-primary/26 hover:bg-card/56"
-            >
-              <feature.icon
-                className={cn("h-5 w-5", toneClasses(feature.tone))}
-              />
-              <h3 className="mt-3 text-base font-semibold text-foreground">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-secondary-foreground/90">
-                {feature.detail}
-              </p>
-            </article>
-          ))}
-        </div>
+    <article className={cn("paper-lift relative flex min-h-[320px] flex-col rounded-[10px] border-2 border-border p-6 shadow-[5px_6px_0_var(--foreground)]", step.surface)}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="grid h-12 w-12 place-items-center rounded-[8px] border-2 border-border bg-card">
+          <Icon className="h-6 w-6" />
+        </span>
+        <span className="text-5xl font-extrabold leading-none tracking-[-0.08em] text-foreground/15">{step.number}</span>
       </div>
-    </section>
-  );
-}
-
-function PrivacySection() {
-  return (
-    <section
-      id="privacy"
-      className="border-y border-border/32 bg-muted/22 px-5 py-10 sm:px-8"
-    >
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.76fr_1fr] lg:items-center">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            Privacy
-          </p>
-          <h2 className="mt-3 max-w-[20ch] text-3xl font-semibold leading-tight text-foreground sm:text-[2.5rem]">
-            Your spending stays reviewable, not mysterious.
-          </h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <PrivacyPoint
-            icon={LockKeyhole}
-            title="Private by default"
-            detail="Financial data is treated like a workspace, not a feed."
-          />
-          <PrivacyPoint
-            icon={ClipboardCheck}
-            title="Approval-led AI"
-            detail="Suggestions stay provisional until you approve them."
-          />
-          <PrivacyPoint
-            icon={Gauge}
-            title="Readable history"
-            detail="Every transaction remains easy to search and correct."
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PrivacyPoint({
-  icon: Icon,
-  title,
-  detail,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <article className="rounded-[12px] border border-border/55 bg-card/34 p-4">
-      <Icon className="h-5 w-5 text-primary" />
-      <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-secondary-foreground/88">
-        {detail}
-      </p>
+      <p className="mt-7 text-xs font-extrabold uppercase tracking-[0.16em]">{step.label}</p>
+      <h3 className="mt-3 text-3xl font-extrabold leading-[1.02] tracking-[-0.04em]">{step.title}</h3>
+      <p className="mt-4 max-w-sm text-base font-medium leading-7 text-secondary-foreground">{step.detail}</p>
+      <p className="font-hand mt-auto pt-7 text-lg text-destructive">{step.note}</p>
     </article>
   );
 }
 
-function FinalCta() {
+function InsightsSection() {
+  const spendingBars = [42, 68, 51, 86, 57, 73, 62];
+
   return (
-    <section className="px-5 pb-6 pt-12 sm:px-8 lg:pt-14">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-[18px] border border-primary/18 bg-[radial-gradient(circle_at_8%_50%,rgba(104,211,145,0.2),transparent_24%),linear-gradient(135deg,rgba(23,32,27,0.95),rgba(8,14,11,0.98))] p-6 shadow-[0_18px_54px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-7 lg:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="flex items-start gap-4">
-            <span className="hidden h-20 w-20 shrink-0 place-items-center rounded-full border border-primary/22 bg-primary/10 text-primary shadow-[0_0_34px_rgba(104,211,145,0.18)] sm:grid">
-              <Radar className="h-9 w-9" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                Review-ready ledger
-              </p>
-              <h2 className="mt-3 max-w-[22ch] text-3xl font-semibold leading-tight text-foreground sm:text-[2.8rem]">
-                Turn scattered alerts into a spending system.
-              </h2>
-              <p className="mt-3 max-w-xl text-base leading-7 text-secondary-foreground/95">
-                Start with the payments you already receive. TrackCrow keeps
-                suggestions visible, rules intentional, and your history easy
-                to understand.
-              </p>
+    <section className="px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <div className="mx-auto max-w-7xl">
+        <SectionHeading
+          note="Numbers that actually answer something."
+          label="Insights & analytics"
+          title="Spot the change before it becomes a pattern."
+          description="See where your money went, compare this month with the last, and catch category or recipient changes worth a closer look."
+        />
+
+        <article className="mt-10 overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[6px_7px_0_var(--foreground)]">
+          <div className="flex flex-col gap-4 border-b-2 border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-[8px] border-2 border-border bg-[var(--paper-mint)]">
+                <BarChart3 className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-secondary-foreground">
+                  Spending overview
+                </p>
+                <p className="mt-1 text-sm font-extrabold">This month · Jul 1–15</p>
+              </div>
+            </div>
+            <div className="flex w-fit rounded-[7px] border-2 border-border bg-background p-1 text-xs font-extrabold">
+              <span className="rounded-[5px] bg-primary px-3 py-1.5">30D</span>
+              <span className="px-3 py-1.5 text-secondary-foreground">90D</span>
+              <span className="px-3 py-1.5 text-secondary-foreground">1Y</span>
             </div>
           </div>
-          <div className="grid gap-2 sm:min-w-[220px]">
-            <Button
-              asChild
-              className="min-h-12 rounded-[8px] bg-primary px-6 text-sm hover:bg-primary/95"
-            >
-              <Link href="/dashboard">
-                Start tracking free
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <p className="text-center text-xs font-medium text-muted-foreground">
-              Free to start - cancel anytime
-            </p>
+
+          <div className="grid lg:grid-cols-[1.25fr_0.75fr]">
+            <div className="border-b-2 border-border p-5 sm:p-6 lg:border-b-0 lg:border-r-2">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <InsightMetric
+                  label="Total spent"
+                  value="₹48,620"
+                  note="12% lower than last month"
+                  surface="bg-[var(--paper-mint)]"
+                />
+                <InsightMetric
+                  label="Daily average"
+                  value="₹3,241"
+                  note="Across 42 detected payments"
+                  surface="bg-[#dcecfb]"
+                />
+              </div>
+
+              <div className="mt-5 rounded-[9px] border-2 border-border bg-[#fffaf0] p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-extrabold">Spending trend</p>
+                    <p className="mt-1 text-xs font-semibold text-secondary-foreground">The last seven days</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#238658]">
+                    <TrendingUp className="h-4 w-4" /> Updated today
+                  </span>
+                </div>
+                <div
+                  aria-label="Illustrative seven-day spending bar chart"
+                  className="mt-6 flex h-36 items-end gap-2 border-b-2 border-l-2 border-border/55 px-3 pt-3 sm:gap-4 sm:px-5"
+                >
+                  {spendingBars.map((height, index) => (
+                    <div key={height + index} className="flex h-full flex-1 items-end">
+                      <span
+                        className={cn(
+                          "block w-full rounded-t-[5px] border-2 border-b-0 border-border",
+                          index === 3 ? "bg-[var(--paper-yellow)]" : "bg-primary"
+                        )}
+                        style={{ height: `${height}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex justify-between px-3 text-[10px] font-bold text-secondary-foreground sm:px-5">
+                  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 p-5 sm:p-6">
+              <article className="rounded-[9px] border-2 border-border bg-[var(--paper-yellow)] p-5 shadow-[3px_4px_0_var(--foreground)]">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.16em]">AI insight</p>
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <p className="mt-5 text-2xl font-extrabold leading-tight tracking-[-0.035em]">
+                  Transport spend is up ₹2,300.
+                </p>
+                <p className="mt-3 text-sm font-semibold leading-6 text-secondary-foreground">
+                  Fuel payments were higher than your usual fortnightly range.
+                </p>
+              </article>
+
+              <article className="rounded-[9px] border-2 border-border bg-[var(--paper-lilac)] p-5">
+                <div className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5" />
+                  <p className="text-sm font-extrabold">Top categories</p>
+                </div>
+                <div className="mt-5 space-y-4">
+                  <CategoryShare label="Household" value="31%" width="31%" color="bg-primary" />
+                  <CategoryShare label="Transport" value="24%" width="24%" color="bg-info" />
+                  <CategoryShare label="Food & dining" value="18%" width="18%" color="bg-accent" />
+                </div>
+              </article>
+            </div>
           </div>
-        </div>
+        </article>
       </div>
-      <footer className="mx-auto flex max-w-7xl flex-col gap-2 py-6 text-sm text-secondary-foreground sm:flex-row sm:items-center sm:justify-between">
-        <BrandMark
-          size="compact"
-          markClassName="h-8 w-8 rounded-[10px]"
-          textClassName="text-[10px] tracking-[0.2em]"
-        />
-        <p>AI expense tracking for the payment alerts you already have.</p>
-      </footer>
     </section>
   );
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  align = "left",
+function InsightMetric({
+  label,
+  value,
+  note,
+  surface,
 }: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  align?: "left" | "center";
+  label: string;
+  value: string;
+  note: string;
+  surface: string;
 }) {
   return (
-    <div className={cn("mx-auto max-w-3xl", align === "center" && "text-center")}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-        {eyebrow}
-      </p>
-      <h2 className="mt-3 text-3xl font-semibold leading-tight text-foreground sm:text-[2.45rem]">
-        {title}
-      </h2>
-      <p className="mt-3 text-base leading-7 text-secondary-foreground/92">
-        {description}
-      </p>
+    <div className={cn("rounded-[9px] border-2 border-border p-4", surface)}>
+      <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-secondary-foreground">{label}</p>
+      <p className="mt-3 text-3xl font-extrabold tracking-[-0.04em] tabular-nums">{value}</p>
+      <p className="mt-2 text-xs font-bold text-secondary-foreground">{note}</p>
     </div>
   );
 }
 
-function HeroBackground() {
+function CategoryShare({
+  label,
+  value,
+  width,
+  color,
+}: {
+  label: string;
+  value: string;
+  width: string;
+  color: string;
+}) {
   return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(104,211,145,0.2),transparent_30%),radial-gradient(circle_at_10%_78%,rgba(121,168,216,0.1),transparent_28%),linear-gradient(115deg,#0f1411_0%,#0b130f_42%,#050907_100%)]" />
-      <div className="absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(104,211,145,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(121,168,216,0.12)_1px,transparent_1px)] [background-size:58px_58px]" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,20,17,0.96)_0%,rgba(15,20,17,0.52)_58%,rgba(15,20,17,0.88)_100%)]" />
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-[linear-gradient(180deg,transparent,var(--background)_90%)]" />
+    <div>
+      <div className="flex items-center justify-between gap-4 text-xs font-bold">
+        <span>{label}</span>
+        <span className="tabular-nums">{value}</span>
+      </div>
+      <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-border bg-card">
+        <span className={cn("block h-full border-r border-border", color)} style={{ width }} />
+      </div>
     </div>
   );
 }
 
-function toneClasses(tone: Tone, variant: "text" | "soft" = "text") {
-  if (variant === "soft") {
-    return cn(
-      tone === "primary" && "border-primary/22 bg-primary/12 text-primary",
-      tone === "accent" && "border-accent/24 bg-accent/10 text-accent",
-      tone === "info" && "border-info/20 bg-info/10 text-info"
-    );
-  }
+function ControlSection() {
+  return (
+    <section id="privacy" className="bg-[#e5f6ed] px-4 pb-0 pt-16 sm:px-6 sm:pb-7 lg:px-8 lg:pt-20">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <div>
+            <p className="font-hand -rotate-2 text-xl text-destructive">No mysterious black box.</p>
+            <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.16em] text-[#238658]">Built around your approval</p>
+            <h2 className="mt-4 max-w-[13ch] text-5xl font-extrabold leading-[0.92] tracking-[-0.055em] sm:text-6xl">
+              AI suggests. You stay in charge.
+            </h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <ControlPoint icon={Eye} title="Nothing hidden">See what TrackCrow found and why it needs a look.</ControlPoint>
+            <ControlPoint icon={CheckCircle2} title="Nothing assumed">Suggestions wait for your approval before they stick.</ControlPoint>
+            <ControlPoint icon={LockKeyhole} title="Private by default">Your spending is a private workspace, not a social feed.</ControlPoint>
+          </div>
+        </div>
 
-  return cn(
-    tone === "primary" && "text-primary",
-    tone === "accent" && "text-accent",
-    tone === "info" && "text-info"
+        <div className="relative mt-16 overflow-hidden rounded-[10px] border-2 border-border bg-[var(--paper-yellow)] px-5 py-10 shadow-[7px_8px_0_var(--foreground)] sm:px-8 sm:py-12 lg:px-12">
+          <div aria-hidden="true" className="absolute bottom-0 left-0 top-0 w-3 [background:radial-gradient(circle_at_0_12px,var(--background)_7px,transparent_8px)] [background-size:12px_24px]" />
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.16em]">Ready when you are</p>
+              <h2 className="mt-4 max-w-[16ch] text-4xl font-extrabold leading-[0.94] tracking-[-0.05em] sm:text-5xl lg:text-6xl">
+                Your spending is already happening. Make it make sense.
+              </h2>
+            </div>
+            <div className="lg:min-w-[230px]">
+              <Button asChild className="min-h-13 w-full rounded-[7px] bg-primary px-6 text-sm">
+                <Link href="/dashboard">
+                  Start tracking free
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <p className="mt-3 text-center text-xs font-bold">Start with the alerts you already get.</p>
+            </div>
+          </div>
+        </div>
+
+        <footer className="mt-10 border-t-2 border-border/70 py-4 text-center sm:relative sm:grid sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4 sm:py-6">
+          <div className="flex items-center justify-between gap-3 sm:contents">
+            <div className="sm:justify-self-start">
+              <BrandMark size="compact" markClassName="h-9 w-9 rounded-[9px]" textClassName="text-[10px]" />
+            </div>
+            <p className="text-xs font-semibold text-secondary-foreground">
+              © 2026 TrackCrow
+            </p>
+          </div>
+          <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.12em] text-[#238658] sm:absolute sm:left-1/2 sm:top-1/2 sm:mt-0 sm:-translate-x-1/2 sm:-translate-y-1/2">
+            Track <span aria-hidden="true">·</span> Review <span aria-hidden="true">·</span> Control
+          </p>
+        </footer>
+      </div>
+    </section>
+  );
+}
+
+function ControlPoint({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  children: string;
+}) {
+  return (
+    <article className="rounded-[9px] border-2 border-border bg-card p-4 shadow-[3px_4px_0_var(--foreground)]">
+      <Icon className="h-5 w-5" />
+      <h3 className="mt-5 text-base font-extrabold">{title}</h3>
+      <p className="mt-2 text-sm font-medium leading-6 text-secondary-foreground">{children}</p>
+    </article>
+  );
+}
+
+function SectionHeading({
+  note,
+  label,
+  title,
+  description,
+}: {
+  note: string;
+  label: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+      <div>
+        <p className="font-hand -rotate-1 text-xl text-destructive">{note}</p>
+        <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.16em] text-[#238658]">{label}</p>
+        <h2 className="mt-4 max-w-[14ch] text-4xl font-extrabold leading-[0.94] tracking-[-0.05em] sm:text-5xl lg:text-6xl">{title}</h2>
+      </div>
+      <p className="max-w-[36rem] text-base font-medium leading-7 text-secondary-foreground lg:justify-self-end lg:text-lg lg:leading-8">{description}</p>
+    </div>
+  );
+}
+
+function HeroDecorations() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute -left-16 top-48 h-36 w-36 rotate-12 rounded-[24px] border-2 border-border/10 bg-[var(--paper-blush)] opacity-70" />
+      <div className="absolute -right-16 top-32 h-48 w-48 -rotate-12 rounded-full border-2 border-border/10 bg-[var(--paper-mint)] opacity-70" />
+      <ReceiptText className="absolute bottom-12 left-[44%] hidden h-16 w-16 -rotate-12 text-border/10 lg:block" />
+      <Banknote className="absolute right-[4%] top-[58%] hidden h-14 w-14 rotate-12 text-border/10 xl:block" />
+      <Sparkles className="absolute left-[4%] top-[17%] h-8 w-8 -rotate-12 text-destructive/35" />
+    </div>
   );
 }

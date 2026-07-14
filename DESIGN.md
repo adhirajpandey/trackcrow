@@ -80,3 +80,14 @@ Pastel surfaces are mint (`#e7f8ef`), blush (`#fff0ef`), lilac (`#f4f0fb`), and 
 ## Scope
 
 Warm Ledger is light-only in this phase. The shared shell and primitives use the new foundation globally; each authenticated screen adopts the system while retaining its existing data contracts and behavior.
+
+## Marketing Voice
+
+The landing page is the expressive public face of the same warm, paper-like product system. Its visual language may use larger type, playful rotation, taped notes, and stronger editorial composition, but it must retain the authenticated product's ivory canvas, ink outlines, pastel surfaces, compact radii, and solid offset shadows.
+
+- Use the brand cadence **Track · Review · Control** to explain the product simply.
+- Prefer short, confident language about `spent`, `paid`, `needs a look`, `sorted`, and `payment pings`.
+- Use familiar Indian payment context such as UPI, SMS, cards, bank alerts, and rupee amounts without turning the copy into a caricature.
+- Present AI as a visible assistant that notices and suggests. The user always approves consequential changes.
+- Avoid inflated SaaS language such as “financial intelligence,” “optimize,” “seamless,” “revolutionary,” and “magic.”
+- Reserve Kalam for brief red margin notes. Primary claims and calls to action stay direct, bold, and readable in Bricolage Grotesque.

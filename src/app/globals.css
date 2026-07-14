@@ -137,6 +137,21 @@ textarea {
   }
 }
 
+@keyframes payment-stage-focus {
+  0%, 8%, 100% {
+    transform: translateY(0) scale(1);
+    filter: saturate(0.9);
+  }
+  12%, 24% {
+    transform: translateY(-5px) scale(1.015);
+    filter: saturate(1.08);
+  }
+  28% {
+    transform: translateY(0) scale(1);
+    filter: saturate(0.9);
+  }
+}
+
 @keyframes dashboard-reveal {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -157,9 +172,33 @@ textarea {
   animation: landing-reveal 520ms ease-out both;
 }
 
+.paper-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.paper-lift:hover {
+  transform: translate(-2px, -3px) rotate(0deg);
+  box-shadow: 7px 9px 0 var(--foreground);
+}
+
+.payment-stage {
+  animation: payment-stage-focus 12s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.payment-stage-2 { animation-delay: 2s; }
+.payment-stage-3 { animation-delay: 4s; }
+.payment-stage-4 { animation-delay: 6s; }
+.payment-stage-5 { animation-delay: 8s; }
+
 @media (prefers-reduced-motion: reduce) {
-  .landing-reveal {
+  .landing-reveal,
+  .payment-stage {
     animation: none;
+  }
+
+  .paper-lift {
+    transition: none;
   }
 
   .dashboard-reveal { animation: none; }
