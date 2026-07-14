@@ -322,7 +322,7 @@ export function TransactionsFilterControls({
 
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]">
-      <label className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
+      <label className="flex min-h-12 items-center gap-3 rounded-[8px] border-2 border-border bg-card px-3.5">
         <Search className="h-4 w-4 text-secondary-foreground" />
         <input
           ref={searchInputRef}
@@ -385,7 +385,7 @@ export function TransactionsFilterControls({
 
             updateTransactionsUrl(buildResetHref(filters), "replace");
           }}
-          className="inline-flex h-12 w-12 items-center justify-center rounded-[8px] border border-border/50 bg-background/10 text-secondary-foreground transition-colors hover:border-border/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-[8px] border-2 border-border bg-card text-secondary-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X className="h-4.5 w-4.5" aria-hidden="true" />
         </button>
@@ -521,14 +521,14 @@ function FilterMenu({
       role="listbox"
       style={renderInPortal ? menuStyle : undefined}
       className={cn(
-        "overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]",
+        "overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]",
         renderInPortal
           ? ""
           : "absolute left-0 top-[calc(100%+0.5rem)] z-20 w-full min-w-[220px]",
         menuClassName
       )}
     >
-      <div className="border-b border-border/45 px-3 py-2 text-xs font-semibold text-secondary-foreground">
+      <div className="border-b-2 border-border bg-secondary/55 px-3 py-2 text-xs font-semibold text-secondary-foreground">
         {label}
       </div>
       <div className="max-h-56 overflow-y-auto py-1">
@@ -559,9 +559,9 @@ function FilterMenu({
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         className={cn(
-          "inline-flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          (isOpen || triggerActive) && "border-primary/70 bg-primary/14 text-primary",
-          disabled && "cursor-not-allowed text-secondary-foreground/55 hover:bg-background/16",
+          "inline-flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border-2 border-border bg-card px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          (isOpen || triggerActive) && "bg-primary/35 text-foreground",
+          disabled && "cursor-not-allowed text-secondary-foreground/55 hover:bg-card",
           triggerClassName
         )}
       >
@@ -602,14 +602,14 @@ function FilterOptionButton({
       aria-selected={selected}
       onClick={onSelect}
       className={cn(
-        "flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:bg-secondary/20",
+        "flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:bg-secondary/60",
         selected
-          ? "bg-primary/12 text-primary hover:bg-primary/16"
-          : "text-foreground hover:bg-secondary/20"
+          ? "bg-primary/35 text-foreground hover:bg-primary/45"
+          : "text-foreground hover:bg-secondary/60"
       )}
     >
       <span className="truncate">{label}</span>
-      {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+      {selected ? <Check className="h-4 w-4 shrink-0 text-foreground" /> : null}
     </button>
   );
 }

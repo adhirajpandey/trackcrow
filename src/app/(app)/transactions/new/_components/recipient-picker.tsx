@@ -84,7 +84,7 @@ export function RecipientPicker({
       <div ref={rootRef} className="relative">
         <div
           className={cn(
-            "flex min-h-11 items-center gap-2 rounded-[8px] border bg-background/18 px-3.5 focus-within:ring-2 focus-within:ring-ring",
+            "flex min-h-11 items-center gap-2 rounded-[8px] border-2 bg-card px-3.5 focus-within:ring-2 focus-within:ring-ring",
             error ? "border-destructive/65" : "border-input",
           )}
         >
@@ -131,7 +131,7 @@ export function RecipientPicker({
           <div
             id="recipient-picker-list"
             role="listbox"
-            className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.99),rgba(10,16,13,1))] p-1.5 shadow-[0_18px_38px_rgba(0,0,0,0.32)]"
+            className="absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-[10px] border-2 border-border bg-card p-1.5 shadow-[3px_4px_0_var(--foreground)]"
           >
             {pickerQuery.isFetching ? (
               <div
@@ -166,10 +166,10 @@ export function RecipientPicker({
                       setOpen(false);
                     }
                   }}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-[8px] px-3 py-2 text-left transition-colors hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex min-h-12 w-full items-center gap-3 rounded-[8px] px-3 py-2 text-left transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <UserRound
-                    className="h-4 w-4 shrink-0 text-primary"
+                    className="h-4 w-4 shrink-0 text-[#238658]"
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1">
@@ -195,7 +195,7 @@ export function RecipientPicker({
                 setOpen(false);
                 setDialogOpen(true);
               }}
-              className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-[8px] border-t border-border/45 px-3 pt-2 text-sm font-semibold text-primary hover:bg-secondary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-[8px] border-t-2 border-border px-3 pt-2 text-sm font-semibold text-foreground hover:bg-[var(--paper-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Create New Recipient{query.trim() ? ` “${query.trim()}”` : ""}

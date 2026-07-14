@@ -20,7 +20,10 @@ import {
   isValidSubcategorySelection,
   parseDateTimeLocalAsIst,
 } from "@/app/(app)/transactions/[id]/_components/transaction-detail-model";
-import { dashboardPanelClassName } from "@/app/(app)/dashboard/_components/dashboard-style";
+import {
+  dashboardAttentionPanelClassName,
+  dashboardPanelClassName,
+} from "@/app/(app)/dashboard/_components/dashboard-style";
 import { AppPageHeader } from "@/components/product/app-page-header";
 import {
   MobileActionBar,
@@ -44,7 +47,7 @@ import {
 } from "./transaction-create-model";
 
 const fieldClassName =
-  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 
 export function TransactionCreatePageView({
@@ -162,7 +165,7 @@ export function TransactionCreatePageView({
           title="Add Transaction"
           description="Record a payment that was not captured from SMS or an automatic import."
           meta={
-            <span className="inline-flex min-h-8 items-center rounded-[999px] border border-primary/25 bg-primary/10 px-3 text-xs font-semibold text-primary">
+            <span className="inline-flex min-h-8 items-center rounded-[999px] border-2 border-border bg-[var(--paper-mint)] px-3 text-xs font-semibold text-foreground">
               Manual entry
             </span>
           }
@@ -192,7 +195,7 @@ export function TransactionCreatePageView({
       {banner ? (
         <section
           role="alert"
-          className="rounded-[8px] border border-destructive/45 bg-destructive/10 px-4 py-3 text-sm text-foreground"
+          className="rounded-[8px] border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm text-foreground"
         >
           {banner}
         </section>
@@ -200,17 +203,15 @@ export function TransactionCreatePageView({
 
       <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.72fr)]">
         <div className="space-y-3">
-          <section
-            className={cn(dashboardPanelClassName, "overflow-visible p-5")}
-          >
+          <section className={cn(dashboardPanelClassName, "overflow-visible p-5")}>
             <SectionHeading number="1" title="Payment" />
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field
                 label="Amount"
                 error={form.formState.errors.amount?.message}
               >
-                <div className="flex min-h-11 items-center rounded-[8px] border border-input bg-background/18 focus-within:ring-2 focus-within:ring-ring">
-                  <span className="border-r border-border/50 px-3.5 text-sm text-secondary-foreground">
+                <div className="flex min-h-11 items-center rounded-[8px] border-2 border-input bg-card focus-within:ring-2 focus-within:ring-ring">
+                  <span className="border-r-2 border-border px-3.5 text-sm text-secondary-foreground">
                     ₹
                   </span>
                   <input
@@ -279,7 +280,10 @@ export function TransactionCreatePageView({
           </section>
 
           <section
-            className={cn(dashboardPanelClassName, "overflow-visible p-5")}
+            className={cn(
+              categoryUuid ? dashboardPanelClassName : dashboardAttentionPanelClassName,
+              "overflow-visible p-5"
+            )}
           >
             <SectionHeading number="2" title="Classification" optional />
             <div className="mt-4 grid gap-4 md:grid-cols-2">

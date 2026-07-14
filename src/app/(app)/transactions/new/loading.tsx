@@ -24,7 +24,7 @@ export default function TransactionCreateLoading() {
           {[3, 2, 4].map((count, section) => (
             <section
               key={section}
-              className="rounded-[8px] border border-border/55 bg-background/12 p-5"
+              className="rounded-[8px] border-2 border-border bg-card p-5"
             >
               <Skeleton className="h-6 w-40 rounded-[8px]" />
               <div className="mt-4 grid gap-4 md:grid-cols-2">

@@ -60,16 +60,16 @@ import {
 import { TransactionDeleteDialog } from "../../_components/transaction-delete-dialog";
 
 const fieldClassName =
-  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 const embeddedFieldClassName =
   "min-h-11 min-w-0 flex-1 bg-transparent px-3.5 text-sm text-foreground outline-none placeholder:text-secondary-foreground/85";
 const embeddedActionButtonClassName =
-  "group h-11 shrink-0 rounded-none border-l border-border/55 bg-background/8 px-4 shadow-none transition-colors hover:border-border/75 hover:bg-secondary/18 hover:text-foreground";
+  "group h-11 shrink-0 rounded-none border-l-2 border-border bg-secondary/35 px-4 shadow-none transition-colors hover:bg-secondary/65 hover:text-foreground";
 const readOnlyActionButtonClassName =
-  "group min-h-11 self-stretch rounded-none border-l border-border/55 bg-background/8 px-4 shadow-none transition-colors hover:border-border/75 hover:bg-secondary/18 hover:text-foreground";
+  "group min-h-11 self-stretch rounded-none border-l-2 border-border bg-secondary/35 px-4 shadow-none transition-colors hover:bg-secondary/65 hover:text-foreground";
 const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 const badgeClassName =
-  "inline-flex min-h-11 items-center rounded-[999px] border px-3 text-sm font-medium";
+  "inline-flex min-h-11 items-center rounded-[999px] border-2 border-border px-3 text-sm font-semibold";
 const disclosureSummaryClassName =
   "flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-foreground marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden [&::-webkit-details-marker]:hidden";
 const inlineDisclosureButtonClassName =
@@ -340,7 +340,7 @@ export function TransactionDetailPageView({
       {banner ? (
         <section
           className={cn(
-            "rounded-[8px] border px-4 py-3 text-sm",
+            "rounded-[8px] border-2 px-4 py-3 text-sm",
             banner.tone === "error" && "border-destructive/45 bg-destructive/10 text-foreground",
             banner.tone === "info" && "border-border/45 bg-background/14 text-secondary-foreground"
           )}
@@ -350,7 +350,7 @@ export function TransactionDetailPageView({
       ) : null}
 
       {transactionQuery.error ? (
-        <section className="rounded-[8px] border border-destructive/45 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+        <section className="rounded-[8px] border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm text-foreground">
           {getApiClientErrorMessage(
             transactionQuery.error,
             "Transaction details are temporarily unavailable."
@@ -385,8 +385,8 @@ export function TransactionDetailPageView({
                   className={cn(
                     badgeClassName,
                     selectedCategoryUuid
-                      ? "border-primary/20 bg-primary/10 text-primary"
-                      : "border-accent/30 bg-accent/12 text-accent"
+                      ? "bg-primary/35 text-foreground"
+                      : "bg-[#fff1bd] text-foreground"
                   )}
                 >
                   {selectedCategoryUuid ? "Category set" : "Needs category"}
@@ -574,7 +574,7 @@ export function TransactionDetailPageView({
                 error={form.formState.errors.locationRaw?.message}
                 className="order-4 md:col-span-2 lg:order-none"
               >
-                <div className="flex min-h-11 overflow-hidden rounded-[8px] border border-input bg-background/18 focus-within:ring-2 focus-within:ring-ring">
+                <div className="flex min-h-11 overflow-hidden rounded-[8px] border-2 border-input bg-card focus-within:ring-2 focus-within:ring-ring">
                   <input className={embeddedFieldClassName} {...form.register("locationRaw")} />
                   {googleMapsHref ? (
                     <Button
@@ -625,6 +625,15 @@ export function TransactionDetailPageView({
         </div>
 
         <aside className="hidden space-y-3 lg:block">
+          <TransactionSummaryPanel
+            amount={formatTransactionAmount(Number(currentAmount) || transaction.amount)}
+            type={currentType}
+            when={getSummaryLine({
+              timestamp: currentTimestamp,
+              fallbackTimestamp: transaction.timestamp,
+            })}
+            recipient={getTransactionDisplayRecipient(previewTransaction)}
+          />
           <DangerZone
             transactionUuid={transaction.uuid}
             isDeleting={deleteMutation.isPending}
@@ -659,20 +668,53 @@ function MobileTransactionSummary({
   recipient: string;
 }) {
   return (
-    <section className={cn(mobileSurfaceClassName, "px-4 py-3.5")}>
+    <section className={cn(mobileSurfaceClassName, "bg-[var(--paper-mint)] px-4 py-3.5")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-secondary-foreground">Amount</p>
-          <p className="mt-1 text-[1.75rem] font-semibold leading-tight tabular-nums text-primary">
+          <p className="mt-1 text-[1.75rem] font-semibold leading-tight tabular-nums text-foreground">
             {amount}
           </p>
         </div>
-        <span className="shrink-0 rounded-[999px] border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+        <span className="shrink-0 rounded-[999px] border-2 border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground">
           {type}
         </span>
       </div>
       <div className="mt-3 grid gap-2 border-t border-border/35 pt-3 text-sm">
         <SummaryRow label="Date and Time" value={when} />
+        <SummaryRow label="Recipient" value={recipient} />
+      </div>
+    </section>
+  );
+}
+
+function TransactionSummaryPanel({
+  amount,
+  type,
+  when,
+  recipient,
+}: {
+  amount: string;
+  type: TransactionRecord["type"];
+  when: string;
+  recipient: string;
+}) {
+  return (
+    <section className={cn(dashboardPanelClassName, "bg-[var(--paper-mint)] px-5 py-5")}>
+      <p className="font-hand text-base font-normal leading-tight text-destructive">Ledger entry</p>
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-secondary-foreground">Amount</p>
+          <p className="mt-1 text-[2rem] font-semibold leading-none tabular-nums text-foreground">
+            {amount}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-[999px] border-2 border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground">
+          {type}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 border-t-2 border-border/60 pt-3 text-sm">
+        <SummaryRow label="Date and time" value={when} />
         <SummaryRow label="Recipient" value={recipient} />
       </div>
     </section>

@@ -253,8 +253,8 @@ export function TransactionsPageView({
                 variant="secondary"
                 size="sm"
                 className={cn(
-                  "min-h-11 max-w-full min-w-0 gap-2 rounded-[8px] border-border/55 bg-background/14 px-3 text-sm font-medium",
-                  mobileFiltersOpen && "border-primary/70 bg-primary/14 text-primary"
+                  "min-h-11 max-w-full min-w-0 gap-2 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-semibold",
+                  mobileFiltersOpen && "bg-primary/35 text-foreground"
                 )}
               >
                 <span className="flex min-w-0 items-center gap-2">
@@ -308,7 +308,7 @@ export function TransactionsPageView({
         </div>
       </section>
 
-      <section className="hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5 lg:block">
+      <section className="hidden rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5 lg:block">
         <TransactionsFilterControls
           filters={data.filters}
           categories={data.categories}
@@ -333,9 +333,9 @@ export function TransactionsPageView({
                   onClick={() => setDrawerRow(row)}
                   className={cn(
                     mobileCardClassName,
-                    "px-4 py-3.5 text-left transition-colors hover:bg-background/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "px-4 py-3.5 text-left transition-colors hover:bg-[var(--paper-mint)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     (row.isSelected || drawerRow?.uuid === row.uuid) &&
-                      "border-primary/55 bg-primary/[0.07] ring-1 ring-inset ring-primary/35"
+                      "bg-primary/35 ring-2 ring-inset ring-border"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3 min-w-0">
@@ -355,10 +355,10 @@ export function TransactionsPageView({
                   <div className="mt-3 flex items-start justify-between gap-3 min-w-0">
                     <span
                       className={cn(
-                        "inline-flex min-h-11 max-w-full min-w-0 items-center rounded-[999px] border px-3 text-sm font-medium",
+                        "inline-flex min-h-11 max-w-full min-w-0 items-center rounded-[999px] border-2 border-border px-3 text-sm font-semibold",
                         row.category
-                          ? "border-primary/20 bg-primary/10 text-primary"
-                          : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
+                          ? "bg-primary/35 text-foreground"
+                          : "bg-[#fff1bd] text-foreground"
                       )}
                     >
                       <span className="overflow-wrap-anywhere break-words">
@@ -471,7 +471,7 @@ export function TransactionsPageView({
       >
         {drawerRow ? (
           <div className="space-y-3 pb-2">
-            <div className="rounded-[8px] border border-border/45 bg-background/12 px-4 py-3.5">
+            <div className="rounded-[8px] border-2 border-border bg-[var(--paper-mint)] px-4 py-3.5">
               <p className="text-xs font-semibold text-secondary-foreground">
                 Amount
               </p>
@@ -479,10 +479,10 @@ export function TransactionsPageView({
                 {formatTransactionAmount(drawerRow.amount)}
               </p>
               {!drawerRow.category ? (
-                <p className="mt-3 text-sm font-medium text-accent">Needs category</p>
+                <p className="mt-3 text-sm font-semibold text-foreground">Needs category</p>
               ) : null}
             </div>
-            <div className="grid gap-3 rounded-[8px] border border-border/45 bg-background/8 px-4 py-3.5">
+            <div className="grid gap-3 rounded-[8px] border-2 border-border bg-card px-4 py-3.5">
               <DetailMetric
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="When"

@@ -77,6 +77,25 @@ function DangerZoneSkeleton({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
+function TransactionSummarySkeleton() {
+  return (
+    <section className={cn(dashboardPanelClassName, "bg-[var(--paper-mint)] px-5 py-5")}>
+      <Skeleton className="h-4 w-24 rounded-[8px]" />
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16 rounded-[8px]" />
+          <Skeleton className="h-8 w-36 rounded-[8px]" />
+        </div>
+        <Skeleton className="h-8 w-16 rounded-[999px]" />
+      </div>
+      <div className="mt-4 grid gap-3 border-t-2 border-border/60 pt-3">
+        <Skeleton className="h-4 w-full rounded-[8px]" />
+        <Skeleton className="h-4 w-full rounded-[8px]" />
+      </div>
+    </section>
+  );
+}
+
 export default function TransactionDetailLoading() {
   return (
     <div className="space-y-3.5">
@@ -98,7 +117,7 @@ export default function TransactionDetailLoading() {
         />
       </div>
 
-      <MobileSurfaceSkeleton className="px-4 py-3.5 lg:hidden">
+      <MobileSurfaceSkeleton className="bg-[var(--paper-mint)] px-4 py-3.5 lg:hidden">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Skeleton className="h-4 w-16 rounded-[8px]" />
@@ -125,11 +144,12 @@ export default function TransactionDetailLoading() {
           <DangerZoneSkeleton mobile />
         </div>
         <aside className="space-y-3">
+          <TransactionSummarySkeleton />
           <DangerZoneSkeleton />
         </aside>
       </div>
 
-      <div className="sticky bottom-0 z-20 -mx-4 border-t border-border/60 bg-background/96 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
+      <div className="sticky bottom-0 z-20 -mx-4 border-t-2 border-border bg-background/96 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
         <Skeleton className="h-10 w-full rounded-[8px]" />
       </div>
     </div>

@@ -126,7 +126,7 @@ export function TransactionsTable<Row extends TransactionTableRow>({
       {rows.length > 0 ? (
         <div className={cn(variant === "full" ? "hidden md:block" : "block")}>
           <Table className={cn(getTableMinWidth(columns, variant), "table-fixed")}>
-            <TableHeader className="border-b border-border/40 bg-background/16">
+            <TableHeader className="border-b-2 border-border bg-secondary/55">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="hover:bg-transparent">
                   {headerGroup.headers.map((header) => {
@@ -175,7 +175,7 @@ export function TransactionsTable<Row extends TransactionTableRow>({
                     role="link"
                     className={cn(
                       "group cursor-pointer",
-                      variant !== "full" && "hover:bg-secondary/18",
+                      variant !== "full" && "hover:bg-[var(--paper-mint)]",
                       selectedRowUuid === row.original.uuid && "bg-primary/10"
                     )}
                     onClick={(event) => {
@@ -268,8 +268,8 @@ export function TransactionsTable<Row extends TransactionTableRow>({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[8px] border border-border/45 bg-background/10",
-        variant === "embedded" && "bg-[linear-gradient(180deg,rgba(10,17,14,0.62),rgba(8,13,11,0.76))]",
+        "overflow-hidden rounded-[8px] border-2 border-border bg-[#fffaf0]",
+        variant === "embedded" && "bg-[#fffaf0]",
         className
       )}
     >
@@ -357,7 +357,7 @@ function renderDefaultCell(
         <div
           className={cn(
             "font-medium",
-            row.status === "uncategorized" ? "text-accent" : "text-secondary-foreground"
+            row.status === "uncategorized" ? "text-destructive" : "text-secondary-foreground"
           )}
         >
           {row.status === "uncategorized" ? "Needs review" : "Set"}
@@ -370,10 +370,10 @@ export function CategoryBadge({ value }: { value: string | null }) {
   return (
     <span
       className={cn(
-        "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
+        "inline-flex min-h-11 max-w-full items-center rounded-[999px] border-2 border-border px-3 text-sm font-bold",
         value
-          ? "border-primary/20 bg-primary/10 text-primary"
-          : "border-accent/30 bg-[rgba(41,36,18,0.78)] text-accent"
+          ? "bg-primary/35 text-foreground"
+          : "bg-[#fff1bd] text-foreground"
       )}
     >
       <span className="truncate">{value ?? "Uncategorized"}</span>

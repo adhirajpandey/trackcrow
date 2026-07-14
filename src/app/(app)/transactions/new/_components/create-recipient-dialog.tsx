@@ -20,7 +20,7 @@ import type {
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 
 const inputClassName =
-  "min-h-11 w-full rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
+  "min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 
 export function CreateRecipientDialog({
   open,
@@ -120,7 +120,7 @@ export function CreateRecipientDialog({
           </label>
 
           {conflict ? (
-            <div className="mt-4 rounded-[8px] border border-accent/35 bg-accent/10 p-4">
+            <div className="mt-4 rounded-[8px] border-2 border-border bg-[#fff1bd] p-4">
               <p className="text-sm font-semibold text-foreground">
                 A matching recipient exists
               </p>
