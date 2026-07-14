@@ -32,10 +32,10 @@ const navigation = [
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
   { href: "/recipients", label: "Recipients", icon: Users },
   {
-    href: "/transactions?review=queue&status=uncategorized",
-    id: "review-queue",
+    href: "#review-queue",
     label: "Review queue",
     icon: ClipboardList,
+    disabled: true,
   },
   { href: "#rules", label: "Rules", icon: ScrollText, disabled: true },
 ];
@@ -96,7 +96,6 @@ export function AppShell({
                   searchParams={searchParams}
                   user={user}
                   onNavigate={() => setIsOpen(false)}
-                  compactBrand
                 />
               </div>
             </aside>
@@ -134,71 +133,40 @@ function ShellSidebarContent({
   searchParams,
   user,
   onNavigate,
-  compactBrand = false,
 }: {
   pathname: string;
   searchParams: ReturnType<typeof useSearchParams>;
   user: AppShellUser;
   onNavigate?: () => void;
-  compactBrand?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <SidebarBrand compact={compactBrand} />
+      <SidebarBrand />
 
-      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
         <ShellNav pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} />
       </div>
 
-      <SidebarFooter user={user} onNavigate={onNavigate} />
+      <SidebarFooter user={user} />
     </div>
   );
 }
 
-function SidebarBrand({ compact = false }: { compact?: boolean }) {
-  const logoClassName = compact
-    ? "h-[64px] w-[64px] rounded-[18px] border-[#9fe8be]/60 shadow-[0_0_0_1px_rgba(186,244,211,0.16),0_0_18px_rgba(104,211,145,0.24)]"
-    : "h-[52px] w-[52px] rounded-[15px] border-[#9fe8be]/55 shadow-[0_0_0_1px_rgba(186,244,211,0.13),0_0_14px_rgba(104,211,145,0.16)]";
-  const wordmarkClassName = compact
-    ? "text-[1.02rem] tracking-[0.26em]"
-    : "text-[0.84rem] tracking-[0.16em]";
-  const subtitleClassName = compact
-    ? "mt-1.5 text-[0.84rem] leading-[1.3]"
-    : "mt-1 text-[0.74rem] leading-[1.2]";
-  const taglineClassName = compact
-    ? "mt-2 whitespace-nowrap text-[0.82rem] leading-5"
-    : "mt-1.5 whitespace-nowrap text-[0.67rem] leading-4";
-
+function SidebarBrand() {
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-[10px] border-2 border-border bg-[var(--paper-mint)] px-4 py-3.5 shadow-[3px_4px_0_var(--foreground)]",
-        !compact && "px-3.5 py-3"
-      )}
-    >
-      <div className={cn("relative flex items-center", compact ? "gap-3.5" : "gap-2.5")}>
+    <div className="border-b border-border/35 px-1 pb-5 pt-0.5">
+      <div className="flex items-center gap-3">
         <BrandMark
           size="compact"
           showText={false}
-          markClassName={logoClassName}
+          markClassName="h-11 w-11 rounded-[12px] border shadow-none"
         />
-        <div className="min-w-0 flex-1 self-center">
-          <p
-            className={cn(
-              "font-extrabold uppercase leading-none tracking-[0.1em] text-foreground",
-              compact ? "truncate" : "pr-1",
-              wordmarkClassName
-            )}
-          >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-black uppercase leading-none tracking-[0.08em] text-foreground">
             TrackCrow
           </p>
-          <p className={cn("font-semibold text-secondary-foreground", subtitleClassName)}>
-            AI-powered expense tracking
-          </p>
-          <p className={cn("font-medium text-[#238658]", taglineClassName)}>
-            Track <span className={compact ? "px-1.5 text-[#238658]/40" : "px-1 text-[#238658]/40"}>|</span>{" "}
-            Review <span className={compact ? "px-1.5 text-[#238658]/40" : "px-1 text-[#238658]/40"}>|</span>{" "}
-            Control
+          <p className="mt-1.5 truncate text-[0.78rem] font-semibold leading-tight text-secondary-foreground">
+            Spending, made clear.
           </p>
         </div>
       </div>
@@ -206,27 +174,15 @@ function SidebarBrand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function SidebarFooter({
-  user,
-  onNavigate,
-}: {
-  user: AppShellUser;
-  onNavigate?: () => void;
-}) {
+function SidebarFooter({ user }: { user: AppShellUser }) {
   return (
     <div className="mt-4 border-t border-border/45 pb-[env(safe-area-inset-bottom)] pt-4">
-      <ProfileCard user={user} onNavigate={onNavigate} />
+      <ProfileCard user={user} />
     </div>
   );
 }
 
-function ProfileCard({
-  user,
-  onNavigate,
-}: {
-  user: AppShellUser;
-  onNavigate?: () => void;
-}) {
+function ProfileCard({ user }: { user: AppShellUser }) {
   return (
     <div className="rounded-[10px] border-2 border-border bg-card p-3.5 shadow-[3px_4px_0_var(--foreground)]">
       <div className="flex items-center gap-3">
@@ -240,14 +196,13 @@ function ProfileCard({
       </div>
       <div className="mt-3.5 h-px bg-border/25" />
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link
-          href="/settings"
-          onClick={onNavigate}
-          className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-border bg-[var(--paper-mint)] px-3 text-sm font-bold text-foreground transition-colors hover:bg-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <div
+          aria-disabled="true"
+          className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-border/25 bg-transparent px-3 text-sm font-bold text-secondary-foreground/55"
         >
-          <Settings className="h-3.5 w-3.5 text-primary" />
+          <Settings className="h-3.5 w-3.5 text-secondary-foreground/45" />
           Settings
-        </Link>
+        </div>
         <Button
           type="button"
           variant="ghost"
@@ -276,11 +231,11 @@ function ShellNav({
   const review = searchParams.get("review");
 
   return (
-    <nav className="mt-5 space-y-1">
+    <nav className="space-y-1">
       {navigation.map((item) => {
         const Icon = item.icon;
         const active =
-          !item.disabled && isNavigationItemActive(item.href, pathname, review, item.id);
+          !item.disabled && isNavigationItemActive(item.href, pathname, review);
         const itemClassName = cn(
           "group relative flex min-h-11 items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-bold transition-[background-color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           active
@@ -341,13 +296,8 @@ function ShellNav({
 function isNavigationItemActive(
   href: string,
   pathname: string,
-  review: string | null,
-  itemId?: string
+  review: string | null
 ) {
-  if (itemId === "review-queue") {
-    return pathname === "/transactions" && review === "queue";
-  }
-
   if (href === "/transactions") {
     return (
       (pathname === href || pathname.startsWith(`${href}/`)) &&
