@@ -182,6 +182,12 @@ def build_page_captures() -> dict[str, PageCapture]:
       output_slug="transactions",
       heading="Transactions",
     ),
+    "transaction-new": PageCapture(
+      alias="transaction-new",
+      path="/transactions/new",
+      output_slug="transaction-new",
+      heading="Add Transaction",
+    ),
     "recipients": PageCapture(
       alias="recipients",
       path="/recipients",
@@ -199,6 +205,12 @@ def build_page_captures() -> dict[str, PageCapture]:
       path=f"/recipients/{recipient_uuid}",
       output_slug="recipient",
       heading="Recipient detail",
+    ),
+    "settings": PageCapture(
+      alias="settings",
+      path="/settings",
+      output_slug="settings",
+      heading="Settings",
     ),
   }
 
