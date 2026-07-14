@@ -330,28 +330,18 @@ export function FilterPanelSkeleton({
         : "lg:grid-cols-5";
 
   return (
-    <section className="rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5">
-      <div
-        className={cn(
-          "grid gap-3 md:grid-cols-2",
-          gridClassName
-        )}
-      >
-        {Array.from({ length: controlCount }).map((_, index) => (
-          <div key={index} className={cn("space-y-2", controlClassNames?.[index])}>
-            {index === controlCount - 1 && controlClassNames ? null : (
-              <Skeleton className="h-4 w-24 rounded-[8px]" />
+    <div className={cn("grid gap-3 md:grid-cols-2", gridClassName)}>
+      {Array.from({ length: controlCount }).map((_, index) => (
+        <div key={index} className={controlClassNames?.[index]}>
+          <Skeleton
+            className={cn(
+              "h-12 w-full rounded-[8px]",
+              index === controlCount - 1 && controlClassNames && "w-12"
             )}
-            <Skeleton
-              className={cn(
-                "h-11 rounded-[8px]",
-                index === controlCount - 1 && controlClassNames && "h-12 w-12"
-              )}
-            />
-          </div>
-        ))}
-      </div>
-    </section>
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -283,7 +283,7 @@ export function RecipientsPageView({
         <MobileFilterChips items={mobileFilterItems} className="mt-3" />
       </section>
 
-      <section className="hidden rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5 lg:block">
+      <section className="hidden lg:block">
         <RecipientsFilterControls filters={data.filters} />
       </section>
 

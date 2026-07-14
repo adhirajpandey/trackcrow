@@ -30,9 +30,9 @@ export default function RecipientsLoading() {
 
       <MobileSearchSurfaceSkeleton />
 
-      <section className="hidden rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5 lg:block">
+      <div className="hidden lg:block">
         <FilterPanelSkeleton controlCount={1} desktopBreakpoint="lg" />
-      </section>
+      </div>
 
       <DataTableShell>
         <div className="grid gap-3 p-4 lg:hidden">
