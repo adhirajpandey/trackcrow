@@ -7,10 +7,9 @@ import { updateTransactionsUrl } from "@/features/transactions/url-state";
 
 import { buildTransactionsRangeHref } from "./transactions-view-model";
 import {
-  buildDashboardTimeframeTriggerLabel,
   quickDashboardRanges,
   secondaryDashboardRanges,
-} from "@/app/(app)/dashboard/_components/dashboard-view-model";
+} from "@/features/dashboard/timeframe-options";
 
 function persistRange(range: TransactionsControlState["range"]) {
   document.cookie = `${dashboardRangeCookieName}=${range}; path=/; max-age=31536000; samesite=lax`;
@@ -31,16 +30,11 @@ export function TransactionsTimeframePicker({
       buildHref={(range, startDate, endDate) =>
         buildTransactionsRangeHref(filters, range, startDate, endDate)
       }
-      buildTriggerLabel={buildDashboardTimeframeTriggerLabel}
       onNavigateHref={(href) => updateTransactionsUrl(href, "replace")}
       persistSelection={persistRange}
       showQuickRanges
-      showSelectedLabelInTrigger={false}
-      selectedLabel={filters.rangeLabel}
       idPrefix="transactions"
       menuClassName="min-w-[240px]"
-      autoApplyCustomRange
-      showCustomApplyButton={false}
       renderMenuInPortal
     />
   );

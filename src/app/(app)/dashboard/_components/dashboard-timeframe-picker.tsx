@@ -2,17 +2,16 @@
 
 import { useRouter } from "next/navigation";
 
-import { MobileTimePeriodRow, mobileDashboardSecondaryRanges } from "@/components/product/mobile/mobile-time-period-row";
+import { MobileTimePeriodRow } from "@/components/product/mobile/mobile-time-period-row";
 import {
   dashboardRangeCookieName,
   type DashboardRangeValue,
 } from "@/features/dashboard/query-state";
 import { TimeframePicker } from "@/components/product/timeframe-picker";
 import {
-  buildDashboardTimeframeTriggerLabel,
   quickDashboardRanges,
   secondaryDashboardRanges,
-} from "./dashboard-view-model";
+} from "@/features/dashboard/timeframe-options";
 
 function persistRange(range: DashboardRangeValue) {
   document.cookie = `${dashboardRangeCookieName}=${range}; path=/; max-age=31536000; samesite=lax`;
@@ -30,8 +29,12 @@ function buildDashboardUrl(range: DashboardRangeValue, startDate?: string, endDa
 
 export function DashboardMobileTimePeriodRow({
   value,
+  startDate,
+  endDate,
 }: {
   value: DashboardRangeValue;
+  startDate: string | null;
+  endDate: string | null;
 }) {
   const router = useRouter();
 
@@ -39,10 +42,12 @@ export function DashboardMobileTimePeriodRow({
     <MobileTimePeriodRow
       value={value}
       quickRanges={quickDashboardRanges}
-      secondaryRanges={mobileDashboardSecondaryRanges}
-      onSelect={(range) => {
+      secondaryRanges={secondaryDashboardRanges}
+      startDate={startDate}
+      endDate={endDate}
+      onSelect={(range, nextStartDate, nextEndDate) => {
         persistRange(range);
-        router.push(buildDashboardUrl(range));
+        router.push(buildDashboardUrl(range, nextStartDate, nextEndDate));
       }}
       renderMenuInPortal
     />
@@ -66,10 +71,8 @@ export function DashboardTimeframePicker({
       quickRanges={quickDashboardRanges}
       secondaryRanges={secondaryDashboardRanges}
       buildHref={buildDashboardUrl}
-      buildTriggerLabel={buildDashboardTimeframeTriggerLabel}
       persistSelection={persistRange}
       showQuickRanges
-      showSelectedLabelInTrigger={false}
       idPrefix="dashboard"
       renderMenuInPortal
     />

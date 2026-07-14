@@ -144,7 +144,9 @@ export function TransactionsPageView({
   );
   const mobileApplyDisabled =
     mobileDraftFilters.range === "custom" &&
-    (!mobileDraftFilters.startDate || !mobileDraftFilters.endDate);
+    (!mobileDraftFilters.startDate ||
+      !mobileDraftFilters.endDate ||
+      mobileDraftFilters.startDate > mobileDraftFilters.endDate);
 
   function persistRange(range: typeof mobileDraftFilters.range) {
     document.cookie = `${dashboardRangeCookieName}=${range}; path=/; max-age=31536000; samesite=lax`;
@@ -308,7 +310,7 @@ export function TransactionsPageView({
         </div>
       </section>
 
-      <section className="hidden rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5 lg:block">
+      <section className="hidden lg:block">
         <TransactionsFilterControls
           filters={data.filters}
           categories={data.categories}

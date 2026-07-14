@@ -6,6 +6,11 @@ import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
 import type { DashboardRangeValue } from "@/features/dashboard/query-state";
+import {
+  getTimeframeTriggerLabel,
+  isSecondaryTimeframe,
+  isValidCustomRange,
+} from "@/features/dashboard/timeframe-options";
 import { cn } from "@/lib/utils";
 
 export type MobileTimePeriodOption = {
@@ -17,31 +22,29 @@ export type MobileTimePeriodRowProps = {
   value: DashboardRangeValue;
   quickRanges: MobileTimePeriodOption[];
   secondaryRanges: MobileTimePeriodOption[];
-  onSelect: (range: DashboardRangeValue) => void;
+  startDate?: string | null;
+  endDate?: string | null;
+  onSelect: (range: DashboardRangeValue, startDate?: string, endDate?: string) => void;
+  customRangeBehavior?: "popover" | "select";
   renderMenuInPortal?: boolean;
   menuPortalZIndex?: number;
 };
-
-export const mobileDashboardSecondaryRanges = [
-  { value: "this-month", label: "This month" },
-  { value: "last-month", label: "Last month" },
-  { value: "last-3-months", label: "Last 3 months" },
-  { value: "last-6-months", label: "Last 6 months" },
-  { value: "all-time", label: "All time" },
-] satisfies MobileTimePeriodOption[];
 
 export function MobileTimePeriodRow({
   value,
   quickRanges,
   secondaryRanges,
+  startDate,
+  endDate,
   onSelect,
+  customRangeBehavior = "popover",
   renderMenuInPortal = true,
   menuPortalZIndex = 80,
 }: MobileTimePeriodRowProps) {
-  const moreRangeActive = secondaryRanges.some((range) => range.value === value);
+  const moreRangeActive = isSecondaryTimeframe(value);
 
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="flex flex-wrap gap-2">
       {quickRanges.map((range) => {
         const active = value === range.value;
 
@@ -52,7 +55,7 @@ export function MobileTimePeriodRow({
             aria-pressed={active}
             onClick={() => onSelect(range.value)}
             className={cn(
-              "min-h-11 rounded-[8px] border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "min-h-11 min-w-[3.25rem] flex-1 basis-[3.25rem] rounded-[8px] border px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "border-primary/70 bg-primary text-primary-foreground shadow-[0_0_0_1px_rgba(104,211,145,0.18)]"
                 : "border-border/55 bg-background/10 text-secondary-foreground hover:bg-background/16 hover:text-foreground"
@@ -65,7 +68,10 @@ export function MobileTimePeriodRow({
       <MoreTimePeriodsMenu
         value={value}
         options={secondaryRanges}
+        startDate={startDate}
+        endDate={endDate}
         onSelect={onSelect}
+        customRangeBehavior={customRangeBehavior}
         triggerActive={moreRangeActive}
         renderInPortal={renderMenuInPortal}
         portalZIndex={menuPortalZIndex}
@@ -77,15 +83,21 @@ export function MobileTimePeriodRow({
 function MoreTimePeriodsMenu({
   value,
   options,
+  startDate,
+  endDate,
   onSelect,
   triggerActive,
+  customRangeBehavior,
   renderInPortal,
   portalZIndex,
 }: {
   value: DashboardRangeValue;
   options: MobileTimePeriodOption[];
-  onSelect: (range: DashboardRangeValue) => void;
+  startDate?: string | null;
+  endDate?: string | null;
+  onSelect: (range: DashboardRangeValue, startDate?: string, endDate?: string) => void;
   triggerActive: boolean;
+  customRangeBehavior: "popover" | "select";
   renderInPortal: boolean;
   portalZIndex: number;
 }) {
@@ -94,6 +106,11 @@ function MoreTimePeriodsMenu({
   const menuPanelRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties | undefined>(undefined);
+  const [draftRange, setDraftRange] = useState(value);
+  const [customStartDate, setCustomStartDate] = useState(startDate ?? "");
+  const [customEndDate, setCustomEndDate] = useState(endDate ?? "");
+  const [customError, setCustomError] = useState<string | null>(null);
+  const showingCustomForm = customRangeBehavior === "popover" && draftRange === "custom";
 
   useEffect(() => {
     if (!isOpen || !renderInPortal) {
@@ -106,12 +123,12 @@ function MoreTimePeriodsMenu({
         return;
       }
 
-      const minWidth = 216;
+      const minWidth = Math.min(showingCustomForm ? 342 : 216, window.innerWidth - 24);
       const left = Math.max(12, Math.min(rect.right - minWidth, window.innerWidth - minWidth - 12));
 
       setMenuStyle({
         position: "fixed",
-        top: rect.bottom + 8,
+        top: rect.bottom - 1,
         left,
         width: minWidth,
         minWidth,
@@ -127,7 +144,7 @@ function MoreTimePeriodsMenu({
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [isOpen, portalZIndex, renderInPortal]);
+  }, [isOpen, portalZIndex, renderInPortal, showingCustomForm]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -137,12 +154,21 @@ function MoreTimePeriodsMenu({
 
       if (!clickedInsideTrigger && !clickedInsideMenu) {
         setIsOpen(false);
+        setDraftRange(value);
+        setCustomStartDate(startDate ?? "");
+        setCustomEndDate(endDate ?? "");
+        setCustomError(null);
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setDraftRange(value);
+        setCustomStartDate(startDate ?? "");
+        setCustomEndDate(endDate ?? "");
+        setCustomError(null);
+        window.requestAnimationFrame(() => triggerRef.current?.focus());
       }
     }
 
@@ -155,15 +181,16 @@ function MoreTimePeriodsMenu({
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [endDate, isOpen, startDate, value]);
 
   const menuContent = (
     <div
       ref={menuPanelRef}
-      role="listbox"
+      role="dialog"
+      aria-label="Choose timeframe"
       style={renderInPortal ? menuStyle : undefined}
       className={cn(
-        "overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]",
+        "overflow-hidden rounded-[10px] rounded-tr-none border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]",
         renderInPortal ? "" : "absolute right-0 top-[calc(100%+0.5rem)] z-20 w-[13.5rem] min-w-[13.5rem]"
       )}
     >
@@ -172,20 +199,25 @@ function MoreTimePeriodsMenu({
       </div>
       <div className="scrollbar-none max-h-56 overflow-y-auto py-1">
         {options.map((option) => {
-          const selected = value === option.value;
+          const selected = draftRange === option.value;
 
           return (
             <button
               key={option.value}
               type="button"
-              role="option"
-              aria-selected={selected}
+              aria-pressed={selected}
               onClick={() => {
+                setDraftRange(option.value);
+                setCustomError(null);
+                if (option.value === "custom" && customRangeBehavior === "popover") {
+                  return;
+                }
+
                 setIsOpen(false);
                 onSelect(option.value);
               }}
               className={cn(
-                "flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:bg-secondary/20",
+                "flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                 selected
                   ? "bg-primary/12 text-primary hover:bg-primary/16"
                   : "text-foreground hover:bg-secondary/20"
@@ -197,23 +229,103 @@ function MoreTimePeriodsMenu({
           );
         })}
       </div>
+      {showingCustomForm ? (
+        <div className="space-y-3 border-t-2 border-dashed border-border/45 p-3">
+          <label className="grid gap-1.5 text-xs font-semibold text-secondary-foreground">
+            Start date
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(event) => {
+                setCustomStartDate(event.target.value);
+                setCustomError(null);
+              }}
+              className="min-h-11 rounded-[8px] border-2 border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </label>
+          <label className="grid gap-1.5 text-xs font-semibold text-secondary-foreground">
+            End date
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(event) => {
+                setCustomEndDate(event.target.value);
+                setCustomError(null);
+              }}
+              className="min-h-11 rounded-[8px] border-2 border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </label>
+          {customError ? (
+            <p role="alert" className="text-xs font-semibold text-destructive">
+              {customError}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setDraftRange(value);
+                setCustomStartDate(startDate ?? "");
+                setCustomEndDate(endDate ?? "");
+                setCustomError(null);
+                window.requestAnimationFrame(() => triggerRef.current?.focus());
+              }}
+              className="min-h-11 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-bold text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!customStartDate || !customEndDate}
+              onClick={() => {
+                if (!isValidCustomRange(customStartDate, customEndDate)) {
+                  setCustomError("Start date must be on or before end date.");
+                  return;
+                }
+                setIsOpen(false);
+                onSelect("custom", customStartDate, customEndDate);
+              }}
+              className="min-h-11 rounded-[8px] border-2 border-primary/50 bg-primary px-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 
   return (
-    <div ref={menuRef} className="relative min-w-0">
+    <div ref={menuRef} className="relative min-w-[6.75rem] flex-[1.5] basis-[6.75rem]">
       <button
         ref={triggerRef}
         type="button"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          if (isOpen) {
+            setDraftRange(value);
+            setCustomStartDate(startDate ?? "");
+            setCustomEndDate(endDate ?? "");
+            setCustomError(null);
+          } else {
+            setDraftRange(value);
+            setCustomStartDate(startDate ?? "");
+            setCustomEndDate(endDate ?? "");
+            setCustomError(null);
+          }
+          setIsOpen((current) => !current);
+        }}
         className={cn(
-          "inline-flex min-h-11 w-full items-center justify-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3 text-sm font-semibold text-foreground transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-border/50 bg-background/16 px-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          isOpen && "rounded-b-none",
           (isOpen || triggerActive) && "border-primary/70 bg-primary/14 text-primary"
         )}
       >
-        <span className="truncate text-center">More</span>
+        <span className="truncate text-center">
+          {triggerActive ? getTimeframeTriggerLabel(value) : "More"}
+        </span>
         <ChevronDown className="hidden h-4 w-4 shrink-0 transition-transform" aria-hidden="true" />
       </button>
 

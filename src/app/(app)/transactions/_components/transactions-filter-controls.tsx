@@ -5,15 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 
+import type { CategoryOption } from "@/common/types";
+import { MobileTimePeriodRow } from "@/components/product/mobile/mobile-time-period-row";
+import { getDashboardRangeState } from "@/features/dashboard/query-state";
 import {
   quickDashboardRanges,
-} from "@/app/(app)/dashboard/_components/dashboard-view-model";
-import type { CategoryOption } from "@/common/types";
-import {
-  MobileTimePeriodRow,
-  mobileDashboardSecondaryRanges,
-} from "@/components/product/mobile/mobile-time-period-row";
-import { getDashboardRangeState } from "@/features/dashboard/query-state";
+  secondaryDashboardRanges,
+} from "@/features/dashboard/timeframe-options";
 import type { TransactionsControlState } from "@/features/transactions/types";
 import { updateTransactionsUrl } from "@/features/transactions/url-state";
 import { cn } from "@/lib/utils";
@@ -286,11 +284,50 @@ export function TransactionsFilterControls({
           <MobileTimePeriodRow
             value={filters.range}
             quickRanges={quickDashboardRanges}
-            secondaryRanges={mobileDashboardSecondaryRanges}
-            onSelect={updateDraftRange}
+            secondaryRanges={secondaryDashboardRanges}
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            onSelect={(range, startDate, endDate) =>
+              updateDraftRange(range, {
+                ...(startDate !== undefined ? { startDate } : {}),
+                ...(endDate !== undefined ? { endDate } : {}),
+              })
+            }
+            customRangeBehavior="select"
             renderMenuInPortal={renderMenusInPortal}
             menuPortalZIndex={menuPortalZIndex}
           />
+          {filters.range === "custom" ? (
+            <div className="grid gap-3 rounded-[8px] border-2 border-dashed border-border/45 bg-background/12 p-3">
+              <label className="grid gap-1.5 text-xs font-semibold text-secondary-foreground">
+                Start date
+                <input
+                  type="date"
+                  value={filters.startDate ?? ""}
+                  onChange={(event) =>
+                    updateDraftRange("custom", { startDate: event.target.value || null })
+                  }
+                  className="min-h-11 rounded-[8px] border-2 border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </label>
+              <label className="grid gap-1.5 text-xs font-semibold text-secondary-foreground">
+                End date
+                <input
+                  type="date"
+                  value={filters.endDate ?? ""}
+                  onChange={(event) =>
+                    updateDraftRange("custom", { endDate: event.target.value || null })
+                  }
+                  className="min-h-11 rounded-[8px] border-2 border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </label>
+              {filters.startDate && filters.endDate && filters.startDate > filters.endDate ? (
+                <p role="alert" className="text-xs font-semibold text-destructive">
+                  Start date must be on or before end date.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </FilterSection>
 
         <FilterSection number="2" title="Category">

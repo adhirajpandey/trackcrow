@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowRight,
   BarChart3,
-  Calendar,
   CheckCircle2,
   Clock3,
   FolderTree,
@@ -20,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
 
 import { DashboardBottomSection } from "./dashboard-bottom-section";
+import { DashboardCardInfo } from "./dashboard-card-info";
 import {
   DashboardMobileTimePeriodRow,
   DashboardTimeframePicker,
@@ -28,8 +28,8 @@ import {
   buildChartDisplayPeriods,
   buildChartBuckets,
   buildChartTicks,
+  buildComparisonPresentation,
   buildMostFrequentRecipient,
-  buildMetricComparisons,
   buildReviewQueueCard,
   buildTransactionsHref,
   buildUncategorizedTransactionsHref,
@@ -37,6 +37,7 @@ import {
   chartLegendItems,
   formatCompactCurrency,
   formatCurrency,
+  formatDashboardDateRange,
   formatDashboardRangeLabel,
   formatNumber,
   formatPeriod,
@@ -67,11 +68,20 @@ import {
   dashboardTopCardValueClassName,
 } from "./dashboard-style";
 
-const chartLabelBandRem = 2.8;
-const chartTooltipBandRem = 3.5;
-const chartHeightClass = "h-[22rem] sm:h-[24rem] xl:h-[26rem]";
+const chartHeightClass = "h-[15.5rem] sm:h-[24rem] xl:h-[26rem]";
 const chartPlotInsetTopRem = 0.85;
 const chartTooltipWidthRem = 13.5;
+
+const dashboardCardDescriptions = {
+  reviewQueue:
+    "Transactions that need a category or could be handled by a reusable rule.",
+  totalSpent:
+    "Booked spending and transaction count for the selected timeframe, compared with the matching prior period.",
+  biggestCategory:
+    "The highest-spend categorised category for the selected timeframe. Uncategorised transactions are excluded.",
+  topRecipient:
+    "The recipient paid most often in the selected timeframe, including its total amount and rule recommendation.",
+} as const;
 
 function getChartTrackOffset(ratio: number) {
   return `calc(${ratio * 100}% - ${ratio * chartPlotInsetTopRem}rem)`;
@@ -120,14 +130,8 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
   const reviewQueue = buildReviewQueueCard({
     summary: data.summary,
     importHealth: data.importHealth,
-    largeTransactionCount: data.largeTransactionCount,
     recipients: data.frequentRecipients,
     range: data.range,
-  });
-  const metricComparisons = buildMetricComparisons({
-    summary: data.summary,
-    comparison: data.comparison,
-    categories: data.spendingByCategory,
   });
   const changeSummary = buildWhatChangedSummary({
     summary: data.summary,
@@ -135,6 +139,11 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
     periods: data.spendingByPeriod,
   });
   const displayRange = formatDashboardRangeLabel(data.range);
+  const displayDateRange = formatDashboardDateRange(data.range);
+  const spendComparison = buildComparisonPresentation(
+    data.summary.totalSpend,
+    data.comparison
+  );
   const chartBuckets = buildChartBuckets({
     periods: chartDisplayPeriods,
     peakPeriod,
@@ -152,26 +161,20 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
       <MobilePageHeader
         eyebrow="Spend operations"
         title="Dashboard"
-        meta={
-          <>
-            <span className="font-medium text-foreground">{displayRange}</span>
-            <Calendar className="h-3.5 w-3.5 text-secondary-foreground/80" />
-          </>
-        }
+        meta={<span className="font-medium text-foreground">{displayRange}</span>}
       />
       <div className="lg:hidden">
-        <DashboardMobileTimePeriodRow value={data.range.value} />
+        <DashboardMobileTimePeriodRow
+          value={data.range.value}
+          startDate={data.range.startDate}
+          endDate={data.range.endDate}
+        />
       </div>
       <div className="hidden lg:block">
         <AppPageHeader
           eyebrow="Spend operations"
           title="Dashboard"
-          meta={
-            <>
-              <span className="font-medium text-foreground">{displayRange}</span>
-              <Calendar className="h-3.5 w-3.5 text-secondary-foreground/80" />
-            </>
-          }
+          meta={<span className="font-medium text-foreground">{displayRange}</span>}
           actions={
             <DashboardTimeframePicker
               value={data.range.value}
@@ -188,20 +191,18 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         </section>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-        <div className="dashboard-reveal order-1">
+      <section className="grid auto-rows-fr items-stretch gap-3 md:grid-cols-2 2xl:grid-cols-4">
+        <div className="dashboard-reveal order-1 h-full">
           <ReviewQueueHero card={reviewQueue} />
         </div>
-        <div className="dashboard-reveal order-2">
+        <div className="dashboard-reveal order-2 h-full">
           <MetricCard
             href={buildTransactionsHref(rangeParams)}
-            label="Total spent"
+            label="TOTAL SPENT"
+            description={dashboardCardDescriptions.totalSpent}
             value={formatCompactCurrency(data.summary.totalSpend, { style: "kpi" })}
-            emphasis={metricComparisons.totalSpend}
-            emphasisTone={getSpendComparisonTone(
-              data.summary.totalSpend,
-              data.comparison?.summary.totalSpend
-            )}
+            emphasis={spendComparison.full}
+            emphasisTone={spendComparison.tone}
             details={[
               { label: "Booked spend", value: formatCurrency(data.summary.totalSpend) },
               {
@@ -213,7 +214,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             icon={<Wallet className="h-4.5 w-4.5" />}
           />
         </div>
-        <div className="dashboard-reveal order-3">
+        <div className="dashboard-reveal order-3 h-full">
           <TopCategoryCard
             category={topCategoryInsight}
             emptyHref={
@@ -231,7 +232,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             }
           />
         </div>
-        <div className="dashboard-reveal order-4">
+        <div className="dashboard-reveal order-4 h-full">
           <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
         </div>
       </section>
@@ -247,7 +248,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
           chartBuckets={chartBuckets}
           hasTransactions={hasTransactions}
           changeSummary={changeSummary}
-          displayRange={displayRange}
+          displayRange={displayDateRange}
         />
       </section>
 
@@ -263,6 +264,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
 function MetricCard({
   href,
   label,
+  description,
   value,
   emphasis,
   emphasisTone,
@@ -272,16 +274,17 @@ function MetricCard({
 }: {
   href: string;
   label: string;
+  description: string;
   value: string;
   emphasis: string;
-  emphasisTone?: "default" | "positive" | "negative";
+  emphasisTone?: "neutral" | "increase" | "decrease";
   details: Array<{ label: string; value: string }>;
   actionLabel?: string;
   icon: ReactNode;
 }) {
   return (
     <TopDashboardCardFrame tone="mint">
-      <TopDashboardCardHeader label={label} icon={icon} />
+      <TopDashboardCardHeader label={label} description={description} icon={icon} />
       <TopDashboardCardBody
         lead={
           <DashboardTopCardMetric
@@ -310,7 +313,8 @@ function MostFrequentRecipientCard({
   return (
     <TopDashboardCardFrame tone="lilac">
       <TopDashboardCardHeader
-        label="Most frequent recipient"
+        label="TOP RECIPIENT"
+        description={dashboardCardDescriptions.topRecipient}
         icon={<UserRound className="h-4 w-4" />}
       />
       {recipient ? (
@@ -333,6 +337,8 @@ function MostFrequentRecipientCard({
                 {
                   label: "Recommendation",
                   value: recipient.helper,
+                  mobileValue:
+                    recipient.action === "Create rule" ? "Rule candidate" : undefined,
                 },
               ]}
             />
@@ -367,13 +373,13 @@ function ReviewQueueHero({
   card: ReturnType<typeof buildReviewQueueCard>;
 }) {
   const needsCategoryTask = card.tasks.find((task) => task.label === "Need category");
-  const largeTransactionsTask = card.tasks.find((task) => task.label === "Large transactions");
   const ruleMatchesTask = card.tasks.find((task) => task.label === "Possible rule matches");
 
   return (
     <TopDashboardCardFrame tone="attention">
       <TopDashboardCardHeader
-        label="Needs review"
+        label="REVIEW QUEUE"
+        description={dashboardCardDescriptions.reviewQueue}
         labelTone="accent"
         icon={
           card.hasItems ? (
@@ -405,10 +411,6 @@ function ReviewQueueHero({
               {
                 label: "Need category",
                 value: formatNumber(needsCategoryTask?.count ?? 0),
-              },
-              {
-                label: "Large transactions",
-                value: formatNumber(largeTransactionsTask?.count ?? 0),
               },
               {
                 label: "Possible rules",
@@ -449,7 +451,8 @@ function TopCategoryCard({
   return (
     <TopDashboardCardFrame tone="blush">
       <TopDashboardCardHeader
-        label="Top known category"
+        label="BIGGEST CATEGORY"
+        description={dashboardCardDescriptions.biggestCategory}
         icon={<FolderTree className="h-4 w-4" />}
       />
       {category ? (
@@ -466,7 +469,7 @@ function TopCategoryCard({
             <TopCardDetailList
               items={[
                 {
-                  label: "Share of known spend",
+                  label: "Share of categorised spend",
                   value: `${category.share}%`,
                 },
                 {
@@ -484,17 +487,17 @@ function TopCategoryCard({
         <TopDashboardCardBody
           lead={
             <DashboardTopCardMetric
-              value="No known category yet"
-              emphasis="Known spend only"
+              value="No categorised spending yet"
+              emphasis="Categorise transactions to reveal this insight."
               entity
             />
           }
           details={
             <p className={dashboardTopCardHelperClassName}>
-              Categorize transactions to surface leaders.
+              Categorise transactions to see your biggest category.
             </p>
           }
-          action={<SecondaryCardAction href={emptyHref} label="Categorize" />}
+          action={<SecondaryCardAction href={emptyHref} label="Categorise" />}
         />
       )}
     </TopDashboardCardFrame>
@@ -524,28 +527,34 @@ function TopDashboardCardFrame({
 
 function TopDashboardCardHeader({
   label,
+  description,
   icon,
   labelTone = "default",
   iconTone = "default",
 }: {
   label: string;
+  description: string;
   icon: ReactNode;
   labelTone?: "default" | "accent";
   iconTone?: "default" | "accent";
 }) {
   return (
     <div className={dashboardTopCardHeaderClassName}>
-      <p
-        className={cn(
-          dashboardTopCardLabelClassName,
-          labelTone === "accent" && "text-destructive"
-        )}
-      >
-        {label}
-      </p>
+      <div className="flex min-w-0 items-center gap-2">
+        <p
+          className={cn(
+            dashboardTopCardLabelClassName,
+            labelTone === "accent" && "text-destructive"
+          )}
+        >
+          {label}
+        </p>
+        <DashboardCardInfo label={label} description={description} />
+      </div>
       <span
         className={cn(
           dashboardMetricIconClassName,
+          "absolute right-0 top-0",
           iconTone === "accent"
             ? "border-border bg-[#fff7d6] text-foreground"
             : "border-border bg-card text-foreground"
@@ -591,11 +600,11 @@ function TopCardDetailList({
   items,
   tone = "default",
 }: {
-  items: Array<{ label: string; value: string }>;
+  items: Array<{ label: string; value: string; mobileValue?: string }>;
   tone?: "default" | "attention";
 }) {
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-1.5 sm:space-y-2">
       {items.map((item) => (
         <div
           key={`${item.label}-${item.value}`}
@@ -610,7 +619,14 @@ function TopCardDetailList({
             {item.label}
           </span>
           <span className="max-w-[16ch] text-right font-medium text-foreground overflow-wrap-anywhere">
-            {item.value}
+            {item.mobileValue ? (
+              <>
+                <span className="sm:hidden">{item.mobileValue}</span>
+                <span className="hidden sm:inline">{item.value}</span>
+              </>
+            ) : (
+              item.value
+            )}
           </span>
         </div>
       ))}
@@ -628,7 +644,14 @@ function DashboardTopCardMetric({
   value: string;
   emphasis?: string;
   valueTone?: "default" | "primary" | "accent";
-  emphasisTone?: "default" | "primary" | "strong" | "muted" | "positive" | "negative";
+  emphasisTone?:
+    | "default"
+    | "primary"
+    | "strong"
+    | "muted"
+    | "neutral"
+    | "increase"
+    | "decrease";
   entity?: boolean;
 }) {
   return (
@@ -651,8 +674,9 @@ function DashboardTopCardMetric({
             emphasisTone === "primary" && "text-primary/90",
             emphasisTone === "strong" && "text-foreground",
             emphasisTone === "muted" && "text-secondary-foreground",
-            emphasisTone === "positive" && "text-destructive",
-            emphasisTone === "negative" && "text-primary"
+            emphasisTone === "neutral" && "text-secondary-foreground",
+            emphasisTone === "increase" && "text-destructive",
+            emphasisTone === "decrease" && "text-primary"
           )}
         >
           {emphasis}
@@ -660,14 +684,6 @@ function DashboardTopCardMetric({
       ) : null}
     </div>
   );
-}
-
-function getSpendComparisonTone(current: number, previous: number | null | undefined) {
-  if (previous === null || previous === undefined || current === previous) {
-    return "default";
-  }
-
-  return current > previous ? "positive" : "negative";
 }
 
 function SecondaryCardAction({
@@ -724,6 +740,19 @@ function SpendingTrendPanel({
 }) {
   const legendByLabel = new Map(chartLegendItems.map((item) => [item.label, item.className]));
   const chartColumnsTemplate = `repeat(${Math.max(chartBuckets.length, 1)}, minmax(0, 1fr))`;
+  const periodsShowingSecondaryLabel = new Set<string>();
+  let lastVisibleSecondaryLabel: string | null = null;
+
+  for (const bucket of chartBuckets) {
+    if (
+      bucket.showLabel &&
+      bucket.label.secondary &&
+      bucket.label.secondary !== lastVisibleSecondaryLabel
+    ) {
+      periodsShowingSecondaryLabel.add(bucket.period);
+      lastVisibleSecondaryLabel = bucket.label.secondary;
+    }
+  }
 
   return (
     <Card className={dashboardPanelClassName}>
@@ -766,7 +795,11 @@ function SpendingTrendPanel({
               tone="info"
               dotClassName={legendByLabel.get("Latest")}
             />
-            <SummaryChip label="Vs previous period" value={changeSummary.value} />
+            <SummaryChip
+              label={changeSummary.title}
+              value={changeSummary.value}
+              tone={changeSummary.tone}
+            />
           </div>
         </div>
       </CardHeader>
@@ -779,18 +812,15 @@ function SpendingTrendPanel({
             helper="Try a different timeframe or import transactions."
           />
         ) : (
-          <div className="rounded-[8px] border-2 border-border bg-[#fffaf0] px-4 py-4 sm:px-5">
+          <div className="rounded-[8px] border-2 border-border bg-[#fffaf0] py-3 pr-2.5 pl-0.5 sm:px-5 sm:py-4">
             <div
               className={cn(
-                "grid min-w-0 grid-cols-[3.15rem_minmax(0,1fr)] gap-2.5 sm:gap-3",
+                "grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)] gap-1 sm:grid-cols-[3.15rem_minmax(0,1fr)] sm:gap-3",
                 chartHeightClass
               )}
             >
               <div
-                className="grid h-full min-h-0"
-                style={{
-                  gridTemplateRows: `${chartTooltipBandRem}rem minmax(0,1fr) ${chartLabelBandRem}rem`,
-                }}
+                className="grid h-full min-h-0 [grid-template-rows:0_minmax(0,1fr)_2.8rem] sm:[grid-template-rows:3.5rem_minmax(0,1fr)_2.8rem]"
               >
                 <div />
                 <div
@@ -811,10 +841,7 @@ function SpendingTrendPanel({
               </div>
 
               <div
-                className="relative grid min-w-0"
-                style={{
-                  gridTemplateRows: `${chartTooltipBandRem}rem minmax(0,1fr) ${chartLabelBandRem}rem`,
-                }}
+                className="relative grid min-w-0 [grid-template-rows:0_minmax(0,1fr)_2.8rem] sm:[grid-template-rows:3.5rem_minmax(0,1fr)_2.8rem]"
               >
                 <div className="min-h-0" />
                 <div
@@ -832,11 +859,15 @@ function SpendingTrendPanel({
                     <div
                       className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-[#2b9b69]/55"
                       style={{ bottom: getChartTrackOffset(averagePeriodSpend / chartMax) }}
-                    />
+                    >
+                      <span className="absolute -top-4 right-0 bg-[#fffaf0] pl-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#237b54]">
+                        Avg
+                      </span>
+                    </div>
                   ) : null}
 
                   <div
-                    className="grid h-full min-w-0 items-end gap-1.5 pr-1 sm:gap-2 sm:pr-2"
+                    className="grid h-full min-w-0 items-end gap-0.5 sm:gap-2 sm:pr-2"
                     style={{ gridTemplateColumns: chartColumnsTemplate }}
                   >
                     {chartBuckets.map((bucket, index) => (
@@ -889,10 +920,10 @@ function SpendingTrendPanel({
                             )}
                           />
                         </span>
-                        <span className="flex h-full w-full items-end rounded-[3px] bg-secondary/75 px-[1px] pb-[1px]">
+                        <span className="flex h-full w-full items-end">
                           <span
                             className={cn(
-                              "w-full rounded-[2px] transition-[background-color,filter,transform] duration-150 group-hover:-translate-y-0.5 group-hover:brightness-110 group-focus-visible:-translate-y-0.5 group-focus-visible:brightness-110",
+                              "mx-auto w-full max-w-5 rounded-t-[3px] transition-[background-color,filter,transform] duration-150 group-hover:-translate-y-0.5 group-hover:brightness-110 group-focus-visible:-translate-y-0.5 group-focus-visible:brightness-110",
                               bucket.isFuture &&
                                 "bg-secondary/22 group-hover:translate-y-0 group-hover:brightness-100 group-focus-visible:translate-y-0 group-focus-visible:brightness-100",
                               bucket.isPlaceholder &&
@@ -915,18 +946,23 @@ function SpendingTrendPanel({
                 </div>
 
                 <div
-                  className="grid min-w-0 gap-1.5 pr-1 sm:gap-2 sm:pr-2"
+                  className="grid min-w-0 gap-0.5 sm:gap-2 sm:pr-2"
                   style={{ gridTemplateColumns: chartColumnsTemplate }}
                 >
-                  {chartBuckets.map((bucket) => (
+                  {chartBuckets.map((bucket, index) => (
                     <div
                       key={`label-${bucket.period}`}
-                      className="flex items-center justify-center px-1 pt-1.5 text-center text-[10px] font-medium leading-[1.15] text-secondary-foreground/85"
+                      className={cn(
+                        "flex items-start justify-center pt-1.5 text-center text-[10px] font-medium leading-[1.15] text-secondary-foreground/85 sm:px-1",
+                        index === 0 && "justify-start text-left",
+                        index === chartBuckets.length - 1 && "justify-end text-right"
+                      )}
                     >
                       {bucket.showLabel ? (
                         <span>
                           <span className="block">{bucket.label.primary}</span>
-                          {bucket.label.secondary ? (
+                          {bucket.label.secondary &&
+                          periodsShowingSecondaryLabel.has(bucket.period) ? (
                             <span className="block text-[9px] text-secondary-foreground">
                               {bucket.label.secondary}
                             </span>
@@ -955,7 +991,7 @@ function SummaryChip({
   label: string;
   value: string;
   helper?: string;
-  tone?: "neutral" | "primary" | "accent" | "info";
+  tone?: "neutral" | "primary" | "accent" | "info" | "increase" | "decrease";
   dotClassName?: string;
 }) {
   return (
@@ -964,7 +1000,9 @@ function SummaryChip({
         "rounded-[8px] border-2 border-border bg-card px-3 py-2",
         tone === "primary" && "bg-[var(--paper-mint)]",
         tone === "accent" && "bg-[#fff4d4]",
-        tone === "info" && "bg-[#edf5ff]"
+        tone === "info" && "bg-[#edf5ff]",
+        tone === "increase" && "bg-[var(--paper-blush)]",
+        tone === "decrease" && "bg-[var(--paper-mint)]"
       )}
     >
       <div className="flex items-center gap-2">
@@ -973,7 +1011,15 @@ function SummaryChip({
           {label}
         </p>
       </div>
-      <p className="mt-1 text-[13px] font-semibold text-foreground tabular-nums">{value}</p>
+      <p
+        className={cn(
+          "mt-1 text-[13px] font-semibold text-foreground tabular-nums",
+          tone === "increase" && "text-destructive",
+          tone === "decrease" && "text-primary"
+        )}
+      >
+        {value}
+      </p>
       {helper ? <p className="mt-0.5 text-[10px] text-secondary-foreground/85">{helper}</p> : null}
     </div>
   );

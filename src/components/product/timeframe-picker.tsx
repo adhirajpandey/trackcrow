@@ -4,9 +4,14 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CalendarRange, ChevronDown } from "lucide-react";
+import { CalendarRange, Check, ChevronDown } from "lucide-react";
 
 import type { DashboardRangeValue } from "@/features/dashboard/query-state";
+import {
+  getTimeframeTriggerLabel,
+  isSecondaryTimeframe,
+  isValidCustomRange,
+} from "@/features/dashboard/timeframe-options";
 import { cn } from "@/lib/utils";
 
 export type TimeframePickerRange = {
@@ -21,17 +26,9 @@ export type TimeframePickerProps = {
   quickRanges: TimeframePickerRange[];
   secondaryRanges: TimeframePickerRange[];
   buildHref: (range: DashboardRangeValue, startDate?: string, endDate?: string) => string;
-  buildTriggerLabel: (input: {
-    value: DashboardRangeValue;
-    showQuickRanges: boolean;
-    showSelectedLabelInTrigger: boolean;
-    selectedLabel?: string;
-  }) => string;
   onNavigateHref?: (href: string) => void;
   persistSelection?: (range: DashboardRangeValue) => void;
   showQuickRanges?: boolean;
-  showSelectedLabelInTrigger?: boolean;
-  selectedLabel?: string;
   idPrefix?: string;
   rootClassName?: string;
   triggerWrapperClassName?: string;
@@ -39,8 +36,6 @@ export type TimeframePickerProps = {
   menuClassName?: string;
   renderMenuInPortal?: boolean;
   menuPortalZIndex?: number;
-  autoApplyCustomRange?: boolean;
-  showCustomApplyButton?: boolean;
 };
 
 export function TimeframePicker({
@@ -50,12 +45,9 @@ export function TimeframePicker({
   quickRanges,
   secondaryRanges,
   buildHref,
-  buildTriggerLabel,
   onNavigateHref,
   persistSelection,
   showQuickRanges = true,
-  showSelectedLabelInTrigger = false,
-  selectedLabel,
   idPrefix = "timeframe",
   rootClassName,
   triggerWrapperClassName,
@@ -63,8 +55,6 @@ export function TimeframePicker({
   menuClassName,
   renderMenuInPortal = false,
   menuPortalZIndex = 80,
-  autoApplyCustomRange = false,
-  showCustomApplyButton = true,
 }: TimeframePickerProps) {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -74,11 +64,12 @@ export function TimeframePicker({
   const [customStartDate, setCustomStartDate] = useState(startDate ?? "");
   const [customEndDate, setCustomEndDate] = useState(endDate ?? "");
   const [isOpen, setIsOpen] = useState(false);
+  const [customError, setCustomError] = useState<string | null>(null);
   const [portalStyle, setPortalStyle] = useState<CSSProperties | undefined>(undefined);
   const secondaryRangeValue = secondaryRanges.some((range) => range.value === selectedRange)
     ? selectedRange
     : "";
-  const secondaryRangeActive = showQuickRanges && secondaryRangeValue !== "";
+  const secondaryRangeActive = showQuickRanges && isSecondaryTimeframe(selectedRange);
 
   useEffect(() => {
     setSelectedRange(value);
@@ -105,23 +96,6 @@ export function TimeframePicker({
     [buildHref, onNavigateHref, persistSelection, router]
   );
 
-  useEffect(() => {
-    if (!autoApplyCustomRange || selectedRange !== "custom") {
-      return;
-    }
-
-    if (!customStartDate || !customEndDate) {
-      return;
-    }
-
-    const nextHref = buildHref("custom", customStartDate, customEndDate);
-    const currentHref = `${window.location.pathname}${window.location.search}`;
-
-    if (nextHref !== currentHref) {
-      navigate("custom", customStartDate, customEndDate);
-    }
-  }, [autoApplyCustomRange, buildHref, customEndDate, customStartDate, navigate, selectedRange]);
-
   useLayoutEffect(() => {
     if (!isOpen || !renderMenuInPortal) {
       return;
@@ -134,9 +108,12 @@ export function TimeframePicker({
       }
 
       const gutter = 12;
-      const gap = 8;
+      const gap = -1;
       const maxMenuHeight = 384;
-      const minWidth = Math.max(rect.width, 220);
+      const minWidth = Math.min(
+        Math.max(rect.width, selectedRange === "custom" ? 420 : 220),
+        window.innerWidth - gutter * 2
+      );
       const menuHeight = Math.min(menuPanelRef.current?.scrollHeight ?? maxMenuHeight, maxMenuHeight);
       const availableBelow = window.innerHeight - rect.bottom - gap - gutter;
       const availableAbove = rect.top - gap - gutter;
@@ -167,7 +144,7 @@ export function TimeframePicker({
       window.removeEventListener("resize", updatePortalPosition);
       window.removeEventListener("scroll", updatePortalPosition, true);
     };
-  }, [isOpen, menuPortalZIndex, renderMenuInPortal]);
+  }, [isOpen, menuPortalZIndex, renderMenuInPortal, selectedRange]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -177,12 +154,21 @@ export function TimeframePicker({
 
       if (!clickedInsideTrigger && !clickedInsideMenu) {
         setIsOpen(false);
+        setSelectedRange(value);
+        setCustomStartDate(startDate ?? "");
+        setCustomEndDate(endDate ?? "");
+        setCustomError(null);
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setSelectedRange(value);
+        setCustomStartDate(startDate ?? "");
+        setCustomEndDate(endDate ?? "");
+        setCustomError(null);
+        window.requestAnimationFrame(() => triggerRef.current?.focus());
       }
     }
 
@@ -195,22 +181,34 @@ export function TimeframePicker({
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
+  }, [endDate, isOpen, startDate, value]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const activeOption = menuPanelRef.current?.querySelector<HTMLElement>(
+        '[aria-pressed="true"]'
+      );
+      const firstOption = menuPanelRef.current?.querySelector<HTMLElement>("button");
+      (activeOption ?? firstOption)?.focus();
+    });
   }, [isOpen]);
 
-  const triggerLabel = buildTriggerLabel({
-    value: selectedRange,
-    showQuickRanges,
-    showSelectedLabelInTrigger,
-    selectedLabel,
-  });
+  const triggerLabel = getTimeframeTriggerLabel(selectedRange);
+  const customRangeValid = isValidCustomRange(customStartDate, customEndDate);
 
   const menuContent = (
     <div
       ref={menuPanelRef}
-      role="menu"
+      id={`${idPrefix}-range-popover`}
+      role="dialog"
+      aria-label="Choose timeframe"
       style={renderMenuInPortal ? portalStyle : undefined}
       className={cn(
-        "rounded-[8px] border border-border/80 bg-popover p-2 shadow-2xl shadow-background/50",
+        "rounded-[8px] rounded-tr-none border-2 border-border bg-popover p-2 shadow-[3px_4px_0_var(--foreground)]",
         renderMenuInPortal
           ? "overflow-y-auto"
           : "absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[220px]",
@@ -224,33 +222,110 @@ export function TimeframePicker({
           <button
             key={range.value}
             type="button"
-            role="menuitem"
+            aria-pressed={active}
             onClick={() => {
               setSelectedRange(range.value);
-              setIsOpen(false);
-              if (range.value !== "custom") {
-                navigate(range.value);
+              setCustomError(null);
+              if (range.value === "custom") {
+                return;
               }
+
+              setIsOpen(false);
+              navigate(range.value);
             }}
             className={cn(
-              "flex min-h-11 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex min-h-10 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-primary/12 text-primary"
                 : "text-secondary-foreground hover:bg-secondary/55 hover:text-foreground"
             )}
           >
             <span>{range.label}</span>
-            {active ? <span className="text-xs text-primary">Current</span> : null}
+            {active ? <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> : null}
           </button>
         );
       })}
+
+      {selectedRange === "custom" ? (
+        <div className="mt-2 space-y-3 border-t-2 border-dashed border-border/45 px-1 pt-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-xs font-semibold text-secondary-foreground">
+              Start date
+              <input
+                id={`${idPrefix}-start-date`}
+                type="date"
+                value={customStartDate}
+                onChange={(event) => {
+                  setCustomStartDate(event.target.value);
+                  setCustomError(null);
+                }}
+                className="min-h-11 rounded-[8px] border-2 border-input bg-card px-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+            <label className="grid gap-1.5 text-xs font-semibold text-secondary-foreground">
+              End date
+              <input
+                id={`${idPrefix}-end-date`}
+                type="date"
+                value={customEndDate}
+                onChange={(event) => {
+                  setCustomEndDate(event.target.value);
+                  setCustomError(null);
+                }}
+                className="min-h-11 rounded-[8px] border-2 border-input bg-card px-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+          </div>
+          {customError ? (
+            <p role="alert" className="text-xs font-semibold text-destructive">
+              {customError}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRange(value);
+                setCustomStartDate(startDate ?? "");
+                setCustomEndDate(endDate ?? "");
+                setCustomError(null);
+                setIsOpen(false);
+                window.requestAnimationFrame(() => triggerRef.current?.focus());
+              }}
+              className="min-h-10 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-bold text-secondary-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!customStartDate || !customEndDate) {
+                  setCustomError("Choose both a start and end date.");
+                  return;
+                }
+                if (!customRangeValid) {
+                  setCustomError("Start date must be on or before end date.");
+                  return;
+                }
+
+                setIsOpen(false);
+                navigate("custom", customStartDate, customEndDate);
+              }}
+              disabled={!customStartDate || !customEndDate}
+              className="min-h-10 rounded-[8px] border-2 border-primary/50 bg-primary px-3 text-sm font-bold text-primary-foreground hover:brightness-105 disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2.5", rootClassName)}>
       {showQuickRanges ? (
-        <div className="flex rounded-[8px] border-2 border-border bg-card p-1 shadow-[2px_3px_0_var(--foreground)]">
+        <div className="flex h-11 rounded-[8px] border-2 border-border bg-card">
           {quickRanges.map((range) => {
             const active = selectedRange === range.value;
 
@@ -262,9 +337,10 @@ export function TimeframePicker({
                 aria-pressed={active}
                 onClick={() => {
                   setSelectedRange(range.value);
+                  setIsOpen(false);
                   navigate(range.value);
                 }}
-                className={`min-h-11 rounded-[6px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`h-10 rounded-[6px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-secondary-foreground hover:bg-secondary/45 hover:text-foreground"
@@ -280,12 +356,27 @@ export function TimeframePicker({
         <button
           ref={triggerRef}
           type="button"
-          aria-haspopup="menu"
+          aria-haspopup="dialog"
+          aria-controls={`${idPrefix}-range-popover`}
           aria-expanded={isOpen}
           aria-pressed={secondaryRangeActive}
-          onClick={() => setIsOpen((current) => !current)}
+          onClick={() => {
+            if (isOpen) {
+              setSelectedRange(value);
+              setCustomStartDate(startDate ?? "");
+              setCustomEndDate(endDate ?? "");
+              setCustomError(null);
+            } else {
+              setSelectedRange(value);
+              setCustomStartDate(startDate ?? "");
+              setCustomEndDate(endDate ?? "");
+              setCustomError(null);
+            }
+            setIsOpen((current) => !current);
+          }}
           className={cn(
-            "inline-flex min-h-11 items-center gap-2 rounded-[8px] border-2 border-border bg-card px-4 text-sm font-bold text-secondary-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex h-11 items-center gap-2 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-bold text-secondary-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            isOpen && "rounded-b-none",
             secondaryRangeActive &&
               "border-primary/50 bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
             triggerClassName
@@ -306,44 +397,6 @@ export function TimeframePicker({
           : null}
       </div>
 
-      {selectedRange === "custom" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="sr-only" htmlFor={`${idPrefix}-start-date`}>
-            Start date
-          </label>
-          <input
-            id={`${idPrefix}-start-date`}
-            type="date"
-            value={customStartDate}
-            onChange={(event) => setCustomStartDate(event.target.value)}
-            className="min-h-11 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <label className="sr-only" htmlFor={`${idPrefix}-end-date`}>
-            End date
-          </label>
-          <input
-            id={`${idPrefix}-end-date`}
-            type="date"
-            value={customEndDate}
-            onChange={(event) => setCustomEndDate(event.target.value)}
-            className="min-h-11 rounded-[8px] border border-input bg-background/24 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          {showCustomApplyButton ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (customStartDate && customEndDate) {
-                  navigate("custom", customStartDate, customEndDate);
-                }
-              }}
-              disabled={!customStartDate || !customEndDate}
-              className="min-h-11 rounded-[8px] border border-primary/40 bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Apply
-            </button>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }
