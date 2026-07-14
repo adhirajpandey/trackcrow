@@ -107,10 +107,10 @@ export function DrilldownPlaceholderPage({
         description={description}
       />
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="rounded-[10px] border-2 border-border bg-card p-5 shadow-[4px_5px_0_var(--foreground)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-card-foreground">
+            <h2 className="font-hand text-[17px] font-normal leading-tight text-destructive">
               Applied filters
             </h2>
             <p className="mt-2 text-sm leading-5 text-muted-foreground">
@@ -120,7 +120,7 @@ export function DrilldownPlaceholderPage({
           </div>
           <Link
             href="/dashboard"
-            className="inline-flex min-h-10 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-11 items-center rounded-[8px] border-2 border-border bg-primary px-4 text-sm font-semibold text-foreground shadow-[2px_3px_0_var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Back to dashboard
           </Link>
@@ -129,20 +129,20 @@ export function DrilldownPlaceholderPage({
         {filters.length > 0 ? (
           <dl className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filters.map((filter) => (
-              <div key={`${filter.label}-${filter.value}`} className="rounded-xl bg-muted/26 p-3">
+              <div key={`${filter.label}-${filter.value}`} className="rounded-[8px] border-2 border-border bg-[var(--paper-mint)] p-3">
                 <dt className="text-sm font-semibold text-foreground">{filter.label}</dt>
                 <dd className="mt-1 text-sm leading-5 text-muted-foreground">{filter.value}</dd>
               </div>
             ))}
           </dl>
         ) : (
-          <p className="mt-5 rounded-xl bg-muted/26 px-4 py-3 text-sm text-muted-foreground">
+          <p className="mt-5 rounded-[8px] border-2 border-border bg-[var(--paper-lilac)] px-4 py-3 text-sm text-muted-foreground">
             {emptyTitle}
           </p>
         )}
 
         {contextNote ? (
-          <div className="mt-5 rounded-xl border border-border/70 bg-muted/18 px-4 py-3">
+          <div className="mt-5 rounded-[8px] border-2 border-border bg-[var(--paper-yellow)] px-4 py-3">
             <p className="text-sm font-semibold text-foreground">What this view will cover</p>
             <p className="mt-1 text-sm leading-5 text-muted-foreground">{contextNote}</p>
           </div>

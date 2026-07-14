@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 
 export default function AppNotFound() {
   return (
-    <section className="mx-auto max-w-2xl border border-border bg-card p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+    <section className="mx-auto max-w-2xl rounded-[10px] border-2 border-border bg-card p-8 shadow-[4px_5px_0_var(--foreground)]">
+      <p className="font-hand text-[17px] font-normal leading-tight text-destructive">
         404
       </p>
       <h1 className="mt-4 text-3xl font-bold">Resource not found.</h1>
