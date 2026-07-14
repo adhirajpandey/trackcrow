@@ -24,9 +24,9 @@ type SelectProps = {
 };
 
 const selectTriggerClassName =
-  "inline-flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] border border-input bg-background/18 px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 const selectContentClassName =
-  "absolute left-0 z-20 w-full overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]";
+  "absolute left-0 z-20 w-full overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]";
 
 export function Select({
   value,
@@ -256,7 +256,7 @@ export function Select({
         onKeyDown={handleTriggerKeyDown}
         className={cn(
           selectTriggerClassName,
-          isOpen && "border-border/70 bg-background/24",
+          isOpen && "bg-[var(--paper-mint)]",
           disabled && "cursor-not-allowed opacity-60",
           triggerClassName
         )}
@@ -306,12 +306,12 @@ export function Select({
                   onFocus={() => setActiveIndex(index)}
                   onKeyDown={(event) => handleOptionKeyDown(event, index, option)}
                   className={cn(
-                    "flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:bg-secondary/20",
+                    "flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:bg-secondary/60",
                     option.disabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
                   )}
                 >
                   <span className="truncate">{option.label}</span>
-                  {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+                  {selected ? <Check className="h-4 w-4 shrink-0 text-foreground" /> : null}
                 </button>
               );
             })}

@@ -56,17 +56,17 @@ export function AppShell({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(104,211,145,0.10),transparent_28%),linear-gradient(180deg,#08100c_0%,#09110d_36%,#0f1411_100%)] text-foreground lg:grid lg:grid-cols-[276px_1fr]">
-      <aside className="hidden border-r border-border/55 bg-[#06100c]/88 backdrop-blur-xl lg:block">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background text-foreground lg:grid lg:grid-cols-[276px_1fr]">
+      <aside className="hidden border-r-2 border-border bg-[#fffaf0]/95 lg:block">
         <ShellSidebar pathname={pathname} searchParams={searchParams} user={user} />
       </aside>
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex min-h-16 items-center border-b border-border/70 bg-background/95 px-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-20 flex min-h-16 items-center border-b-2 border-border bg-[#fffaf0]/95 px-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] backdrop-blur lg:hidden">
           <div className="flex items-center gap-3.5">
             <button
               type="button"
-              className="-ml-1 rounded-[14px] px-1 py-1 transition-colors hover:bg-white/4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="-ml-1 rounded-md px-1 py-1 transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               onClick={() => setIsOpen(true)}
               aria-label="Open navigation"
               title="Open navigation"
@@ -89,7 +89,7 @@ export function AppShell({
               aria-label="Close navigation"
               onClick={() => setIsOpen(false)}
             />
-            <aside className="absolute left-0 top-0 flex h-full w-[86vw] max-w-[360px] flex-col border-r border-border/70 bg-[#06100c]/96 px-[max(16px,env(safe-area-inset-left))] pb-[calc(16px+env(safe-area-inset-bottom))] pt-4 pr-[max(16px,env(safe-area-inset-right))] backdrop-blur-xl">
+            <aside className="absolute left-0 top-0 flex h-full w-[86vw] max-w-[360px] flex-col border-r-2 border-border bg-[#fffaf0] px-[max(16px,env(safe-area-inset-left))] pb-[calc(16px+env(safe-area-inset-bottom))] pt-4 pr-[max(16px,env(safe-area-inset-right))]">
               <div className="min-h-0 flex-1">
                 <ShellSidebarContent
                   pathname={pathname}
@@ -103,7 +103,7 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-[1560px] min-w-0 overflow-x-hidden px-4 py-6 lg:px-7 lg:py-6">
+        <main className="mx-auto w-full max-w-[1560px] min-w-0 overflow-x-hidden px-4 py-6 lg:px-7 lg:py-7">
           {children}
         </main>
       </div>
@@ -172,17 +172,10 @@ function SidebarBrand({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[20px] border border-[#72d8a2]/30 bg-[radial-gradient(circle_at_left,rgba(54,150,104,0.18),transparent_38%),linear-gradient(135deg,rgba(8,21,16,0.98),rgba(4,12,9,0.96))] px-4 py-3.5 shadow-[inset_0_0_0_1px_rgba(220,255,235,0.03),0_0_0_1px_rgba(114,216,162,0.05)]",
-        !compact && "rounded-[18px] px-3.5 py-3"
+        "relative overflow-hidden rounded-[10px] border-2 border-border bg-[var(--paper-mint)] px-4 py-3.5 shadow-[3px_4px_0_var(--foreground)]",
+        !compact && "px-3.5 py-3"
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_26%,transparent_74%,rgba(114,216,162,0.05))]" />
-      <div
-        className={cn(
-          "pointer-events-none absolute top-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl",
-          compact ? "-left-7 h-24 w-24" : "-left-5 h-18 w-18"
-        )}
-      />
       <div className={cn("relative flex items-center", compact ? "gap-3.5" : "gap-2.5")}>
         <BrandMark
           size="compact"
@@ -192,19 +185,19 @@ function SidebarBrand({ compact = false }: { compact?: boolean }) {
         <div className="min-w-0 flex-1 self-center">
           <p
             className={cn(
-              "font-semibold uppercase leading-none text-[#79d7a4]",
+              "font-extrabold uppercase leading-none tracking-[0.1em] text-foreground",
               compact ? "truncate" : "pr-1",
               wordmarkClassName
             )}
           >
             TrackCrow
           </p>
-          <p className={cn("font-medium text-white/55", subtitleClassName)}>
+          <p className={cn("font-semibold text-secondary-foreground", subtitleClassName)}>
             AI-powered expense tracking
           </p>
-          <p className={cn("font-medium text-primary/82", taglineClassName)}>
-            Track <span className={compact ? "px-1.5 text-primary/50" : "px-1 text-primary/45"}>|</span>{" "}
-            Review <span className={compact ? "px-1.5 text-primary/50" : "px-1 text-primary/45"}>|</span>{" "}
+          <p className={cn("font-medium text-[#238658]", taglineClassName)}>
+            Track <span className={compact ? "px-1.5 text-[#238658]/40" : "px-1 text-[#238658]/40"}>|</span>{" "}
+            Review <span className={compact ? "px-1.5 text-[#238658]/40" : "px-1 text-[#238658]/40"}>|</span>{" "}
             Control
           </p>
         </div>
@@ -235,22 +228,22 @@ function ProfileCard({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="rounded-[20px] border border-[#244030] bg-[linear-gradient(180deg,rgba(10,20,16,0.96),rgba(9,17,14,0.98))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="rounded-[10px] border-2 border-border bg-card p-3.5 shadow-[3px_4px_0_var(--foreground)]">
       <div className="flex items-center gap-3">
         <UserAvatar user={user} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold leading-tight text-[#eef5f0]">
+          <p className="truncate text-[14px] font-bold leading-tight text-foreground">
             {user.name ?? "TrackCrow user"}
           </p>
-          <p className="mt-1 text-xs font-medium text-[#8ee5ad]">Free account</p>
+          <p className="mt-1 text-xs font-semibold text-[#238658]">Free account</p>
         </div>
       </div>
-      <div className="mt-3.5 h-px bg-[linear-gradient(90deg,rgba(111,207,151,0.18),rgba(255,255,255,0.04),transparent)]" />
+      <div className="mt-3.5 h-px bg-border/25" />
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Link
           href="/settings"
           onClick={onNavigate}
-          className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[12px] border border-[#2b4436] bg-[#0d1713]/52 px-3 text-sm font-medium text-[#d5e2da] transition-colors hover:border-primary/25 hover:bg-primary/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-border bg-[var(--paper-mint)] px-3 text-sm font-bold text-foreground transition-colors hover:bg-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Settings className="h-3.5 w-3.5 text-primary" />
           Settings
@@ -260,7 +253,7 @@ function ProfileCard({
           variant="ghost"
           aria-label="Sign out"
           title="Sign out"
-          className="min-h-11 cursor-pointer whitespace-nowrap rounded-[12px] border border-[#563333] bg-[#211111]/52 px-3 text-sm font-medium text-[#f49c9c] hover:border-[#cf4a4a]/55 hover:bg-[#361616] hover:text-[#ffd0d0] focus-visible:ring-[#cf4a4a]"
+          className="min-h-11 cursor-pointer whitespace-nowrap rounded-md border-2 border-destructive bg-[#fff0ee] px-3 text-sm font-bold text-destructive hover:bg-[#ffdeda] focus-visible:ring-destructive"
           onClick={() => void handleSignOut()}
         >
           <LogOut className="h-3.5 w-3.5 text-[#ff9b9b]" />
@@ -289,20 +282,20 @@ function ShellNav({
         const active =
           !item.disabled && isNavigationItemActive(item.href, pathname, review, item.id);
         const itemClassName = cn(
-          "group relative flex min-h-11 items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "group relative flex min-h-11 items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-bold transition-[background-color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           active
-            ? "bg-[linear-gradient(180deg,rgba(104,211,145,0.18),rgba(104,211,145,0.08))] text-foreground"
+            ? "border-2 border-border bg-primary text-foreground shadow-[2px_3px_0_var(--foreground)]"
             : item.disabled
               ? "cursor-not-allowed text-secondary-foreground/55"
-              : "text-secondary-foreground/90 hover:bg-white/2 hover:text-foreground"
+              : "text-secondary-foreground hover:bg-secondary hover:text-foreground"
         );
         const iconClassName = cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
           active
-            ? "border-primary/20 bg-[#11271d] text-primary"
+            ? "border-border bg-[#e3f5ea] text-foreground"
             : item.disabled
-              ? "border-white/8 bg-transparent text-secondary-foreground/45"
-              : "border-white/10 bg-transparent text-secondary-foreground/90 group-hover:border-primary/12 group-hover:bg-primary/6 group-hover:text-foreground"
+              ? "border-border/25 bg-transparent text-secondary-foreground/45"
+              : "border-border/45 bg-card text-secondary-foreground group-hover:border-border group-hover:bg-[var(--paper-mint)] group-hover:text-foreground"
         );
 
         const content = (
@@ -315,7 +308,7 @@ function ShellNav({
               aria-hidden="true"
               className={cn(
                 "h-6 w-1 rounded-full transition-opacity",
-                active ? "bg-primary shadow-[0_0_12px_rgba(104,211,145,0.8)]" : "opacity-0"
+                active ? "bg-foreground" : "opacity-0"
               )}
             />
           </>
@@ -380,7 +373,7 @@ function UserAvatar({ user }: { user: AppShellUser }) {
   const initials = getInitials(user.name, user.email);
 
   return (
-    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#355541] bg-[linear-gradient(180deg,#214e35,#183726)] shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-border bg-[var(--paper-mint)]">
       {user.image ? (
         <Image
           src={user.image}
@@ -390,11 +383,11 @@ function UserAvatar({ user }: { user: AppShellUser }) {
           className="rounded-full object-cover"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center rounded-full text-[16px] font-semibold tracking-[-0.05em] text-[#eff8f1]">
+        <div className="flex h-full w-full items-center justify-center rounded-full text-[16px] font-bold tracking-[-0.05em] text-foreground">
           {initials}
         </div>
       )}
-      <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#0b1511] bg-[#67ef98]" />
+      <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-card bg-primary" />
     </div>
   );
 }

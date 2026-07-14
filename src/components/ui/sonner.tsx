@@ -21,19 +21,19 @@ export function Toaster() {
       richColors={false}
       closeButton
       expand={false}
-      theme="dark"
+      theme="light"
       toastOptions={{
         classNames: {
           toast:
-            "trackcrow-sonner rounded-[8px] border border-border/60 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] text-foreground shadow-[0_18px_38px_rgba(0,0,0,0.32)]",
+            "trackcrow-sonner rounded-[8px] border-2 border-border bg-card text-foreground shadow-[4px_5px_0_var(--foreground)]",
           title: "text-sm font-semibold text-foreground",
           description: "text-sm leading-5 text-secondary-foreground",
           closeButton:
-            "border-border/35 bg-background/10 text-secondary-foreground hover:bg-background/16 hover:text-foreground",
+            "border-2 border-border bg-card text-secondary-foreground hover:bg-secondary/60 hover:text-foreground",
           actionButton:
-            "min-h-8 rounded-[8px] border border-border/45 bg-background/12 px-3 text-sm font-semibold text-foreground hover:bg-background/18",
+            "min-h-8 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-semibold text-foreground hover:bg-secondary/60",
           cancelButton:
-            "min-h-8 rounded-[8px] border border-border/45 bg-background/12 px-3 text-sm font-semibold text-foreground hover:bg-background/18",
+            "min-h-8 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-semibold text-foreground hover:bg-secondary/60",
         },
       }}
     />
@@ -75,7 +75,7 @@ export function toast(input: AppToastInput) {
 
 function getToastIcon(tone: AppToastTone) {
   if (tone === "success") {
-    return <CheckCircle2 className="h-5 w-5 text-primary" />;
+    return <CheckCircle2 className="h-5 w-5 text-[#238658]" />;
   }
 
   if (tone === "error") {
@@ -83,7 +83,7 @@ function getToastIcon(tone: AppToastTone) {
   }
 
   if (tone === "warning") {
-    return <CircleAlert className="h-5 w-5 text-accent" />;
+    return <CircleAlert className="h-5 w-5 text-foreground" />;
   }
 
   return <Info className="h-5 w-5 text-info" />;
@@ -91,16 +91,16 @@ function getToastIcon(tone: AppToastTone) {
 
 function getToastToneClassName(tone: AppToastTone) {
   if (tone === "success") {
-    return "border-primary/35 bg-[linear-gradient(180deg,rgba(18,36,25,0.98),rgba(11,21,15,0.99))]";
+    return "border-border bg-[var(--paper-mint)]";
   }
 
   if (tone === "error") {
-    return "border-destructive/45 bg-[linear-gradient(180deg,rgba(46,18,18,0.98),rgba(28,10,10,0.99))]";
+    return "border-destructive bg-[#fff0ee]";
   }
 
   if (tone === "warning") {
-    return "border-accent/38 bg-[linear-gradient(180deg,rgba(42,33,12,0.98),rgba(24,18,8,0.99))]";
+    return "border-border bg-[#fff1bd]";
   }
 
-  return "border-info/35 bg-[linear-gradient(180deg,rgba(19,28,38,0.98),rgba(11,17,24,0.99))]";
+  return "border-border bg-[var(--paper-lilac)]";
 }

@@ -18,10 +18,10 @@ import {
 import { cn } from "@/lib/utils";
 
 export const mobileSurfaceClassName =
-  "w-full max-w-full min-w-0 overflow-hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] shadow-[0_8px_24px_rgba(0,0,0,0.16)]";
+  "w-full max-w-full min-w-0 overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]";
 
 export const mobileCardClassName =
-  "w-full max-w-full min-w-0 overflow-hidden rounded-[8px] border border-border/45 bg-background/12";
+  "w-full max-w-full min-w-0 overflow-hidden rounded-[10px] border-2 border-border bg-card";
 
 export function MobilePageHeader({
   eyebrow,
@@ -81,7 +81,7 @@ export function MobileSearchBar({
   return (
     <label
       className={cn(
-        "flex min-h-12 w-full max-w-full min-w-0 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5",
+        "flex min-h-12 w-full max-w-full min-w-0 items-center gap-3 rounded-[8px] border-2 border-border bg-card px-3.5",
         className
       )}
     >
@@ -116,10 +116,10 @@ export function MobileFilterChips({
         <span
           key={item.label}
           className={cn(
-            "inline-flex min-h-11 max-w-full items-center rounded-[999px] border px-3 text-sm font-medium",
+            "inline-flex min-h-11 max-w-full items-center rounded-[999px] border-2 border-border px-3 text-sm font-semibold",
             item.tone === "accent"
-              ? "border-accent/30 bg-accent/12 text-accent"
-              : "border-primary/20 bg-primary/10 text-primary"
+              ? "bg-[#fff1bd] text-foreground"
+              : "bg-primary/35 text-foreground"
           )}
         >
           <span className="overflow-wrap-anywhere break-words">{item.label}</span>
@@ -171,7 +171,7 @@ export function MobileActionBar({
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-20 -mx-4 border-t border-border/60 bg-background/96 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden",
+        "sticky bottom-0 z-20 -mx-4 border-t-2 border-border bg-background/96 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden",
         className
       )}
     >
@@ -195,7 +195,7 @@ export function MobileEmptyState({
     <div className={cn(mobileSurfaceClassName, "p-4", className)}>
       <div className="flex items-start gap-3">
         {icon ? (
-          <div className="rounded-[8px] border border-border/60 bg-secondary/24 p-2 text-primary">
+          <div className="rounded-[8px] border-2 border-border bg-primary/25 p-2 text-foreground">
             {icon}
           </div>
         ) : null}
@@ -374,7 +374,7 @@ export function MobileSectionLink({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 w-full items-center justify-between rounded-[8px] border border-border/50 bg-background/12 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-background/18"
+      className="inline-flex min-h-11 w-full items-center justify-between rounded-[8px] border-2 border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/60"
     >
       <span>{label}</span>
       <ChevronRight className="h-4 w-4 text-secondary-foreground" />

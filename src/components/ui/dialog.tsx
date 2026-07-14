@@ -37,7 +37,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed left-1/2 top-1/2 z-[101] w-[calc(100vw-2rem)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-[8px]",
-        "border border-border/60 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] p-5 text-foreground shadow-[0_24px_70px_rgba(0,0,0,0.48)]",
+        "border-2 border-border bg-card p-5 text-foreground shadow-[5px_6px_0_var(--foreground)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}
@@ -45,7 +45,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="absolute right-4 top-4 rounded-[8px] p-1 text-secondary-foreground transition-colors hover:bg-background/12 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="absolute right-4 top-4 rounded-[8px] p-2 text-secondary-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
@@ -113,4 +113,3 @@ export {
   DialogTitle,
   DialogTrigger,
 };
-

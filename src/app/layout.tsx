@@ -1,5 +1,19 @@
 import type { Metadata } from "next";
+import { Bricolage_Grotesque, Kalam } from "next/font/google";
 import "./globals.css";
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
+
+const kalam = Kalam({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-kalam",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "TrackCrow",
@@ -13,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={`${bricolage.variable} ${kalam.variable}`}>{children}</body>
     </html>
   );
 }

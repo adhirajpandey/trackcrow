@@ -37,7 +37,7 @@ const AlertDialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed left-1/2 top-1/2 z-[101] w-[calc(100vw-2rem)] max-w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-[8px]",
-        "border border-destructive/45 bg-[linear-gradient(180deg,rgba(46,18,18,0.98),rgba(14,19,16,0.99))] p-5 text-foreground shadow-[0_24px_70px_rgba(0,0,0,0.48)]",
+        "border-2 border-destructive bg-[#fff0ee] p-5 text-foreground shadow-[5px_6px_0_var(--foreground)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}

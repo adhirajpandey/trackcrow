@@ -20,16 +20,16 @@ export function AppPageHeader({
   return (
     <section
       className={cn(
-        "w-full max-w-full min-w-0 overflow-hidden border-b border-border pb-6",
+        "w-full max-w-full min-w-0 overflow-hidden border-b-2 border-border/25 pb-6",
         className
       )}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 max-w-full">
-          <p className="text-sm font-semibold text-primary">
+          <p className="font-hand text-[17px] font-normal leading-tight text-destructive">
             {eyebrow}
           </p>
-          <h1 className="mt-2 break-words text-[32px] font-bold leading-tight text-foreground lg:text-[42px]">
+          <h1 className="mt-1 break-words text-[38px] font-extrabold leading-none tracking-[-0.04em] text-foreground lg:text-[52px]">
             {title}
           </h1>
           {description ? (

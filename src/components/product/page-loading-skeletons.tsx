@@ -21,7 +21,7 @@ const defaultTableColumns: TableSkeletonColumn[] = [
 ];
 
 const mobileSurfaceClassName =
-  "w-full max-w-full min-w-0 overflow-hidden rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] shadow-[0_8px_24px_rgba(0,0,0,0.16)]";
+  "w-full max-w-full min-w-0 overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]";
 
 export function WorkspaceListPageSkeleton({
   eyebrowWidth = "w-36",
@@ -254,7 +254,7 @@ export function MobileSearchSurfaceSkeleton({
 
 export function MobileSearchBarSkeleton() {
   return (
-    <div className="flex min-h-12 items-center gap-3 rounded-[8px] border border-border/50 bg-background/16 px-3.5">
+    <div className="flex min-h-12 items-center gap-3 rounded-[8px] border-2 border-border bg-card px-3.5">
       <Skeleton className="h-4 w-4 rounded-full" />
       <Skeleton className="h-4 w-56 max-w-full rounded-[8px]" />
     </div>
@@ -271,7 +271,7 @@ export function MobileListCardSkeleton({
   detailRows?: number;
 }) {
   return (
-    <div className="rounded-[8px] border border-border/45 bg-background/12 p-4">
+    <div className="rounded-[10px] border-2 border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-5 w-4/5 rounded-[8px]" />
@@ -330,7 +330,7 @@ export function FilterPanelSkeleton({
         : "lg:grid-cols-5";
 
   return (
-    <section className="rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:px-5">
+    <section className="rounded-[10px] border-2 border-border bg-card px-4 py-4 shadow-[3px_4px_0_var(--foreground)] sm:px-5">
       <div
         className={cn(
           "grid gap-3 md:grid-cols-2",

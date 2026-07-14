@@ -31,7 +31,7 @@ export function BrandMark({
     <div className={cn("flex items-center gap-3", className)}>
       <span
         className={cn(
-          "relative shrink-0 overflow-hidden rounded-[14px] border border-primary/20 bg-[#07130f] shadow-[0_0_18px_rgba(104,211,145,0.16)]",
+          "relative shrink-0 overflow-hidden rounded-[14px] border-2 border-border bg-[var(--paper-mint)] shadow-[2px_3px_0_var(--foreground)]",
           markSizeClasses[size],
           markClassName
         )}
@@ -48,7 +48,7 @@ export function BrandMark({
       {showText ? (
         <span
           className={cn(
-            "font-semibold uppercase leading-none text-primary",
+              "font-extrabold uppercase leading-none text-foreground",
             textSizeClasses[size],
             textClassName
           )}

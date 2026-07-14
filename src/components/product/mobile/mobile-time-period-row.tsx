@@ -163,7 +163,7 @@ function MoreTimePeriodsMenu({
       role="listbox"
       style={renderInPortal ? menuStyle : undefined}
       className={cn(
-        "overflow-hidden rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(17,27,22,0.98),rgba(10,16,13,0.99))] shadow-[0_18px_38px_rgba(0,0,0,0.32)]",
+        "overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]",
         renderInPortal ? "" : "absolute right-0 top-[calc(100%+0.5rem)] z-20 w-[13.5rem] min-w-[13.5rem]"
       )}
     >

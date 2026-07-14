@@ -66,4 +66,4 @@ Active project docs live directly under `docs/`:
 | `docs/development.md` | setup, commands, and contributor workflow | local workflow or tooling changes |
 | `docs/roadmap.md` | completed work, active work, and next priorities | product status or priorities change |
 
-Historical plans, reviews, and superseded specs live in `docs/archive/`. Design direction for the product UI remains in [design.md](./design.md).
+Historical plans, reviews, and superseded specs live in `docs/archive/`. Design direction for the product UI remains in [DESIGN.md](./DESIGN.md).

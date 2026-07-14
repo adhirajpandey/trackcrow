@@ -250,7 +250,7 @@ export function TimeframePicker({
   return (
     <div className={cn("flex flex-wrap items-center gap-2.5", rootClassName)}>
       {showQuickRanges ? (
-        <div className="flex rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] p-1">
+        <div className="flex rounded-[8px] border-2 border-border bg-card p-1 shadow-[2px_3px_0_var(--foreground)]">
           {quickRanges.map((range) => {
             const active = selectedRange === range.value;
 
@@ -285,7 +285,7 @@ export function TimeframePicker({
           aria-pressed={secondaryRangeActive}
           onClick={() => setIsOpen((current) => !current)}
           className={cn(
-            "inline-flex min-h-11 items-center gap-2 rounded-[8px] border border-border/55 bg-[rgba(9,18,14,0.80)] px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex min-h-11 items-center gap-2 rounded-[8px] border-2 border-border bg-card px-4 text-sm font-bold text-secondary-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             secondaryRangeActive &&
               "border-primary/50 bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
             triggerClassName
