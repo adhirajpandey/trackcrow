@@ -265,7 +265,7 @@ function SpendingByCategoryPanel({
               <div className={cn(dashboardAttentionPanelClassName, "px-4 py-3")}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-accent">Uncategorized</p>
+                    <p className="font-semibold text-foreground">Uncategorized</p>
                     <p className="mt-1 text-sm text-secondary-foreground">
                       {formatCurrency(uncategorizedCategory.totalSpend)} across{" "}
                       {uncategorizedCategory.transactionCount} transactions
@@ -275,7 +275,7 @@ function SpendingByCategoryPanel({
                     href={buildTransactionsHref({ status: "uncategorized" })}
                     className={cn(
                       dashboardPrimaryActionClassName,
-                      "cursor-pointer border border-accent/35 bg-accent text-accent-foreground transition-colors hover:brightness-105"
+                      "cursor-pointer border-2 border-border bg-destructive text-white shadow-[2px_3px_0_var(--foreground)] transition-[background-color,transform,box-shadow] hover:bg-[#dd3434] active:translate-x-[2px] active:translate-y-[3px] active:shadow-none"
                     )}
                   >
                     Review
@@ -450,7 +450,7 @@ function TableHeader({
   };
 }) {
   return (
-    <SemanticTableHeader className="border-b border-border/40 bg-background/16">
+    <SemanticTableHeader className="border-b-2 border-border bg-secondary/55">
       <TableRow className="hover:bg-transparent">
       {layout.columns.map((column, index) => (
         <TableHead
@@ -481,7 +481,7 @@ function EmptyPanel({
   helper?: string;
 }) {
   return (
-    <div className="rounded-[8px] border border-dashed border-border/50 bg-background/16 p-4">
+    <div className="rounded-[8px] border-2 border-dashed border-border bg-secondary/45 p-4">
       <div className="flex items-start gap-3">
         <div className="rounded-[8px] border border-border/60 bg-secondary/24 p-2 text-accent">
           <AlertCircle className="h-5 w-5" />

@@ -148,7 +148,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
   });
 
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-4">
       <MobilePageHeader
         eyebrow="Spend operations"
         title="Dashboard"
@@ -189,10 +189,10 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-        <div className="order-1">
+        <div className="dashboard-reveal order-1">
           <ReviewQueueHero card={reviewQueue} />
         </div>
-        <div className="order-2">
+        <div className="dashboard-reveal order-2">
           <MetricCard
             href={buildTransactionsHref(rangeParams)}
             label="Total spent"
@@ -213,7 +213,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             icon={<Wallet className="h-4.5 w-4.5" />}
           />
         </div>
-        <div className="order-3">
+        <div className="dashboard-reveal order-3">
           <TopCategoryCard
             category={topCategoryInsight}
             emptyHref={
@@ -231,7 +231,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             }
           />
         </div>
-        <div className="order-4">
+        <div className="dashboard-reveal order-4">
           <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
         </div>
       </section>
@@ -280,7 +280,7 @@ function MetricCard({
   icon: ReactNode;
 }) {
   return (
-    <TopDashboardCardFrame>
+    <TopDashboardCardFrame tone="mint">
       <TopDashboardCardHeader label={label} icon={icon} />
       <TopDashboardCardBody
         lead={
@@ -308,7 +308,7 @@ function MostFrequentRecipientCard({
   const recipientHref = recipient?.href ?? "/recipients";
 
   return (
-    <TopDashboardCardFrame>
+    <TopDashboardCardFrame tone="lilac">
       <TopDashboardCardHeader
         label="Most frequent recipient"
         icon={<UserRound className="h-4 w-4" />}
@@ -423,7 +423,7 @@ function ReviewQueueHero({
             variant="ghost"
             className={cn(
               dashboardPrimaryActionClassName,
-              "w-full border border-accent/35 bg-accent text-accent-foreground hover:border-accent/45 hover:bg-[#f6c251]"
+              "w-full border-2 border-border bg-destructive text-white shadow-[2px_3px_0_var(--foreground)] hover:bg-[#dd3434] active:translate-x-[2px] active:translate-y-[3px] active:shadow-none"
             )}
           >
             <Link href={card.hasItems ? card.href : buildTransactionsHref({})}>
@@ -447,7 +447,7 @@ function TopCategoryCard({
   emptyHref: string;
 }) {
   return (
-    <TopDashboardCardFrame>
+    <TopDashboardCardFrame tone="blush">
       <TopDashboardCardHeader
         label="Top known category"
         icon={<FolderTree className="h-4 w-4" />}
@@ -457,7 +457,7 @@ function TopCategoryCard({
           lead={
             <DashboardTopCardMetric
               value={category.category}
-              valueTone="primary"
+              valueTone="default"
               emphasis={`${formatCurrency(category.totalSpend)} spent`}
               entity
             />
@@ -506,11 +506,16 @@ function TopDashboardCardFrame({
   tone = "default",
 }: {
   children: ReactNode;
-  tone?: "default" | "attention";
+  tone?: "default" | "attention" | "mint" | "blush" | "lilac";
 }) {
   return (
     <article
-      className={tone === "attention" ? dashboardTopCardAttentionClassName : dashboardTopCardClassName}
+      className={cn(
+        tone === "attention" ? dashboardTopCardAttentionClassName : dashboardTopCardClassName,
+        tone === "mint" && "bg-[var(--paper-mint)]",
+        tone === "blush" && "bg-[var(--paper-blush)]",
+        tone === "lilac" && "bg-[var(--paper-lilac)]"
+      )}
     >
       {children}
     </article>
@@ -533,7 +538,7 @@ function TopDashboardCardHeader({
       <p
         className={cn(
           dashboardTopCardLabelClassName,
-          labelTone === "accent" && "text-accent"
+          labelTone === "accent" && "text-destructive"
         )}
       >
         {label}
@@ -542,8 +547,8 @@ function TopDashboardCardHeader({
         className={cn(
           dashboardMetricIconClassName,
           iconTone === "accent"
-            ? "border border-accent/22 bg-accent/10 text-accent"
-            : "border border-primary/12 bg-primary/6 text-primary/85"
+            ? "border-border bg-[#fff7d6] text-foreground"
+            : "border-border bg-card text-foreground"
         )}
       >
         {icon}
@@ -633,7 +638,7 @@ function DashboardTopCardMetric({
           entity ? dashboardTopCardEntityValueClassName : dashboardTopCardValueClassName,
           valueTone === "default" && "text-foreground",
           valueTone === "primary" && "text-primary",
-          valueTone === "accent" && "text-accent"
+          valueTone === "accent" && "text-foreground"
         )}
       >
         {value}
@@ -774,7 +779,7 @@ function SpendingTrendPanel({
             helper="Try a different timeframe or import transactions."
           />
         ) : (
-          <div className="rounded-[8px] border border-border/35 bg-[linear-gradient(180deg,rgba(10,17,14,0.62),rgba(8,13,11,0.76))] px-4 py-4 sm:px-5">
+          <div className="rounded-[8px] border-2 border-border bg-[#fffaf0] px-4 py-4 sm:px-5">
             <div
               className={cn(
                 "grid min-w-0 grid-cols-[3.15rem_minmax(0,1fr)] gap-2.5 sm:gap-3",
@@ -819,13 +824,13 @@ function SpendingTrendPanel({
                   {chartTicks.map((tick) => (
                     <div
                       key={`grid-${tick.ratio}-${tick.value}`}
-                      className="pointer-events-none absolute inset-x-0 border-t border-border/14"
+                      className="pointer-events-none absolute inset-x-0 border-t border-dashed border-border/25"
                       style={{ bottom: getChartTrackOffset(tick.ratio) }}
                     />
                   ))}
                   {averagePeriodSpend > 0 && chartMax > 0 ? (
                     <div
-                      className="pointer-events-none absolute inset-x-0 border-t border-dashed border-primary/22"
+                      className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-[#2b9b69]/55"
                       style={{ bottom: getChartTrackOffset(averagePeriodSpend / chartMax) }}
                     />
                   ) : null}
@@ -861,7 +866,7 @@ function SpendingTrendPanel({
                                 : { left: "50%", transform: "translateX(-50%)" }),
                           }}
                         >
-                          <span className="block rounded-[8px] border border-border/70 bg-[linear-gradient(180deg,rgba(28,39,33,0.98),rgba(18,27,22,0.98))] px-3 py-2 text-left shadow-[0_16px_40px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+                          <span className="block rounded-[8px] border-2 border-border bg-card px-3 py-2 text-left shadow-[3px_4px_0_var(--foreground)]">
                             <span className="text-[11px] font-semibold text-foreground">
                               {bucket.tooltip.title}
                             </span>
@@ -874,7 +879,7 @@ function SpendingTrendPanel({
                           </span>
                           <span
                             className={cn(
-                              "mt-1 block h-2.5 w-2.5 rotate-45 border-b border-r border-border/70 bg-[rgb(18,27,22)]",
+                              "mt-1 block h-2.5 w-2.5 rotate-45 border-b-2 border-r-2 border-border bg-card",
                               getChartTooltipAlignment(index, chartBuckets.length) === "left" &&
                                 "ml-5",
                               getChartTooltipAlignment(index, chartBuckets.length) === "center" &&
@@ -884,7 +889,7 @@ function SpendingTrendPanel({
                             )}
                           />
                         </span>
-                        <span className="flex h-full w-full items-end rounded-[3px] bg-secondary/10 px-[1px] pb-[1px]">
+                        <span className="flex h-full w-full items-end rounded-[3px] bg-secondary/75 px-[1px] pb-[1px]">
                           <span
                             className={cn(
                               "w-full rounded-[2px] transition-[background-color,filter,transform] duration-150 group-hover:-translate-y-0.5 group-hover:brightness-110 group-focus-visible:-translate-y-0.5 group-focus-visible:brightness-110",
@@ -892,14 +897,14 @@ function SpendingTrendPanel({
                                 "bg-secondary/22 group-hover:translate-y-0 group-hover:brightness-100 group-focus-visible:translate-y-0 group-focus-visible:brightness-100",
                               bucket.isPlaceholder &&
                                 !bucket.isFuture &&
-                                "bg-primary/35",
-                              bucket.isPeak && "bg-accent",
+                                "bg-primary/40",
+                              bucket.isPeak && "border border-border bg-accent",
                               bucket.isLatest && !bucket.isPeak && "bg-info",
                               !bucket.isPeak &&
                                 !bucket.isLatest &&
                                 !bucket.isFuture &&
                                 !bucket.isPlaceholder &&
-                                "bg-primary/90"
+                                "border border-border bg-primary"
                             )}
                             style={{ height: getChartBarHeight(bucket.height) }}
                           />
@@ -956,10 +961,10 @@ function SummaryChip({
   return (
     <div
       className={cn(
-        "rounded-[8px] border border-border/35 bg-background/14 px-3 py-2",
-        tone === "primary" && "border-primary/16",
-        tone === "accent" && "border-accent/16",
-        tone === "info" && "border-info/16"
+        "rounded-[8px] border-2 border-border bg-card px-3 py-2",
+        tone === "primary" && "bg-[var(--paper-mint)]",
+        tone === "accent" && "bg-[#fff4d4]",
+        tone === "info" && "bg-[#edf5ff]"
       )}
     >
       <div className="flex items-center gap-2">
@@ -984,7 +989,7 @@ function EmptyPanel({
   helper?: string;
 }) {
   return (
-    <div className="rounded-[8px] border border-dashed border-border/50 bg-background/16 p-4">
+    <div className="rounded-[8px] border-2 border-dashed border-border bg-secondary/45 p-4">
       <div className="flex items-start gap-3">
         {icon ? (
           <div className="rounded-[8px] border border-border/60 bg-secondary/24 p-2 text-primary">

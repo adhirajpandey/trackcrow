@@ -14,9 +14,8 @@ function DashboardPanelSkeleton({
   return (
     <div
       className={[
-        "overflow-hidden rounded-[8px] border border-border/55",
-        "bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))]",
-        "shadow-[0_8px_24px_rgba(0,0,0,0.16)]",
+        "overflow-hidden rounded-[10px] border-2 border-border bg-card",
+        "shadow-[4px_5px_0_var(--foreground)]",
         className ?? "",
       ].join(" ")}
     >
@@ -27,7 +26,7 @@ function DashboardPanelSkeleton({
 
 function TopCardSkeleton() {
   return (
-    <div className="flex min-h-[236px] flex-col rounded-[8px] border border-border/55 bg-[linear-gradient(180deg,rgba(12,22,17,0.94),rgba(9,16,13,0.96))] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.16)] sm:p-5">
+    <div className="flex min-h-[258px] flex-col rounded-[10px] border-2 border-border bg-card p-4 shadow-[4px_5px_0_var(--foreground)] sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-11 w-11 rounded-[8px]" />
@@ -36,7 +35,7 @@ function TopCardSkeleton() {
         <Skeleton className="h-9 w-32" />
         <Skeleton className="h-4 w-40" />
       </div>
-      <div className="mt-5 space-y-2.5 border-t border-border/35 pt-4">
+      <div className="mt-5 space-y-2.5 border-t-2 border-dashed border-border/55 pt-4">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-10 justify-self-end" />
@@ -74,7 +73,7 @@ function TablePanelSkeleton({
         </div>
       </div>
       <div className="flex flex-1 flex-col px-6 pb-6">
-        <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] border border-border/50 bg-background/14">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] border-2 border-border bg-[#fffaf0]">
           <div className="grid grid-cols-3 gap-4 border-b border-border/40 px-5 py-3.5">
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-3 w-14 justify-self-end" />
@@ -136,7 +135,7 @@ export default function DashboardLoading() {
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="rounded-[8px] border border-border/35 bg-background/14 px-3 py-2"
+                  className="rounded-[8px] border-2 border-border bg-card px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
                     <Skeleton className="h-2.5 w-2.5 rounded-full" />
@@ -151,7 +150,7 @@ export default function DashboardLoading() {
         </div>
 
         <div className="px-6 pb-6">
-          <div className="rounded-[8px] border border-border/35 bg-[linear-gradient(180deg,rgba(10,17,14,0.62),rgba(8,13,11,0.76))] px-4 py-4 sm:px-5">
+          <div className="rounded-[8px] border-2 border-border bg-[#fffaf0] px-4 py-4 sm:px-5">
             <div className="grid h-[22rem] min-w-0 grid-cols-[3.15rem_minmax(0,1fr)] gap-2.5 sm:gap-3 sm:h-[24rem] xl:h-[26rem]">
               <div className="grid h-full min-h-0 grid-rows-[3.5rem_minmax(0,1fr)_2.8rem]">
                 <div />
@@ -223,7 +222,7 @@ export default function DashboardLoading() {
           </div>
         </div>
         <div className="flex flex-1 flex-col px-6 pb-6">
-          <div className="overflow-hidden rounded-[8px] border border-border/50 bg-background/14">
+          <div className="overflow-hidden rounded-[8px] border-2 border-border bg-[#fffaf0]">
             <div className="grid grid-cols-4 gap-4 border-b border-border/40 px-5 py-3.5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-3 w-20" />
