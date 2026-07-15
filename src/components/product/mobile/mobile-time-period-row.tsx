@@ -30,6 +30,9 @@ export type MobileTimePeriodRowProps = {
   menuPortalZIndex?: number;
 };
 
+const activeRangeClassName =
+  "border-primary/70 bg-primary text-primary-foreground shadow-[0_0_0_1px_rgba(104,211,145,0.18)]";
+
 export function MobileTimePeriodRow({
   value,
   quickRanges,
@@ -57,7 +60,7 @@ export function MobileTimePeriodRow({
             className={cn(
               "min-h-11 min-w-[3.25rem] flex-1 basis-[3.25rem] rounded-[8px] border px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
-                ? "border-primary/70 bg-primary text-primary-foreground shadow-[0_0_0_1px_rgba(104,211,145,0.18)]"
+                ? activeRangeClassName
                 : "border-border/55 bg-background/10 text-secondary-foreground hover:bg-background/16 hover:text-foreground"
             )}
           >
@@ -320,7 +323,8 @@ function MoreTimePeriodsMenu({
         className={cn(
           "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-border/50 bg-background/16 px-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           isOpen && "rounded-b-none",
-          (isOpen || triggerActive) && "border-primary/70 bg-primary/14 text-primary"
+          isOpen && !triggerActive && "border-primary/70 bg-primary/14 text-primary",
+          triggerActive && activeRangeClassName
         )}
       >
         <span className="truncate text-center">
