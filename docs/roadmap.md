@@ -37,9 +37,3 @@ This document tracks current implementation status and near-term priorities. For
 - top-level `dehydrate()` / `HydrationBoundary` adoption as a default pattern
 - repository or data-access extraction as optional architectural cleanup
 - broad new automated table coverage as a prerequisite for UI iteration
-
-## Archive
-
-- Pre-rewrite baseline: [project-baseline-pre-rewrite.md](./archive/project-baseline-pre-rewrite.md)
-- Migration rewrite plan: [rewrite-plan-archived-2026-06.md](./archive/rewrite-plan-archived-2026-06.md)
-- Archived frontend spec: [frontend-trd-archived-2026.md](./archive/frontend-trd-archived-2026.md)
