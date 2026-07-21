@@ -1,4 +1,3 @@
-import { DataTableShell } from "@/components/product/data-table-shell";
 import {
   AppPageHeaderSkeleton,
   DataTableSkeleton,
@@ -27,7 +26,7 @@ function MobileTransactionsListSkeleton() {
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
-          className="rounded-[8px] border border-border/45 bg-background/12 px-4 py-3.5"
+          className="rounded-[10px] border-2 border-border bg-card px-4 py-3.5"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-2">
@@ -37,7 +36,7 @@ function MobileTransactionsListSkeleton() {
             <Skeleton className="h-5 w-20 rounded-[8px]" />
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
-            <Skeleton className="h-7 w-24 rounded-[999px]" />
+            <Skeleton className="h-11 w-24 rounded-[999px]" />
             <Skeleton className="h-4 w-16 rounded-[8px]" />
           </div>
         </div>
@@ -52,6 +51,7 @@ export default function TransactionsLoading() {
       <MobilePageHeaderSkeleton
         titleWidth="w-48"
         descriptionWidth="w-[18rem]"
+        actionWidth="w-full"
         showEyebrow
         eyebrowWidth="w-36"
       />
@@ -61,7 +61,7 @@ export default function TransactionsLoading() {
           eyebrowWidth="w-44"
           titleWidth="w-64"
           descriptionWidth="w-[34rem]"
-          actionWidths={["w-64"]}
+          actionWidths={["w-56", "w-44"]}
         />
       </div>
 
@@ -69,30 +69,29 @@ export default function TransactionsLoading() {
 
       <div className="hidden lg:block">
         <FilterPanelSkeleton
-          controlCount={4}
-          controlClassNames={["", "", "", "flex items-end lg:justify-end"]}
+          controlCount={5}
+          controlClassNames={["", "", "", "", "flex items-center lg:justify-end"]}
           desktopBreakpoint="lg"
+          desktopGridClassName="lg:grid-cols-[minmax(16rem,1fr)_minmax(10rem,0.25fr)_minmax(10rem,0.25fr)_minmax(10rem,0.25fr)_3rem]"
         />
       </div>
 
-      <DataTableShell>
-        <MobileTransactionsListSkeleton />
+      <MobileTransactionsListSkeleton />
 
-        <div className="hidden lg:block">
-          <DataTableSkeleton
-            columns={[
-              { className: "w-[20%]" },
-              { className: "w-[30%]" },
-              { className: "w-[16%]", align: "right" },
-              { className: "w-[22%]" },
-              { className: "w-[12%]" },
-            ]}
-            minWidth="min-w-[860px]"
-            mobileBreakpoint="lg"
-            includeShell={false}
-          />
-        </div>
-      </DataTableShell>
+      <div className="hidden lg:block">
+        <DataTableSkeleton
+          columns={[
+            { className: "w-[20%]" },
+            { className: "w-[30%]" },
+            { className: "w-[16%]", align: "right" },
+            { className: "w-[17%]" },
+            { className: "w-[14%]" },
+            { className: "w-[17%]" },
+          ]}
+          minWidth="min-w-[860px]"
+          mobileBreakpoint="lg"
+        />
+      </div>
 
       <MobilePaginationSkeleton />
     </div>

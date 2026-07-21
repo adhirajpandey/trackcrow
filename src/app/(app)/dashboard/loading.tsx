@@ -24,7 +24,15 @@ function DashboardPanelSkeleton({
   );
 }
 
-function TopCardSkeleton() {
+function TopCardSkeleton({
+  metricWidth,
+  detailWidths,
+  badge = false,
+}: {
+  metricWidth: string;
+  detailWidths: [string, string];
+  badge?: boolean;
+}) {
   return (
     <div className="flex min-h-[258px] flex-col rounded-[10px] border-2 border-border bg-card p-4 shadow-[4px_5px_0_var(--foreground)] sm:p-5">
       <div className="flex items-start justify-between gap-3">
@@ -32,16 +40,19 @@ function TopCardSkeleton() {
         <Skeleton className="h-11 w-11 rounded-[8px]" />
       </div>
       <div className="mt-5 space-y-2.5">
-        <Skeleton className="h-9 w-32" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Skeleton className={`h-9 ${metricWidth}`} />
+          {badge ? <Skeleton className="h-8 w-24 rounded-[999px]" /> : null}
+        </div>
         <Skeleton className="h-4 w-40" />
       </div>
       <div className="mt-5 space-y-2.5 border-t-2 border-dashed border-border/55 pt-4">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
-          <Skeleton className="h-4 w-24" />
+          <Skeleton className={`h-4 ${detailWidths[0]}`} />
           <Skeleton className="h-4 w-10 justify-self-end" />
         </div>
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
-          <Skeleton className="h-4 w-28" />
+          <Skeleton className={`h-4 ${detailWidths[1]}`} />
           <Skeleton className="h-4 w-16 justify-self-end" />
         </div>
       </div>
@@ -102,7 +113,7 @@ function TablePanelSkeleton({
 
 export default function DashboardLoading() {
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-4">
       <MobilePageHeaderSkeleton titleWidth="w-44" metaWidth="w-32" />
 
       <div className="lg:hidden">
@@ -119,9 +130,10 @@ export default function DashboardLoading() {
       </div>
 
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <TopCardSkeleton key={index} />
-        ))}
+        <TopCardSkeleton metricWidth="w-44" detailWidths={["w-28", "w-32"]} badge />
+        <TopCardSkeleton metricWidth="w-32" detailWidths={["w-24", "w-28"]} />
+        <TopCardSkeleton metricWidth="w-40" detailWidths={["w-32", "w-24"]} badge />
+        <TopCardSkeleton metricWidth="w-48" detailWidths={["w-28", "w-36"]} />
       </section>
 
       <DashboardPanelSkeleton>
@@ -223,21 +235,23 @@ export default function DashboardLoading() {
         </div>
         <div className="flex flex-1 flex-col px-6 pb-6">
           <div className="overflow-hidden rounded-[8px] border-2 border-border bg-[#fffaf0]">
-            <div className="grid grid-cols-4 gap-4 border-b border-border/40 px-5 py-3.5">
+            <div className="grid grid-cols-5 gap-4 border-b border-border/40 px-5 py-3.5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-3 w-14 justify-self-end" />
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-3 w-14" />
             </div>
             {Array.from({ length: 8 }).map((_, index) => (
               <div
                 key={index}
-                className="grid min-h-[72px] grid-cols-4 gap-4 border-t border-border/40 px-5 py-4 first:border-t-0"
+                className="grid min-h-[72px] grid-cols-5 gap-4 border-t border-border/40 px-5 py-4 first:border-t-0"
               >
                 <Skeleton className="h-4 w-[78%] self-center" />
                 <Skeleton className="h-4 w-[70%] self-center" />
                 <Skeleton className="h-4 w-[58%] self-center" />
-                <Skeleton className="h-4 w-16 justify-self-end self-center" />
+                <Skeleton className="h-8 w-24 self-center rounded-[999px]" />
+                <Skeleton className="h-4 w-[70%] self-center" />
               </div>
             ))}
           </div>

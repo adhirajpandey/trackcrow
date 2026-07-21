@@ -151,28 +151,27 @@ export function AppPageHeaderSkeleton({
   actionWidths?: string[];
 }) {
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div className="min-w-0 space-y-3">
-        <Skeleton className={cn("h-4 rounded-[8px]", eyebrowWidth)} />
-        <Skeleton className={cn("h-12 max-w-full rounded-[8px]", titleWidth)} />
-        {descriptionWidth ? (
-          <Skeleton className={cn("h-5 max-w-full rounded-[8px]", descriptionWidth)} />
-        ) : null}
-        {metaWidth ? (
-          <div className="flex items-center gap-2">
-            <Skeleton className={cn("h-4 rounded-[8px]", metaWidth)} />
-            <Skeleton className="h-3.5 w-3.5 rounded-full" />
+    <section className="w-full max-w-full min-w-0 overflow-hidden border-b-2 border-border/25 pb-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 max-w-full">
+          <Skeleton className={cn("h-4 rounded-[8px]", eyebrowWidth)} />
+          <Skeleton className={cn("mt-1 h-13 max-w-full rounded-[8px]", titleWidth)} />
+          {descriptionWidth ? (
+            <Skeleton className={cn("mt-3 h-5 max-w-full rounded-[8px]", descriptionWidth)} />
+          ) : null}
+          {metaWidth ? (
+            <Skeleton className={cn("mt-3 h-4 rounded-[8px]", metaWidth)} />
+          ) : null}
+        </div>
+        {actionWidths.length > 0 ? (
+          <div className="flex w-full flex-wrap gap-2 lg:w-auto">
+            {actionWidths.map((width, index) => (
+              <Skeleton key={`${width}-${index}`} className={cn("h-10 rounded-[8px]", width)} />
+            ))}
           </div>
         ) : null}
       </div>
-      {actionWidths.length > 0 ? (
-        <div className="flex w-full flex-wrap gap-2 lg:w-auto">
-          {actionWidths.map((width, index) => (
-            <Skeleton key={`${width}-${index}`} className={cn("h-10 rounded-[8px]", width)} />
-          ))}
-        </div>
-      ) : null}
-    </div>
+    </section>
   );
 }
 
@@ -200,7 +199,7 @@ export function MobilePageHeaderSkeleton({
           ) : null}
           <Skeleton
             className={cn(
-              "h-10 max-w-full rounded-[8px]",
+              "h-8 max-w-full rounded-[8px]",
               showEyebrow ? "mt-1" : "",
               titleWidth
             )}
@@ -210,10 +209,7 @@ export function MobilePageHeaderSkeleton({
           ) : null}
         </div>
         {metaWidth ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Skeleton className={cn("h-4 rounded-[8px]", metaWidth)} />
-            <Skeleton className="h-4 w-20 rounded-[8px]" />
-          </div>
+          <Skeleton className={cn("h-4 rounded-[8px]", metaWidth)} />
         ) : null}
       </div>
       {actionWidth ? (
@@ -315,19 +311,21 @@ export function FilterPanelSkeleton({
   controlCount = 5,
   controlClassNames,
   desktopBreakpoint = "lg",
+  desktopGridClassName,
 }: {
   controlCount?: number;
   controlClassNames?: string[];
   desktopBreakpoint?: "lg" | "xl";
+  desktopGridClassName?: string;
 }) {
   const gridClassName =
-    controlClassNames
+    desktopGridClassName ?? (controlClassNames
       ? desktopBreakpoint === "xl"
         ? "xl:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]"
         : "lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]"
       : desktopBreakpoint === "xl"
         ? "xl:grid-cols-5"
-        : "lg:grid-cols-5";
+        : "lg:grid-cols-5");
 
   return (
     <div className={cn("grid gap-3 md:grid-cols-2", gridClassName)}>

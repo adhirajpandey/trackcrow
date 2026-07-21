@@ -15,13 +15,17 @@ function DetailPanelSkeleton({
   rows,
   textarea = false,
   actionWidth,
+  secondaryActionWidth,
   tone = "default",
+  collapsibleDetails = false,
 }: {
   titleWidth: string;
   rows: number;
   textarea?: boolean;
   actionWidth?: string;
+  secondaryActionWidth?: string;
   tone?: "default" | "attention";
+  collapsibleDetails?: boolean;
 }) {
   return (
     <section
@@ -31,15 +35,34 @@ function DetailPanelSkeleton({
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Skeleton className={cn("h-6 rounded-[8px]", titleWidth)} />
-          <Skeleton className="h-8 w-28 rounded-[999px]" />
+          {tone === "attention" ? (
+            <>
+              <Skeleton className="h-9 w-24 rounded-[999px]" />
+              <Skeleton className="h-9 w-28 rounded-[999px]" />
+            </>
+          ) : null}
         </div>
-        {actionWidth ? <Skeleton className={cn("h-10 rounded-[8px]", actionWidth)} /> : null}
+        {actionWidth || secondaryActionWidth ? (
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            {actionWidth ? <Skeleton className={cn("h-10 rounded-[8px]", actionWidth)} /> : null}
+            {secondaryActionWidth ? (
+              <Skeleton className={cn("h-10 rounded-[8px]", secondaryActionWidth)} />
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {Array.from({ length: rows }).map((_, index) => (
-          <div key={index} className="space-y-2">
+          <div
+            key={index}
+            className={cn(
+              "space-y-2",
+              collapsibleDetails && [2, 3, 5].includes(index) && "hidden lg:block",
+              collapsibleDetails && index === 6 && "md:col-span-2"
+            )}
+          >
             <Skeleton className="h-4 w-28 rounded-[8px]" />
             <Skeleton className="h-11 rounded-[8px]" />
           </div>
@@ -51,6 +74,14 @@ function DetailPanelSkeleton({
           </div>
         ) : null}
       </div>
+      {tone === "attention" ? (
+        <Skeleton className="mt-3 h-4 w-[34rem] max-w-full rounded-[8px]" />
+      ) : null}
+      {collapsibleDetails ? (
+        <div className="mt-4 lg:hidden">
+          <Skeleton className="h-11 w-full rounded-[8px]" />
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -101,7 +132,6 @@ export default function TransactionDetailLoading() {
     <div className="space-y-3.5">
       <MobilePageHeaderSkeleton
         titleWidth="w-48"
-        metaWidth="w-24"
         actionWidth="w-full"
         showEyebrow
         eyebrowWidth="w-36"
@@ -139,11 +169,22 @@ export default function TransactionDetailLoading() {
 
       <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.78fr)]">
         <div className="space-y-3">
-          <DetailPanelSkeleton titleWidth="w-32" rows={2} actionWidth="w-36" tone="attention" />
-          <DetailPanelSkeleton titleWidth="w-40" rows={6} textarea />
+          <DetailPanelSkeleton
+            titleWidth="w-32"
+            rows={2}
+            actionWidth="w-36"
+            secondaryActionWidth="w-28"
+            tone="attention"
+          />
+          <DetailPanelSkeleton
+            titleWidth="w-40"
+            rows={7}
+            textarea
+            collapsibleDetails
+          />
           <DangerZoneSkeleton mobile />
         </div>
-        <aside className="space-y-3">
+        <aside className="hidden space-y-3 lg:block">
           <TransactionSummarySkeleton />
           <DangerZoneSkeleton />
         </aside>
