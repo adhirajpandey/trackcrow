@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -105,7 +105,7 @@ function RuleRow({ rule, onEdit }: { rule: RuleDto; onEdit: () => void }) {
 
 function DeleteRule({ rule }: { rule: RuleDto }) {
   const mutations = useRuleMutations();
-  return <AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="destructive" aria-label={`Delete ${rule.name}`}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete rule?</AlertDialogTitle><AlertDialogDescription>This disables and removes “{rule.name}”. Existing transactions will not change.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel asChild><Button variant="secondary">Cancel</Button></AlertDialogCancel><AlertDialogAction asChild><Button variant="destructive" onClick={async () => { await mutations.remove.mutateAsync(rule.uuid); toast({ tone: "success", title: "Rule deleted" }); }}>Delete rule</Button></AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>;
+  return <AlertDialog><AlertDialogTrigger asChild><Button size="icon" variant="destructive" aria-label={`Delete ${rule.name}`}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete rule?</AlertDialogTitle><AlertDialogDescription>This disables and removes “{rule.name}”. Existing transactions will not change.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel asChild><Button variant="secondary">Cancel</Button></AlertDialogCancel><AlertDialogAction asChild><Button variant="destructive" onClick={async () => { await mutations.remove.mutateAsync(rule.uuid); toast({ tone: "success", title: "Rule deleted", description: "The rule was removed. Existing transactions were not changed." }); }}>Delete rule</Button></AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>;
 }
 
 function RuleOverlay({ open, onClose, initialRule, prefill, categories, recipients }: { open: boolean; onClose: () => void; initialRule: RuleDto | null; prefill: RulesPageInitialData["initialPrefill"]; categories: RulesPageInitialData["categories"]; recipients: RulesPageInitialData["recipients"] }) {
@@ -132,7 +132,14 @@ function RuleForm({ initialRule, prefill, categories, recipients, onDone }: { in
     const input = { name: name.trim(), isEnabled: enabled, conditions: { recipient: { equals: recipientUuid } }, action: { categoryUuid, subcategoryUuid: subcategoryUuid || null } };
     try {
       if (initialRule) await mutations.update.mutateAsync({ ruleUuid: initialRule.uuid, input }); else await mutations.create.mutateAsync(input);
-      toast({ tone: "success", title: initialRule ? "Rule updated" : "Rule created" }); onDone();
+      toast({
+        tone: "success",
+        title: initialRule ? "Rule updated" : "Rule created",
+        description: initialRule
+          ? "The rule changes were saved."
+          : "The rule will classify matching future transactions.",
+      });
+      onDone();
     } catch (caught) {
       if (caught instanceof ApiClientError && caught.body?.code === "RULE_RECIPIENT_CONFLICT") {
         const details = caught.body.details as { existingRule?: { uuid?: string } } | undefined;

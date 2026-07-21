@@ -139,7 +139,10 @@ export type TransactionCategoryUpdateResult = ServiceResult<
     subcategoryUuid: string | null;
     subcategory: string | null;
   },
-  "NOT_FOUND" | "VALIDATION_ERROR" | "INTERNAL_ERROR"
+  | "NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "TRANSACTION_SUGGESTION_CONFLICT"
+  | "INTERNAL_ERROR"
 >;
 export type TransactionDeleteResult = ServiceResult<
   { uuid: string },
