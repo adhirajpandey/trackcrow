@@ -89,6 +89,11 @@ describe("transactions query state", () => {
     });
   });
 
+  it("ignores the retired review queue mode", () => {
+    expect(getTransactionsPageState({ review: "queue" }).view.review).toBeNull();
+    expect(getTransactionsPageState({ review: "large" }).view.review).toBe("large");
+  });
+
   it("clears subcategories that are incompatible with selected categories", () => {
     const state = getTransactionsPageState(
       {

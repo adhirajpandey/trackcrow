@@ -90,7 +90,7 @@ function parseSortOrder(value: string | undefined): TransactionSortOrder {
 }
 
 function parseReview(value: string | undefined): TransactionReview | null {
-  return value === "queue" || value === "large" ? value : null;
+  return value === "large" ? value : null;
 }
 
 function parseStatus(value: string | undefined): TransactionStatus | null {

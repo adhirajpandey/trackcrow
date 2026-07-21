@@ -129,8 +129,7 @@ export default function DashboardLoading() {
         />
       </div>
 
-      <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-        <TopCardSkeleton metricWidth="w-44" detailWidths={["w-28", "w-32"]} badge />
+      <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
         <TopCardSkeleton metricWidth="w-32" detailWidths={["w-24", "w-28"]} />
         <TopCardSkeleton metricWidth="w-40" detailWidths={["w-32", "w-24"]} badge />
         <TopCardSkeleton metricWidth="w-48" detailWidths={["w-28", "w-36"]} />

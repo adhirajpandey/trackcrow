@@ -8,7 +8,7 @@ import type { DashboardRangeValue } from "@/features/dashboard/query-state";
 
 export type TransactionSortBy = "timestamp" | "amount";
 export type TransactionSortOrder = "asc" | "desc";
-export type TransactionReview = "queue" | "large";
+export type TransactionReview = "large";
 export type TransactionStatus = "uncategorized";
 
 export type TransactionsQueryRow = {

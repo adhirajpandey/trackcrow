@@ -26,16 +26,22 @@ export async function getRulesPageData(
   const categoryUuid = Array.isArray(params.category) ? params.category[0] : params.category;
   const subcategoryUuid = Array.isArray(params.subcategory) ? params.subcategory[0] : params.subcategory;
   let initialPrefill: RulesPageInitialData["initialPrefill"] = null;
-  if (recipientUuid && categoryUuid) {
+  if (recipientUuid) {
     const [recipient, category, subcategory] = await Promise.all([
       prisma.recipient.findFirst({ where: { userUuid, uuid: recipientUuid }, select: { uuid: true } }),
-      prisma.category.findFirst({ where: { userUuid, uuid: categoryUuid }, select: { id: true, uuid: true } }),
-      subcategoryUuid
+      categoryUuid
+        ? prisma.category.findFirst({ where: { userUuid, uuid: categoryUuid }, select: { id: true, uuid: true } })
+        : null,
+      categoryUuid && subcategoryUuid
         ? prisma.subcategory.findFirst({ where: { userUuid, uuid: subcategoryUuid }, select: { uuid: true, categoryId: true } })
         : null,
     ]);
-    if (recipient && category && (!subcategoryUuid || subcategory?.categoryId === category.id)) {
-      initialPrefill = { recipientUuid, categoryUuid, subcategoryUuid: subcategory?.uuid ?? null };
+    if (recipient) {
+      initialPrefill = {
+        recipientUuid,
+        categoryUuid: category?.uuid ?? null,
+        subcategoryUuid: category && subcategory?.categoryId === category.id ? subcategory.uuid : null,
+      };
     }
   }
 

@@ -6,13 +6,11 @@ import {
   buildChartTicks,
   buildChartTooltip,
   buildDashboardInsights,
-  buildImportIssuesHref,
   buildLargeTransactionsHref,
   buildMetricComparisons,
   buildPeriodTransactionsHref,
   buildRecentTransactionMeta,
   buildRecentTransactionsSummary,
-  buildReviewQueueCard,
   buildTransactionsHref,
   buildSuggestedRules,
   buildUncategorizedTransactionsHref,
@@ -185,7 +183,7 @@ describe("dashboard view model", () => {
     expect(formatComparisonDelta(500, null)).toBe("No comparison available");
   });
 
-  it("builds dashboard drilldown links", () => {
+  it("builds transaction drilldown links", () => {
     expect(
       buildTransactionsHref({
         startDate: "2026-06-01",
@@ -194,9 +192,6 @@ describe("dashboard view model", () => {
         status: null,
       })
     ).toBe("/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Food");
-    expect(buildImportIssuesHref(range)).toBe(
-      "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue"
-    );
   });
 
   it("builds largest transaction links with the selected preset range", () => {
@@ -267,62 +262,6 @@ describe("dashboard view model", () => {
         transactionCount: 4,
       })
     ).toBe("4 recent");
-  });
-
-  it("derives compact review queue copy without large transactions", () => {
-    expect(
-      buildReviewQueueCard({
-        range,
-        summary: {
-          totalSpend: 1000,
-          transactionCount: 10,
-          categorizedCount: 7,
-          uncategorizedCount: 3,
-          averageSpend: 100,
-        },
-        importHealth: { parsedCount: 5, failedCount: 1, unparseableCount: 2 },
-      })
-    ).toMatchObject({
-      title: "Needs review",
-      action: "Review now",
-      hasItems: true,
-      totalReviewCount: 3,
-      tasks: [
-        {
-          label: "Need category",
-          count: 3,
-          tone: "attention",
-          href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
-        },
-        {
-          label: "Possible rule matches",
-          count: 0,
-          tone: "info",
-          href: "/recipients",
-        },
-      ],
-      helper: "3 transactions need review",
-    });
-  });
-
-  it("derives the review queue success state", () => {
-    expect(
-      buildReviewQueueCard({
-        range,
-        summary: {
-          totalSpend: 1000,
-          transactionCount: 10,
-          categorizedCount: 10,
-          uncategorizedCount: 0,
-          averageSpend: 100,
-        },
-        importHealth: { parsedCount: 5, failedCount: 0, unparseableCount: 0 },
-      })
-    ).toMatchObject({
-      action: "View transactions",
-      hasItems: false,
-      helper: "No open review items in this period.",
-    });
   });
 
   it("builds uncategorized drilldown links", () => {
@@ -420,7 +359,7 @@ describe("dashboard view model", () => {
         label: "Import health",
         value: "2 issues flagged",
         helper: "Failed or unreadable messages are waiting for review.",
-        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&review=queue",
+        href: null,
         tone: "attention",
       },
       {
@@ -659,14 +598,14 @@ describe("dashboard view model", () => {
       {
         recipient: "B ten cafe sec 56",
         action: "Create rule",
-        href: "/recipients/rcp-cafe",
+        href: "/rules?create=1&recipient=rcp-cafe",
         paymentCount: 5,
         totalAmount: 2450,
       },
       {
         recipient: "Hamanthi Devi",
         action: "Create rule",
-        href: "/recipients/rcp-devi",
+        href: "/rules?create=1&recipient=rcp-devi",
         paymentCount: 4,
         totalAmount: 1600,
       },
@@ -946,8 +885,25 @@ describe("dashboard view model", () => {
       })
     ).toMatchObject({
       action: "Create rule",
-      href: "/recipients/rcp-electric",
+      href: "/rules?create=1&recipient=rcp-electric",
       helper: "Good candidate for a rule",
+    });
+
+    expect(
+      buildMostFrequentRecipient({
+        recipients: [
+          {
+            recipientUuid: "rcp-unknown",
+            recipient: "Unknown recipient",
+            paymentCount: 3,
+            totalAmount: 2400,
+          },
+        ],
+      })
+    ).toMatchObject({
+      action: "Review",
+      href: "/recipients/rcp-unknown",
+      helper: "Review repeated payments",
     });
   });
 });

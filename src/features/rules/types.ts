@@ -43,7 +43,7 @@ export type RulesPageInitialData = {
   initialForm: RuleDto | null;
   initialPrefill: {
     recipientUuid: string;
-    categoryUuid: string;
+    categoryUuid: string | null;
     subcategoryUuid: string | null;
   } | null;
 };

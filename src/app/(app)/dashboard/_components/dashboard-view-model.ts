@@ -2,7 +2,6 @@ import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 import type { DashboardRangeValue } from "@/features/dashboard/query-state";
 import type {
   DashboardCategorySpendDto,
-  DashboardImportHealthDto,
   DashboardPageData,
   DashboardPeriodSpendDto,
   DashboardSectionStatus,
@@ -35,24 +34,6 @@ const timeFormatter = new Intl.DateTimeFormat("en-IN", {
   minute: "2-digit",
   hour12: true,
 });
-
-export type ReviewTaskVm = {
-  label: string;
-  count: number;
-  tone: "attention" | "warning" | "info";
-  href: string;
-  helper: string;
-};
-
-export type ReviewQueueCardVm = {
-  title: string;
-  href: string;
-  action: string;
-  hasItems: boolean;
-  totalReviewCount: number;
-  helper: string;
-  tasks: ReviewTaskVm[];
-};
 
 export type DashboardInsightVm = {
   label: string;
@@ -521,7 +502,16 @@ function getRecipientReviewAction(input: {
   return "Review" as const;
 }
 
-function getRecipientActionHref(recipientUuid: string | null = null) {
+function getRecipientActionHref(
+  recipientUuid: string | null,
+  action: "Create rule" | "Review"
+) {
+  if (action === "Create rule") {
+    const params = new URLSearchParams({ create: "1" });
+    if (recipientUuid) params.set("recipient", recipientUuid);
+    return `/rules?${params}`;
+  }
+
   return recipientUuid ? `/recipients/${recipientUuid}` : "/recipients";
 }
 
@@ -644,13 +634,6 @@ export function buildTransactionsHref(params: Record<string, LinkParamValue>) {
   return query ? `/transactions?${query}` : "/transactions";
 }
 
-export function buildReviewQueueHref(range: DashboardPageData["range"]) {
-  return buildTransactionsHref({
-    ...getRangeParams(range),
-    review: "queue",
-  });
-}
-
 export function buildLargeTransactionsHref(range: DashboardPageData["range"]) {
   return buildTransactionsHref({
     range: range.value,
@@ -666,13 +649,6 @@ export function buildUncategorizedTransactionsHref(range: DashboardPageData["ran
   return buildTransactionsHref({
     ...getRangeParams(range),
     status: "uncategorized",
-  });
-}
-
-export function buildImportIssuesHref(range: DashboardPageData["range"]) {
-  return buildTransactionsHref({
-    ...getRangeParams(range),
-    review: "queue",
   });
 }
 
@@ -783,51 +759,6 @@ export function buildChartDisplayPeriods(input: {
   }
 
   return displayPeriods;
-}
-
-export function buildReviewQueueCard(input: {
-  summary: DashboardSummaryDto;
-  importHealth: DashboardImportHealthDto;
-  recipients?: DashboardPageData["frequentRecipients"];
-  range: DashboardPageData["range"];
-}): ReviewQueueCardVm {
-  const repeatedRecipientMatchCount = (input.recipients ?? [])
-    .filter((recipient) => recipient.paymentCount >= 2)
-    .reduce((sum, recipient) => sum + recipient.paymentCount, 0);
-  const totalReviewCount =
-    input.summary.uncategorizedCount +
-    repeatedRecipientMatchCount;
-  const hasItems =
-    input.summary.uncategorizedCount > 0 ||
-    repeatedRecipientMatchCount > 0;
-  const tasks: ReviewTaskVm[] = [
-    {
-      label: "Need category",
-      count: input.summary.uncategorizedCount,
-      tone: "attention",
-      href: buildUncategorizedTransactionsHref(input.range),
-      helper: "Transactions that still need a category.",
-    },
-    {
-      label: "Possible rule matches",
-      count: repeatedRecipientMatchCount,
-      tone: "info",
-      href: "/recipients",
-      helper: "Repeated recipients that could reduce future reviews.",
-    },
-  ];
-
-  return {
-    title: "Needs review",
-    href: buildReviewQueueHref(input.range),
-    action: hasItems ? "Review now" : "View transactions",
-    hasItems,
-    totalReviewCount,
-    tasks,
-    helper: hasItems
-      ? `${formatNumber(totalReviewCount)} transactions need review`
-      : "No open review items in this period.",
-  };
 }
 
 export function buildMetricComparisons(input: {
@@ -1085,7 +1016,7 @@ export function buildDashboardInsights(input: {
         : input.sectionStatus.imports === "empty"
           ? "Import messages to start filling out the dashboard."
           : "No import issues in this period.",
-    href: buildImportIssuesHref(input.range),
+    href: null,
     tone: input.importIssueCount > 0 ? "attention" : "info",
   });
 
@@ -1199,7 +1130,7 @@ export function buildSuggestedRules(input: {
       return {
         recipient: recipient.recipient,
         action,
-        href: getRecipientActionHref(recipient.recipientUuid),
+        href: getRecipientActionHref(recipient.recipientUuid, action),
         paymentCount: recipient.paymentCount,
         totalAmount: recipient.totalAmount,
       };
@@ -1220,7 +1151,7 @@ export function buildMostFrequentRecipient(input: {
     paymentCount: recipient.paymentCount,
     totalAmount: recipient.totalAmount,
     action,
-    href: getRecipientActionHref(recipient.recipientUuid),
+    href: getRecipientActionHref(recipient.recipientUuid, action),
     helper:
       action === "Create rule"
         ? "Good candidate for a rule"
@@ -1237,7 +1168,7 @@ export function buildFrequentRecipientRows(input: {
     return {
       ...recipient,
       action,
-      href: getRecipientActionHref(recipient.recipientUuid),
+      href: getRecipientActionHref(recipient.recipientUuid, action),
     };
   });
 }

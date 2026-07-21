@@ -2,10 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  ClipboardList,
   Gauge,
   LogOut,
   ReceiptText,
@@ -31,12 +30,6 @@ const navigation = [
   { href: "/dashboard", label: "Overview", icon: Gauge },
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
   { href: "/recipients", label: "Recipients", icon: Users },
-  {
-    href: "#review-queue",
-    label: "Review queue",
-    icon: ClipboardList,
-    disabled: true,
-  },
   { href: "/rules", label: "Rules", icon: ScrollText },
 ];
 
@@ -52,13 +45,12 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background text-foreground lg:grid lg:grid-cols-[276px_1fr]">
       <aside className="hidden border-r-2 border-border bg-[#fffaf0]/95 lg:block">
-        <ShellSidebar pathname={pathname} searchParams={searchParams} user={user} />
+        <ShellSidebar pathname={pathname} user={user} />
       </aside>
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
@@ -93,7 +85,6 @@ export function AppShell({
               <div className="min-h-0 flex-1">
                 <ShellSidebarContent
                   pathname={pathname}
-                  searchParams={searchParams}
                   user={user}
                   onNavigate={() => setIsOpen(false)}
                 />
@@ -112,17 +103,15 @@ export function AppShell({
 
 function ShellSidebar({
   pathname,
-  searchParams,
   user,
 }: {
   pathname: string;
-  searchParams: ReturnType<typeof useSearchParams>;
   user: AppShellUser;
 }) {
   return (
     <div className="sticky top-0 h-screen px-4 py-5">
       <div className="h-full">
-        <ShellSidebarContent pathname={pathname} searchParams={searchParams} user={user} />
+        <ShellSidebarContent pathname={pathname} user={user} />
       </div>
     </div>
   );
@@ -130,12 +119,10 @@ function ShellSidebar({
 
 function ShellSidebarContent({
   pathname,
-  searchParams,
   user,
   onNavigate,
 }: {
   pathname: string;
-  searchParams: ReturnType<typeof useSearchParams>;
   user: AppShellUser;
   onNavigate?: () => void;
 }) {
@@ -144,7 +131,7 @@ function ShellSidebarContent({
       <SidebarBrand />
 
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-        <ShellNav pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} />
+        <ShellNav pathname={pathname} onNavigate={onNavigate} />
       </div>
 
       <SidebarFooter user={user} />
@@ -221,36 +208,27 @@ function ProfileCard({ user }: { user: AppShellUser }) {
 
 function ShellNav({
   pathname,
-  searchParams,
   onNavigate,
 }: {
   pathname: string;
-  searchParams: ReturnType<typeof useSearchParams>;
   onNavigate?: () => void;
 }) {
-  const review = searchParams.get("review");
-
   return (
     <nav className="space-y-1">
       {navigation.map((item) => {
         const Icon = item.icon;
-        const active =
-          !item.disabled && isNavigationItemActive(item.href, pathname, review);
+        const active = isNavigationItemActive(item.href, pathname);
         const itemClassName = cn(
           "group relative flex min-h-11 items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-bold transition-[background-color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           active
             ? "border-2 border-border bg-primary text-foreground shadow-[2px_3px_0_var(--foreground)]"
-            : item.disabled
-              ? "cursor-not-allowed text-secondary-foreground/55"
-              : "text-secondary-foreground hover:bg-secondary hover:text-foreground"
+            : "text-secondary-foreground hover:bg-secondary hover:text-foreground"
         );
         const iconClassName = cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
           active
             ? "border-border bg-[#e3f5ea] text-foreground"
-            : item.disabled
-              ? "border-border/25 bg-transparent text-secondary-foreground/45"
-              : "border-border/45 bg-card text-secondary-foreground group-hover:border-border group-hover:bg-[var(--paper-mint)] group-hover:text-foreground"
+            : "border-border/45 bg-card text-secondary-foreground group-hover:border-border group-hover:bg-[var(--paper-mint)] group-hover:text-foreground"
         );
 
         const content = (
@@ -268,14 +246,6 @@ function ShellNav({
             />
           </>
         );
-
-        if (item.disabled) {
-          return (
-            <div key={item.label} aria-disabled="true" className={itemClassName}>
-              {content}
-            </div>
-          );
-        }
 
         return (
           <Link
@@ -295,16 +265,8 @@ function ShellNav({
 
 function isNavigationItemActive(
   href: string,
-  pathname: string,
-  review: string | null
+  pathname: string
 ) {
-  if (href === "/transactions") {
-    return (
-      (pathname === href || pathname.startsWith(`${href}/`)) &&
-      !(pathname === "/transactions" && review === "queue")
-    );
-  }
-
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

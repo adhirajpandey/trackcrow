@@ -20,13 +20,6 @@ function getFilterLabel(key: string, value: string) {
     };
   }
 
-  if (key === "review" && value === "queue") {
-    return {
-      label: "Review set",
-      value: "All dashboard review items",
-    };
-  }
-
   if (key === "review" && value === "large") {
     return {
       label: "Review set",

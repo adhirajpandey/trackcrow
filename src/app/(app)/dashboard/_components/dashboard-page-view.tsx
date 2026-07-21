@@ -4,8 +4,6 @@ import {
   AlertCircle,
   ArrowRight,
   BarChart3,
-  CheckCircle2,
-  Clock3,
   FolderTree,
   UserRound,
   Wallet,
@@ -30,7 +28,6 @@ import {
   buildChartTicks,
   buildComparisonPresentation,
   buildMostFrequentRecipient,
-  buildReviewQueueCard,
   buildTransactionsHref,
   buildUncategorizedTransactionsHref,
   buildWhatChangedSummary,
@@ -51,11 +48,8 @@ import {
 import {
   dashboardMetricIconClassName,
   dashboardPanelClassName,
-  dashboardPrimaryActionClassName,
   dashboardSmallActionClassName,
   dashboardTopCardActionSlotClassName,
-  dashboardTopCardAttentionDetailSectionClassName,
-  dashboardTopCardAttentionClassName,
   dashboardTopCardBodyClassName,
   dashboardTopCardClassName,
   dashboardTopCardDetailSectionClassName,
@@ -73,8 +67,6 @@ const chartPlotInsetTopRem = 0.85;
 const chartTooltipWidthRem = 13.5;
 
 const dashboardCardDescriptions = {
-  reviewQueue:
-    "Transactions that need a category or could be handled by a reusable rule.",
   totalSpent:
     "Booked spending and transaction count for the selected timeframe, compared with the matching prior period.",
   biggestCategory:
@@ -127,12 +119,6 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
   const latestPeriod = data.spendingByPeriod[data.spendingByPeriod.length - 1] ?? null;
   const averagePeriodSpend = getAveragePeriodSpend(data.spendingByPeriod);
   const rangeParams = getRangeParams(data.range);
-  const reviewQueue = buildReviewQueueCard({
-    summary: data.summary,
-    importHealth: data.importHealth,
-    recipients: data.frequentRecipients,
-    range: data.range,
-  });
   const changeSummary = buildWhatChangedSummary({
     summary: data.summary,
     comparison: data.comparison,
@@ -191,11 +177,8 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
         </section>
       ) : null}
 
-      <section className="grid auto-rows-fr items-stretch gap-3 md:grid-cols-2 2xl:grid-cols-4">
+      <section className="grid auto-rows-fr items-stretch gap-3 md:grid-cols-2 2xl:grid-cols-3">
         <div className="dashboard-reveal order-1 h-full">
-          <ReviewQueueHero card={reviewQueue} />
-        </div>
-        <div className="dashboard-reveal order-2 h-full">
           <MetricCard
             href={buildTransactionsHref(rangeParams)}
             label="TOTAL SPENT"
@@ -214,7 +197,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             icon={<Wallet className="h-4.5 w-4.5" />}
           />
         </div>
-        <div className="dashboard-reveal order-3 h-full">
+        <div className="dashboard-reveal order-2 h-full">
           <TopCategoryCard
             category={topCategoryInsight}
             emptyHref={
@@ -232,7 +215,7 @@ export function DashboardPageView({ data }: { data: DashboardPageData }) {
             }
           />
         </div>
-        <div className="dashboard-reveal order-4 h-full">
+        <div className="dashboard-reveal order-3 h-full">
           <MostFrequentRecipientCard recipient={mostFrequentRecipient} />
         </div>
       </section>
@@ -367,78 +350,6 @@ function MostFrequentRecipientCard({
   );
 }
 
-function ReviewQueueHero({
-  card,
-}: {
-  card: ReturnType<typeof buildReviewQueueCard>;
-}) {
-  const needsCategoryTask = card.tasks.find((task) => task.label === "Need category");
-  const ruleMatchesTask = card.tasks.find((task) => task.label === "Possible rule matches");
-
-  return (
-    <TopDashboardCardFrame tone="attention">
-      <TopDashboardCardHeader
-        label="REVIEW QUEUE"
-        description={dashboardCardDescriptions.reviewQueue}
-        labelTone="accent"
-        icon={
-          card.hasItems ? (
-            <Clock3 className="h-4.5 w-4.5" />
-          ) : (
-            <CheckCircle2 className="h-4.5 w-4.5" />
-          )
-        }
-        iconTone="accent"
-      />
-      <TopDashboardCardBody
-        tone="attention"
-        lead={
-          <DashboardTopCardMetric
-            value={formatNumber(card.totalReviewCount)}
-            valueTone="accent"
-            emphasis={
-              card.hasItems
-                ? "Transaction review workload"
-                : "No transaction review backlog"
-            }
-            emphasisTone="strong"
-          />
-        }
-        details={
-          <TopCardDetailList
-            tone="attention"
-            items={[
-              {
-                label: "Need category",
-                value: formatNumber(needsCategoryTask?.count ?? 0),
-              },
-              {
-                label: "Possible rules",
-                value: formatNumber(ruleMatchesTask?.count ?? 0),
-              },
-            ]}
-          />
-        }
-        action={
-          <Button
-            asChild
-            variant="ghost"
-            className={cn(
-              dashboardPrimaryActionClassName,
-              "w-full border-2 border-border bg-destructive text-white shadow-[2px_3px_0_var(--foreground)] hover:bg-[#dd3434] active:translate-x-[2px] active:translate-y-[3px] active:shadow-none"
-            )}
-          >
-            <Link href={card.hasItems ? card.href : buildTransactionsHref({})}>
-              {card.hasItems ? "Review now" : "View transactions"}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        }
-      />
-    </TopDashboardCardFrame>
-  );
-}
-
 function TopCategoryCard({
   category,
   href,
@@ -509,12 +420,12 @@ function TopDashboardCardFrame({
   tone = "default",
 }: {
   children: ReactNode;
-  tone?: "default" | "attention" | "mint" | "blush" | "lilac";
+  tone?: "default" | "mint" | "blush" | "lilac";
 }) {
   return (
     <article
       className={cn(
-        tone === "attention" ? dashboardTopCardAttentionClassName : dashboardTopCardClassName,
+        dashboardTopCardClassName,
         tone === "mint" && "bg-[var(--paper-mint)]",
         tone === "blush" && "bg-[var(--paper-blush)]",
         tone === "lilac" && "bg-[var(--paper-lilac)]"
@@ -529,24 +440,15 @@ function TopDashboardCardHeader({
   label,
   description,
   icon,
-  labelTone = "default",
-  iconTone = "default",
 }: {
   label: string;
   description: string;
   icon: ReactNode;
-  labelTone?: "default" | "accent";
-  iconTone?: "default" | "accent";
 }) {
   return (
     <div className={dashboardTopCardHeaderClassName}>
       <div className="flex min-w-0 items-center gap-2">
-        <p
-          className={cn(
-            dashboardTopCardLabelClassName,
-            labelTone === "accent" && "text-destructive"
-          )}
-        >
+        <p className={dashboardTopCardLabelClassName}>
           {label}
         </p>
         <DashboardCardInfo label={label} description={description} />
@@ -554,10 +456,7 @@ function TopDashboardCardHeader({
       <span
         className={cn(
           dashboardMetricIconClassName,
-          "absolute right-0 top-0",
-          iconTone === "accent"
-            ? "border-border bg-[#fff7d6] text-foreground"
-            : "border-border bg-card text-foreground"
+          "absolute right-0 top-0 border-border bg-card text-foreground"
         )}
       >
         {icon}
@@ -570,24 +469,16 @@ function TopDashboardCardBody({
   lead,
   details,
   action,
-  tone = "default",
 }: {
   lead: ReactNode;
   details?: ReactNode;
   action?: ReactNode;
-  tone?: "default" | "attention";
 }) {
   return (
     <div className={dashboardTopCardBodyClassName}>
       {lead}
       {details ? (
-        <div
-          className={
-            tone === "attention"
-              ? dashboardTopCardAttentionDetailSectionClassName
-              : dashboardTopCardDetailSectionClassName
-          }
-        >
+        <div className={dashboardTopCardDetailSectionClassName}>
           {details}
         </div>
       ) : null}
@@ -598,10 +489,8 @@ function TopDashboardCardBody({
 
 function TopCardDetailList({
   items,
-  tone = "default",
 }: {
   items: Array<{ label: string; value: string; mobileValue?: string }>;
-  tone?: "default" | "attention";
 }) {
   return (
     <div className="space-y-1.5 sm:space-y-2">
@@ -610,12 +499,7 @@ function TopCardDetailList({
           key={`${item.label}-${item.value}`}
           className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 text-sm leading-5"
         >
-          <span
-            className={cn(
-              "text-secondary-foreground",
-              tone === "attention" && "text-secondary-foreground/95"
-            )}
-          >
+          <span className="text-secondary-foreground">
             {item.label}
           </span>
           <span className="max-w-[16ch] text-right font-medium text-foreground overflow-wrap-anywhere">
@@ -643,7 +527,7 @@ function DashboardTopCardMetric({
 }: {
   value: string;
   emphasis?: string;
-  valueTone?: "default" | "primary" | "accent";
+  valueTone?: "default" | "primary";
   emphasisTone?:
     | "default"
     | "primary"
@@ -661,7 +545,6 @@ function DashboardTopCardMetric({
           entity ? dashboardTopCardEntityValueClassName : dashboardTopCardValueClassName,
           valueTone === "default" && "text-foreground",
           valueTone === "primary" && "text-primary",
-          valueTone === "accent" && "text-foreground"
         )}
       >
         {value}

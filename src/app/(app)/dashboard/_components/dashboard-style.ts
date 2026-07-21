@@ -36,9 +36,6 @@ export const dashboardMetricIconClassName =
 export const dashboardTopCardClassName =
   "flex h-full flex-col rounded-[10px] border-2 border-border bg-card p-3 shadow-[4px_5px_0_var(--foreground)] sm:p-4";
 
-export const dashboardTopCardAttentionClassName =
-  "flex h-full flex-col rounded-[10px] border-2 border-border bg-[var(--paper-yellow)] p-3 shadow-[4px_5px_0_var(--foreground)] sm:p-4";
-
 export const dashboardTopCardHeaderClassName =
   "relative min-h-8 pr-12 sm:min-h-9 sm:pr-14";
 
@@ -60,9 +57,6 @@ export const dashboardTopCardBodyClassName = "mt-1 flex min-h-0 flex-1 flex-col 
 export const dashboardTopCardLeadStackClassName = "space-y-1.5 sm:space-y-2";
 
 export const dashboardTopCardDetailSectionClassName =
-  "mt-3 border-t-2 border-dashed border-border/55 pt-2.5 sm:mt-4 sm:pt-3";
-
-export const dashboardTopCardAttentionDetailSectionClassName =
   "mt-3 border-t-2 border-dashed border-border/55 pt-2.5 sm:mt-4 sm:pt-3";
 
 export const dashboardTopCardActionSlotClassName = "mt-auto pt-2 sm:pt-4";
