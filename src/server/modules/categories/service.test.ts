@@ -36,12 +36,17 @@ const mockPrisma = (globalThis as any).__categoriesPrismaMock;
 const mockTransactionClient = {
   category: {
     create: jest.fn(),
+    delete: jest.fn(),
     deleteMany: jest.fn(),
   },
   subcategory: {
     createMany: jest.fn(),
+    delete: jest.fn(),
     deleteMany: jest.fn(),
+    update: jest.fn(),
   },
+  transaction: { updateMany: jest.fn() },
+  rule: { updateMany: jest.fn() },
 };
 
 describe("category service", () => {
@@ -139,6 +144,8 @@ describe("category service", () => {
     expect(mockTransactionClient.subcategory.deleteMany).toHaveBeenCalledWith({
       where: { userUuid: "user-1" },
     });
+    expect(mockTransactionClient.transaction.updateMany).toHaveBeenCalled();
+    expect(mockTransactionClient.rule.updateMany).toHaveBeenCalled();
     expect(mockTransactionClient.category.deleteMany).toHaveBeenCalledWith({
       where: { userUuid: "user-1" },
     });

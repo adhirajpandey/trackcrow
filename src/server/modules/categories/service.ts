@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
+import { ClassificationSource, RuleActionStatus } from "@/generated/prisma-rewrite";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
 import { defaultCategories } from "./defaults";
@@ -105,6 +106,26 @@ export async function resetCategoriesToDefault(
 ): Promise<ServiceResult<{ reset: true }, "INTERNAL_ERROR">> {
   try {
     await prisma.$transaction(async (tx) => {
+      const operationTimestamp = new Date();
+      await tx.transaction.updateMany({
+        where: {
+          userUuid: input.userUuid,
+          OR: [{ categoryId: { not: null } }, { subcategoryId: { not: null } }],
+        },
+        data: {
+          classificationSource: ClassificationSource.MANUAL,
+          classificationRuleId: null,
+          classificationChangedAt: operationTimestamp,
+        },
+      });
+      await tx.rule.updateMany({
+        where: {
+          userUuid: input.userUuid,
+          deletedAt: null,
+          OR: [{ categoryId: { not: null } }, { subcategoryId: { not: null } }],
+        },
+        data: { isEnabled: false, actionStatus: RuleActionStatus.NEEDS_REPAIR },
+      });
       await tx.subcategory.deleteMany({ where: { userUuid: input.userUuid } });
       await tx.category.deleteMany({ where: { userUuid: input.userUuid } });
 
@@ -238,7 +259,29 @@ export async function deleteCategory(
       return fail("NOT_FOUND");
     }
 
-    await prisma.category.delete({ where: { id: existing.id } });
+    const operationTimestamp = new Date();
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.updateMany({
+        where: { userUuid: input.userUuid, categoryId: existing.id },
+        data: {
+          classificationSource: ClassificationSource.MANUAL,
+          classificationRuleId: null,
+          classificationChangedAt: operationTimestamp,
+        },
+      });
+      await tx.rule.updateMany({
+        where: {
+          userUuid: input.userUuid,
+          deletedAt: null,
+          OR: [
+            { categoryId: existing.id },
+            { subcategory: { categoryId: existing.id } },
+          ],
+        },
+        data: { isEnabled: false, actionStatus: RuleActionStatus.NEEDS_REPAIR },
+      });
+      await tx.category.delete({ where: { id: existing.id } });
+    });
     logger.info({
       event: "category.deleted",
       userId: input.userUuid,
@@ -315,7 +358,7 @@ export async function updateSubcategory(
     const [subcategory, category] = await Promise.all([
       prisma.subcategory.findFirst({
         where: { uuid: input.subcategoryUuid, userUuid: input.userUuid },
-        select: { id: true },
+        select: { id: true, categoryId: true },
       }),
       prisma.category.findFirst({
         where: { uuid: input.categoryUuid, userUuid: input.userUuid },
@@ -327,14 +370,42 @@ export async function updateSubcategory(
       return fail("NOT_FOUND");
     }
 
-    const updated = await prisma.subcategory.update({
-      where: { id: subcategory.id },
-      data: {
-        categoryId: category.id,
-        name: input.name.trim(),
-      },
-      select: { id: true, uuid: true },
-    });
+    const updated =
+      subcategory.categoryId === category.id
+        ? await prisma.subcategory.update({
+            where: { id: subcategory.id },
+            data: { name: input.name.trim() },
+            select: { id: true, uuid: true },
+          })
+        : await prisma.$transaction(async (tx) => {
+            const operationTimestamp = new Date();
+            await tx.transaction.updateMany({
+              where: { userUuid: input.userUuid, subcategoryId: subcategory.id },
+              data: {
+                subcategoryId: null,
+                classificationSource: ClassificationSource.MANUAL,
+                classificationRuleId: null,
+                classificationChangedAt: operationTimestamp,
+              },
+            });
+            await tx.rule.updateMany({
+              where: {
+                userUuid: input.userUuid,
+                deletedAt: null,
+                subcategoryId: subcategory.id,
+              },
+              data: {
+                subcategoryId: null,
+                isEnabled: false,
+                actionStatus: RuleActionStatus.NEEDS_REPAIR,
+              },
+            });
+            return tx.subcategory.update({
+              where: { id: subcategory.id },
+              data: { categoryId: category.id, name: input.name.trim() },
+              select: { id: true, uuid: true },
+            });
+          });
 
     logger.info({
       event: "subcategory.updated",
@@ -374,7 +445,22 @@ export async function deleteSubcategory(
       return fail("NOT_FOUND");
     }
 
-    await prisma.subcategory.delete({ where: { id: existing.id } });
+    const operationTimestamp = new Date();
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.updateMany({
+        where: { userUuid: input.userUuid, subcategoryId: existing.id },
+        data: {
+          classificationSource: ClassificationSource.MANUAL,
+          classificationRuleId: null,
+          classificationChangedAt: operationTimestamp,
+        },
+      });
+      await tx.rule.updateMany({
+        where: { userUuid: input.userUuid, deletedAt: null, subcategoryId: existing.id },
+        data: { isEnabled: false, actionStatus: RuleActionStatus.NEEDS_REPAIR },
+      });
+      await tx.subcategory.delete({ where: { id: existing.id } });
+    });
     logger.info({
       event: "subcategory.deleted",
       userId: input.userUuid,

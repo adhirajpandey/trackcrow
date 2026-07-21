@@ -67,6 +67,7 @@ describe("transactions query state", () => {
       endDate: "2026-06-21",
       categories: ["Food", "Travel", "Uncategorized"].sort(),
       subcategories: ["Dinner", "Lunch"],
+      classificationSources: [],
       page: 3,
       pageSize: 10,
       sortBy: "amount",
@@ -135,6 +136,7 @@ describe("transactions query state", () => {
       endDate: "2026-06-21",
       categories: ["Food", "Uncategorized"],
       subcategories: ["Lunch"],
+      classificationSources: [],
       page: 2,
       pageSize: transactionsPageSize,
       sortBy: "amount",
@@ -176,4 +178,3 @@ describe("transactions query state", () => {
     expect(isSameTransactionsQuery(base, different)).toBe(false);
   });
 });
-

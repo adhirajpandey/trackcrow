@@ -167,12 +167,12 @@ export function applyTransactionSuggestion(
   categories: CategoryOption[],
   suggestion: TransactionDetailSuggestion
 ) {
-  const category = suggestion.suggestedCategory
-    ? categories.find((item) => item.name === suggestion.suggestedCategory)
+  const category = suggestion.suggestedCategoryUuid
+    ? categories.find((item) => item.uuid === suggestion.suggestedCategoryUuid)
     : null;
   const subcategory =
-    category && suggestion.suggestedSubCategory
-      ? category.subcategories.find((item) => item.name === suggestion.suggestedSubCategory)
+    category && suggestion.suggestedSubcategoryUuid
+      ? category.subcategories.find((item) => item.uuid === suggestion.suggestedSubcategoryUuid)
       : null;
 
   return {

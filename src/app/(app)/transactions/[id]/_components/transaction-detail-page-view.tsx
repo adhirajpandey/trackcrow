@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 
 import type { TransactionRecord } from "@/common/types";
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { AssignmentSourceBadge } from "@/components/product/assignment-source-badge";
 import {
   MobileActionBar,
   MobilePageHeader,
@@ -88,6 +89,10 @@ export function TransactionDetailPageView({
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
   const pendingSuggestedSubcategoryRef = useRef<string | null>(null);
+  const suggestionIntentRef = useRef<{
+    categoryUuid: string;
+    subcategoryUuid: string;
+  } | null>(null);
   const shortcutStateRef = useRef({
     hasUnsavedChanges: false,
     isSuggesting: false,
@@ -142,6 +147,7 @@ export function TransactionDetailPageView({
 
   useEffect(() => {
     form.reset(mapTransactionToFormValues(transaction));
+    suggestionIntentRef.current = null;
     setBanner(null);
   }, [form, transaction]);
 
@@ -179,9 +185,15 @@ export function TransactionDetailPageView({
     form.clearErrors();
 
     try {
+      const suggestionIntent = suggestionIntentRef.current;
       await updateMutation.mutateAsync({
         transactionUuid,
         ...mapFormValuesToTransactionPayload(transaction, values),
+        ...(suggestionIntent &&
+        suggestionIntent.categoryUuid === values.categoryUuid &&
+        suggestionIntent.subcategoryUuid === values.subcategoryUuid
+          ? { classificationIntent: "SUGGESTION" as const }
+          : {}),
       });
 
       await transactionQuery.refetch();
@@ -221,6 +233,10 @@ export function TransactionDetailPageView({
       }
 
       pendingSuggestedSubcategoryRef.current = resolved.subcategoryUuid;
+      suggestionIntentRef.current = {
+        categoryUuid: resolved.categoryUuid,
+        subcategoryUuid: resolved.subcategoryUuid,
+      };
       form.setValue("categoryUuid", resolved.categoryUuid, { shouldDirty: true });
       form.setValue("subcategoryUuid", "", { shouldDirty: true });
       toast({
@@ -381,6 +397,7 @@ export function TransactionDetailPageView({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <h2 className="text-[1.05rem] font-semibold text-foreground">Classification</h2>
+                <AssignmentSourceBadge source={transaction.classificationSource} />
                 <span
                   className={cn(
                     badgeClassName,
@@ -407,6 +424,29 @@ export function TransactionDetailPageView({
                 )}
                 Suggest category
               </Button>
+              {transaction.recipientUuid && transaction.categoryUuid ? (
+                <Button asChild type="button" variant="secondary" className="w-full sm:w-auto">
+                  <Link
+                    href={
+                      transaction.classificationSource === "RULE" &&
+                      transaction.classificationRule &&
+                      !transaction.classificationRule.isDeleted
+                        ? `/rules?edit=${transaction.classificationRule.uuid}`
+                        : `/rules?create=1&recipient=${transaction.recipientUuid}&category=${transaction.categoryUuid}${
+                            transaction.subcategoryUuid
+                              ? `&subcategory=${transaction.subcategoryUuid}`
+                              : ""
+                          }`
+                    }
+                  >
+                    {transaction.classificationSource === "RULE" &&
+                    transaction.classificationRule &&
+                    !transaction.classificationRule.isDeleted
+                      ? "Edit rule"
+                      : "Create rule"}
+                  </Link>
+                </Button>
+              ) : null}
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">

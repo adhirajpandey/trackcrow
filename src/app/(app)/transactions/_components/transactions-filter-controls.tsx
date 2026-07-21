@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 import {
   buildCategoryTriggerLabel,
+  buildApplyFiltersHref,
   buildClearCategoriesHref,
   buildClearSubcategoriesHref,
   buildResetFilterState,
@@ -62,6 +63,12 @@ export function TransactionsFilterControls({
   const categoryTriggerLabel = buildCategoryTriggerLabel(filters);
   const subcategoryTriggerLabel = buildSubcategoryTriggerLabel(filters);
   const subcategoryEnabled = hasSingleSubcategoryCategorySelection(filters);
+  const assignmentTriggerLabel =
+    filters.classificationSources.length === 0
+      ? "All assignments"
+      : filters.classificationSources.length === 1
+        ? ({ MANUAL: "Manual", SUGGESTION: "Suggestion", RULE: "Rule" } as const)[filters.classificationSources[0]]
+        : `${filters.classificationSources.length} assignments`;
   const subcategoryDisabled = !subcategoryEnabled || subcategoryOptions.length === 0;
   const isDraftMode = mode === "draft";
   const isMobileSheet = variant === "mobile-sheet";
@@ -223,6 +230,35 @@ export function TransactionsFilterControls({
     });
   }
 
+  function setAssignmentSources(
+    classificationSources: TransactionsControlState["classificationSources"]
+  ) {
+    const next = { ...filters, page: 1, classificationSources };
+    if (isDraftMode) {
+      updateDraft(next);
+    } else {
+      updateTransactionsUrl(buildApplyFiltersHref(next), "replace");
+    }
+  }
+
+  const assignmentMenuOptions = [
+    {
+      label: "All assignments",
+      selected: filters.classificationSources.length === 0,
+      onSelect: () => setAssignmentSources([]),
+    },
+    ...(["MANUAL", "SUGGESTION", "RULE"] as const).map((source) => ({
+      label: ({ MANUAL: "Manual", SUGGESTION: "Suggestion", RULE: "Rule" } as const)[source],
+      selected: filters.classificationSources.includes(source),
+      onSelect: () =>
+        setAssignmentSources(
+          filters.classificationSources.includes(source)
+            ? filters.classificationSources.filter((value) => value !== source)
+            : [...filters.classificationSources, source]
+        ),
+    })),
+  ];
+
   function resetDraftFilters() {
     updateDraft(buildResetFilterState(filters));
   }
@@ -353,12 +389,22 @@ export function TransactionsFilterControls({
             options={subcategoryMenuOptions}
           />
         </FilterSection>
+        <FilterSection number="4" title="Assignment source">
+          <FilterMenu
+            label="Filter assignment sources"
+            triggerLabel={assignmentTriggerLabel}
+            renderInPortal={renderMenusInPortal}
+            portalZIndex={menuPortalZIndex}
+            closeOnSelect={false}
+            options={assignmentMenuOptions}
+          />
+        </FilterSection>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_minmax(11rem,0.28fr)_minmax(11rem,0.28fr)_3rem]">
+    <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_minmax(10rem,0.25fr)_minmax(10rem,0.25fr)_minmax(10rem,0.25fr)_3rem]">
       <label className="flex min-h-12 items-center gap-3 rounded-[8px] border-2 border-border bg-card px-3.5">
         <Search className="h-4 w-4 text-secondary-foreground" />
         <input
@@ -397,6 +443,14 @@ export function TransactionsFilterControls({
         renderInPortal={renderMenusInPortal}
         portalZIndex={menuPortalZIndex}
         options={categoryMenuOptions}
+      />
+
+      <FilterMenu
+        label="Filter assignment sources"
+        triggerLabel={assignmentTriggerLabel}
+        renderInPortal={renderMenusInPortal}
+        portalZIndex={menuPortalZIndex}
+        options={assignmentMenuOptions}
       />
 
       <FilterMenu

@@ -18,6 +18,7 @@ const baseFilters: TransactionsControlState = {
   endDate: "2026-06-21",
   categories: ["Food"],
   subcategories: [],
+  classificationSources: [],
   page: 3,
   pageSize: 10,
   sortBy: "amount",

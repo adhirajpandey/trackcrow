@@ -59,6 +59,9 @@ export async function getTransactions(request: Request) {
   const categoriesCsv = searchParams.get("categories");
   const subcategoryParams = searchParams.getAll("subcategory");
   const subcategoriesCsv = searchParams.get("subcategories");
+  const classificationSources = Array.from(
+    new Set(searchParams.getAll("classificationSource"))
+  );
   const categories = Array.from(
     new Set([
       ...categoryParams,
@@ -86,6 +89,8 @@ export async function getTransactions(request: Request) {
     endDate: searchParams.get("endDate") ?? undefined,
     categories: categories.length > 0 ? categories : undefined,
     subcategories: subcategories.length > 0 ? subcategories : undefined,
+    classificationSources:
+      classificationSources.length > 0 ? classificationSources : undefined,
   });
   if (!parsed.success) {
     logValidationFailure(path, parsed.error.issues);
@@ -217,6 +222,7 @@ export async function patchTransactionCategory(
     userUuid: sessionData.userUuid,
     categoryUuid: parsed.data.categoryUuid ?? null,
     subcategoryUuid: parsed.data.subcategoryUuid,
+    classificationIntent: parsed.data.classificationIntent,
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);

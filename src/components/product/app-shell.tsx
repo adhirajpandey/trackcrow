@@ -37,7 +37,7 @@ const navigation = [
     icon: ClipboardList,
     disabled: true,
   },
-  { href: "#rules", label: "Rules", icon: ScrollText, disabled: true },
+  { href: "/rules", label: "Rules", icon: ScrollText },
 ];
 
 function handleSignOut() {

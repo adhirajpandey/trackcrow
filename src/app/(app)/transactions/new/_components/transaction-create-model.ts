@@ -38,13 +38,15 @@ export type TransactionCreateFormSchema = z.infer<
   typeof transactionCreateFormSchema
 >;
 
+export const AUTO_CLASSIFY_VALUE = "__auto__";
+
 export function getCreateTransactionDefaultValues(
   now = new Date(),
 ): TransactionCreateFormSchema {
   return {
     amount: "",
     recipientUuid: "",
-    categoryUuid: "",
+    categoryUuid: AUTO_CLASSIFY_VALUE,
     subcategoryUuid: "",
     type: "UPI",
     timestamp: formatDateTimeLocalValue(now.toISOString()),
@@ -58,11 +60,9 @@ export function getCreateTransactionDefaultValues(
 export function mapCreateFormValuesToPayload(
   values: TransactionCreateFormSchema,
 ): TransactionCreateInput {
-  return {
+  const payload: TransactionCreateInput = {
     amount: Number(values.amount),
     recipientUuid: values.recipientUuid,
-    categoryUuid: toNullableValue(values.categoryUuid),
-    subcategoryUuid: toNullableValue(values.subcategoryUuid),
     type: values.type,
     timestamp: parseDateTimeLocalAsIst(values.timestamp).toISOString(),
     reference: toNullableValue(values.reference),
@@ -70,6 +70,11 @@ export function mapCreateFormValuesToPayload(
     remarks: toNullableValue(values.remarks),
     locationRaw: toNullableValue(values.locationRaw),
   };
+  if (values.categoryUuid !== AUTO_CLASSIFY_VALUE) {
+    payload.categoryUuid = toNullableValue(values.categoryUuid);
+    payload.subcategoryUuid = toNullableValue(values.subcategoryUuid);
+  }
+  return payload;
 }
 
 function toNullableValue(value: string) {

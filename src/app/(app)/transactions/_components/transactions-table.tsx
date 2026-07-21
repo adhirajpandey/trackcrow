@@ -13,6 +13,7 @@ import { DataTableEmpty } from "@/components/product/data-table-empty";
 import { DataTablePagination } from "@/components/product/data-table-pagination";
 import { DataTableShell } from "@/components/product/data-table-shell";
 import { SortableTableHead } from "@/components/product/sortable-table-head";
+import { AssignmentSourceBadge } from "@/components/product/assignment-source-badge";
 import {
   Table,
   TableBody,
@@ -352,6 +353,8 @@ function renderDefaultCell(
       );
     case "source":
       return <div className="font-medium text-secondary-foreground">{row.source ?? "-"}</div>;
+    case "assignment":
+      return <AssignmentSourceBadge source={row.classificationSource ?? null} />;
     case "status":
       return (
         <div
@@ -417,6 +420,7 @@ function getColumnWidthClassName(
       category: "w-[29%]",
       subcategory: "w-[29%]",
       source: "w-[14%]",
+      assignment: "w-[16%]",
       status: "w-[14%]",
     };
     return widths[column];
@@ -429,6 +433,7 @@ function getColumnWidthClassName(
     category: columns.includes("subcategory") ? "w-[17%]" : "w-[22%]",
     subcategory: "w-[17%]",
     source: "w-[12%]",
+    assignment: "w-[14%]",
     status: "w-[10%]",
   };
   return widths[column];

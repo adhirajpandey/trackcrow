@@ -142,5 +142,5 @@ export type RecipientUpdateResult = ServiceResult<
 >;
 export type RecipientAliasWriteResult = ServiceResult<
   RecipientAliasWriteDto,
-  "NOT_FOUND" | "CONFLICT" | "INTERNAL_ERROR"
+  "NOT_FOUND" | "CONFLICT" | "RULE_RECIPIENT_CONFLICT" | "INTERNAL_ERROR"
 >;

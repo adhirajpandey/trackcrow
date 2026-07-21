@@ -7,6 +7,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
     subcategory: {
       findFirst: jest.fn(),
     },
+    rule: { findMany: jest.fn() },
     transaction: {
       count: jest.fn(),
       create: jest.fn(),
@@ -22,7 +23,7 @@ jest.mock("@/server/modules/recipients/service", () => ({
   resolveRecipient: jest.fn(),
 }));
 
-import { TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
+import { ClassificationSource, TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
 import { resolveRecipient } from "@/server/modules/recipients/service";
 
 import {
@@ -64,6 +65,10 @@ function transactionRecord(overrides: Record<string, unknown> = {}) {
     updatedAt: now,
     categoryId: 10,
     subcategoryId: 20,
+    classificationSource: ClassificationSource.MANUAL,
+    classificationRuleId: null,
+    classificationChangedAt: now,
+    classificationRule: null,
     recipient: { uuid: "rcp-30", displayName: "Merchant" },
     category: { uuid: "cat-food", name: "Food" },
     subcategory: { uuid: "sub-dinner", name: "Dinner" },
@@ -183,6 +188,52 @@ describe("transaction service", () => {
       }),
       select: { id: true, uuid: true },
     });
+  });
+
+  it("distinguishes omitted auto-classification from explicit manual Uncategorized", async () => {
+    resolveRecipientMock
+      .mockResolvedValueOnce({ ok: true, data: { recipientId: 30, recipientUuid: "rcp-30", displayName: "Merchant" } })
+      .mockResolvedValueOnce({ ok: true, data: { recipientId: 30, recipientUuid: "rcp-30", displayName: "Merchant" } });
+    mockPrisma.rule.findMany.mockResolvedValueOnce([{
+      id: 7,
+      uuid: "rule-7",
+      categoryId: 10,
+      subcategoryId: 20,
+      recipient: { uuid: "rcp-30" },
+    }]);
+    mockPrisma.transaction.create
+      .mockResolvedValueOnce({ id: 1, uuid: "txn-auto" })
+      .mockResolvedValueOnce({ id: 2, uuid: "txn-none" });
+
+    const base = {
+      userUuid: "user-1",
+      amount: 25,
+      recipientRaw: "merchant@upi",
+      type: TransactionType.UPI,
+      timestamp: new Date(),
+      source: TransactionSource.SMS,
+    };
+    await createTransaction(base);
+    expect(mockPrisma.transaction.create).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      data: expect.objectContaining({
+        categoryId: 10,
+        subcategoryId: 20,
+        classificationSource: ClassificationSource.RULE,
+        classificationRuleId: 7,
+        classificationChangedAt: expect.any(Date),
+      }),
+    }));
+
+    await createTransaction({ ...base, categoryUuid: null });
+    expect(mockPrisma.rule.findMany).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.transaction.create).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      data: expect.objectContaining({
+        categoryId: null,
+        classificationSource: ClassificationSource.MANUAL,
+        classificationRuleId: null,
+        classificationChangedAt: expect.any(Date),
+      }),
+    }));
   });
 
   it("maps list filters, pagination, search, and amount sorting", async () => {
@@ -332,7 +383,13 @@ describe("transaction service", () => {
 
     expect(mockPrisma.transaction.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { categoryId: 11, subcategoryId: null },
+      data: {
+        categoryId: 11,
+        subcategoryId: null,
+        classificationSource: ClassificationSource.MANUAL,
+        classificationRuleId: null,
+        classificationChangedAt: expect.any(Date),
+      },
       include: {
         category: { select: { uuid: true, name: true } },
         subcategory: { select: { uuid: true, name: true } },
@@ -367,13 +424,66 @@ describe("transaction service", () => {
     });
   });
 
+  it("preserves provenance and skips suggestion work when the category pair is unchanged", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({
+      id: 1,
+      uuid: "txn-1",
+      categoryId: 10,
+      subcategoryId: 20,
+      category: { uuid: "cat-food", name: "Food" },
+      subcategory: { uuid: "sub-dinner", name: "Dinner" },
+    });
+    mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 10 });
+    mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20, categoryId: 10 });
+
+    await expect(updateTransactionCategory({
+      userUuid: "user-1",
+      transactionUuid: "txn-1",
+      categoryUuid: "cat-food",
+      subcategoryUuid: "sub-dinner",
+      classificationIntent: "SUGGESTION",
+    })).resolves.toEqual({
+      ok: true,
+      data: {
+        uuid: "txn-1",
+        categoryUuid: "cat-food",
+        category: "Food",
+        subcategoryUuid: "sub-dinner",
+        subcategory: "Dinner",
+      },
+    });
+    expect(mockPrisma.transaction.update).not.toHaveBeenCalled();
+    expect(mockPrisma.transaction.findMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale suggestion before writing", async () => {
+    mockPrisma.transaction.findFirst
+      .mockResolvedValueOnce({ id: 1, uuid: "txn-1", categoryId: null, subcategoryId: null, category: null, subcategory: null })
+      .mockResolvedValueOnce({ id: 1, recipientId: 30 });
+    mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 10 });
+    mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20, categoryId: 10 });
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([]);
+
+    await expect(updateTransactionCategory({
+      userUuid: "user-1",
+      transactionUuid: "txn-1",
+      categoryUuid: "cat-food",
+      subcategoryUuid: "sub-dinner",
+      classificationIntent: "SUGGESTION",
+    })).resolves.toMatchObject({
+      ok: false,
+      error: "TRANSACTION_SUGGESTION_CONFLICT",
+    });
+    expect(mockPrisma.transaction.update).not.toHaveBeenCalled();
+  });
+
   it("suggests the most frequent category and subcategory with deterministic ties", async () => {
     mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 99, recipientId: 30 });
     mockPrisma.transaction.findMany.mockResolvedValueOnce([
-      { category: { name: "Shopping" }, subcategory: { name: "Gifts" } },
-      { category: { name: "Food" }, subcategory: { name: "Dinner" } },
-      { category: { name: "Food" }, subcategory: { name: "Lunch" } },
-      { category: { name: "Shopping" }, subcategory: { name: "Apparel" } },
+      { category: { uuid: "cat-shopping", name: "Shopping" }, subcategory: { uuid: "sub-gifts", name: "Gifts" } },
+      { category: { uuid: "cat-food", name: "Food" }, subcategory: { uuid: "sub-dinner", name: "Dinner" } },
+      { category: { uuid: "cat-food", name: "Food" }, subcategory: { uuid: "sub-lunch", name: "Lunch" } },
+      { category: { uuid: "cat-shopping", name: "Shopping" }, subcategory: { uuid: "sub-apparel", name: "Apparel" } },
     ]);
 
     const result = await suggestTransactionCategory({
@@ -385,8 +495,13 @@ describe("transaction service", () => {
       ok: true,
       data: {
         suggestedCategory: "Food",
-        suggestedSubCategory: "Apparel",
+        suggestedSubCategory: "Dinner",
+        suggestedCategoryUuid: "cat-food",
+        suggestedSubcategoryUuid: "sub-dinner",
       },
     });
+    expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: { not: 99 } }),
+    }));
   });
 });

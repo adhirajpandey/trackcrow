@@ -2,6 +2,7 @@ import {
   getCreateTransactionDefaultValues,
   mapCreateFormValuesToPayload,
   transactionCreateFormSchema,
+  AUTO_CLASSIFY_VALUE,
 } from "./transaction-create-model";
 
 describe("transaction create model", () => {
@@ -11,7 +12,7 @@ describe("transaction create model", () => {
     ).toEqual({
       amount: "",
       recipientUuid: "",
-      categoryUuid: "",
+      categoryUuid: AUTO_CLASSIFY_VALUE,
       subcategoryUuid: "",
       type: "UPI",
       timestamp: "2026-07-12T20:42",
@@ -20,6 +21,17 @@ describe("transaction create model", () => {
       remarks: "",
       locationRaw: "",
     });
+  });
+
+  it("omits classification properties for Auto-classify", () => {
+    const values = {
+      ...getCreateTransactionDefaultValues(new Date("2026-07-12T15:12:00.000Z")),
+      amount: "20",
+      recipientUuid: "550e8400-e29b-41d4-a716-446655440000",
+    };
+    const payload = mapCreateFormValuesToPayload(values);
+    expect(payload).not.toHaveProperty("categoryUuid");
+    expect(payload).not.toHaveProperty("subcategoryUuid");
   });
 
   it("maps form values to the existing manual transaction API payload", () => {

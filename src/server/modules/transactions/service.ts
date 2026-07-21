@@ -1,7 +1,9 @@
-import { TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
+import { ClassificationSource, TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { resolveRecipient } from "@/server/modules/recipients/service";
+import { resolveCreateClassification } from "@/server/modules/rules/evaluator";
+import { loadEvaluatableRules } from "@/server/modules/rules/service";
 import { fail, ok } from "@/server/shared/result";
 
 import type {
@@ -42,12 +44,16 @@ type TransactionRecord = {
   updatedAt: Date;
   categoryId: number | null;
   subcategoryId: number | null;
+  classificationSource: ClassificationSource | null;
+  classificationRuleId: number | null;
+  classificationChangedAt: Date | null;
   recipient: {
     uuid: string;
     displayName: string;
   };
   category: { uuid: string; name: string } | null;
   subcategory: { uuid: string; name: string } | null;
+  classificationRule: { uuid: string; name: string; deletedAt: Date | null } | null;
 };
 
 type ResolvedCategorySelection = {
@@ -78,6 +84,15 @@ function toTransactionDto(record: TransactionRecord): TransactionDto {
     subcategory: record.subcategory?.name ?? null,
     categoryUuid: record.category?.uuid ?? null,
     subcategoryUuid: record.subcategory?.uuid ?? null,
+    classificationSource: record.classificationSource,
+    classificationChangedAt: record.classificationChangedAt?.toISOString() ?? null,
+    classificationRule: record.classificationRule
+      ? {
+          uuid: record.classificationRule.uuid,
+          name: record.classificationRule.name,
+          isDeleted: record.classificationRule.deletedAt !== null,
+        }
+      : null,
   };
 }
 
@@ -103,6 +118,8 @@ function toTransactionListItemDto(record: TransactionRecord): TransactionListIte
     subcategory: dto.subcategory,
     categoryUuid: dto.categoryUuid,
     subcategoryUuid: dto.subcategoryUuid,
+    classificationSource: dto.classificationSource,
+    classificationChangedAt: dto.classificationChangedAt,
   };
 }
 
@@ -190,6 +207,9 @@ async function getOwnedTransaction(userUuid: string, transactionUuid: string) {
       subcategory: {
         select: { uuid: true, name: true },
       },
+      classificationRule: {
+        select: { uuid: true, name: true, deletedAt: true },
+      },
     },
   });
 }
@@ -201,7 +221,7 @@ async function resolveExistingRecipient(input: {
   try {
     const recipient = await prisma.recipient.findFirst({
       where: { uuid: input.recipientUuid, userUuid: input.userUuid },
-      select: { id: true, displayName: true },
+      select: { id: true, uuid: true, displayName: true },
     });
 
     if (!recipient) {
@@ -212,6 +232,7 @@ async function resolveExistingRecipient(input: {
 
     return ok({
       recipientId: recipient.id,
+      recipientUuid: recipient.uuid,
       displayName: recipient.displayName,
     });
   } catch (error) {
@@ -239,6 +260,7 @@ export async function listTransactions(
   const sortOrder = input.sortOrder === "asc" ? "asc" : "desc";
   const categoryFilters = input.categories ?? [];
   const subcategoryFilters = input.subcategories ?? [];
+  const classificationSources = input.classificationSources ?? [];
 
   const where: Record<string, unknown> = { userUuid: input.userUuid };
   const andFilters: Array<Record<string, unknown>> = [];
@@ -277,6 +299,10 @@ export async function listTransactions(
 
   if (subcategoryFilters.length > 0) {
     andFilters.push({ subcategory: { name: { in: subcategoryFilters } } });
+  }
+
+  if (classificationSources.length > 0) {
+    andFilters.push({ classificationSource: { in: classificationSources } });
   }
 
   if (input.startDate || input.endDate) {
@@ -320,6 +346,7 @@ export async function listTransactions(
               recipient: { select: { uuid: true, displayName: true } },
               category: { select: { uuid: true, name: true } },
               subcategory: { select: { uuid: true, name: true } },
+              classificationRule: { select: { uuid: true, name: true, deletedAt: true } },
             },
             skip,
             take: pageSize,
@@ -396,6 +423,7 @@ export async function listTransactionsForRange(
         recipient: { select: { uuid: true, displayName: true } },
         category: { select: { uuid: true, name: true } },
         subcategory: { select: { uuid: true, name: true } },
+        classificationRule: { select: { uuid: true, name: true, deletedAt: true } },
       },
       orderBy: { timestamp: "desc" },
     });
@@ -420,13 +448,16 @@ export async function createTransaction(
   input: TransactionWriteInput
 ): Promise<TransactionCreateResult> {
   try {
-    const categorySelection = await resolveCategorySelection({
-      userUuid: input.userUuid,
-      categoryUuid: input.categoryUuid,
-      subcategoryUuid: input.subcategoryUuid,
-    });
-    if (!categorySelection.ok) {
-      return fail("VALIDATION_ERROR", categorySelection.details);
+    const isManual = Object.prototype.hasOwnProperty.call(input, "categoryUuid");
+    const manualSelection = isManual
+      ? await resolveCategorySelection({
+          userUuid: input.userUuid,
+          categoryUuid: input.categoryUuid,
+          subcategoryUuid: input.subcategoryUuid,
+        })
+      : null;
+    if (manualSelection && !manualSelection.ok) {
+      return fail("VALIDATION_ERROR", manualSelection.details);
     }
 
     const recipientResult =
@@ -444,6 +475,34 @@ export async function createTransaction(
       return recipientResult;
     }
 
+    let classification;
+    if (isManual) {
+      classification = resolveCreateClassification(
+        { recipientUuid: recipientResult.data.recipientUuid },
+        {
+          type: "MANUAL",
+          categoryId: manualSelection!.data.categoryId,
+          subcategoryId: manualSelection!.data.subcategoryId,
+        },
+        []
+      );
+    } else {
+      classification = resolveCreateClassification(
+        { recipientUuid: recipientResult.data.recipientUuid },
+        { type: "AUTO" },
+        await loadEvaluatableRules(input.userUuid)
+      );
+    }
+
+    if (classification.type === "MULTIPLE_MATCHES") {
+      logger.error({
+        event: "transaction.classification.multiple_rules",
+        userId: input.userUuid,
+        recipientUuid: recipientResult.data.recipientUuid,
+      });
+    }
+    const assigned = classification.type === "ASSIGNED" ? classification : null;
+
     const recipientRaw =
       "recipientRaw" in input ? input.recipientRaw.trim() : recipientResult.data.displayName;
     const recipientName =
@@ -453,8 +512,11 @@ export async function createTransaction(
       data: {
         userUuid: input.userUuid,
         recipientId: recipientResult.data.recipientId,
-        categoryId: categorySelection.data.categoryId,
-        subcategoryId: categorySelection.data.subcategoryId,
+        categoryId: assigned?.categoryId ?? null,
+        subcategoryId: assigned?.subcategoryId ?? null,
+        classificationSource: assigned?.classificationSource ?? null,
+        classificationRuleId: assigned?.classificationRuleId ?? null,
+        classificationChangedAt: assigned ? new Date() : null,
         amount: input.amount,
         currency: "INR",
         type: input.type,
@@ -501,7 +563,7 @@ export async function updateTransaction(
   try {
     const existing = await prisma.transaction.findFirst({
       where: { uuid: input.transactionUuid, userUuid: input.userUuid },
-      select: { id: true },
+      select: { id: true, categoryId: true, subcategoryId: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
@@ -516,11 +578,33 @@ export async function updateTransaction(
       return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
+    const classificationChanged =
+      existing.categoryId !== categorySelection.data.categoryId ||
+      existing.subcategoryId !== categorySelection.data.subcategoryId;
+    let classificationSource: ClassificationSource | undefined;
+    if (classificationChanged && input.classificationIntent === "SUGGESTION") {
+      const verification = await verifySuggestionSelection(input, {
+        categoryUuid: input.categoryUuid,
+        subcategoryUuid: input.subcategoryUuid,
+      });
+      if (!verification.ok) return verification;
+      classificationSource = ClassificationSource.SUGGESTION;
+    } else if (classificationChanged) {
+      classificationSource = ClassificationSource.MANUAL;
+    }
+
     await prisma.transaction.update({
       where: { id: existing.id },
       data: {
         categoryId: categorySelection.data.categoryId,
         subcategoryId: categorySelection.data.subcategoryId,
+        ...(classificationChanged
+          ? {
+              classificationSource,
+              classificationRuleId: null,
+              classificationChangedAt: new Date(),
+            }
+          : {}),
         amount: input.amount,
         type: input.type,
         reference: input.reference?.trim() || null,
@@ -560,7 +644,14 @@ export async function updateTransactionCategory(
   try {
     const existing = await prisma.transaction.findFirst({
       where: { uuid: input.transactionUuid, userUuid: input.userUuid },
-      select: { id: true, categoryId: true },
+      select: {
+        id: true,
+        uuid: true,
+        categoryId: true,
+        subcategoryId: true,
+        category: { select: { uuid: true, name: true } },
+        subcategory: { select: { uuid: true, name: true } },
+      },
     });
     if (!existing) {
       return fail("NOT_FOUND");
@@ -575,18 +666,47 @@ export async function updateTransactionCategory(
       return fail("VALIDATION_ERROR", categorySelection.details);
     }
 
+    const nextSubcategoryId =
+      categorySelection.data.categoryId == null
+        ? null
+        : Object.prototype.hasOwnProperty.call(input, "subcategoryUuid")
+          ? categorySelection.data.subcategoryId
+          : existing.categoryId !== categorySelection.data.categoryId
+            ? null
+            : existing.subcategoryId;
+    const classificationChanged =
+      existing.categoryId !== categorySelection.data.categoryId ||
+      existing.subcategoryId !== nextSubcategoryId;
+
+    if (!classificationChanged) {
+      return ok({
+        uuid: existing.uuid,
+        categoryUuid: existing.category?.uuid ?? null,
+        category: existing.category?.name ?? null,
+        subcategoryUuid: existing.subcategory?.uuid ?? null,
+        subcategory: existing.subcategory?.name ?? null,
+      });
+    }
+
+    if (input.classificationIntent === "SUGGESTION") {
+      const verification = await verifySuggestionSelection(input, {
+        categoryUuid: input.categoryUuid,
+        subcategoryUuid: input.subcategoryUuid,
+      });
+      if (!verification.ok) return verification;
+    }
+
     const updated = await prisma.transaction.update({
       where: { id: existing.id },
       data: {
         categoryId: categorySelection.data.categoryId,
-        subcategoryId:
-          categorySelection.data.categoryId == null
-            ? null
-            : input.subcategoryUuid !== undefined
-              ? categorySelection.data.subcategoryId
-              : existing.categoryId !== categorySelection.data.categoryId
-                ? null
-                : undefined,
+        subcategoryId: nextSubcategoryId,
+        classificationSource:
+          input.classificationIntent === "SUGGESTION"
+            ? ClassificationSource.SUGGESTION
+            : ClassificationSource.MANUAL,
+        classificationRuleId: null,
+        classificationChangedAt: new Date(),
       },
       include: {
         category: { select: { uuid: true, name: true } },
@@ -622,6 +742,38 @@ export async function updateTransactionCategory(
     );
     return fail("INTERNAL_ERROR");
   }
+}
+
+async function verifySuggestionSelection(
+  input: TransactionLookupInput & { classificationIntent?: "SUGGESTION" },
+  submitted: { categoryUuid?: string | null; subcategoryUuid?: string | null }
+) {
+  if (
+    !submitted.categoryUuid ||
+    submitted.subcategoryUuid === undefined
+  ) {
+    return fail("VALIDATION_ERROR" as const, [
+      {
+        path: ["classificationIntent"],
+        message: "Suggestion intent requires a complete category pair",
+      },
+    ]);
+  }
+
+  const suggestion = await suggestTransactionCategory(input);
+  if (!suggestion.ok) return suggestion;
+  if (
+    suggestion.data.suggestedCategoryUuid !== submitted.categoryUuid ||
+    suggestion.data.suggestedSubcategoryUuid !== (submitted.subcategoryUuid ?? null)
+  ) {
+    return fail("TRANSACTION_SUGGESTION_CONFLICT" as const, {
+      suggestion: {
+        categoryUuid: suggestion.data.suggestedCategoryUuid,
+        subcategoryUuid: suggestion.data.suggestedSubcategoryUuid,
+      },
+    });
+  }
+  return ok({ verified: true as const });
 }
 
 export async function deleteTransaction(
@@ -683,31 +835,43 @@ export async function suggestTransactionCategory(
       orderBy: { timestamp: "desc" },
     });
 
-    const categoryCounts = new Map<string, number>();
-    const subcategoryCounts = new Map<string, number>();
+    const categoryCounts = new Map<string, { uuid: string; name: string; count: number }>();
     for (const transaction of matches) {
-      if (transaction.category?.name) {
-        categoryCounts.set(
-          transaction.category.name,
-          (categoryCounts.get(transaction.category.name) ?? 0) + 1
-        );
-      }
-      if (transaction.subcategory?.name) {
-        subcategoryCounts.set(
-          transaction.subcategory.name,
-          (subcategoryCounts.get(transaction.subcategory.name) ?? 0) + 1
-        );
+      if (transaction.category) {
+        const current = categoryCounts.get(transaction.category.uuid);
+        categoryCounts.set(transaction.category.uuid, {
+          uuid: transaction.category.uuid,
+          name: transaction.category.name,
+          count: (current?.count ?? 0) + 1,
+        });
       }
     }
 
-    const suggestedCategory =
-      [...categoryCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ??
-      null;
-    const suggestedSubCategory =
-      [...subcategoryCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ??
-      null;
+    const category = [...categoryCounts.values()].sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name)
+    )[0];
+    const subcategoryCounts = new Map<string, { uuid: string; name: string; count: number }>();
+    if (category) {
+      for (const transaction of matches) {
+        if (transaction.category?.uuid !== category.uuid || !transaction.subcategory) continue;
+        const current = subcategoryCounts.get(transaction.subcategory.uuid);
+        subcategoryCounts.set(transaction.subcategory.uuid, {
+          uuid: transaction.subcategory.uuid,
+          name: transaction.subcategory.name,
+          count: (current?.count ?? 0) + 1,
+        });
+      }
+    }
+    const subcategory = [...subcategoryCounts.values()].sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name)
+    )[0];
 
-    return ok({ suggestedCategory, suggestedSubCategory });
+    return ok({
+      suggestedCategory: category?.name ?? null,
+      suggestedSubCategory: subcategory?.name ?? null,
+      suggestedCategoryUuid: category?.uuid ?? null,
+      suggestedSubcategoryUuid: subcategory?.uuid ?? null,
+    });
   } catch (error) {
     logger.error(
       {

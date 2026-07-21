@@ -13,6 +13,7 @@ export type TransactionTableColumn =
   | "category"
   | "subcategory"
   | "source"
+  | "assignment"
   | "status";
 
 export type TransactionTableRow = {
@@ -22,6 +23,7 @@ export type TransactionTableRow = {
   category: string | null;
   subcategory?: string | null;
   source?: string | null;
+  classificationSource?: import("@/common/types").ClassificationSource | null;
   timestamp: string;
   status?: "categorized" | "uncategorized" | string;
 };
@@ -34,6 +36,7 @@ export function getTransactionTableColumnLabels(columns: TransactionTableColumn[
     category: "Category",
     subcategory: "Subcategory",
     source: "Source",
+    assignment: "Assignment",
     status: "Status",
   };
 

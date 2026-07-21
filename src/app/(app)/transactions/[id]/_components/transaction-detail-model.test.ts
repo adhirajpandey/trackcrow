@@ -227,6 +227,8 @@ describe("transaction detail model", () => {
       applyTransactionSuggestion(categories, {
         suggestedCategory: "Transport",
         suggestedSubCategory: "Cab",
+        suggestedCategoryUuid: "cat-2",
+        suggestedSubcategoryUuid: "sub-21",
       })
     ).toEqual({
       categoryUuid: "cat-2",
@@ -238,6 +240,8 @@ describe("transaction detail model", () => {
       applyTransactionSuggestion(categories, {
         suggestedCategory: "Missing",
         suggestedSubCategory: null,
+        suggestedCategoryUuid: "missing",
+        suggestedSubcategoryUuid: null,
       })
     ).toEqual({
       categoryUuid: "",

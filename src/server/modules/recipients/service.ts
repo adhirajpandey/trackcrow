@@ -792,8 +792,38 @@ export async function addRecipientAlias(
       (sum, transaction) => sum + transaction.amount.toNumber(),
       0
     );
+    const sourceIdentifierCount = await prisma.recipientIdentifier.count({
+      where: { userUuid: input.userUuid, recipientId: sourceRecipient.id },
+    });
+    const sourceWillBeDeleted =
+      sourceIdentifierCount === 1 && matchingTransactionIds.length === sourceTransactions.length;
+
+    if (sourceWillBeDeleted) {
+      const enabledRules = await prisma.rule.findMany({
+        where: {
+          userUuid: input.userUuid,
+          deletedAt: null,
+          isEnabled: true,
+          recipientId: { in: [sourceRecipient.id, targetRecipient.id] },
+        },
+        select: { uuid: true, name: true, recipientId: true },
+      });
+      const sourceRule = enabledRules.find((rule) => rule.recipientId === sourceRecipient.id);
+      const targetRule = enabledRules.find((rule) => rule.recipientId === targetRecipient.id);
+      if (sourceRule && targetRule) {
+        return fail("RULE_RECIPIENT_CONFLICT", {
+          existingRule: { uuid: targetRule.uuid, name: targetRule.name },
+        });
+      }
+    }
 
     const moveResult = await prisma.$transaction(async (tx) => {
+      if (sourceWillBeDeleted) {
+        await tx.rule.updateMany({
+          where: { userUuid: input.userUuid, recipientId: sourceRecipient.id },
+          data: { recipientId: targetRecipient.id },
+        });
+      }
       const updatedIdentifier = await tx.recipientIdentifier.update({
         where: { id: existingIdentifier.id },
         data: { recipientId: targetRecipient.id },
@@ -832,7 +862,7 @@ export async function addRecipientAlias(
         }),
       ]);
       const deletedSourceRecipient =
-        remainingIdentifiers === 0 && remainingTransactions === 0;
+        sourceWillBeDeleted && remainingIdentifiers === 0 && remainingTransactions === 0;
 
       if (deletedSourceRecipient) {
         await tx.recipient.delete({
@@ -863,6 +893,26 @@ export async function addRecipientAlias(
       deletedSourceRecipient: moveResult.deletedSourceRecipient,
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const targetRecipient = await prisma.recipient.findFirst({
+        where: { uuid: input.recipientUuid, userUuid: input.userUuid },
+        select: { id: true },
+      });
+      const existingRule = targetRecipient
+        ? await prisma.rule.findFirst({
+            where: {
+              userUuid: input.userUuid,
+              recipientId: targetRecipient.id,
+              isEnabled: true,
+              deletedAt: null,
+            },
+            select: { uuid: true, name: true },
+          })
+        : null;
+      if (existingRule) {
+        return fail("RULE_RECIPIENT_CONFLICT", { existingRule });
+      }
+    }
     logger.error(
       {
         event: "recipient.alias_add.db_failed",
@@ -883,6 +933,7 @@ export async function resolveRecipient(
   ServiceResult<
     {
       recipientId: number;
+      recipientUuid: string;
       displayName: string;
     },
     "INTERNAL_ERROR"
@@ -909,6 +960,7 @@ export async function resolveRecipient(
     if (existingIdentifier) {
       return ok({
         recipientId: existingIdentifier.recipientId,
+        recipientUuid: existingIdentifier.recipient.uuid,
         displayName: existingIdentifier.recipient.displayName,
       });
     }
@@ -942,6 +994,7 @@ export async function resolveRecipient(
 
     return ok({
       recipientId: recipient.id,
+      recipientUuid: recipient.uuid,
       displayName: recipient.displayName,
     });
   } catch (error) {

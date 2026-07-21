@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { TransactionType } from "@/generated/prisma-rewrite";
+import { ClassificationSource, TransactionType } from "@/generated/prisma-rewrite";
 
 const optionalNullableString = z.string().trim().optional().nullable();
 const optionalNullableUuid = z.string().uuid().optional().nullable();
@@ -69,14 +69,34 @@ export const createTransactionSchema = z.object({
   locationRaw: optionalNullableString,
 });
 
-export const updateTransactionSchema = createTransactionSchema.omit({
-  recipientUuid: true,
-});
+function requireSuggestionPair(
+  value: { categoryUuid?: string | null; subcategoryUuid?: string | null; classificationIntent?: "SUGGESTION" },
+  context: z.RefinementCtx
+) {
+  if (
+    value.classificationIntent === "SUGGESTION" &&
+    (!value.categoryUuid || value.subcategoryUuid === undefined)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["classificationIntent"],
+      message: "Suggestion intent requires categoryUuid and subcategoryUuid",
+    });
+  }
+}
 
-export const updateTransactionCategorySchema = z.object({
-  categoryUuid: optionalNullableUuid,
-  subcategoryUuid: optionalNullableUuid,
-});
+export const updateTransactionSchema = createTransactionSchema
+  .omit({ recipientUuid: true })
+  .extend({ classificationIntent: z.literal("SUGGESTION").optional() })
+  .superRefine(requireSuggestionPair);
+
+export const updateTransactionCategorySchema = z
+  .object({
+    categoryUuid: optionalNullableUuid,
+    subcategoryUuid: optionalNullableUuid,
+    classificationIntent: z.literal("SUGGESTION").optional(),
+  })
+  .superRefine(requireSuggestionPair);
 
 export const transactionIdParamsSchema = z.object({
   id: z.string().uuid(),
@@ -92,4 +112,5 @@ export const listTransactionsQuerySchema = z.object({
   endDate: optionalEndDateParam,
   categories: z.array(z.string().trim().min(1)).optional(),
   subcategories: z.array(z.string().trim().min(1)).optional(),
+  classificationSources: z.array(z.nativeEnum(ClassificationSource)).optional(),
 });

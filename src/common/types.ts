@@ -12,6 +12,9 @@ export const TRANSACTION_SOURCES = ["SMS", "MANUAL"] as const;
 
 export type TransactionSource = (typeof TRANSACTION_SOURCES)[number];
 
+export const CLASSIFICATION_SOURCES = ["MANUAL", "SUGGESTION", "RULE"] as const;
+export type ClassificationSource = (typeof CLASSIFICATION_SOURCES)[number];
+
 export type CategoryOption = {
   uuid: string;
   name: string;
@@ -56,6 +59,9 @@ export type TransactionRecord = {
   subcategory: string | null;
   categoryUuid: string | null;
   subcategoryUuid: string | null;
+  classificationSource: ClassificationSource | null;
+  classificationChangedAt: string | null;
+  classificationRule?: { uuid: string; name: string; isDeleted: boolean } | null;
 };
 
 export type TransactionListResponse = {

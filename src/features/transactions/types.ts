@@ -19,6 +19,7 @@ export type TransactionsQueryRow = {
   category: string | null;
   subcategory: string | null;
   source: TransactionRecord["source"];
+  classificationSource: TransactionRecord["classificationSource"];
   timestamp: string;
 };
 
@@ -32,6 +33,7 @@ export type TransactionsApiQuery = {
   endDate: string | null;
   categories: string[];
   subcategories: string[];
+  classificationSources: import("@/common/types").ClassificationSource[];
   page: number;
   pageSize: number;
   sortBy: TransactionSortBy;
@@ -84,6 +86,8 @@ export type TransactionsPageInitialData = {
 export type TransactionDetailSuggestion = {
   suggestedCategory: string | null;
   suggestedSubCategory: string | null;
+  suggestedCategoryUuid: string | null;
+  suggestedSubcategoryUuid: string | null;
 };
 
 export type TransactionDetailPageInitialData = {
@@ -124,12 +128,14 @@ export type TransactionMutationInput = {
 
 export type UpdateTransactionInput = TransactionMutationInput & {
   transactionUuid: string;
+  classificationIntent?: "SUGGESTION";
 };
 
 export type UpdateTransactionCategoryInput = {
   transactionUuid: string;
   categoryUuid?: string | null;
   subcategoryUuid?: string | null;
+  classificationIntent?: "SUGGESTION";
 };
 
 export type TransactionDetailFormValues = {

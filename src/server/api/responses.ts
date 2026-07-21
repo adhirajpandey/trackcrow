@@ -20,6 +20,16 @@ export function fromServiceError(result: ServiceFailure) {
       return jsonError("Not found", 404);
     case "CONFLICT":
       return jsonError("Conflict", 409, result.details ? { details: result.details } : undefined);
+    case "RULE_RECIPIENT_CONFLICT":
+      return jsonError("An enabled rule already exists for this recipient", 409, {
+        code: result.error,
+        ...(result.details ? { details: result.details } : {}),
+      });
+    case "TRANSACTION_SUGGESTION_CONFLICT":
+      return jsonError("The category suggestion is no longer current", 409, {
+        code: result.error,
+        ...(result.details ? { details: result.details } : {}),
+      });
     case "UNPROCESSABLE":
       return jsonError("Unprocessable entity", 422, result.details ? { details: result.details } : undefined);
     default:

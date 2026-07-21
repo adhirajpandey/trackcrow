@@ -80,10 +80,11 @@ export function useUpdateTransactionCategoryMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ transactionUuid, categoryUuid, subcategoryUuid }: UpdateTransactionCategoryInput) =>
+    mutationFn: ({ transactionUuid, categoryUuid, subcategoryUuid, classificationIntent }: UpdateTransactionCategoryInput) =>
       apiPatch<TransactionUpdateResponse>(`/api/transactions/${transactionUuid}/category`, {
         categoryUuid: categoryUuid ?? null,
         ...(subcategoryUuid !== undefined ? { subcategoryUuid } : {}),
+        ...(classificationIntent ? { classificationIntent } : {}),
       }),
     onSuccess: async (_data, variables) => {
       await Promise.all([

@@ -31,6 +31,7 @@ function getBaseParams(
       | "endDate"
       | "categories"
       | "subcategories"
+      | "classificationSources"
       | "selectedTransactionUuid"
       | "review"
       | "status"
@@ -58,6 +59,9 @@ function getBaseParams(
   }
   for (const subcategory of nextFilters.subcategories) {
     params.append("subcategory", subcategory);
+  }
+  for (const source of nextFilters.classificationSources) {
+    params.append("classificationSource", source);
   }
   if (nextFilters.selectedTransactionUuid) {
     params.set("transaction", nextFilters.selectedTransactionUuid);
@@ -338,6 +342,7 @@ export function buildResetFilterState(
     sortOrder: "desc",
     categories: [],
     subcategories: [],
+    classificationSources: [],
     selectedTransactionUuid: null,
     review: null,
     status: null,
@@ -409,6 +414,9 @@ export function buildFilterFormHiddenParams(filters: TransactionsControlState) {
   }
   for (const subcategory of filters.subcategories) {
     hiddenParams.push({ name: "subcategory", value: subcategory });
+  }
+  for (const source of filters.classificationSources) {
+    hiddenParams.push({ name: "classificationSource", value: source });
   }
   return hiddenParams;
 }

@@ -38,8 +38,9 @@ import type { TransactionCreatePageInitialData } from "@/features/transactions/t
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
-import { RecipientPicker } from "./recipient-picker";
+import { RecipientPicker } from "@/components/product/recipient-picker";
 import {
+  AUTO_CLASSIFY_VALUE,
   getCreateTransactionDefaultValues,
   mapCreateFormValuesToPayload,
   transactionCreateFormSchema,
@@ -281,7 +282,7 @@ export function TransactionCreatePageView({
 
           <section
             className={cn(
-              categoryUuid ? dashboardPanelClassName : dashboardAttentionPanelClassName,
+              categoryUuid !== "" ? dashboardPanelClassName : dashboardAttentionPanelClassName,
               "overflow-visible p-5"
             )}
           >
@@ -300,6 +301,7 @@ export function TransactionCreatePageView({
                       value={field.value}
                       onValueChange={field.onChange}
                       options={[
+                        { value: AUTO_CLASSIFY_VALUE, label: "Auto-classify" },
                         { value: "", label: "Uncategorized" },
                         ...categories.map((category) => ({
                           value: category.uuid,
@@ -322,11 +324,11 @@ export function TransactionCreatePageView({
                       ariaLabel="Subcategory"
                       value={field.value}
                       onValueChange={field.onChange}
-                      disabled={!categoryUuid || subcategories.length === 0}
+                      disabled={!categoryUuid || categoryUuid === AUTO_CLASSIFY_VALUE || subcategories.length === 0}
                       options={[
                         {
                           value: "",
-                          label: categoryUuid
+                          label: categoryUuid && categoryUuid !== AUTO_CLASSIFY_VALUE
                             ? "No subcategory"
                             : "Choose a category first",
                         },
@@ -449,9 +451,11 @@ export function TransactionCreatePageView({
             <SummaryItem
               label="Classification"
               value={
-                [selectedCategory?.name, selectedSubcategory?.name]
-                  .filter(Boolean)
-                  .join(" · ") || "Uncategorized"
+                categoryUuid === AUTO_CLASSIFY_VALUE
+                  ? "Auto-classify"
+                  : ([selectedCategory?.name, selectedSubcategory?.name]
+                      .filter(Boolean)
+                      .join(" · ") || "Uncategorized")
               }
             />
             <SummaryItem
@@ -581,6 +585,3 @@ function applyServerErrors(
     }
   }
 }
-
-
-

@@ -15,6 +15,7 @@ import {
 
 import { formatNumber } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { AssignmentSourceBadge } from "@/components/product/assignment-source-badge";
 import {
   MobileBottomSheet,
   MobileCardList,
@@ -121,7 +122,8 @@ export function TransactionsPageView({
   const searchTimeoutRef = useRef<number | null>(null);
   const mobileActiveFilterCount =
     (data.filters.categories.length > 0 ? 1 : 0) +
-    (data.filters.subcategories.length > 0 ? 1 : 0);
+    (data.filters.subcategories.length > 0 ? 1 : 0) +
+    (data.filters.classificationSources.length > 0 ? 1 : 0);
   const mobileTransactionCountLabel = `${formatNumber(data.pagination.total)} transaction${
     data.pagination.total === 1 ? "" : "s"
   }`;
@@ -374,6 +376,9 @@ export function TransactionsPageView({
                       />
                     </span>
                   </div>
+                  <div className="mt-3">
+                    <AssignmentSourceBadge source={row.classificationSource} />
+                  </div>
                 </button>
               ))}
             </MobileCardList>
@@ -381,7 +386,7 @@ export function TransactionsPageView({
             <div className="hidden lg:block">
               <TransactionsTable
                 rows={data.rows}
-                columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
+                columns={["timestamp", "recipient", "amount", "category", "assignment", "subcategory"]}
                 variant="full"
                 selectedRowUuid={data.filters.selectedTransactionUuid}
                 sort={{
@@ -405,7 +410,7 @@ export function TransactionsPageView({
         ) : (
           <TransactionsTable
             rows={[] as TransactionsPageRow[]}
-            columns={["timestamp", "recipient", "amount", "category", "subcategory"]}
+            columns={["timestamp", "recipient", "amount", "category", "assignment", "subcategory"]}
             variant="full"
             rowHref={(row) => `/transactions/${row.uuid}`}
             onNavigate={router.push}
@@ -502,6 +507,10 @@ export function TransactionsPageView({
                 label="Subcategory"
                 value={drawerRow.subcategory ?? "-"}
               />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-secondary-foreground">Assignment</span>
+                <AssignmentSourceBadge source={drawerRow.classificationSource} />
+              </div>
             </div>
           </div>
         ) : null}

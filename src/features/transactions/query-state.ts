@@ -1,4 +1,4 @@
-import type { CategoryOption, TransactionListResponse, TransactionRecord } from "@/common/types";
+import { CLASSIFICATION_SOURCES, type CategoryOption, type ClassificationSource, type TransactionListResponse, type TransactionRecord } from "@/common/types";
 import {
   getDashboardRangeState,
   type DashboardRangeValue,
@@ -170,6 +170,7 @@ function toQueryRow(transaction: TransactionRecord): TransactionsQueryRow {
     category: transaction.category,
     subcategory: transaction.subcategory,
     source: transaction.source,
+    classificationSource: transaction.classificationSource,
     timestamp: transaction.timestamp,
   };
 }
@@ -206,6 +207,10 @@ export function getTransactionsPageState(
       : categories;
   const normalizedSortedCategories = normalizeCategories(normalizedCategories);
   const rawSubcategories = getRepeatedParams(searchParams.subcategory);
+  const classificationSources = [...new Set(getRepeatedParams(searchParams.classificationSource))]
+    .filter((value): value is ClassificationSource =>
+      CLASSIFICATION_SOURCES.includes(value as ClassificationSource)
+    );
   const allowedSubcategories = getSelectedCategorySubcategories(
     options.categories,
     normalizedSortedCategories
@@ -222,6 +227,7 @@ export function getTransactionsPageState(
       endDate,
       categories: normalizedSortedCategories,
       subcategories: normalizeCategories([...new Set(normalizedSubcategories)]),
+      classificationSources,
       page,
       pageSize: parsePageSize(firstParam(searchParams.size)),
       sortBy,
@@ -252,7 +258,9 @@ export function isSameTransactionsQuery(
     left.categories.length === right.categories.length &&
     left.categories.every((category, index) => category === right.categories[index]) &&
     left.subcategories.length === right.subcategories.length &&
-    left.subcategories.every((subcategory, index) => subcategory === right.subcategories[index])
+    left.subcategories.every((subcategory, index) => subcategory === right.subcategories[index]) &&
+    left.classificationSources.length === right.classificationSources.length &&
+    left.classificationSources.every((source, index) => source === right.classificationSources[index])
   );
 }
 
@@ -273,6 +281,9 @@ export function buildTransactionsApiSearchParams(query: TransactionsApiQuery) {
   }
   for (const subcategory of query.subcategories) {
     params.append("subcategory", subcategory);
+  }
+  for (const source of query.classificationSources) {
+    params.append("classificationSource", source);
   }
 
   params.set("page", String(query.page));
@@ -359,4 +370,3 @@ export function buildTransactionsPageData(input: {
     pagination: input.result.pagination,
   };
 }
-
