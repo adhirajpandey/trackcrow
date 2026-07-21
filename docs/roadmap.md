@@ -7,8 +7,9 @@ This document tracks current implementation status and near-term priorities. For
 - The rewrite Prisma schema is the active data model.
 - The app runs as a single Next.js monolith with stable route-handler, controller, service, and page-data boundaries.
 - Google sign-in, user bootstrap, category seeding, and session-protected app routes are in place.
-- SMS import, category/subcategory management APIs, transaction CRUD, dashboard summaries, recipient APIs, and device-token APIs are implemented.
-- The current authenticated product surface includes dashboard, transactions, transaction detail, transaction create, recipients, recipient detail, and settings placeholder routes.
+- SMS import, category/subcategory management APIs, transaction CRUD, dashboard summaries, recipient APIs, rule lifecycle APIs, and device-token APIs are implemented.
+- Recipient-based rules classify new imported transactions while preserving manual, suggestion, and rule provenance.
+- The current authenticated product surface includes dashboard, transactions, transaction detail, transaction create, recipients, recipient detail, rules, and settings placeholder routes.
 
 ## Active Work
 
@@ -19,8 +20,7 @@ This document tracks current implementation status and near-term priorities. For
 
 ## Next Priorities
 
-- Rules: ship explicit rule-management and categorization workflows on top of the current deterministic import and recipient-history foundation.
-- Budgets: add budget tracking after rules so limits and notifications are built on top of stable categorization behavior.
+- Budgets: add budget tracking so limits and notifications are built on top of stable categorization behavior.
 - Settings: replace the current placeholder with real account, device-token, and import-management flows.
 - Categories: decide whether category management stays API-only for now or gets a dedicated authenticated page.
 - Imports review: decide whether a manual review surface is still needed alongside the current deterministic SMS pipeline.

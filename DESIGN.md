@@ -64,6 +64,13 @@ Pastel surfaces are mint (`#e7f8ef`), blush (`#fff0ef`), lilac (`#f4f0fb`), and 
 - Manual transaction entry uses grouped paper panels, 2px field borders, a mint live summary, a yellow optional classification surface until a category is selected, and the existing sticky mobile action bar.
 - Settings, error, empty, loading, dialog, drawer, select, and toast surfaces are part of the authenticated workspace and use the same paper, ink, shadow, focus, and semantic-state rules.
 
+## Rules Workspace
+
+- Rules use the ledger-table pattern on desktop and compact paper cards on mobile. Search, status filters, pagination, and actions retain visible focus states and URL-driven navigation.
+- Enabled rules use mint, disabled rules use a neutral paper treatment, and rules requiring repair use review yellow with an explicit warning icon and label. Status must never rely on color alone.
+- Create and edit flows use a dialog on desktop and a drawer on mobile, with recipient, category, subcategory, and enabled-state controls. Repair flows explain that a valid category action is required before the rule can be enabled.
+- Rule deletion uses a destructive confirmation and clearly states that existing transactions are unchanged.
+
 ## States
 
 - Loading skeletons must mirror the final desktop and mobile geometry using paper panels; they must not reintroduce dark gradients or cause layout shift.

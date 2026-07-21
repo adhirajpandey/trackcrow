@@ -7,6 +7,7 @@ TrackCrow is a Next.js expense tracking app that turns SMS transaction messages 
 - Google sign-in with user bootstrap on first login
 - SMS transaction import through device tokens
 - Manual transaction creation and editing
+- Automatic recipient-based transaction classification through user-managed rules
 - Dashboard summaries, category breakdowns, and period-based spending views
 - User-owned categories, subcategories, and resolved recipients
 

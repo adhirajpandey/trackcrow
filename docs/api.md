@@ -112,6 +112,7 @@ Supported query params:
 - `endDate`
 - repeated `category` params or comma-separated `categories`
 - repeated `subcategory` params or comma-separated `subcategories`
+- repeated `classificationSource=MANUAL|SUGGESTION|RULE` params
 
 Transaction list filters are validated as UUID/string inputs. `startDate` and `endDate` are interpreted as day boundaries in IST when sent as `YYYY-MM-DD`.
 
@@ -131,10 +132,11 @@ Each transaction includes:
 
 - `uuid`, `userUuid`, `recipientUuid`
 - `amount`, `currency`, `type`, `source`
-- `recipientDisplayName`, optional `recipientRaw`, optional `recipientName`
+- `recipientDisplayName`
 - `reference`, `accountLabel`, `remarks`, `locationRaw`
 - `timestamp`, `createdAt`, `updatedAt`
 - `category`, `subcategory`, `categoryUuid`, `subcategoryUuid`
+- `classificationSource` and `classificationChangedAt`
 
 ### `POST /api/transactions`
 
@@ -157,25 +159,43 @@ Request body:
 }
 ```
 
-`categoryUuid` and `subcategoryUuid` may be `null`. Returns `201` with `{ "uuid": "..." }`.
+`categoryUuid` and `subcategoryUuid` may be `null`. Manual creation records `classificationSource: "MANUAL"`. Returns `201` with `{ "uuid": "..." }`.
 
 ### `GET /api/transactions/:id`
 
-Returns one transaction DTO with the same fields as the list item plus `recipientRaw` and `recipientName`.
+Returns one transaction DTO with the same fields as the list item plus `recipientRaw`, `recipientName`, and `classificationRule`.
+
+`classificationRule` is either `null` or contains `uuid`, `name`, and `isDeleted` for the rule that assigned the current classification.
 
 ### `PATCH /api/transactions/:id`
 
-Same shape as create, except `recipientUuid` is not accepted. Returns `{ "uuid": "..." }`.
+Same shape as create, except `recipientUuid` is not accepted. The optional `classificationIntent: "SUGGESTION"` marks the category change as an accepted suggestion and requires both `categoryUuid` and `subcategoryUuid` to be present. Returns `{ "uuid": "..." }`.
+
+When the submitted category pair no longer matches the current suggestion, returns `409` with:
+
+```json
+{
+  "message": "The category suggestion is no longer current",
+  "code": "TRANSACTION_SUGGESTION_CONFLICT",
+  "details": {
+    "suggestion": { "categoryUuid": "...", "subcategoryUuid": null }
+  }
+}
+```
 
 ### `PATCH /api/transactions/:id/category`
 
 Request body:
 
 ```json
-{ "categoryUuid": "...", "subcategoryUuid": "..." }
+{
+  "categoryUuid": "...",
+  "subcategoryUuid": "...",
+  "classificationIntent": "SUGGESTION"
+}
 ```
 
-`categoryUuid` may be `null` to clear the category. Returns:
+`categoryUuid` may be `null` to clear the category. `classificationIntent` is optional; when supplied, it has the same validation and stale-suggestion conflict behavior as the full transaction update. Direct category edits record `classificationSource: "MANUAL"`, while verified suggestions record `"SUGGESTION"`. Both clear any prior rule link. Returns:
 
 - `uuid`
 - `categoryUuid`
@@ -193,8 +213,82 @@ Returns:
 
 - `suggestedCategory`
 - `suggestedSubCategory`
+- `suggestedCategoryUuid`
+- `suggestedSubcategoryUuid`
 
 The suggestion is based on prior categorized transactions for the same resolved recipient.
+
+### Rules
+
+Rules classify future imported transactions by resolved recipient. All rule routes require a valid session and operate only on the current user's data.
+
+Each rule DTO contains:
+
+- `uuid`, `name`, `isEnabled`, `actionStatus`
+- `conditions: { recipient: { equals: recipientUuid } }`
+- `recipient: { uuid, displayName }`
+- `action` with `categoryUuid`, `categoryName`, `subcategoryUuid`, and `subcategoryName`
+- `createdAt`, `updatedAt`
+
+`actionStatus` is `VALID` or `NEEDS_REPAIR`. Deleted rules are omitted from rule reads, but may remain visible as historical `classificationRule` metadata on transaction details.
+
+### `GET /api/rules`
+
+Supported query params:
+
+- `page`, default `1`
+- `size`, default `20`, maximum `100`
+- `q`, a case-insensitive rule-name or recipient-name search
+- `status=enabled|disabled|needsRepair`
+
+The `disabled` filter returns valid disabled rules; repair-required rules use the separate `needsRepair` status. Returns:
+
+- `rules[]`
+- `page`, `pageSize`, `total`, `totalPages`, `hasNext`, `hasPrev`
+
+### `POST /api/rules`
+
+Request body:
+
+```json
+{
+  "name": "Classify Swiggy as Food",
+  "isEnabled": true,
+  "conditions": {
+    "recipient": { "equals": "..." }
+  },
+  "action": {
+    "categoryUuid": "...",
+    "subcategoryUuid": "..."
+  }
+}
+```
+
+The name is trimmed and must contain 1–100 characters. Recipient, category, and optional subcategory UUIDs must belong to the current user, and the subcategory must belong to the selected category. Returns `201` with the full rule DTO.
+
+Only one non-deleted enabled rule may exist per recipient. Creating or enabling a conflicting rule returns `409` with:
+
+```json
+{
+  "message": "An enabled rule already exists for this recipient",
+  "code": "RULE_RECIPIENT_CONFLICT",
+  "details": {
+    "existingRule": { "uuid": "...", "name": "..." }
+  }
+}
+```
+
+### `GET /api/rules/:ruleUuid`
+
+Returns the full rule DTO, or `404` when the rule is missing, deleted, or not owned by the current user.
+
+### `PATCH /api/rules/:ruleUuid`
+
+Accepts any non-empty subset of `name`, `isEnabled`, `conditions`, and `action` using the same shapes and ownership validation as creation. A `NEEDS_REPAIR` rule cannot be enabled until a valid action is supplied. Returns the updated rule DTO.
+
+### `DELETE /api/rules/:ruleUuid`
+
+Soft-deletes the rule by disabling it and setting `deletedAt`. Existing transactions are unchanged. Returns `{ "uuid": "..." }`.
 
 ### Dashboard
 
@@ -313,6 +407,8 @@ Request body:
 - `deletedSourceRecipient`
 
 If the alias already belongs to another recipient and `transfer` is not set, the route returns `409` with transfer-impact `details`.
+
+If the transfer would merge two recipients that each have an enabled rule, it returns `409` with `code: "RULE_RECIPIENT_CONFLICT"` and the target recipient's `existingRule` details.
 
 ### Device Tokens
 

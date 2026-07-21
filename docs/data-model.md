@@ -10,7 +10,7 @@ This document describes the Prisma schema and the business rules enforced around
 
 - primary stable key for app ownership: `uuid`
 - numeric `id` also exists and is unique
-- one user owns categories, subcategories, recipients, transactions, raw messages, and device tokens
+- one user owns categories, subcategories, recipients, rules, transactions, raw messages, and device tokens
 - sign-in identity is keyed by unique `email`
 
 ### Category And Subcategory
@@ -52,15 +52,45 @@ Service behavior:
 - `timestamp` is stored as `Timestamptz`
 - `recipientRaw` stores the original counterparty string from the source event
 - `recipientName` is optional source-provided display text
+- `classificationSource` records whether the current category assignment came from `MANUAL`, `SUGGESTION`, or `RULE`; it is `null` when no classification has been assigned
+- `classificationChangedAt` records when the current classification was applied
+- `classificationRuleId` links rule-classified transactions to the originating rule
 
 Important service rules:
 
 - manual API creation always forces `source` to `MANUAL`
 - SMS import creation sets `source` to `SMS`
+- manual creation records `classificationSource: MANUAL`, including when the transaction is left uncategorized
+- imported transactions are classified by the single enabled, valid rule matching their resolved recipient; imports without a match remain unclassified
+- accepting a current recipient-history suggestion records `classificationSource: SUGGESTION`; direct category edits record `MANUAL`
+- changing a transaction classification clears any prior `classificationRuleId`
 - transaction create and update APIs use UUID references for recipient, category, and subcategory inputs
 - category and subcategory assignments are checked for user ownership
 - changing a transaction category through the narrow category endpoint can update both category and subcategory, and clearing the category clears the subcategory as well
 - duplicate transactions are allowed
+
+### Rule
+
+`Rule` assigns a category and optional subcategory to future imported transactions for one resolved recipient.
+
+- each rule belongs to one user and one recipient
+- the current condition shape is a recipient UUID equality match
+- the action requires a category and may include a subcategory from that category
+- `isEnabled` controls whether the rule participates in classification
+- `actionStatus` is `VALID` or `NEEDS_REPAIR`
+- an enabled rule must be valid and retain a category
+- at most one non-deleted enabled rule may exist for a user and recipient
+- deletion is soft: the service disables the rule and sets `deletedAt`
+
+Rules affect newly imported transactions only. Creating, editing, disabling, repairing, or deleting a rule does not reclassify existing transactions. A transaction assigned by a rule retains its rule relationship after soft deletion so detail responses can expose the historical rule as deleted.
+
+Cross-domain behavior:
+
+- deleting or resetting a category marks affected transaction classifications as manual, clears their rule link, and disables affected rules as `NEEDS_REPAIR`
+- deleting a subcategory, or moving it to another category, clears it from affected transactions and disables affected rules as `NEEDS_REPAIR`
+- repairing a rule with a valid action returns it to `VALID`; it must still be explicitly enabled if it was disabled
+- when an alias transfer removes its source recipient, that recipient's rules move to the target recipient
+- a recipient merge is rejected when moving the rules would produce two enabled rules for the target recipient
 
 ### RawMessage
 
@@ -96,10 +126,13 @@ User
   |- Category
   |   `- Subcategory
   |- Recipient
-  |   `- RecipientIdentifier
+  |   |- RecipientIdentifier
+  |   `- Rule -> Category
+  |           -> Subcategory?
   |- Transaction -> Recipient
   |              -> Category?
   |              -> Subcategory?
+  |              -> Rule?
   |- RawMessage -> Transaction?
   `- DeviceToken
 ```
@@ -115,8 +148,10 @@ The current bootstrap seed creates these top-level categories:
 
 ## Delete Behavior
 
-- deleting a user cascades to categories, subcategories, recipients, transactions, raw messages, and device tokens
+- deleting a user cascades to categories, subcategories, recipients, rules, transactions, raw messages, and device tokens
 - deleting a category sets `transaction.categoryId` to `null`
 - deleting a subcategory sets `transaction.subcategoryId` to `null`
+- deleting a category or subcategory disables affected rules and marks them `NEEDS_REPAIR`
+- deleting a rule is a soft delete; deleting its user cascades the persisted rule record
 - deleting a transaction sets `raw_message.transactionId` to `null`
 - transactions cannot cascade-delete recipients because the relation uses `onDelete: Restrict`

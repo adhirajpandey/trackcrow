@@ -19,6 +19,7 @@ Current authenticated page routes are:
 - `/transactions/[id]`
 - `/recipients`
 - `/recipients/[id]`
+- `/rules`
 - `/settings`
 
 `/settings` is still a placeholder page. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
@@ -38,6 +39,7 @@ Business logic is grouped by module:
 - `device-tokens`
 - `imports`
 - `recipients`
+- `rules`
 - `transactions`
 - `users`
 
