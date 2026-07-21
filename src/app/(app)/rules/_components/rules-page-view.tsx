@@ -6,7 +6,8 @@ import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
 import { DataTableShell } from "@/components/product/data-table-shell";
-import { MobileCardList, MobilePageHeader, mobileCardClassName } from "@/components/product/mobile/mobile-primitives";
+import { MobileBottomSheet, MobileCardList, MobilePageHeader, mobileCardClassName } from "@/components/product/mobile/mobile-primitives";
+import { FilterResetButton, FilterSection, FilterSheetFooter, ListSearchField } from "@/components/product/list-filter-controls";
 import { RecipientPicker } from "@/components/product/recipient-picker";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -23,12 +24,17 @@ import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
 const inputClassName = "min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const ruleStatusOptions = [
+  { value: "", label: "All statuses" },
+  { value: "enabled", label: "Enabled" },
+  { value: "disabled", label: "Disabled" },
+  { value: "needsRepair", label: "Needs repair" },
+];
 
 export function RulesPageView(props: RulesPageInitialData) {
   const router = useRouter();
-  const queryStatus = props.initialQuery.status ?? "";
-  const [statusDraft, setStatusDraft] = useState<{ queryStatus: string; value: string } | null>(null);
-  const status = statusDraft?.queryStatus === queryStatus ? statusDraft.value : queryStatus;
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileDraftQuery, setMobileDraftQuery] = useState(props.initialQuery);
   const rulesQuery = useRulesQuery(props.initialQuery, props.initialRules);
   const data = rulesQuery.data ?? props.initialRules;
   const overlayOpen = Boolean(props.createMode || props.initialForm || props.initialPrefill);
@@ -40,6 +46,11 @@ export function RulesPageView(props: RulesPageInitialData) {
     const params = buildRulesSearchParams({ ...props.initialQuery, page });
     return `/rules?${params}`;
   };
+  const replaceQuery = (query: typeof props.initialQuery) =>
+    router.replace(`/rules?${buildRulesSearchParams(query)}`);
+  const statusLabel = ruleStatusOptions.find(
+    (option) => option.value === (props.initialQuery.status ?? "")
+  )?.label ?? "All statuses";
 
   return (
     <div className="space-y-3.5">
@@ -49,26 +60,77 @@ export function RulesPageView(props: RulesPageInitialData) {
       </div>
       <div className="lg:hidden"><Button className="w-full" onClick={openCreate}><Plus className="h-4 w-4" />Create rule</Button></div>
 
-      <form className="grid gap-3 sm:grid-cols-[1fr_12rem_auto]" onSubmit={(event) => {
-        event.preventDefault();
-        const form = new FormData(event.currentTarget);
-        const params = buildRulesSearchParams({ ...props.initialQuery, page: 1, q: String(form.get("q") ?? "").trim(), status: (status || undefined) as typeof props.initialQuery.status });
-        router.replace(`/rules?${params}`);
-      }}>
-        <input name="q" defaultValue={props.initialQuery.q} className={inputClassName} placeholder="Search rule or recipient…" aria-label="Search rules" />
+      <section className="space-y-3 lg:hidden">
+        <ListSearchField
+          value={props.initialQuery.q}
+          placeholder="Search rule or recipient..."
+          ariaLabel="Search rules"
+          onCommit={(q) => replaceQuery({ ...props.initialQuery, page: 1, q: q.trim() })}
+        />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="min-w-0">
+            <MobileBottomSheet
+              open={mobileFiltersOpen}
+              onOpenChange={(open) => {
+                setMobileFiltersOpen(open);
+                if (open) setMobileDraftQuery(props.initialQuery);
+              }}
+              triggerLabel={`Filters · ${statusLabel}`}
+              title="Rule filters"
+              description="Refine the automation rules list."
+              footer={
+                <FilterSheetFooter
+                  onReset={() => setMobileDraftQuery({ ...mobileDraftQuery, page: 1, q: "", status: undefined })}
+                  onApply={() => {
+                    replaceQuery({ ...mobileDraftQuery, page: 1 });
+                    setMobileFiltersOpen(false);
+                  }}
+                />
+              }
+            >
+              <FilterSection number="1" title="Status">
+                <Select
+                  ariaLabel="Rule status"
+                  value={mobileDraftQuery.status ?? ""}
+                  presentation="inline"
+                  onValueChange={(value) => setMobileDraftQuery((current) => ({
+                    ...current,
+                    page: 1,
+                    status: (value || undefined) as typeof current.status,
+                  }))}
+                  options={ruleStatusOptions}
+                />
+              </FilterSection>
+            </MobileBottomSheet>
+          </div>
+          <p className="whitespace-nowrap text-sm text-secondary-foreground">
+            {data.total.toLocaleString("en-IN")} {data.total === 1 ? "rule" : "rules"}
+          </p>
+        </div>
+      </section>
+
+      <section className="hidden gap-3 lg:grid lg:grid-cols-[minmax(16rem,1fr)_12rem_3rem]">
+        <ListSearchField
+          value={props.initialQuery.q}
+          placeholder="Search rule or recipient..."
+          ariaLabel="Search rules"
+          onCommit={(q) => replaceQuery({ ...props.initialQuery, page: 1, q: q.trim() })}
+        />
         <Select
           ariaLabel="Rule status"
-          value={status}
-          onValueChange={(value) => setStatusDraft({ queryStatus, value })}
-          options={[
-            { value: "", label: "All statuses" },
-            { value: "enabled", label: "Enabled" },
-            { value: "disabled", label: "Disabled" },
-            { value: "needsRepair", label: "Needs repair" },
-          ]}
+          value={props.initialQuery.status ?? ""}
+          onValueChange={(value) => replaceQuery({
+            ...props.initialQuery,
+            page: 1,
+            status: (value || undefined) as typeof props.initialQuery.status,
+          })}
+          options={ruleStatusOptions}
         />
-        <Button type="submit" variant="secondary">Apply</Button>
-      </form>
+        <FilterResetButton
+          disabled={!props.initialQuery.q && !props.initialQuery.status}
+          onReset={() => replaceQuery({ ...props.initialQuery, page: 1, q: "", status: undefined })}
+        />
+      </section>
 
       {rulesQuery.isError ? <div role="alert" className="rounded-[8px] border-2 border-destructive bg-destructive/10 p-4">Rules are temporarily unavailable.</div> : null}
       {data.rules.length === 0 ? (

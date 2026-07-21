@@ -56,6 +56,17 @@ function parseSortOrder(value: string | undefined): RecipientSortOrder {
     : "desc";
 }
 
+function parseOptionalNumber(value: string | undefined, integer = false) {
+  if (value == null || value.trim() === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || (integer && !Number.isInteger(parsed))) {
+    return null;
+  }
+  return parsed;
+}
+
 export function getRecipientsPageState(
   searchParams: RecipientsSearchParams
 ): RecipientsPageState {
@@ -66,6 +77,10 @@ export function getRecipientsPageState(
       pageSize: parsePageSize(firstParam(searchParams.size)),
       sortBy: parseSortBy(firstParam(searchParams.sortBy)),
       sortOrder: parseSortOrder(firstParam(searchParams.sortOrder)),
+      minTransactionCount: parseOptionalNumber(firstParam(searchParams.minTransactionCount), true),
+      maxTransactionCount: parseOptionalNumber(firstParam(searchParams.maxTransactionCount), true),
+      minTotalAmount: parseOptionalNumber(firstParam(searchParams.minTotalAmount)),
+      maxTotalAmount: parseOptionalNumber(firstParam(searchParams.maxTotalAmount)),
     },
   };
 }
@@ -76,7 +91,11 @@ export function isSameRecipientsQuery(left: RecipientsApiQuery, right: Recipient
     left.page === right.page &&
     left.pageSize === right.pageSize &&
     left.sortBy === right.sortBy &&
-    left.sortOrder === right.sortOrder
+    left.sortOrder === right.sortOrder &&
+    left.minTransactionCount === right.minTransactionCount &&
+    left.maxTransactionCount === right.maxTransactionCount &&
+    left.minTotalAmount === right.minTotalAmount &&
+    left.maxTotalAmount === right.maxTotalAmount
   );
 }
 
@@ -91,6 +110,19 @@ export function buildRecipientsApiSearchParams(query: RecipientsApiQuery) {
   params.set("size", String(query.pageSize));
   params.set("sortBy", query.sortBy);
   params.set("sortOrder", query.sortOrder);
+
+  if (query.minTransactionCount !== null) {
+    params.set("minTransactionCount", String(query.minTransactionCount));
+  }
+  if (query.maxTransactionCount !== null) {
+    params.set("maxTransactionCount", String(query.maxTransactionCount));
+  }
+  if (query.minTotalAmount !== null) {
+    params.set("minTotalAmount", String(query.minTotalAmount));
+  }
+  if (query.maxTotalAmount !== null) {
+    params.set("maxTotalAmount", String(query.maxTotalAmount));
+  }
 
   return params;
 }

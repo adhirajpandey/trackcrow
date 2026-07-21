@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
@@ -28,6 +28,8 @@ export type MobileTimePeriodRowProps = {
   customRangeBehavior?: "popover" | "select";
   renderMenuInPortal?: boolean;
   menuPortalZIndex?: number;
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 };
 
 const activeRangeClassName =
@@ -43,6 +45,8 @@ export function MobileTimePeriodRow({
   customRangeBehavior = "popover",
   renderMenuInPortal = true,
   menuPortalZIndex = 80,
+  menuOpen,
+  onMenuOpenChange,
 }: MobileTimePeriodRowProps) {
   const moreRangeActive = isSecondaryTimeframe(value);
 
@@ -78,6 +82,8 @@ export function MobileTimePeriodRow({
         triggerActive={moreRangeActive}
         renderInPortal={renderMenuInPortal}
         portalZIndex={menuPortalZIndex}
+        open={menuOpen}
+        onOpenChange={onMenuOpenChange}
       />
     </div>
   );
@@ -93,6 +99,8 @@ function MoreTimePeriodsMenu({
   customRangeBehavior,
   renderInPortal,
   portalZIndex,
+  open,
+  onOpenChange,
 }: {
   value: DashboardRangeValue;
   options: MobileTimePeriodOption[];
@@ -103,11 +111,23 @@ function MoreTimePeriodsMenu({
   customRangeBehavior: "popover" | "select";
   renderInPortal: boolean;
   portalZIndex: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuPanelRef = useRef<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
+  const setMenuOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (open === undefined) {
+        setInternalOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange, open]
+  );
   const [menuStyle, setMenuStyle] = useState<CSSProperties | undefined>(undefined);
   const [draftRange, setDraftRange] = useState(value);
   const [customStartDate, setCustomStartDate] = useState(startDate ?? "");
@@ -156,7 +176,7 @@ function MoreTimePeriodsMenu({
       const clickedInsideMenu = menuPanelRef.current?.contains(target);
 
       if (!clickedInsideTrigger && !clickedInsideMenu) {
-        setIsOpen(false);
+        setMenuOpen(false);
         setDraftRange(value);
         setCustomStartDate(startDate ?? "");
         setCustomEndDate(endDate ?? "");
@@ -166,7 +186,7 @@ function MoreTimePeriodsMenu({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsOpen(false);
+        setMenuOpen(false);
         setDraftRange(value);
         setCustomStartDate(startDate ?? "");
         setCustomEndDate(endDate ?? "");
@@ -184,7 +204,7 @@ function MoreTimePeriodsMenu({
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [endDate, isOpen, startDate, value]);
+  }, [endDate, isOpen, setMenuOpen, startDate, value]);
 
   const menuContent = (
     <div
@@ -194,13 +214,18 @@ function MoreTimePeriodsMenu({
       style={renderInPortal ? menuStyle : undefined}
       className={cn(
         "overflow-hidden rounded-[10px] rounded-tr-none border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]",
-        renderInPortal ? "" : "absolute right-0 top-[calc(100%+0.5rem)] z-20 w-[13.5rem] min-w-[13.5rem]"
+        renderInPortal ? "" : "relative mt-2 w-full"
       )}
     >
       <div className="border-b border-border/45 px-3 py-2 text-xs font-semibold text-secondary-foreground">
         More time periods
       </div>
-      <div className="scrollbar-none max-h-56 overflow-y-auto py-1">
+      <div
+        className={cn(
+          "scrollbar-none py-1",
+          renderInPortal && "max-h-56 overflow-y-auto"
+        )}
+      >
         {options.map((option) => {
           const selected = draftRange === option.value;
 
@@ -216,7 +241,7 @@ function MoreTimePeriodsMenu({
                   return;
                 }
 
-                setIsOpen(false);
+                setMenuOpen(false);
                 onSelect(option.value);
               }}
               className={cn(
@@ -267,7 +292,7 @@ function MoreTimePeriodsMenu({
             <button
               type="button"
               onClick={() => {
-                setIsOpen(false);
+                setMenuOpen(false);
                 setDraftRange(value);
                 setCustomStartDate(startDate ?? "");
                 setCustomEndDate(endDate ?? "");
@@ -286,7 +311,7 @@ function MoreTimePeriodsMenu({
                   setCustomError("Start date must be on or before end date.");
                   return;
                 }
-                setIsOpen(false);
+                setMenuOpen(false);
                 onSelect("custom", customStartDate, customEndDate);
               }}
               className="min-h-11 rounded-[8px] border-2 border-primary/50 bg-primary px-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:border-border disabled:bg-secondary disabled:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -300,7 +325,13 @@ function MoreTimePeriodsMenu({
   );
 
   return (
-    <div ref={menuRef} className="relative min-w-[6.75rem] flex-[1.5] basis-[6.75rem]">
+    <div
+      ref={menuRef}
+      className={cn(
+        "relative min-w-[6.75rem] flex-[1.5] basis-[6.75rem]",
+        !renderInPortal && isOpen && "w-full flex-none basis-full"
+      )}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -318,7 +349,7 @@ function MoreTimePeriodsMenu({
             setCustomEndDate(endDate ?? "");
             setCustomError(null);
           }
-          setIsOpen((current) => !current);
+          setMenuOpen(!isOpen);
         }}
         className={cn(
           "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-border/50 bg-background/16 px-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

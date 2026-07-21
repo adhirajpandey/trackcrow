@@ -21,12 +21,13 @@ type SelectProps = {
   ariaLabel?: string;
   triggerClassName?: string;
   contentClassName?: string;
+  presentation?: "popover" | "inline";
 };
 
 const selectTriggerClassName =
   "inline-flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
 const selectContentClassName =
-  "absolute left-0 z-20 w-full overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]";
+  "z-20 w-full overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]";
 
 export function Select({
   value,
@@ -38,6 +39,7 @@ export function Select({
   ariaLabel,
   triggerClassName,
   contentClassName,
+  presentation = "popover",
 }: SelectProps) {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
@@ -135,7 +137,7 @@ export function Select({
   }, [closeMenu, isOpen]);
 
   React.useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || presentation === "inline") {
       return;
     }
 
@@ -150,7 +152,7 @@ export function Select({
     const spaceAbove = triggerRect.top - 12;
 
     setOpenUpward(spaceBelow < estimatedHeight && spaceAbove > spaceBelow);
-  }, [isOpen, options.length]);
+  }, [isOpen, options.length, presentation]);
 
   React.useEffect(() => {
     if (!isOpen || activeIndex < 0) {
@@ -276,11 +278,23 @@ export function Select({
           aria-label={ariaLabel}
           className={cn(
             selectContentClassName,
-            openUpward ? "bottom-[calc(100%+0.5rem)]" : "top-[calc(100%+0.5rem)]",
+            presentation === "inline"
+              ? "relative mt-2"
+              : cn(
+                  "absolute left-0",
+                  openUpward
+                    ? "bottom-[calc(100%+0.5rem)]"
+                    : "top-[calc(100%+0.5rem)]"
+                ),
             contentClassName
           )}
         >
-          <div className="max-h-64 overflow-y-auto py-1">
+          <div
+            className={cn(
+              "py-1",
+              presentation === "popover" && "max-h-64 overflow-y-auto"
+            )}
+          >
             {options.map((option, index) => {
               const selected = option.value === value;
 

@@ -23,11 +23,18 @@ export default function RulesLoading() {
         />
       </div>
       <Skeleton className="h-11 w-full rounded-[8px] lg:hidden" />
+      <section className="space-y-3 lg:hidden">
+        <Skeleton className="h-12 w-full rounded-[8px]" />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <Skeleton className="h-11 w-52 max-w-full rounded-[8px]" />
+          <Skeleton className="h-4 w-16 rounded-[8px]" />
+        </div>
+      </section>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_12rem_auto]">
-        <Skeleton className="h-11 w-full rounded-[8px]" />
-        <Skeleton className="h-11 w-full rounded-[8px]" />
-        <Skeleton className="h-11 w-full rounded-[8px] sm:w-20" />
+      <div className="hidden gap-3 lg:grid lg:grid-cols-[minmax(16rem,1fr)_12rem_3rem]">
+        <Skeleton className="h-12 w-full rounded-[8px]" />
+        <Skeleton className="h-12 w-full rounded-[8px]" />
+        <Skeleton className="h-12 w-12 rounded-[8px]" />
       </div>
 
       <div className="grid gap-3 lg:hidden">

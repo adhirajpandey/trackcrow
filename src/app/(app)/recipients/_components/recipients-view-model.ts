@@ -7,7 +7,7 @@ import type {
 
 function getBaseParams(
   filters: RecipientsControlState,
-  overrides: Partial<Pick<RecipientsControlState, "q">> = {}
+  overrides: Partial<RecipientsControlState> = {}
 ) {
   const nextFilters = {
     ...filters,
@@ -17,6 +17,19 @@ function getBaseParams(
 
   if (nextFilters.q) {
     params.set("q", nextFilters.q);
+  }
+
+  if (nextFilters.minTransactionCount !== null) {
+    params.set("minTransactionCount", String(nextFilters.minTransactionCount));
+  }
+  if (nextFilters.maxTransactionCount !== null) {
+    params.set("maxTransactionCount", String(nextFilters.maxTransactionCount));
+  }
+  if (nextFilters.minTotalAmount !== null) {
+    params.set("minTotalAmount", String(nextFilters.minTotalAmount));
+  }
+  if (nextFilters.maxTotalAmount !== null) {
+    params.set("maxTotalAmount", String(nextFilters.maxTotalAmount));
   }
 
   return params;
@@ -79,6 +92,58 @@ export function buildSearchHref(filters: RecipientsControlState, q: string) {
   params.set("sortBy", filters.sortBy);
   params.set("sortOrder", filters.sortOrder);
   return toHref(params);
+}
+
+export function buildApplyFiltersHref(filters: RecipientsControlState) {
+  const params = getBaseParams(filters, { q: filters.q.trim() });
+  params.set("page", "1");
+  params.set("size", String(filters.pageSize));
+  params.set("sortBy", filters.sortBy);
+  params.set("sortOrder", filters.sortOrder);
+  return toHref(params);
+}
+
+export function buildResetFiltersState(
+  filters: RecipientsControlState
+): RecipientsControlState {
+  return {
+    ...filters,
+    q: "",
+    page: 1,
+    sortBy: "transactionCount",
+    sortOrder: "desc",
+    minTransactionCount: null,
+    maxTransactionCount: null,
+    minTotalAmount: null,
+    maxTotalAmount: null,
+  };
+}
+
+export function buildResetFiltersHref(filters: RecipientsControlState) {
+  return buildApplyFiltersHref(buildResetFiltersState(filters));
+}
+
+export function hasRecipientFilters(filters: RecipientsControlState) {
+  return Boolean(
+    filters.q ||
+      filters.minTransactionCount !== null ||
+      filters.maxTransactionCount !== null ||
+      filters.minTotalAmount !== null ||
+      filters.maxTotalAmount !== null ||
+      filters.sortBy !== "transactionCount" ||
+      filters.sortOrder !== "desc"
+  );
+}
+
+export function getRecipientRangeError(
+  minimum: number | null,
+  maximum: number | null,
+  label: string
+) {
+  if (minimum !== null && maximum !== null && minimum > maximum) {
+    return `${label} maximum must be at least the minimum.`;
+  }
+  return null;
 }
 
 export function buildPaginationItems(currentPage: number, totalPages: number) {
@@ -159,7 +224,11 @@ export function buildRecipientsPageData(input: {
       input.result.status === "error"
         ? "none"
         : input.result.pagination.total === 0
-          ? input.filters.q
+          ? input.filters.q ||
+            input.filters.minTransactionCount !== null ||
+            input.filters.maxTransactionCount !== null ||
+            input.filters.minTotalAmount !== null ||
+            input.filters.maxTotalAmount !== null
             ? "filtered"
             : "empty"
           : "none",

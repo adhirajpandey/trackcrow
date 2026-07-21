@@ -22,6 +22,10 @@ const recipientPickerQuery = {
   pageSize: 10,
   sortBy: "transactionCount" as const,
   sortOrder: "desc" as const,
+  minTransactionCount: null,
+  maxTransactionCount: null,
+  minTotalAmount: null,
+  maxTotalAmount: null,
 };
 
 export function useRecipientPickerQuery(input: {

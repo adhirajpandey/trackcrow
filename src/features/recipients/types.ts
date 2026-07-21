@@ -56,6 +56,10 @@ export type RecipientsApiQuery = {
   pageSize: number;
   sortBy: RecipientSortBy;
   sortOrder: RecipientSortOrder;
+  minTransactionCount: number | null;
+  maxTransactionCount: number | null;
+  minTotalAmount: number | null;
+  maxTotalAmount: number | null;
 };
 
 export type RecipientsControlState = RecipientsApiQuery;

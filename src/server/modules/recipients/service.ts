@@ -20,9 +20,14 @@ import type {
   ResolveRecipientInput,
 } from "./types";
 
-type RecipientAggregateSortRow = {
+type RecipientAggregateRow = {
   id: number;
+  transactionCount: number | bigint | string;
   totalAmount: Prisma.Decimal | number | string | null;
+};
+
+type RecipientAggregateCountRow = {
+  total: number | bigint | string;
 };
 
 function toRecipientDto(record: {
@@ -207,16 +212,6 @@ export async function createRecipient(
   }
 }
 
-function buildNonEmptyRecipientWhere(userUuid: string) {
-  return {
-    userUuid,
-    OR: [
-      { identifiers: { some: {} } },
-      { transactions: { some: {} } },
-    ],
-  };
-}
-
 function detectAliasType(value: string): RecipientIdentifierKind {
   const trimmed = value.trim();
   if (trimmed.includes("@")) {
@@ -322,110 +317,117 @@ export async function listRecipients(
     kindMatches.add(RecipientIdentifierKind.TEXT);
   }
 
-  const where: Record<string, unknown> = {
-    AND: [buildNonEmptyRecipientWhere(input.userUuid)],
-  };
-
-  if (q) {
-    const identifierOrFilters: Array<Record<string, unknown>> = [
-      { value: { contains: q, mode: "insensitive" } },
-      { normalizedValue: { contains: normalizedSearch, mode: "insensitive" } },
-    ];
-
-    if (kindMatches.size > 0) {
-      identifierOrFilters.push({ kind: { in: [...kindMatches] } });
-    }
-
-    (where.AND as Array<Record<string, unknown>>).push({
-      OR: [
-        { displayName: { contains: q, mode: "insensitive" } },
-        { normalizedName: { contains: normalizedSearch, mode: "insensitive" } },
-        {
-          identifiers: {
-            some: {
-              OR: identifierOrFilters,
-            },
-          },
-        },
-      ],
-    });
-  }
-
   try {
-    const total = await prisma.recipient.count({ where });
+    const searchClause = q
+      ? Prisma.sql`
+          AND (
+            r."displayName" ILIKE ${`%${q}%`}
+            OR r."normalized_name" ILIKE ${`%${normalizedSearch}%`}
+            OR EXISTS (
+              SELECT 1
+              FROM "recipient_identifier" ri
+              WHERE ri."recipient_id" = r.id
+                AND (
+                  ri.value ILIKE ${`%${q}%`}
+                  OR ri."normalized_value" ILIKE ${`%${normalizedSearch}%`}
+                  ${
+                    kindMatches.size > 0
+                      ? Prisma.sql`OR ri.kind IN (${Prisma.join(
+                          [...kindMatches].map((kind) => Prisma.sql`${kind}`)
+                        )})`
+                      : Prisma.empty
+                  }
+                )
+            )
+          )
+        `
+      : Prisma.empty;
+    const havingConditions: Prisma.Sql[] = [];
+    if (input.minTransactionCount !== undefined) {
+      havingConditions.push(Prisma.sql`COUNT(t.id) >= ${input.minTransactionCount}`);
+    }
+    if (input.maxTransactionCount !== undefined) {
+      havingConditions.push(Prisma.sql`COUNT(t.id) <= ${input.maxTransactionCount}`);
+    }
+    if (input.minTotalAmount !== undefined) {
+      havingConditions.push(
+        Prisma.sql`COALESCE(SUM(t.amount), 0) >= ${input.minTotalAmount}`
+      );
+    }
+    if (input.maxTotalAmount !== undefined) {
+      havingConditions.push(
+        Prisma.sql`COALESCE(SUM(t.amount), 0) <= ${input.maxTotalAmount}`
+      );
+    }
+    const havingClause =
+      havingConditions.length > 0
+        ? Prisma.sql`HAVING ${Prisma.join(havingConditions, " AND ")}`
+        : Prisma.empty;
+    const aggregateCandidates = Prisma.sql`
+      SELECT
+        r.id,
+        r."displayName",
+        COUNT(t.id)::int AS "transactionCount",
+        COALESCE(SUM(t.amount), 0) AS "totalAmount"
+      FROM "recipient" r
+      LEFT JOIN "transaction" t
+        ON t."recipient_id" = r.id
+        AND t."user_uuid" = r."user_uuid"
+      WHERE
+        r."user_uuid" = ${input.userUuid}
+        AND (
+          EXISTS (
+            SELECT 1
+            FROM "recipient_identifier" ri_non_empty
+            WHERE ri_non_empty."recipient_id" = r.id
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM "transaction" t_non_empty
+            WHERE t_non_empty."recipient_id" = r.id
+              AND t_non_empty."user_uuid" = r."user_uuid"
+          )
+        )
+        ${searchClause}
+      GROUP BY r.id, r."displayName"
+      ${havingClause}
+    `;
+    const countRows = await prisma.$queryRaw<RecipientAggregateCountRow[]>(Prisma.sql`
+      SELECT COUNT(*)::int AS total
+      FROM (${aggregateCandidates}) candidates
+    `);
+    const total = Number(countRows[0]?.total ?? 0);
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
-    const aggregateSortRows =
-      total > 0 && page <= totalPages && sortBy === "totalAmount"
-        ? await prisma.$queryRaw<RecipientAggregateSortRow[]>(Prisma.sql`
-            SELECT
-              r.id,
-              COALESCE(SUM(t.amount), 0) AS "totalAmount"
-            FROM "recipient" r
-            LEFT JOIN "transaction" t
-              ON t."recipient_id" = r.id
-              AND t."user_uuid" = r."user_uuid"
-            WHERE
-              r."user_uuid" = ${input.userUuid}
-              AND (
-                EXISTS (
-                  SELECT 1
-                  FROM "recipient_identifier" ri_non_empty
-                  WHERE ri_non_empty."recipient_id" = r.id
-                )
-                OR EXISTS (
-                  SELECT 1
-                  FROM "transaction" t_non_empty
-                  WHERE t_non_empty."recipient_id" = r.id
-                    AND t_non_empty."user_uuid" = r."user_uuid"
-                )
-              )
-              ${q
-                ? Prisma.sql`
-                    AND (
-                      r."displayName" ILIKE ${`%${q}%`}
-                      OR r."normalized_name" ILIKE ${`%${normalizedSearch}%`}
-                      OR EXISTS (
-                        SELECT 1
-                        FROM "recipient_identifier" ri
-                        WHERE ri."recipient_id" = r.id
-                          AND (
-                            ri.value ILIKE ${`%${q}%`}
-                            OR ri."normalized_value" ILIKE ${`%${normalizedSearch}%`}
-                            ${
-                              kindMatches.size > 0
-                                ? Prisma.sql`OR ri.kind IN (${Prisma.join(
-                                    [...kindMatches].map((kind) => Prisma.sql`${kind}`)
-                                  )})`
-                                : Prisma.empty
-                            }
-                          )
-                      )
-                    )
-                  `
-                : Prisma.empty}
-            GROUP BY r.id
-            ORDER BY
-              COALESCE(SUM(t.amount), 0) ${Prisma.raw(sortOrder.toUpperCase())},
-              r."displayName" ASC,
-              r.id ASC
+    const orderClause =
+      sortBy === "displayName"
+        ? Prisma.sql`candidates."displayName" ${Prisma.raw(sortOrder.toUpperCase())}, candidates.id ASC`
+        : sortBy === "totalAmount"
+          ? Prisma.sql`candidates."totalAmount" ${Prisma.raw(sortOrder.toUpperCase())}, candidates."displayName" ASC, candidates.id ASC`
+          : Prisma.sql`candidates."transactionCount" ${Prisma.raw(sortOrder.toUpperCase())}, candidates."displayName" ASC, candidates.id ASC`;
+    const aggregateRows =
+      total > 0 && page <= totalPages
+        ? await prisma.$queryRaw<RecipientAggregateRow[]>(Prisma.sql`
+            SELECT candidates.id, candidates."transactionCount", candidates."totalAmount"
+            FROM (${aggregateCandidates}) candidates
+            ORDER BY ${orderClause}
             OFFSET ${skip}
             LIMIT ${pageSize}
           `)
         : [];
     const aggregateTotalsByRecipientId = new Map(
-      aggregateSortRows.map((row) => [row.id, Number(row.totalAmount ?? 0)])
+      aggregateRows.map((row) => [row.id, Number(row.totalAmount ?? 0)])
     );
-    const aggregateSortedRecipientIds = aggregateSortRows.map((row) => row.id);
+    const aggregateCountsByRecipientId = new Map(
+      aggregateRows.map((row) => [row.id, Number(row.transactionCount ?? 0)])
+    );
+    const aggregateSortedRecipientIds = aggregateRows.map((row) => row.id);
     const recipients =
       total > 0 && page <= totalPages
         ? await prisma.recipient.findMany({
-            where:
-              sortBy === "totalAmount"
-                ? {
-                    ...buildNonEmptyRecipientWhere(input.userUuid),
-                    id: { in: aggregateSortedRecipientIds },
-                  }
-                : where,
+            where: {
+              userUuid: input.userUuid,
+              id: { in: aggregateSortedRecipientIds },
+            },
             include: {
               identifiers: {
                 orderBy: { createdAt: "asc" },
@@ -441,56 +443,22 @@ export async function listRecipients(
                 select: { transactions: true },
               },
             },
-            orderBy:
-              sortBy === "transactionCount"
-                ? [
-                    { transactions: { _count: sortOrder } },
-                    { displayName: "asc" },
-                    { id: "asc" },
-                  ]
-                : sortBy === "displayName"
-                  ? [{ displayName: sortOrder }, { id: "asc" }]
-                  : undefined,
-            skip: sortBy === "totalAmount" ? undefined : skip,
-            take: sortBy === "totalAmount" ? undefined : pageSize,
           })
         : [];
-    const orderedRecipients =
-      sortBy === "totalAmount"
-        ? aggregateSortedRecipientIds
-            .map((recipientId) =>
-              recipients.find((recipient) => recipient.id === recipientId)
-            )
-            .filter((recipient): recipient is (typeof recipients)[number] => Boolean(recipient))
-        : recipients;
-
-    const totals =
-      orderedRecipients.length > 0 && sortBy !== "totalAmount"
-        ? await prisma.transaction.groupBy({
-            by: ["recipientId"],
-            where: {
-              userUuid: input.userUuid,
-              recipientId: {
-                in: orderedRecipients.map((recipient) => recipient.id),
-              },
-            },
-            _sum: {
-              amount: true,
-            },
-          })
-        : [];
-    const totalsByRecipientId = new Map(
-      totals.map((row) => [row.recipientId, row._sum.amount?.toNumber() ?? 0])
-    );
+    const orderedRecipients = aggregateSortedRecipientIds
+      .map((recipientId) => recipients.find((recipient) => recipient.id === recipientId))
+      .filter((recipient): recipient is (typeof recipients)[number] => Boolean(recipient));
 
     return ok({
       recipients: orderedRecipients.map((recipient) =>
         toRecipientDto({
           ...recipient,
-          totalAmount:
-            aggregateTotalsByRecipientId.get(recipient.id) ??
-            totalsByRecipientId.get(recipient.id) ??
-            0,
+          totalAmount: aggregateTotalsByRecipientId.get(recipient.id) ?? 0,
+          _count: {
+            transactions:
+              aggregateCountsByRecipientId.get(recipient.id) ??
+              recipient._count.transactions,
+          },
         })
       ),
       page,

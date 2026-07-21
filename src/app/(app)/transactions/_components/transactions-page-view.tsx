@@ -5,10 +5,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
-  ChevronDown,
   LoaderCircle,
   Plus,
-  SlidersHorizontal,
   Tag,
   Trash2,
 } from "lucide-react";
@@ -16,6 +14,9 @@ import {
 import { formatNumber } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import { AppPageHeader } from "@/components/product/app-page-header";
 import { AssignmentSourceBadge } from "@/components/product/assignment-source-badge";
+import {
+  FilterSheetFooter,
+} from "@/components/product/list-filter-controls";
 import {
   MobileBottomSheet,
   MobileCardList,
@@ -229,7 +230,7 @@ export function TransactionsPageView({
 
       <section className="space-y-3 lg:hidden">
         <MobileSearchBar
-          defaultValue={data.filters.q}
+          value={data.filters.q}
           placeholder="Search recipient, remarks, amount..."
           onChange={(nextValue) => {
             if (searchTimeoutRef.current !== null) {
@@ -244,66 +245,41 @@ export function TransactionsPageView({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="min-w-0">
             <MobileBottomSheet
-            open={mobileFiltersOpen}
-            onOpenChange={(open) => {
-              setMobileFiltersOpen(open);
-              if (open) {
-                setMobileDraftFilters(data.filters);
-              }
-            }}
-            trigger={
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className={cn(
-                  "min-h-11 max-w-full min-w-0 gap-2 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-semibold",
-                  mobileFiltersOpen && "bg-primary/35 text-foreground"
-                )}
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <SlidersHorizontal className="h-4 w-4 shrink-0" />
-                  <span className="truncate text-left">{mobileFilterTriggerLabel}</span>
-                </span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-secondary-foreground/80" />
-              </Button>
-            }
-            title="Transactions filters"
-            description="Refine the transaction feed."
-            footer={
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setMobileDraftFilters(buildResetFilterState(mobileDraftFilters))}
-                >
-                  Clear all
-                </Button>
-                <Button
-                  type="button"
-                  disabled={mobileApplyDisabled}
-                  onClick={() => {
+              open={mobileFiltersOpen}
+              onOpenChange={(open) => {
+                setMobileFiltersOpen(open);
+                if (open) {
+                  setMobileDraftFilters(data.filters);
+                }
+              }}
+              triggerLabel={mobileFilterTriggerLabel}
+              title="Transactions filters"
+              description="Refine the transaction feed."
+              footer={
+                <FilterSheetFooter
+                  applyDisabled={mobileApplyDisabled}
+                  onReset={() =>
+                    setMobileDraftFilters(buildResetFilterState(mobileDraftFilters))
+                  }
+                  onApply={() => {
                     persistRange(mobileDraftFilters.range);
                     updateTransactionsUrl(buildApplyFiltersHref(mobileDraftFilters), "replace");
                     setMobileFiltersOpen(false);
                   }}
-                >
-                  Apply filters
-                </Button>
-              </div>
-            }
-          >
-            <TransactionsFilterControls
-              filters={mobileDraftFilters}
-              categories={data.categories}
-              categoryOptions={categoryOptions}
-              subcategoryOptions={mobileSubcategoryOptions}
-              mode="draft"
-              variant="mobile-sheet"
-              onFiltersChange={setMobileDraftFilters}
-              renderMenusInPortal={false}
-              menuPortalZIndex={120}
-            />
+                />
+              }
+            >
+              <TransactionsFilterControls
+                filters={mobileDraftFilters}
+                categories={data.categories}
+                categoryOptions={categoryOptions}
+                subcategoryOptions={mobileSubcategoryOptions}
+                mode="draft"
+                variant="mobile-sheet"
+                onFiltersChange={setMobileDraftFilters}
+                renderMenusInPortal={false}
+                menuPortalZIndex={120}
+              />
             </MobileBottomSheet>
           </div>
           <p className="whitespace-nowrap text-sm text-secondary-foreground">
@@ -376,9 +352,11 @@ export function TransactionsPageView({
                       />
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <AssignmentSourceBadge source={row.classificationSource} />
-                  </div>
+                  {row.classificationSource !== "MANUAL" ? (
+                    <div className="mt-3">
+                      <AssignmentSourceBadge source={row.classificationSource} />
+                    </div>
+                  ) : null}
                 </button>
               ))}
             </MobileCardList>

@@ -6,7 +6,7 @@ import {
   MobileListCardSkeleton,
   MobilePageHeaderSkeleton,
   MobilePaginationSkeleton,
-  MobileSearchSurfaceSkeleton,
+  MobileSearchBarSkeleton,
 } from "@/components/product/page-loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -28,10 +28,16 @@ export default function RecipientsLoading() {
         />
       </div>
 
-      <MobileSearchSurfaceSkeleton />
+      <section className="space-y-3 lg:hidden">
+        <MobileSearchBarSkeleton />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <Skeleton className="h-11 w-56 max-w-full rounded-[8px]" />
+          <Skeleton className="h-4 w-24 rounded-[8px]" />
+        </div>
+      </section>
 
       <div className="hidden lg:block">
-        <FilterPanelSkeleton controlCount={1} desktopBreakpoint="lg" />
+        <FilterPanelSkeleton controlCount={4} desktopBreakpoint="lg" />
       </div>
 
       <DataTableShell>

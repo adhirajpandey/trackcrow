@@ -16,15 +16,19 @@ import { DataTableEmpty } from "@/components/product/data-table-empty";
 import { DataTablePagination } from "@/components/product/data-table-pagination";
 import { DataTableShell } from "@/components/product/data-table-shell";
 import {
+  MobileBottomSheet,
   MobileCardList,
-  MobileFilterChips,
   MobileLongValue,
   MobilePageHeader,
   MobilePagination,
   MobileSearchBar,
   mobileCardClassName,
-  mobileSurfaceClassName,
 } from "@/components/product/mobile/mobile-primitives";
+import {
+  FilterSection,
+  FilterSheetFooter,
+  NumericRangeFields,
+} from "@/components/product/list-filter-controls";
 import { MobileRowDetailDrawer } from "@/components/product/mobile-row-detail-drawer";
 import { SortableTableHead } from "@/components/product/sortable-table-head";
 import {
@@ -36,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select } from "@/components/ui/select";
 import {
   getRecipientsPageState,
   isSameRecipientsQuery,
@@ -58,11 +63,14 @@ import { updateTransactionsUrl } from "@/features/transactions/url-state";
 
 import {
   buildFooterSummary,
+  buildApplyFiltersHref,
   buildPageHref,
   buildPaginationItems,
   buildRecipientsPageData,
   buildSearchHref,
+  buildResetFiltersState,
   buildSortHref,
+  getRecipientRangeError,
   getSortDirection,
 } from "./recipients-view-model";
 import { RecipientsFilterControls } from "./recipients-filter-controls";
@@ -72,6 +80,27 @@ type ColumnMeta = {
   sortable?: "displayName" | "transactionCount" | "totalAmount";
   widthClassName?: string;
 };
+
+const recipientSortOptions = [
+  { value: "transactionCount:desc", label: "Most transactions" },
+  { value: "transactionCount:asc", label: "Fewest transactions" },
+  { value: "totalAmount:desc", label: "Highest total sent" },
+  { value: "totalAmount:asc", label: "Lowest total sent" },
+  { value: "displayName:asc", label: "Name A–Z" },
+  { value: "displayName:desc", label: "Name Z–A" },
+];
+
+function parseOptionalRangeValue(value: string, integer: boolean) {
+  if (value.trim() === "") return { value: null, error: null };
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || (integer && !Number.isInteger(parsed))) {
+    return {
+      value: null,
+      error: integer ? "Enter a non-negative whole number." : "Enter a non-negative amount.",
+    };
+  }
+  return { value: parsed, error: null };
+}
 
 function getAliasChipClassName(tone: RecipientAliasChip["tone"]) {
   switch (tone) {
@@ -225,10 +254,39 @@ export function RecipientsPageView({
     },
   });
   const paginationItems = buildPaginationItems(data.pagination.page, data.pagination.totalPages);
-  const mobileFilterItems = data.filters.q
-    ? [{ label: `Search: ${data.filters.q}` }]
-    : [];
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileDraftFilters, setMobileDraftFilters] = useState(data.filters);
+  const [mobileRangeDrafts, setMobileRangeDrafts] = useState({
+    minTransactionCount: data.filters.minTransactionCount?.toString() ?? "",
+    maxTransactionCount: data.filters.maxTransactionCount?.toString() ?? "",
+    minTotalAmount: data.filters.minTotalAmount?.toString() ?? "",
+    maxTotalAmount: data.filters.maxTotalAmount?.toString() ?? "",
+  });
   const searchTimeoutRef = useRef<number | null>(null);
+  const parsedMinimumCount = parseOptionalRangeValue(mobileRangeDrafts.minTransactionCount, true);
+  const parsedMaximumCount = parseOptionalRangeValue(mobileRangeDrafts.maxTransactionCount, true);
+  const parsedMinimumAmount = parseOptionalRangeValue(mobileRangeDrafts.minTotalAmount, false);
+  const parsedMaximumAmount = parseOptionalRangeValue(mobileRangeDrafts.maxTotalAmount, false);
+  const countRangeError =
+    parsedMinimumCount.error ??
+    parsedMaximumCount.error ??
+    getRecipientRangeError(parsedMinimumCount.value, parsedMaximumCount.value, "Transaction count");
+  const amountRangeError =
+    parsedMinimumAmount.error ??
+    parsedMaximumAmount.error ??
+    getRecipientRangeError(parsedMinimumAmount.value, parsedMaximumAmount.value, "Total sent");
+  const mobileApplyDisabled = Boolean(countRangeError || amountRangeError);
+  const mobileActiveFilterCount =
+    (data.filters.minTransactionCount !== null || data.filters.maxTransactionCount !== null ? 1 : 0) +
+    (data.filters.minTotalAmount !== null || data.filters.maxTotalAmount !== null ? 1 : 0) +
+    (data.filters.sortBy !== "transactionCount" || data.filters.sortOrder !== "desc" ? 1 : 0);
+  const mobileFilterLabel =
+    mobileActiveFilterCount > 0
+      ? `Filters · ${mobileActiveFilterCount} active`
+      : "Filters · Most transactions";
+  const mobileResultLabel = `${data.pagination.total.toLocaleString("en-IN")} recipient${
+    data.pagination.total === 1 ? "" : "s"
+  }`;
 
   useEffect(() => {
     return () => {
@@ -266,9 +324,9 @@ export function RecipientsPageView({
         </section>
       ) : null}
 
-      <section className={cn(mobileSurfaceClassName, "p-4 lg:hidden")}>
+      <section className="space-y-3 lg:hidden">
         <MobileSearchBar
-          defaultValue={data.filters.q}
+          value={data.filters.q}
           placeholder="Search recipient, normalized name, alias..."
           onChange={(nextValue) => {
             if (searchTimeoutRef.current !== null) {
@@ -280,7 +338,106 @@ export function RecipientsPageView({
             }, 300);
           }}
         />
-        <MobileFilterChips items={mobileFilterItems} className="mt-3" />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="min-w-0">
+            <MobileBottomSheet
+              open={mobileFiltersOpen}
+              onOpenChange={(open) => {
+                setMobileFiltersOpen(open);
+                if (open) {
+                  setMobileDraftFilters(data.filters);
+                  setMobileRangeDrafts({
+                    minTransactionCount: data.filters.minTransactionCount?.toString() ?? "",
+                    maxTransactionCount: data.filters.maxTransactionCount?.toString() ?? "",
+                    minTotalAmount: data.filters.minTotalAmount?.toString() ?? "",
+                    maxTotalAmount: data.filters.maxTotalAmount?.toString() ?? "",
+                  });
+                }
+              }}
+              triggerLabel={mobileFilterLabel}
+              title="Recipient filters"
+              description="Refine and order the recipient list."
+              footer={
+                <FilterSheetFooter
+                  applyDisabled={mobileApplyDisabled}
+                  onReset={() => {
+                    setMobileDraftFilters(buildResetFiltersState(mobileDraftFilters));
+                    setMobileRangeDrafts({
+                      minTransactionCount: "",
+                      maxTransactionCount: "",
+                      minTotalAmount: "",
+                      maxTotalAmount: "",
+                    });
+                  }}
+                  onApply={() => {
+                    if (mobileApplyDisabled) return;
+                    updateTransactionsUrl(
+                      buildApplyFiltersHref({
+                        ...mobileDraftFilters,
+                        minTransactionCount: parsedMinimumCount.value,
+                        maxTransactionCount: parsedMaximumCount.value,
+                        minTotalAmount: parsedMinimumAmount.value,
+                        maxTotalAmount: parsedMaximumAmount.value,
+                      }),
+                      "replace"
+                    );
+                    setMobileFiltersOpen(false);
+                  }}
+                />
+              }
+            >
+              <div className="space-y-5">
+                <FilterSection number="1" title="Transaction count">
+                  <NumericRangeFields
+                    legend="Transaction count"
+                    minValue={mobileRangeDrafts.minTransactionCount}
+                    maxValue={mobileRangeDrafts.maxTransactionCount}
+                    step="1"
+                    integer
+                    error={countRangeError}
+                    onMinChange={(value) =>
+                      setMobileRangeDrafts((current) => ({ ...current, minTransactionCount: value }))
+                    }
+                    onMaxChange={(value) =>
+                      setMobileRangeDrafts((current) => ({ ...current, maxTransactionCount: value }))
+                    }
+                  />
+                </FilterSection>
+                <FilterSection number="2" title="Total sent">
+                  <NumericRangeFields
+                    legend="Total sent"
+                    minValue={mobileRangeDrafts.minTotalAmount}
+                    maxValue={mobileRangeDrafts.maxTotalAmount}
+                    step="0.01"
+                    error={amountRangeError}
+                    onMinChange={(value) =>
+                      setMobileRangeDrafts((current) => ({ ...current, minTotalAmount: value }))
+                    }
+                    onMaxChange={(value) =>
+                      setMobileRangeDrafts((current) => ({ ...current, maxTotalAmount: value }))
+                    }
+                  />
+                </FilterSection>
+                <FilterSection number="3" title="Sort by">
+                  <Select
+                    ariaLabel="Sort recipients"
+                    presentation="inline"
+                    value={`${mobileDraftFilters.sortBy}:${mobileDraftFilters.sortOrder}`}
+                    onValueChange={(value) => {
+                      const [sortBy, sortOrder] = value.split(":") as [
+                        typeof mobileDraftFilters.sortBy,
+                        typeof mobileDraftFilters.sortOrder,
+                      ];
+                      setMobileDraftFilters((current) => ({ ...current, sortBy, sortOrder, page: 1 }));
+                    }}
+                    options={recipientSortOptions}
+                  />
+                </FilterSection>
+              </div>
+            </MobileBottomSheet>
+          </div>
+          <p className="whitespace-nowrap text-sm text-secondary-foreground">{mobileResultLabel}</p>
+        </div>
       </section>
 
       <section className="hidden lg:block">

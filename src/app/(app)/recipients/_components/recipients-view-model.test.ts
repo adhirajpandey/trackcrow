@@ -1,11 +1,14 @@
 import type { RecipientsControlState, RecipientsQueryResult } from "@/features/recipients/types";
 
 import {
+  buildApplyFiltersHref,
   buildFooterSummary,
   buildPageHref,
   buildRecipientsPageData,
   buildSearchHref,
+  buildResetFiltersHref,
   buildSortHref,
+  getRecipientRangeError,
 } from "./recipients-view-model";
 
 const baseFilters: RecipientsControlState = {
@@ -14,6 +17,10 @@ const baseFilters: RecipientsControlState = {
   pageSize: 10,
   sortBy: "displayName",
   sortOrder: "asc",
+  minTransactionCount: null,
+  maxTransactionCount: null,
+  minTotalAmount: null,
+  maxTotalAmount: null,
 };
 
 const baseResult: RecipientsQueryResult = {
@@ -116,6 +123,30 @@ describe("recipients view model", () => {
     expect(buildFooterSummary(pageData.pagination)).toBe("Showing 11 to 11 of 11 recipients");
   });
 
+  it("builds aggregate filter and reset hrefs", () => {
+    const filtered = {
+      ...baseFilters,
+      minTransactionCount: 2,
+      maxTransactionCount: 12,
+      minTotalAmount: 500,
+      maxTotalAmount: 5000,
+    };
+
+    expect(buildApplyFiltersHref(filtered)).toBe(
+      "/recipients?q=biraj&minTransactionCount=2&maxTransactionCount=12&minTotalAmount=500&maxTotalAmount=5000&page=1&size=10&sortBy=displayName&sortOrder=asc"
+    );
+    expect(buildResetFiltersHref(filtered)).toBe(
+      "/recipients?page=1&size=10&sortBy=transactionCount&sortOrder=desc"
+    );
+  });
+
+  it("validates inclusive range order", () => {
+    expect(getRecipientRangeError(2, 2, "Transaction count")).toBeNull();
+    expect(getRecipientRangeError(3, 2, "Transaction count")).toBe(
+      "Transaction count maximum must be at least the minimum."
+    );
+  });
+
   it("returns the filtered empty state from API totals", () => {
     expect(
       buildRecipientsPageData({
@@ -139,7 +170,13 @@ describe("recipients view model", () => {
   it("returns the empty state when there are no recipients at all", () => {
     expect(
       buildRecipientsPageData({
-        filters: { ...baseFilters, q: "", page: 1 },
+        filters: {
+          ...baseFilters,
+          q: "",
+          page: 1,
+          sortBy: "transactionCount",
+          sortOrder: "desc",
+        },
         result: {
           ...baseResult,
           recipients: [],

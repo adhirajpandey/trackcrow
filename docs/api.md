@@ -342,6 +342,12 @@ Supported query params:
 - `q`
 - `sortBy=displayName|transactionCount|totalAmount`
 - `sortOrder=asc|desc`
+- `minTransactionCount` (optional non-negative integer, inclusive)
+- `maxTransactionCount` (optional non-negative integer, inclusive)
+- `minTotalAmount` (optional non-negative number, inclusive)
+- `maxTotalAmount` (optional non-negative number, inclusive)
+
+When both bounds for a metric are supplied, the maximum must be greater than or equal to the minimum. Aggregate filters are applied before sorting and pagination.
 
 Returns:
 

@@ -1,11 +1,16 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 
 import type { CategoryOption } from "@/common/types";
+import {
+  FilterResetButton,
+  FilterSection,
+  ListSearchField,
+} from "@/components/product/list-filter-controls";
 import { MobileTimePeriodRow } from "@/components/product/mobile/mobile-time-period-row";
 import { getDashboardRangeState } from "@/features/dashboard/query-state";
 import {
@@ -58,8 +63,6 @@ export function TransactionsFilterControls({
   renderMenusInPortal = true,
   menuPortalZIndex = 80,
 }: TransactionsFilterControlsProps) {
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const searchTimeoutRef = useRef<number | null>(null);
   const categoryTriggerLabel = buildCategoryTriggerLabel(filters);
   const subcategoryTriggerLabel = buildSubcategoryTriggerLabel(filters);
   const subcategoryEnabled = hasSingleSubcategoryCategorySelection(filters);
@@ -72,29 +75,9 @@ export function TransactionsFilterControls({
   const subcategoryDisabled = !subcategoryEnabled || subcategoryOptions.length === 0;
   const isDraftMode = mode === "draft";
   const isMobileSheet = variant === "mobile-sheet";
-
-  useEffect(() => {
-    if (isDraftMode) {
-      return;
-    }
-
-    if (searchTimeoutRef.current !== null) {
-      window.clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-
-    if (searchInputRef.current && searchInputRef.current.value !== filters.q) {
-      searchInputRef.current.value = filters.q;
-    }
-  }, [filters.q, isDraftMode]);
-
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current !== null) {
-        window.clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
+  const [openMobileMenu, setOpenMobileMenu] = useState<
+    "time" | "category" | "subcategory" | "assignment" | null
+  >(null);
 
   function updateDraft(nextFilters: TransactionsControlState) {
     onFiltersChange?.(nextFilters);
@@ -312,6 +295,16 @@ export function TransactionsFilterControls({
             updateTransactionsUrl(buildToggleSubcategoryHref(filters, option.value), "replace"),
     })),
   ];
+  const resetDisabled =
+    !filters.q &&
+    filters.sortBy === "timestamp" &&
+    filters.sortOrder === "desc" &&
+    filters.categories.length === 0 &&
+    filters.subcategories.length === 0 &&
+    filters.classificationSources.length === 0 &&
+    filters.selectedTransactionUuid === null &&
+    filters.review === null &&
+    filters.status === null;
 
   if (isMobileSheet) {
     return (
@@ -323,15 +316,18 @@ export function TransactionsFilterControls({
             secondaryRanges={secondaryDashboardRanges}
             startDate={filters.startDate}
             endDate={filters.endDate}
-            onSelect={(range, startDate, endDate) =>
+            onSelect={(range, startDate, endDate) => {
+              setOpenMobileMenu(null);
               updateDraftRange(range, {
                 ...(startDate !== undefined ? { startDate } : {}),
                 ...(endDate !== undefined ? { endDate } : {}),
-              })
-            }
+              });
+            }}
             customRangeBehavior="select"
             renderMenuInPortal={renderMenusInPortal}
             menuPortalZIndex={menuPortalZIndex}
+            menuOpen={openMobileMenu === "time"}
+            onMenuOpenChange={(open) => setOpenMobileMenu(open ? "time" : null)}
           />
           {filters.range === "custom" ? (
             <div className="grid gap-3 rounded-[8px] border-2 border-dashed border-border/45 bg-background/12 p-3">
@@ -373,6 +369,8 @@ export function TransactionsFilterControls({
             renderInPortal={renderMenusInPortal}
             portalZIndex={menuPortalZIndex}
             closeOnSelect={false}
+            open={openMobileMenu === "category"}
+            onOpenChange={(open) => setOpenMobileMenu(open ? "category" : null)}
             options={categoryMenuOptions}
           />
         </FilterSection>
@@ -386,6 +384,8 @@ export function TransactionsFilterControls({
             renderInPortal={renderMenusInPortal}
             portalZIndex={menuPortalZIndex}
             closeOnSelect={false}
+            open={openMobileMenu === "subcategory"}
+            onOpenChange={(open) => setOpenMobileMenu(open ? "subcategory" : null)}
             options={subcategoryMenuOptions}
           />
         </FilterSection>
@@ -396,6 +396,8 @@ export function TransactionsFilterControls({
             renderInPortal={renderMenusInPortal}
             portalZIndex={menuPortalZIndex}
             closeOnSelect={false}
+            open={openMobileMenu === "assignment"}
+            onOpenChange={(open) => setOpenMobileMenu(open ? "assignment" : null)}
             options={assignmentMenuOptions}
           />
         </FilterSection>
@@ -405,37 +407,18 @@ export function TransactionsFilterControls({
 
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_minmax(10rem,0.25fr)_minmax(10rem,0.25fr)_minmax(10rem,0.25fr)_3rem]">
-      <label className="flex min-h-12 items-center gap-3 rounded-[8px] border-2 border-border bg-card px-3.5">
-        <Search className="h-4 w-4 text-secondary-foreground" />
-        <input
-          ref={searchInputRef}
-          value={isDraftMode ? filters.q : undefined}
-          defaultValue={isDraftMode ? undefined : filters.q}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-
-            if (isDraftMode) {
-              updateDraft({
-                ...filters,
-                q: nextValue,
-                page: 1,
-              });
-              return;
-            }
-
-            if (searchTimeoutRef.current !== null) {
-              window.clearTimeout(searchTimeoutRef.current);
-            }
-
-            searchTimeoutRef.current = window.setTimeout(() => {
-              const nextHref = buildSearchHref(filters, nextValue);
-              updateTransactionsUrl(nextHref, "replace");
-            }, 300);
-          }}
-          placeholder="Search recipient, remarks, amount..."
-          className="w-full border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/85"
-        />
-      </label>
+      <ListSearchField
+        value={filters.q}
+        placeholder="Search recipient, remarks, amount..."
+        ariaLabel="Search transactions"
+        onCommit={(nextValue) => {
+          if (isDraftMode) {
+            updateDraft({ ...filters, q: nextValue, page: 1 });
+            return;
+          }
+          updateTransactionsUrl(buildSearchHref(filters, nextValue), "replace");
+        }}
+      />
 
       <FilterMenu
         label="Filter categories"
@@ -464,11 +447,9 @@ export function TransactionsFilterControls({
       />
 
       <div className="flex items-center lg:justify-end">
-        <button
-          type="button"
-          aria-label="Reset filters"
-          title="Reset filters"
-          onClick={() => {
+        <FilterResetButton
+          disabled={resetDisabled}
+          onReset={() => {
             if (isDraftMode) {
               resetDraftFilters();
               return;
@@ -476,32 +457,9 @@ export function TransactionsFilterControls({
 
             updateTransactionsUrl(buildResetHref(filters), "replace");
           }}
-          className="inline-flex h-12 w-12 items-center justify-center rounded-[8px] border-2 border-border bg-card text-secondary-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <X className="h-4.5 w-4.5" aria-hidden="true" />
-        </button>
+        />
       </div>
     </div>
-  );
-}
-
-function FilterSection({
-  number,
-  title,
-  children,
-}: {
-  number: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-3 border-b border-border/40 pb-5 last:border-b-0 last:pb-0">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-foreground">{number}.</span>
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -519,6 +477,8 @@ function FilterMenu({
   triggerIconClassName,
   triggerActive = false,
   menuClassName,
+  open,
+  onOpenChange,
 }: {
   label: string;
   triggerLabel: string;
@@ -537,12 +497,24 @@ function FilterMenu({
   triggerIconClassName?: string;
   triggerActive?: boolean;
   menuClassName?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuPanelRef = useRef<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
   const [menuStyle, setMenuStyle] = useState<CSSProperties | undefined>(undefined);
+  const setMenuOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (open === undefined) {
+        setInternalOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange, open]
+  );
 
   useEffect(() => {
     if (!isOpen || !renderInPortal) {
@@ -585,13 +557,13 @@ function FilterMenu({
       const clickedInsideMenu = menuPanelRef.current?.contains(target);
 
       if (!clickedInsideTrigger && !clickedInsideMenu) {
-        setIsOpen(false);
+        setMenuOpen(false);
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsOpen(false);
+        setMenuOpen(false);
       }
     }
 
@@ -604,7 +576,7 @@ function FilterMenu({
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, setMenuOpen]);
 
   const menuContent = (
     <div
@@ -615,14 +587,14 @@ function FilterMenu({
         "overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_4px_0_var(--foreground)]",
         renderInPortal
           ? ""
-          : "absolute left-0 top-[calc(100%+0.5rem)] z-20 w-full min-w-[220px]",
+          : "relative mt-2 w-full",
         menuClassName
       )}
     >
       <div className="border-b-2 border-border bg-secondary/55 px-3 py-2 text-xs font-semibold text-secondary-foreground">
         {label}
       </div>
-      <div className="max-h-56 overflow-y-auto py-1">
+      <div className={cn("py-1", renderInPortal && "max-h-56 overflow-y-auto")}>
         {options.map((option) => (
           <FilterOptionButton
             key={option.label}
@@ -630,7 +602,7 @@ function FilterMenu({
             selected={option.selected}
             onSelect={() => {
               if (closeOnSelect) {
-                setIsOpen(false);
+                setMenuOpen(false);
               }
               option.onSelect();
             }}
@@ -648,7 +620,7 @@ function FilterMenu({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         disabled={disabled}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => setMenuOpen(!isOpen)}
         className={cn(
           "inline-flex min-h-12 w-full items-center justify-between gap-3 rounded-[8px] border-2 border-border bg-card px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           (isOpen || triggerActive) && "bg-primary/35 text-foreground",

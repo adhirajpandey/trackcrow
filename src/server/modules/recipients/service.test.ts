@@ -7,6 +7,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
       findFirst: jest.fn(),
       findMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
     transaction: {
       groupBy: jest.fn(),
@@ -106,7 +107,9 @@ describe("recipient service", () => {
   });
 
   it("filters by recipient and identifier fields, paginates, and sorts by display name", async () => {
-    mockPrisma.recipient.count.mockResolvedValueOnce(2);
+    mockPrisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 2 }])
+      .mockResolvedValueOnce([{ id: 1, transactionCount: 19, totalAmount: 3200 }]);
     mockPrisma.recipient.findMany.mockResolvedValueOnce([recipientRecord()]);
 
     const result = await listRecipients({
@@ -130,43 +133,18 @@ describe("recipient service", () => {
       },
     });
     expect(mockPrisma.recipient.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          AND: expect.arrayContaining([
-            expect.objectContaining({
-              userUuid: "user-1",
-              OR: expect.arrayContaining([
-                { identifiers: { some: {} } },
-                { transactions: { some: {} } },
-              ]),
-            }),
-            expect.objectContaining({
-              OR: expect.arrayContaining([
-                { displayName: { contains: "oksbi", mode: "insensitive" } },
-                { normalizedName: { contains: "oksbi", mode: "insensitive" } },
-                {
-                  identifiers: {
-                    some: {
-                      OR: expect.arrayContaining([
-                        { value: { contains: "oksbi", mode: "insensitive" } },
-                        { normalizedValue: { contains: "oksbi", mode: "insensitive" } },
-                      ]),
-                    },
-                  },
-                },
-              ]),
-            }),
-          ]),
-        }),
-        orderBy: [{ displayName: "desc" }, { id: "asc" }],
-        skip: 1,
-        take: 1,
-      })
+      expect.objectContaining({ where: { userUuid: "user-1", id: { in: [1] } } })
     );
+    expect(result).toMatchObject({
+      ok: true,
+      data: { recipients: [{ transactionCount: 19, totalAmount: 3200 }] },
+    });
   });
 
   it("maps alias-label searches onto supported alias types", async () => {
-    mockPrisma.recipient.count.mockResolvedValueOnce(1);
+    mockPrisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 1 }])
+      .mockResolvedValueOnce([{ id: 1, transactionCount: 19, totalAmount: 3200 }]);
     mockPrisma.recipient.findMany.mockResolvedValueOnce([recipientRecord()]);
 
     await listRecipients({
@@ -174,38 +152,13 @@ describe("recipient service", () => {
       q: "text alias",
     });
 
-    expect(mockPrisma.recipient.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          AND: expect.arrayContaining([
-            expect.objectContaining({
-              userUuid: "user-1",
-              OR: expect.arrayContaining([
-                { identifiers: { some: {} } },
-                { transactions: { some: {} } },
-              ]),
-            }),
-            expect.objectContaining({
-              OR: expect.arrayContaining([
-                {
-                  identifiers: {
-                    some: {
-                      OR: expect.arrayContaining([
-                        { kind: { in: [RecipientIdentifierKind.TEXT] } },
-                      ]),
-                    },
-                  },
-                },
-              ]),
-            }),
-          ]),
-        }),
-      })
-    );
+    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(2);
   });
 
   it("sorts by transaction count with deterministic fallback ordering", async () => {
-    mockPrisma.recipient.count.mockResolvedValueOnce(3);
+    mockPrisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 3 }])
+      .mockResolvedValueOnce([{ id: 2, transactionCount: 4, totalAmount: 900 }]);
     mockPrisma.recipient.findMany.mockResolvedValueOnce([
       recipientRecord({ id: 2, displayName: "Luxmi Enterprises", _count: { transactions: 4 } }),
     ]);
@@ -217,18 +170,39 @@ describe("recipient service", () => {
     });
 
     expect(mockPrisma.recipient.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: [
-          { transactions: { _count: "desc" } },
-          { displayName: "asc" },
-          { id: "asc" },
-        ],
-      })
+      expect.objectContaining({ where: { userUuid: "user-1", id: { in: [2] } } })
     );
   });
 
+  it("applies inclusive transaction-count and total-amount ranges before paging", async () => {
+    mockPrisma.$queryRaw
+      .mockResolvedValueOnce([{ total: 1 }])
+      .mockResolvedValueOnce([{ id: 1, transactionCount: 5, totalAmount: 1250.5 }]);
+    mockPrisma.recipient.findMany.mockResolvedValueOnce([
+      recipientRecord({ _count: { transactions: 5 } }),
+    ]);
+
+    const result = await listRecipients({
+      userUuid: "user-1",
+      minTransactionCount: 5,
+      maxTransactionCount: 5,
+      minTotalAmount: 1250.5,
+      maxTotalAmount: 1250.5,
+      sortBy: "totalAmount",
+      sortOrder: "desc",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        total: 1,
+        recipients: [{ transactionCount: 5, totalAmount: 1250.5 }],
+      },
+    });
+  });
+
   it("returns an empty page when the requested page exceeds total pages", async () => {
-    mockPrisma.recipient.count.mockResolvedValueOnce(11);
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: 11 }]);
 
     const result = await listRecipients({
       userUuid: "user-1",

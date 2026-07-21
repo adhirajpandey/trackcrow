@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -68,11 +68,13 @@ export function MobilePageHeader({
 }
 
 export function MobileSearchBar({
+  value,
   defaultValue,
   placeholder,
   onChange,
   className,
 }: {
+  value?: string;
   defaultValue?: string;
   placeholder: string;
   onChange: (value: string) => void;
@@ -87,8 +89,11 @@ export function MobileSearchBar({
     >
       <Search className="h-4 w-4 shrink-0 text-secondary-foreground" />
       <input
-        defaultValue={defaultValue}
-        onChange={(event) => onChange(event.target.value)}
+        key={value ?? defaultValue ?? ""}
+        defaultValue={value ?? defaultValue}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
         placeholder={placeholder}
         className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary-foreground/85"
       />
@@ -130,7 +135,7 @@ export function MobileFilterChips({
 }
 
 export function MobileBottomSheet({
-  trigger,
+  triggerLabel,
   title,
   description,
   children,
@@ -138,7 +143,7 @@ export function MobileBottomSheet({
   open,
   onOpenChange,
 }: {
-  trigger: ReactNode;
+  triggerLabel: string;
   title: string;
   description?: string;
   children: ReactNode;
@@ -148,14 +153,36 @@ export function MobileBottomSheet({
 }) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent className="lg:hidden">
-        <DrawerHeader>
+      <DrawerTrigger asChild>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className={cn(
+            "min-h-11 max-w-full min-w-0 gap-2 rounded-[8px] border-2 border-border bg-card px-3 text-sm font-semibold",
+            open && "bg-primary/35 text-foreground"
+          )}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 shrink-0" />
+            <span className="truncate text-left">{triggerLabel}</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-secondary-foreground/80" />
+        </Button>
+      </DrawerTrigger>
+      <DrawerContent className="overflow-hidden lg:hidden">
+        <DrawerHeader className="shrink-0">
           <DrawerTitle>{title}</DrawerTitle>
           {description ? <DrawerDescription>{description}</DrawerDescription> : null}
         </DrawerHeader>
-        <div className="max-h-[70vh] overflow-y-auto px-5 pb-2">{children}</div>
-        {footer ? <DrawerFooter>{footer}</DrawerFooter> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+          {children}
+        </div>
+        {footer ? (
+          <DrawerFooter className="shrink-0 border-t-2 border-border bg-card">
+            {footer}
+          </DrawerFooter>
+        ) : null}
       </DrawerContent>
     </Drawer>
   );

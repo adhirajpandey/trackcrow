@@ -58,6 +58,10 @@ export async function getRecipients(request: Request) {
     q: searchParams.get("q") ?? undefined,
     sortBy: searchParams.get("sortBy") ?? undefined,
     sortOrder: searchParams.get("sortOrder") ?? undefined,
+    minTransactionCount: searchParams.get("minTransactionCount") ?? undefined,
+    maxTransactionCount: searchParams.get("maxTransactionCount") ?? undefined,
+    minTotalAmount: searchParams.get("minTotalAmount") ?? undefined,
+    maxTotalAmount: searchParams.get("maxTotalAmount") ?? undefined,
   });
   if (!parsed.success) {
     logValidationFailure(path, parsed.error.issues);

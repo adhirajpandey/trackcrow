@@ -44,7 +44,7 @@ describe("recipients controller", () => {
 
     const response = await getRecipients(
       new Request(
-        "http://localhost/api/recipients?q=merchant&page=2&size=10&sortBy=transactionCount&sortOrder=desc"
+        "http://localhost/api/recipients?q=merchant&page=2&size=10&sortBy=transactionCount&sortOrder=desc&minTransactionCount=2&maxTransactionCount=10&minTotalAmount=99.5&maxTotalAmount=5000"
       )
     );
 
@@ -65,6 +65,10 @@ describe("recipients controller", () => {
       size: 10,
       sortBy: "transactionCount",
       sortOrder: "desc",
+      minTransactionCount: 2,
+      maxTransactionCount: 10,
+      minTotalAmount: 99.5,
+      maxTotalAmount: 5000,
     });
   });
 
@@ -78,6 +82,17 @@ describe("recipients controller", () => {
       message: "Invalid request",
       issues: expect.any(Array),
     });
+  });
+
+  it("rejects inverted recipient aggregate ranges", async () => {
+    const response = await getRecipients(
+      new Request(
+        "http://localhost/api/recipients?minTransactionCount=5&maxTransactionCount=2"
+      )
+    );
+
+    expect(response.status).toBe(400);
+    expect(listRecipientsMock).not.toHaveBeenCalled();
   });
 
   it("creates a recipient for the authenticated user", async () => {

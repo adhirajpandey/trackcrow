@@ -129,6 +129,10 @@ export type RecipientListInput = {
   q?: string;
   sortBy?: "displayName" | "transactionCount" | "totalAmount";
   sortOrder?: "asc" | "desc";
+  minTransactionCount?: number;
+  maxTransactionCount?: number;
+  minTotalAmount?: number;
+  maxTotalAmount?: number;
 };
 
 export type RecipientListResult = ServiceResult<RecipientListDto, "INTERNAL_ERROR">;

@@ -15,6 +15,10 @@ describe("recipients query state", () => {
       pageSize: recipientsPageSize,
       sortBy: "transactionCount",
       sortOrder: "desc",
+      minTransactionCount: null,
+      maxTransactionCount: null,
+      minTotalAmount: null,
+      maxTotalAmount: null,
     });
   });
 
@@ -75,6 +79,39 @@ describe("recipients query state", () => {
     expect(buildRecipientsApiSearchParams(query).toString()).toBe(
       "q=merchant&page=2&size=10&sortBy=transactionCount&sortOrder=desc"
     );
+  });
+
+  it("parses and serializes recipient aggregate ranges", () => {
+    const query = getRecipientsPageState({
+      minTransactionCount: "2",
+      maxTransactionCount: "10",
+      minTotalAmount: "99.5",
+      maxTotalAmount: "1000",
+    }).query;
+
+    expect(query).toMatchObject({
+      minTransactionCount: 2,
+      maxTransactionCount: 10,
+      minTotalAmount: 99.5,
+      maxTotalAmount: 1000,
+    });
+    expect(buildRecipientsApiSearchParams(query).toString()).toContain(
+      "minTransactionCount=2&maxTransactionCount=10&minTotalAmount=99.5&maxTotalAmount=1000"
+    );
+  });
+
+  it("ignores malformed aggregate range values in page state", () => {
+    expect(
+      getRecipientsPageState({
+        minTransactionCount: "1.5",
+        maxTransactionCount: "-1",
+        minTotalAmount: "nope",
+      }).query
+    ).toMatchObject({
+      minTransactionCount: null,
+      maxTransactionCount: null,
+      minTotalAmount: null,
+    });
   });
 
   it("maps paginated API data into the recipients query result", () => {
