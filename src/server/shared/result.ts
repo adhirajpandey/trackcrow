@@ -4,6 +4,8 @@ export type ServiceErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "UNPROCESSABLE"
+  | "RULE_RECIPIENT_CONFLICT"
+  | "TRANSACTION_SUGGESTION_CONFLICT"
   | "INTERNAL_ERROR";
 
 export type ServiceSuccess<T> = { ok: true; data: T };

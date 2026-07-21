@@ -9,21 +9,22 @@ datasource db {
 }
 
 model User {
-  uuid          String      @id @default(uuid())
-  id            Int         @unique @default(autoincrement())
-  email         String      @unique
+  uuid          String        @id @default(uuid())
+  id            Int           @unique @default(autoincrement())
+  email         String        @unique
   name          String
   image         String?
   provider      String
-  subscription  Int         @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  subscription  Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   categories    Category[]
   subcategories Subcategory[]
   recipients    Recipient[]
   transactions  Transaction[]
   rawMessages   RawMessage[]
   deviceTokens  DeviceToken[]
+  rules         Rule[]
 
   @@map("user")
 }
@@ -38,6 +39,7 @@ model Category {
   user          User          @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
   subcategories Subcategory[]
   transactions  Transaction[]
+  rules         Rule[]
 
   @@unique([userUuid, name])
   @@map("category")
@@ -54,22 +56,24 @@ model Subcategory {
   user         User          @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  rules        Rule[]
 
   @@unique([categoryId, name])
   @@map("subcategory")
 }
 
 model Recipient {
-  id              Int                   @id @default(autoincrement())
-  uuid            String                @unique @default(uuid())
-  userUuid        String                @map("user_uuid")
-  displayName     String
-  normalizedName  String                @map("normalized_name")
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  user            User                  @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
-  identifiers     RecipientIdentifier[]
-  transactions    Transaction[]
+  id             Int                   @id @default(autoincrement())
+  uuid           String                @unique @default(uuid())
+  userUuid       String                @map("user_uuid")
+  displayName    String
+  normalizedName String                @map("normalized_name")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  user           User                  @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  identifiers    RecipientIdentifier[]
+  transactions   Transaction[]
+  rules          Rule[]
 
   @@unique([userUuid, normalizedName])
   @@map("recipient")
@@ -92,32 +96,60 @@ model RecipientIdentifier {
 }
 
 model Transaction {
-  id             Int               @id @default(autoincrement())
-  uuid           String            @unique @default(uuid())
-  userUuid       String            @map("user_uuid")
-  recipientId    Int               @map("recipient_id")
-  categoryId     Int?              @map("category_id")
-  subcategoryId  Int?              @map("subcategory_id")
-  amount         Decimal
-  currency       String            @default("INR")
-  type           TransactionType   @default(UPI)
-  source         TransactionSource
-  recipientRaw   String            @map("recipient_raw")
-  recipientName  String?           @map("recipient_name")
-  reference      String?
-  accountLabel   String?           @map("account_label")
-  remarks        String?
-  locationRaw    String?           @map("location_raw")
-  timestamp      DateTime          @db.Timestamptz(6)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  user           User              @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
-  recipient      Recipient         @relation(fields: [recipientId], references: [id], onDelete: Restrict)
-  category       Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategory    Subcategory?      @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  rawMessages    RawMessage[]
+  id                      Int                   @id @default(autoincrement())
+  uuid                    String                @unique @default(uuid())
+  userUuid                String                @map("user_uuid")
+  recipientId             Int                   @map("recipient_id")
+  categoryId              Int?                  @map("category_id")
+  subcategoryId           Int?                  @map("subcategory_id")
+  classificationSource    ClassificationSource? @map("classification_source")
+  classificationRuleId    Int?                  @map("classification_rule_id")
+  classificationChangedAt DateTime?             @map("classification_changed_at")
+  amount                  Decimal
+  currency                String                @default("INR")
+  type                    TransactionType       @default(UPI)
+  source                  TransactionSource
+  recipientRaw            String                @map("recipient_raw")
+  recipientName           String?               @map("recipient_name")
+  reference               String?
+  accountLabel            String?               @map("account_label")
+  remarks                 String?
+  locationRaw             String?               @map("location_raw")
+  timestamp               DateTime              @db.Timestamptz(6)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  user                    User                  @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  recipient               Recipient             @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  category                Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory             Subcategory?          @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  classificationRule      Rule?                 @relation(fields: [classificationRuleId], references: [id], onDelete: SetNull)
+  rawMessages             RawMessage[]
 
   @@map("transaction")
+}
+
+model Rule {
+  id            Int              @id @default(autoincrement())
+  uuid          String           @unique @default(uuid())
+  userUuid      String           @map("user_uuid")
+  recipientId   Int              @map("recipient_id")
+  categoryId    Int?             @map("category_id")
+  subcategoryId Int?             @map("subcategory_id")
+  name          String
+  isEnabled     Boolean          @default(true) @map("is_enabled")
+  actionStatus  RuleActionStatus @default(VALID) @map("action_status")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?        @map("deleted_at")
+  user          User             @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  recipient     Recipient        @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  category      Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory   Subcategory?     @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  transactions  Transaction[]
+
+  @@index([userUuid, isEnabled, updatedAt])
+  @@index([recipientId])
+  @@map("rule")
 }
 
 model RawMessage {
@@ -166,6 +198,17 @@ enum TransactionType {
 enum TransactionSource {
   SMS
   MANUAL
+}
+
+enum ClassificationSource {
+  MANUAL
+  SUGGESTION
+  RULE
+}
+
+enum RuleActionStatus {
+  VALID
+  NEEDS_REPAIR
 }
 
 enum RawMessageSource {
