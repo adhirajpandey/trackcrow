@@ -38,6 +38,7 @@
 - Jest is configured for TypeScript tests, with current coverage concentrated in `src/common/**/*.test.ts` and `src/server/modules/**/*.test.ts`.
 - Run `pnpm test` for the full test suite or `pnpm test:unit` for the focused common/server unit suite.
 - Minimum quality gate today is `pnpm lint`, `pnpm test`, and manual verification of modified flows.
+- Do not run `pnpm lint` or `pnpm build` after every small iterative change. Run the relevant final checks once before pushing, or earlier only when the user explicitly requests them or they are needed to diagnose a relevant issue.
 - When adding tests, colocate them with the module or feature they exercise.
 - Prefer service-level backend tests for business logic introduced under `src/server/modules/*`; keep route-handler tests targeted when route wiring itself is the risk.
 
