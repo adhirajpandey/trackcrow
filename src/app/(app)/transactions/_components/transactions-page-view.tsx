@@ -13,7 +13,6 @@ import {
 
 import { formatNumber } from "@/app/(app)/dashboard/_components/dashboard-view-model";
 import { AppPageHeader } from "@/components/product/app-page-header";
-import { AssignmentSourceBadge } from "@/components/product/assignment-source-badge";
 import {
   FilterSheetFooter,
 } from "@/components/product/list-filter-controls";
@@ -352,11 +351,6 @@ export function TransactionsPageView({
                       />
                     </span>
                   </div>
-                  {row.classificationSource !== "MANUAL" ? (
-                    <div className="mt-3">
-                      <AssignmentSourceBadge source={row.classificationSource} />
-                    </div>
-                  ) : null}
                 </button>
               ))}
             </MobileCardList>
@@ -485,10 +479,6 @@ export function TransactionsPageView({
                 label="Subcategory"
                 value={drawerRow.subcategory ?? "-"}
               />
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-secondary-foreground">Assignment</span>
-                <AssignmentSourceBadge source={drawerRow.classificationSource} />
-              </div>
             </div>
           </div>
         ) : null}
