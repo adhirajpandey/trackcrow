@@ -13,6 +13,7 @@ export async function getRulesPageData(
 ): Promise<RulesPageInitialData> {
   const { userUuid } = await requirePageSessionUser();
   const query = getRulesQuery(params);
+  const create = Array.isArray(params.create) ? params.create[0] : params.create;
   const edit = Array.isArray(params.edit) ? params.edit[0] : params.edit;
   const [rules, categories, recipients, editedRule] = await Promise.all([
     listRules({ userUuid, page: query.page, size: query.pageSize, q: query.q, status: query.status }),
@@ -46,6 +47,7 @@ export async function getRulesPageData(
       subcategories: category.subcategories.map((subcategory) => ({ ...subcategory, categoryUuid: category.uuid })),
     })) : [],
     recipients: recipients.ok ? recipients.data.recipients : [],
+    createMode: create === "1",
     initialForm: editedRule && editedRule.ok ? editedRule.data : null,
     initialPrefill,
   };

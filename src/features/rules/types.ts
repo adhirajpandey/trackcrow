@@ -39,6 +39,7 @@ export type RulesPageInitialData = {
   initialQuery: RulesQuery;
   categories: CategoryOption[];
   recipients: RecipientListItemDto[];
+  createMode: boolean;
   initialForm: RuleDto | null;
   initialPrefill: {
     recipientUuid: string;

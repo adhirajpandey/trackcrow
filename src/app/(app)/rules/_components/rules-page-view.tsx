@@ -26,9 +26,12 @@ const inputClassName = "min-h-11 w-full rounded-[8px] border-2 border-input bg-c
 
 export function RulesPageView(props: RulesPageInitialData) {
   const router = useRouter();
+  const queryStatus = props.initialQuery.status ?? "";
+  const [statusDraft, setStatusDraft] = useState<{ queryStatus: string; value: string } | null>(null);
+  const status = statusDraft?.queryStatus === queryStatus ? statusDraft.value : queryStatus;
   const rulesQuery = useRulesQuery(props.initialQuery, props.initialRules);
   const data = rulesQuery.data ?? props.initialRules;
-  const overlayOpen = Boolean(props.initialForm || props.initialPrefill);
+  const overlayOpen = Boolean(props.createMode || props.initialForm || props.initialPrefill);
   const baseParams = buildRulesSearchParams(props.initialQuery);
   const baseHref = `/rules?${baseParams}`;
   const openCreate = () => router.push(`${baseHref}&create=1`);
@@ -46,16 +49,24 @@ export function RulesPageView(props: RulesPageInitialData) {
       </div>
       <div className="lg:hidden"><Button className="w-full" onClick={openCreate}><Plus className="h-4 w-4" />Create rule</Button></div>
 
-      <form className="grid gap-3 rounded-[10px] border-2 border-border bg-card p-3 shadow-[3px_4px_0_var(--foreground)] sm:grid-cols-[1fr_12rem_auto]" onSubmit={(event) => {
+      <form className="grid gap-3 sm:grid-cols-[1fr_12rem_auto]" onSubmit={(event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
-        const params = buildRulesSearchParams({ ...props.initialQuery, page: 1, q: String(form.get("q") ?? "").trim(), status: (String(form.get("status") ?? "") || undefined) as typeof props.initialQuery.status });
+        const params = buildRulesSearchParams({ ...props.initialQuery, page: 1, q: String(form.get("q") ?? "").trim(), status: (status || undefined) as typeof props.initialQuery.status });
         router.replace(`/rules?${params}`);
       }}>
         <input name="q" defaultValue={props.initialQuery.q} className={inputClassName} placeholder="Search rule or recipient…" aria-label="Search rules" />
-        <select name="status" defaultValue={props.initialQuery.status ?? ""} className={inputClassName} aria-label="Rule status">
-          <option value="">All statuses</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option><option value="needsRepair">Needs repair</option>
-        </select>
+        <Select
+          ariaLabel="Rule status"
+          value={status}
+          onValueChange={(value) => setStatusDraft({ queryStatus, value })}
+          options={[
+            { value: "", label: "All statuses" },
+            { value: "enabled", label: "Enabled" },
+            { value: "disabled", label: "Disabled" },
+            { value: "needsRepair", label: "Needs repair" },
+          ]}
+        />
         <Button type="submit" variant="secondary">Apply</Button>
       </form>
 
