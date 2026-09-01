@@ -18,16 +18,23 @@ type SmsParser = {
 
 // Configuration for all supported SMS templates
 const smsParsers: SmsParser[] = [
-  // Kotak UPI: "Sent Rs.90.00 from Kotak Bank AC X5213 to paytmqr68kufv@ptys on 16-09-25.UPI Ref 525982708197."
+  // Kotak UPI supports both the legacy UPI-ID alert and the newer recipient-name alert.
   {
     name: 'KOTAK_UPI',
-    test: (message) => message.includes('Kotak Bank') && message.includes('UPI Ref'),
-    regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s+from\s+Kotak\s+Bank\s+AC\s+\w+\s+to\s+(?<recipient>[^\s]+@[^\s]+)\s+on\s+\d{2}-\d{2}-\d{2}\.UPI\s+Ref\s+(?<reference>\d+)/i,
+    test: (message) =>
+      /Sent\s+Rs\./i.test(message) &&
+      /Kotak\s+Bank/i.test(message) &&
+      /UPI\s+Ref/i.test(message),
+    regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s+from\s+Kotak\s+Bank\s+A\/?C\s+\w+\s+to\s+(?<recipient>[^\r\n]+?)\s+on\s+\d{2}-\d{2}-\d{2}\.\s*UPI\s+Ref\s+(?<reference>\d+)/i,
     mapper: (match) => {
       const groups = match.groups ?? {};
+      const recipient = groups.recipient?.trim() ?? null;
+      const recipientName = recipient?.includes('@') ? null : recipient;
+
       return {
         amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
-        recipient: groups.recipient ?? null,
+        recipient,
+        ...(recipientName ? { recipient_name: recipientName } : {}),
         reference: groups.reference ?? null,
         type: 'UPI',
         account: 'KOTAK',

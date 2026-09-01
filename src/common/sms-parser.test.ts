@@ -24,6 +24,35 @@ describe("parseTransactionMessage", () => {
     });
   });
 
+  it("parses new Kotak UPI messages that contain a recipient name", () => {
+    const parsed = parseTransactionMessage(
+      "Sent Rs.80.00 from Kotak Bank A/c X5213 to SAHIL YADAV on 31-08-26. UPI Ref 214558404246. Not done by you? Tap https://kotak.bank.in/KBANKT/Fraud"
+    );
+
+    expect(parsed).toEqual({
+      amount: 80,
+      recipient: "SAHIL YADAV",
+      recipient_name: "SAHIL YADAV",
+      reference: "214558404246",
+      type: "UPI",
+      account: "KOTAK",
+    });
+  });
+
+  it("keeps supporting UPI IDs when Kotak uses the new account marker and spacing", () => {
+    const parsed = parseTransactionMessage(
+      "Sent Rs.1,100.00 from Kotak Bank A/c X5213 to pandey.pragya9899-1@okhdfcbank on 28-08-26. UPI Ref 313444140776."
+    );
+
+    expect(parsed).toEqual({
+      amount: 1100,
+      recipient: "pandey.pragya9899-1@okhdfcbank",
+      reference: "313444140776",
+      type: "UPI",
+      account: "KOTAK",
+    });
+  });
+
   it("parses supported debit and credit card messages", () => {
     expect(
       parseTransactionMessage(
