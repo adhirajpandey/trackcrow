@@ -6,7 +6,7 @@ export function getAssignmentSourceLabel(source: ClassificationSource | null) {
     case "MANUAL":
       return "Manual";
     case "SUGGESTION":
-      return "Suggestion";
+      return "Suggested";
     case "RULE":
       return "Rule";
     default:

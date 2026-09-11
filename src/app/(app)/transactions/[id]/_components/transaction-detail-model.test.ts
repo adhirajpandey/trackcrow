@@ -6,6 +6,7 @@ import {
   getTransactionGoogleMapsHref,
   getRecipientDetailHref,
   getSubcategoryOptions,
+  getTransactionClassificationState,
   hasTransactionDetailChanges,
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
@@ -87,9 +88,85 @@ const transaction: TransactionRecord = {
   subcategory: null,
   categoryUuid: null,
   subcategoryUuid: null,
+  classificationSource: null,
+  classificationChangedAt: null,
 };
 
+describe("classification draft state", () => {
+  const food = { categoryUuid: "cat-1", subcategoryUuid: "sub-11" };
+  const empty = { categoryUuid: "", subcategoryUuid: "" };
+  const saved = { ...transaction, ...food, classificationSource: "SUGGESTION" as const };
+
+  it("shows only needs-category for an uncategorized saved record, even with legacy provenance", () => {
+    expect(getTransactionClassificationState(
+      { ...transaction, classificationSource: "MANUAL" }, empty, null, false
+    )).toMatchObject({ needsCategory: true, source: null, hasClassificationChanges: false, canUseRuleActions: false });
+  });
+
+  it("marks an applied suggestion unsaved immediately and supplies its save intent", () => {
+    expect(getTransactionClassificationState(transaction, food, food, true)).toMatchObject({
+      needsCategory: false, source: "SUGGESTION", hasClassificationChanges: true,
+      classificationIntent: "SUGGESTION", canUseRuleActions: false,
+    });
+  });
+
+  it("treats subcategory-only edits as manual and does not submit stale suggestion intent", () => {
+    expect(getTransactionClassificationState(saved, { ...food, subcategoryUuid: "" }, food, true))
+      .toMatchObject({ source: "MANUAL", hasClassificationChanges: true, classificationIntent: undefined });
+  });
+
+  it("keeps a manually reselected unsaved suggestion manual after intent is cleared", () => {
+    expect(getTransactionClassificationState(transaction, food, null, true))
+      .toMatchObject({ source: "MANUAL", classificationIntent: undefined });
+  });
+
+  it.each(["MANUAL", "SUGGESTION", "RULE"] as const)(
+    "restores saved %s provenance when edits are reverted or a suggestion matches saved values", (source) => {
+      expect(getTransactionClassificationState({ ...saved, classificationSource: source }, food, food, false))
+        .toMatchObject({ source, hasClassificationChanges: false, classificationIntent: undefined, canUseRuleActions: true });
+    }
+  );
+
+  it("shows needs-category and unsaved state when clearing a saved classification", () => {
+    expect(getTransactionClassificationState(saved, empty, null, true)).toMatchObject({
+      needsCategory: true, source: null, hasClassificationChanges: true, canUseRuleActions: false,
+    });
+  });
+
+  it("accepts a category without a subcategory", () => {
+    const categoryOnly = { ...food, subcategoryUuid: "" };
+    expect(getTransactionClassificationState(transaction, categoryOnly, categoryOnly, true))
+      .toMatchObject({ needsCategory: false, source: "SUGGESTION" });
+  });
+
+  it("hides rule actions for unrelated edits without changing classification state", () => {
+    expect(getTransactionClassificationState(saved, food, null, true)).toMatchObject({
+      source: "SUGGESTION", hasClassificationChanges: false, canUseRuleActions: false,
+    });
+  });
+
+  it("hides rule actions during operations or without a recipient", () => {
+    expect(getTransactionClassificationState(saved, food, null, false, true).canUseRuleActions).toBe(false);
+    expect(getTransactionClassificationState({ ...saved, recipientUuid: "" }, food, null, false).canUseRuleActions).toBe(false);
+  });
+});
+
 describe("transaction detail model", () => {
+  it("does not mark untouched timestamp seconds dirty or truncate them on an unrelated save", () => {
+    const precise = { ...transaction, timestamp: "2026-06-24T17:31:43.123Z" };
+    const values = mapTransactionToFormValues(precise);
+    expect(hasTransactionDetailChanges(precise, values)).toBe(false);
+    expect(mapFormValuesToTransactionPayload(precise, { ...values, remarks: "edited" }).timestamp)
+      .toBe(precise.timestamp);
+  });
+
+  it.each(["", "not-a-date", "2026-"])("handles incomplete timestamp %j while detecting edits", (timestamp) => {
+    expect(hasTransactionDetailChanges(transaction, { ...mapTransactionToFormValues(transaction), timestamp })).toBe(true);
+  });
+
+  it.each(["", "no amount"])("treats invalid amount %j as an edit without crashing", (amount) => {
+    expect(hasTransactionDetailChanges(transaction, { ...mapTransactionToFormValues(transaction), amount })).toBe(true);
+  });
   it("maps transaction records into form defaults with IST datetime-local values", () => {
     expect(mapTransactionToFormValues(transaction)).toEqual({
       amount: "1063",

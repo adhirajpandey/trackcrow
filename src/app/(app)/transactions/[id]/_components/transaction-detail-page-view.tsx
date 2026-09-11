@@ -49,6 +49,7 @@ import {
   getSubcategoryOptions,
   getTransactionDisplayRecipient,
   getTransactionGoogleMapsHref,
+  getTransactionClassificationState,
   hasTransactionDetailChanges,
   isValidSubcategorySelection,
   mapFormValuesToTransactionPayload,
@@ -57,6 +58,7 @@ import {
   shouldIgnoreTransactionDetailShortcut,
   transactionDetailFormSchema,
   type TransactionDetailFormSchema,
+  type TransactionClassificationPair,
 } from "./transaction-detail-model";
 import { TransactionDeleteDialog } from "../../_components/transaction-delete-dialog";
 
@@ -76,7 +78,11 @@ const disclosureSummaryClassName =
 const inlineDisclosureButtonClassName =
   "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[8px] px-0 text-sm font-semibold text-primary transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-export function TransactionDetailPageView({
+export function TransactionDetailPageView(props: TransactionDetailPageInitialData) {
+  return <TransactionDetailEditor key={props.transactionUuid} {...props} />;
+}
+
+function TransactionDetailEditor({
   transactionUuid,
   initialTransactionData,
   initialCategoriesData,
@@ -87,13 +93,13 @@ export function TransactionDetailPageView({
     message: string;
   } | null>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
-  const pendingSuggestedSubcategoryRef = useRef<string | null>(null);
-  const suggestionIntentRef = useRef<{
-    categoryUuid: string;
-    subcategoryUuid: string;
-  } | null>(null);
+  const [suggestionIntent, setSuggestionIntent] = useState<TransactionClassificationPair | null>(null);
+  const operationRef = useRef<"save" | "suggest" | null>(null);
+  const classificationRevisionRef = useRef(0);
   const shortcutStateRef = useRef({
+    needsCategory: false,
     hasUnsavedChanges: false,
     isSuggesting: false,
     isSaving: false,
@@ -109,7 +115,8 @@ export function TransactionDetailPageView({
   });
   const updateMutation = useUpdateTransactionMutation();
   const deleteMutation = useDeleteTransactionMutation();
-  const transaction = transactionQuery.data ?? initialTransactionData;
+  const incomingTransaction = transactionQuery.data ?? initialTransactionData;
+  const [transaction, setTransaction] = useState(incomingTransaction);
   const categories = categoriesQuery.data ?? initialCategoriesData;
 
   const form = useForm<TransactionDetailFormSchema>({
@@ -128,7 +135,7 @@ export function TransactionDetailPageView({
   const currentRemarks = form.watch("remarks");
   const subcategoryOptions = getSubcategoryOptions(categories, selectedCategoryUuid);
   const googleMapsHref = getTransactionGoogleMapsHref(currentLocationRaw);
-  const hasUnsavedChanges = hasTransactionDetailChanges(transaction, {
+  const currentFormValues = {
     amount: currentAmount,
     categoryUuid: selectedCategoryUuid,
     subcategoryUuid: selectedSubcategoryUuid,
@@ -138,38 +145,54 @@ export function TransactionDetailPageView({
     accountLabel: currentAccountLabel,
     remarks: currentRemarks,
     locationRaw: currentLocationRaw,
+  };
+  const hasUnsavedChanges = hasTransactionDetailChanges(transaction, currentFormValues);
+  const hasTransactionDetailsChanges = hasTransactionDetailChanges(transaction, {
+    ...currentFormValues,
+    categoryUuid: transaction.categoryUuid ?? "",
+    subcategoryUuid: transaction.subcategoryUuid ?? "",
   });
+  const classification = getTransactionClassificationState(
+    transaction,
+    { categoryUuid: selectedCategoryUuid, subcategoryUuid: selectedSubcategoryUuid },
+    suggestionIntent,
+    hasUnsavedChanges,
+    isSaving || isSuggesting
+  );
   shortcutStateRef.current = {
+    needsCategory: classification.needsCategory,
     hasUnsavedChanges,
     isSuggesting,
-    isSaving: updateMutation.isPending,
+    isSaving,
   };
 
   useEffect(() => {
-    form.reset(mapTransactionToFormValues(transaction));
-    suggestionIntentRef.current = null;
+    if (incomingTransaction === transaction || operationRef.current || hasUnsavedChanges) return;
+    setTransaction(incomingTransaction);
+    form.reset(mapTransactionToFormValues(incomingTransaction));
+    setSuggestionIntent(null);
+    classificationRevisionRef.current += 1;
     setBanner(null);
-  }, [form, transaction]);
+  }, [form, incomingTransaction, transaction, hasUnsavedChanges, isSaving, isSuggesting]);
 
   useEffect(() => {
-    if (pendingSuggestedSubcategoryRef.current !== null) {
-      const nextSuggestedSubcategory = pendingSuggestedSubcategoryRef.current;
-      const matchesSuggestedOption =
-        nextSuggestedSubcategory === "" ||
-        subcategoryOptions.some((subcategory) => subcategory.uuid === nextSuggestedSubcategory);
-
-      if (matchesSuggestedOption) {
-        form.setValue("subcategoryUuid", nextSuggestedSubcategory, { shouldDirty: true });
-      }
-
-      pendingSuggestedSubcategoryRef.current = null;
-      return;
-    }
-
     if (!isValidSubcategorySelection(categories, selectedCategoryUuid, selectedSubcategoryUuid)) {
+      classificationRevisionRef.current += 1;
+      setSuggestionIntent(null);
       form.setValue("subcategoryUuid", "", { shouldDirty: true });
     }
-  }, [categories, form, selectedCategoryUuid, selectedSubcategoryUuid, subcategoryOptions]);
+  }, [categories, form, selectedCategoryUuid, selectedSubcategoryUuid]);
+
+  function handleClassificationChange(field: keyof TransactionClassificationPair, value: string) {
+    if (operationRef.current === "save" || value === form.getValues(field)) return;
+    classificationRevisionRef.current += 1;
+    setSuggestionIntent(null);
+    form.setValue(field, value, { shouldDirty: true, shouldValidate: true });
+    if (field === "categoryUuid" &&
+      !isValidSubcategorySelection(categories, value, form.getValues("subcategoryUuid"))) {
+      form.setValue("subcategoryUuid", "", { shouldDirty: true });
+    }
+  }
 
   const previewTransaction = {
     ...transaction,
@@ -181,22 +204,35 @@ export function TransactionDetailPageView({
   } satisfies TransactionRecord;
 
   async function handleSubmit(values: TransactionDetailFormSchema) {
+    if (operationRef.current || !hasTransactionDetailChanges(transaction, values)) return;
+    operationRef.current = "save";
+    setIsSaving(true);
     setBanner(null);
     form.clearErrors();
 
     try {
-      const suggestionIntent = suggestionIntentRef.current;
+      const submittedClassification = getTransactionClassificationState(
+        transaction, values, suggestionIntent, true
+      );
       await updateMutation.mutateAsync({
         transactionUuid,
         ...mapFormValuesToTransactionPayload(transaction, values),
-        ...(suggestionIntent &&
-        suggestionIntent.categoryUuid === values.categoryUuid &&
-        suggestionIntent.subcategoryUuid === values.subcategoryUuid
-          ? { classificationIntent: "SUGGESTION" as const }
+        ...(submittedClassification.classificationIntent
+          ? { classificationIntent: submittedClassification.classificationIntent }
           : {}),
       });
 
-      await transactionQuery.refetch();
+      const refreshed = await transactionQuery.refetch();
+      if (refreshed.error || !refreshed.data) {
+        setBanner({
+          tone: "info",
+          message: "Changes were saved, but the updated transaction could not be loaded. Your draft is still shown. Try saving again to refresh it.",
+        });
+        return;
+      }
+      setTransaction(refreshed.data);
+      form.reset(mapTransactionToFormValues(refreshed.data));
+      setSuggestionIntent(null);
       toast({
         tone: "success",
         title: "Transaction saved",
@@ -212,14 +248,21 @@ export function TransactionDetailPageView({
           "Unable to save changes right now. Try again in a moment."
         ),
       });
+    } finally {
+      operationRef.current = null;
+      setIsSaving(false);
     }
   }
 
   async function handleSuggest() {
+    if (operationRef.current || form.getValues("categoryUuid")) return;
+    operationRef.current = "suggest";
+    const revision = classificationRevisionRef.current;
     setIsSuggesting(true);
 
     try {
       const suggestion = await getTransactionSuggestionData(transactionUuid);
+      if (revision !== classificationRevisionRef.current) return;
       const resolved = applyTransactionSuggestion(categories, suggestion);
 
       if (!resolved.matched) {
@@ -232,20 +275,26 @@ export function TransactionDetailPageView({
         return;
       }
 
-      pendingSuggestedSubcategoryRef.current = resolved.subcategoryUuid;
-      suggestionIntentRef.current = {
+      const nextSuggestion = {
         categoryUuid: resolved.categoryUuid,
         subcategoryUuid: resolved.subcategoryUuid,
       };
+      const matchesSaved = !getTransactionClassificationState(
+        transaction, nextSuggestion, null, hasUnsavedChanges
+      ).hasClassificationChanges;
+      setSuggestionIntent(matchesSaved ? null : nextSuggestion);
       form.setValue("categoryUuid", resolved.categoryUuid, { shouldDirty: true });
-      form.setValue("subcategoryUuid", "", { shouldDirty: true });
+      form.setValue("subcategoryUuid", resolved.subcategoryUuid, { shouldDirty: true });
       toast({
         tone: "success",
-        title: "Suggestion applied",
-        description: "Suggested classification applied. Save changes to keep it.",
+        title: matchesSaved ? "Classification already saved" : "Suggestion applied",
+        description: matchesSaved
+          ? "The suggested category and subcategory match the saved classification."
+          : "Suggested classification applied. Save changes to keep it.",
         durationMs: 3200,
       });
     } catch (error) {
+      if (revision !== classificationRevisionRef.current) return;
       toast({
         tone: "warning",
         title: "Suggestion unavailable",
@@ -256,6 +305,7 @@ export function TransactionDetailPageView({
         durationMs: 4200,
       });
     } finally {
+      operationRef.current = null;
       setIsSuggesting(false);
     }
   }
@@ -274,7 +324,8 @@ export function TransactionDetailPageView({
       }
 
       const key = event.key.toLowerCase();
-      if (key === "c" && !shortcutStateRef.current.isSuggesting) {
+      if (key === "c" && shortcutStateRef.current.needsCategory &&
+        !shortcutStateRef.current.isSuggesting && !shortcutStateRef.current.isSaving) {
         event.preventDefault();
         suggestShortcutRef.current();
         return;
@@ -283,6 +334,7 @@ export function TransactionDetailPageView({
       if (
         key === "s" &&
         !shortcutStateRef.current.isSaving &&
+        !shortcutStateRef.current.isSuggesting &&
         shortcutStateRef.current.hasUnsavedChanges
       ) {
         event.preventDefault();
@@ -339,9 +391,9 @@ export function TransactionDetailPageView({
               <Button
                 type="submit"
                 className="min-w-[168px]"
-                disabled={updateMutation.isPending || !hasUnsavedChanges}
+                disabled={isSaving || isSuggesting || !hasUnsavedChanges}
               >
-                {updateMutation.isPending ? (
+                {isSaving ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                 ) : (
                   <Save className="h-4 w-4" />
@@ -390,62 +442,63 @@ export function TransactionDetailPageView({
         <div className="space-y-3">
           <section
             className={cn(
-              selectedCategoryUuid ? dashboardPanelClassName : dashboardAttentionPanelClassName,
+              classification.needsCategory ? dashboardAttentionPanelClassName : dashboardPanelClassName,
               "relative z-10 overflow-visible px-5 py-5"
             )}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-[1.05rem] font-semibold text-foreground">Classification</h2>
-                <AssignmentSourceBadge source={transaction.classificationSource} />
-                <span
-                  className={cn(
-                    badgeClassName,
-                    selectedCategoryUuid
-                      ? "bg-primary/35 text-foreground"
-                      : "bg-[#fff1bd] text-foreground"
-                  )}
-                >
-                  {selectedCategoryUuid ? "Category set" : "Needs category"}
-                </span>
+                {classification.needsCategory ? (
+                  <span className={cn(badgeClassName, "bg-[#fff1bd] text-foreground")}>
+                    Needs category
+                  </span>
+                ) : <AssignmentSourceBadge source={classification.source} />}
+                {classification.hasClassificationChanges ? (
+                  <span role="status" className="text-sm text-secondary-foreground">Unsaved changes</span>
+                ) : null}
               </div>
 
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full min-w-0 sm:w-auto lg:min-w-[148px]"
-                onClick={() => void handleSuggest()}
-                disabled={isSuggesting}
-              >
-                {isSuggesting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                Suggest category
-              </Button>
-              {transaction.recipientUuid && transaction.categoryUuid ? (
-                <Button asChild type="button" variant="secondary" className="w-full sm:w-auto">
-                  <Link
-                    href={
-                      transaction.classificationSource === "RULE" &&
+              {classification.needsCategory || classification.canUseRuleActions ? (
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                {classification.needsCategory ? <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full min-w-0 sm:w-auto lg:min-w-[148px]"
+                  onClick={() => void handleSuggest()}
+                  disabled={isSuggesting || isSaving}
+                >
+                  {isSuggesting ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  Suggest category
+                </Button> : null}
+                {classification.canUseRuleActions ? (
+                  <Button asChild type="button" variant="secondary" className="w-full sm:w-auto">
+                    <Link
+                      href={
+                        transaction.classificationSource === "RULE" &&
+                        transaction.classificationRule &&
+                        !transaction.classificationRule.isDeleted
+                          ? `/rules?edit=${transaction.classificationRule.uuid}`
+                          : `/rules?create=1&recipient=${transaction.recipientUuid}&category=${transaction.categoryUuid}${
+                              transaction.subcategoryUuid
+                                ? `&subcategory=${transaction.subcategoryUuid}`
+                                : ""
+                            }`
+                      }
+                    >
+                      {transaction.classificationSource === "RULE" &&
                       transaction.classificationRule &&
                       !transaction.classificationRule.isDeleted
-                        ? `/rules?edit=${transaction.classificationRule.uuid}`
-                        : `/rules?create=1&recipient=${transaction.recipientUuid}&category=${transaction.categoryUuid}${
-                            transaction.subcategoryUuid
-                              ? `&subcategory=${transaction.subcategoryUuid}`
-                              : ""
-                          }`
-                    }
-                  >
-                    {transaction.classificationSource === "RULE" &&
-                    transaction.classificationRule &&
-                    !transaction.classificationRule.isDeleted
-                      ? "Edit rule"
-                      : "Create rule"}
-                  </Link>
-                </Button>
+                        ? "Edit rule"
+                        : "Create rule"}
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
               ) : null}
             </div>
 
@@ -461,7 +514,8 @@ export function TransactionDetailPageView({
                     <Select
                       ariaLabel="Category"
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => handleClassificationChange("categoryUuid", value)}
+                      disabled={isSaving}
                       options={[
                         { value: "", label: "Uncategorized" },
                         ...categories.map((category) => ({
@@ -486,8 +540,8 @@ export function TransactionDetailPageView({
                     <Select
                       ariaLabel="Subcategory"
                       value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={!selectedCategoryUuid || subcategoryOptions.length === 0}
+                      onValueChange={(value) => handleClassificationChange("subcategoryUuid", value)}
+                      disabled={isSaving || !selectedCategoryUuid || subcategoryOptions.length === 0}
                       options={[
                         {
                           value: "",
@@ -507,16 +561,21 @@ export function TransactionDetailPageView({
               </Field>
             </div>
 
-            <p className="mt-3 text-sm text-secondary-foreground">
+            {classification.needsCategory ? <p className="mt-3 text-sm text-secondary-foreground">
               Categorize this transaction to include it in spending insights and dashboard
               breakdowns.
-            </p>
+            </p> : null}
           </section>
 
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
-            <h2 className="text-[1.05rem] font-semibold text-foreground">
-              Transaction details
-            </h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-[1.05rem] font-semibold text-foreground">
+                Transaction details
+              </h2>
+              {hasTransactionDetailsChanges ? (
+                <span role="status" className="text-sm text-secondary-foreground">Unsaved changes</span>
+              ) : null}
+            </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2 lg:mt-4">
               <Field
                 label="Amount"
@@ -525,6 +584,7 @@ export function TransactionDetailPageView({
               >
                 <input
                   type="number"
+                  disabled={isSaving}
                   step="0.01"
                   inputMode="decimal"
                   className={fieldClassName}
@@ -542,6 +602,7 @@ export function TransactionDetailPageView({
                   render={({ field }) => (
                     <Select
                       ariaLabel="Transaction type"
+                      disabled={isSaving}
                       value={field.value}
                       onValueChange={field.onChange}
                       options={[
@@ -566,6 +627,7 @@ export function TransactionDetailPageView({
               >
                 <input
                   type="datetime-local"
+                  disabled={isSaving}
                   className={fieldClassName}
                   {...form.register("timestamp")}
                 />
@@ -578,7 +640,7 @@ export function TransactionDetailPageView({
                   !isMoreDetailsOpen && "hidden lg:block"
                 )}
               >
-                <input className={fieldClassName} {...form.register("accountLabel")} />
+                <input disabled={isSaving} className={fieldClassName} {...form.register("accountLabel")} />
               </Field>
 
               <ReadOnlyActionField
@@ -607,7 +669,7 @@ export function TransactionDetailPageView({
                   !isMoreDetailsOpen && "hidden lg:block"
                 )}
               >
-                <input className={fieldClassName} {...form.register("reference")} />
+                <input disabled={isSaving} className={fieldClassName} {...form.register("reference")} />
               </Field>
               <Field
                 label="Location"
@@ -615,7 +677,7 @@ export function TransactionDetailPageView({
                 className="order-4 md:col-span-2 lg:order-none"
               >
                 <div className="flex min-h-11 overflow-hidden rounded-[8px] border-2 border-input bg-card focus-within:ring-2 focus-within:ring-ring">
-                  <input className={embeddedFieldClassName} {...form.register("locationRaw")} />
+                  <input disabled={isSaving} className={embeddedFieldClassName} {...form.register("locationRaw")} />
                   {googleMapsHref ? (
                     <Button
                       asChild
@@ -636,7 +698,7 @@ export function TransactionDetailPageView({
                 error={form.formState.errors.remarks?.message}
                 className="order-5 md:col-span-2 lg:order-none"
               >
-                <textarea className={textAreaClassName} {...form.register("remarks")} />
+                <textarea disabled={isSaving} className={textAreaClassName} {...form.register("remarks")} />
               </Field>
               <div className="order-6 md:col-span-2 lg:hidden">
                 <button
@@ -659,7 +721,7 @@ export function TransactionDetailPageView({
 
           <MobileDangerZone
             transactionUuid={transaction.uuid}
-            isDeleting={deleteMutation.isPending}
+            isDeleting={deleteMutation.isPending || isSaving}
             onDelete={handleDelete}
           />
         </div>
@@ -676,15 +738,15 @@ export function TransactionDetailPageView({
           />
           <DangerZone
             transactionUuid={transaction.uuid}
-            isDeleting={deleteMutation.isPending}
+            isDeleting={deleteMutation.isPending || isSaving}
             onDelete={handleDelete}
           />
         </aside>
       </div>
 
       <MobileActionBar>
-        <Button type="submit" disabled={updateMutation.isPending || !hasUnsavedChanges}>
-          {updateMutation.isPending ? (
+        <Button type="submit" disabled={isSaving || isSuggesting || !hasUnsavedChanges}>
+          {isSaving ? (
             <LoaderCircle className="h-4 w-4 animate-spin" />
           ) : (
             <Save className="h-4 w-4" />

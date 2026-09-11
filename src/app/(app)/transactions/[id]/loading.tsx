@@ -5,51 +5,37 @@ import {
 } from "@/components/product/page-loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import {
-  dashboardAttentionPanelClassName,
-  dashboardPanelClassName,
-} from "@/app/(app)/dashboard/_components/dashboard-style";
+import { dashboardPanelClassName } from "@/app/(app)/dashboard/_components/dashboard-style";
 
 function DetailPanelSkeleton({
   titleWidth,
   rows,
   textarea = false,
   actionWidth,
-  secondaryActionWidth,
-  tone = "default",
+  showClassificationBadge = false,
   collapsibleDetails = false,
 }: {
   titleWidth: string;
   rows: number;
   textarea?: boolean;
   actionWidth?: string;
-  secondaryActionWidth?: string;
-  tone?: "default" | "attention";
+  showClassificationBadge?: boolean;
   collapsibleDetails?: boolean;
 }) {
   return (
     <section
-      className={cn(
-        tone === "attention" ? dashboardAttentionPanelClassName : dashboardPanelClassName,
-        "px-5 py-5"
-      )}
+      className={cn(dashboardPanelClassName, "px-5 py-5")}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Skeleton className={cn("h-6 rounded-[8px]", titleWidth)} />
-          {tone === "attention" ? (
-            <>
-              <Skeleton className="h-9 w-24 rounded-[999px]" />
-              <Skeleton className="h-9 w-28 rounded-[999px]" />
-            </>
+          {showClassificationBadge ? (
+            <Skeleton className="h-9 w-24 rounded-[999px]" />
           ) : null}
         </div>
-        {actionWidth || secondaryActionWidth ? (
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            {actionWidth ? <Skeleton className={cn("h-10 rounded-[8px]", actionWidth)} /> : null}
-            {secondaryActionWidth ? (
-              <Skeleton className={cn("h-10 rounded-[8px]", secondaryActionWidth)} />
-            ) : null}
+        {actionWidth ? (
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <Skeleton className={cn("h-10 rounded-[8px]", actionWidth)} />
           </div>
         ) : null}
       </div>
@@ -74,9 +60,6 @@ function DetailPanelSkeleton({
           </div>
         ) : null}
       </div>
-      {tone === "attention" ? (
-        <Skeleton className="mt-3 h-4 w-[34rem] max-w-full rounded-[8px]" />
-      ) : null}
       {collapsibleDetails ? (
         <div className="mt-4 lg:hidden">
           <Skeleton className="h-11 w-full rounded-[8px]" />
@@ -142,7 +125,6 @@ export default function TransactionDetailLoading() {
           eyebrowWidth="w-44"
           titleWidth="w-72"
           descriptionWidth="w-[34rem]"
-          metaWidth="w-28"
           actionWidths={["w-44", "w-40"]}
         />
       </div>
@@ -172,9 +154,8 @@ export default function TransactionDetailLoading() {
           <DetailPanelSkeleton
             titleWidth="w-32"
             rows={2}
-            actionWidth="w-36"
-            secondaryActionWidth="w-28"
-            tone="attention"
+            actionWidth="w-full sm:w-[200px]"
+            showClassificationBadge
           />
           <DetailPanelSkeleton
             titleWidth="w-40"

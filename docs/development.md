@@ -77,6 +77,18 @@ Typical workflow:
 
 ## Frontend Maintenance Rules
 
+### Transaction detail classification
+
+The detail form keeps a saved baseline separate from its draft. Classification badges describe the draft: `Needs category` when empty, otherwise `Suggested`, `Manual`, or the saved `Rule` source. Only an empty category uses the yellow panel and categorization helper. `Unsaved changes` appears only in the section containing edits: Classification for a changed category/subcategory pair, and Transaction details for other changed fields. Neither desktop nor mobile Save controls have a separate unsaved label.
+
+Suggest category and its `c` shortcut are available only when the draft category is Uncategorized, including after clearing a saved category. Applying a suggestion records draft intent and hides the action once a category is selected. A manual classification change clears that intent; returning to an unsaved suggestion manually stays Manual. Returning to the exact saved pair restores the saved source. A suggestion matching the saved pair is already saved and does not change provenance. Only a different, unedited suggested pair sends `classificationIntent: "SUGGESTION"`. The loading skeleton reserves space for one classification action.
+
+Incidental refetches and failed saves preserve drafts. A successful save and refresh establish the new baseline. Save and Suggest cannot overlap; a late suggestion cannot overwrite a newer manual classification. Dirty checks compare normalized form defaults, and unrelated saves preserve the original timestamp precision.
+
+Create/Edit rule links use saved values and appear only when the entire form is clean and no save or suggestion is pending. Verify both desktop and mobile indicators, manual edits after suggestions, reverting edits, failed saves, delayed suggestions, and source persistence after reload. Use mocked responses or test records for write verification.
+
+### General conventions
+
 These are the current durable rules distilled from the archived frontend TRD:
 
 - Prefer server-first page reads: `page.tsx` should load from `src/server/page-data/*`.

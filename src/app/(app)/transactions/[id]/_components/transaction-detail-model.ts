@@ -108,7 +108,9 @@ export function mapFormValuesToTransactionPayload(
     categoryUuid: toNullableUuid(values.categoryUuid),
     subcategoryUuid: toNullableUuid(values.subcategoryUuid),
     type: values.type,
-    timestamp: parseDateTimeLocalAsIst(values.timestamp).toISOString(),
+    timestamp: values.timestamp === formatDateTimeLocalValue(transaction.timestamp)
+      ? transaction.timestamp
+      : parseDateTimeLocalAsIst(values.timestamp).toISOString(),
     reference: toNullableTrimmedString(values.reference),
     accountLabel: toNullableTrimmedString(values.accountLabel),
     remarks: toNullableTrimmedString(values.remarks),
@@ -120,20 +122,45 @@ export function hasTransactionDetailChanges(
   transaction: TransactionRecord,
   values: TransactionDetailFormValues
 ) {
-  const nextPayload = mapFormValuesToTransactionPayload(transaction, values);
-  const currentPayload = mapTransactionToMutationPayload(transaction);
+  const saved = mapTransactionToFormValues(transaction);
+  return (Object.keys(saved) as Array<keyof TransactionDetailFormValues>).some((key) => {
+    if (key === "amount") {
+      return values.amount.trim() === "" || Number(values.amount) !== Number(saved.amount);
+    }
+    return values[key].trim() !== saved[key].trim();
+  });
+}
 
-  return (
-    nextPayload.amount !== currentPayload.amount ||
-    nextPayload.categoryUuid !== currentPayload.categoryUuid ||
-    nextPayload.subcategoryUuid !== currentPayload.subcategoryUuid ||
-    nextPayload.type !== currentPayload.type ||
-    nextPayload.timestamp !== currentPayload.timestamp ||
-    nextPayload.reference !== currentPayload.reference ||
-    nextPayload.accountLabel !== currentPayload.accountLabel ||
-    nextPayload.remarks !== currentPayload.remarks ||
-    nextPayload.locationRaw !== currentPayload.locationRaw
-  );
+export type TransactionClassificationPair = Pick<
+  TransactionDetailFormValues, "categoryUuid" | "subcategoryUuid"
+>;
+
+export function getTransactionClassificationState(
+  transaction: TransactionRecord,
+  draft: TransactionClassificationPair,
+  suggestion: TransactionClassificationPair | null,
+  hasUnsavedChanges: boolean,
+  isBusy = false
+) {
+  const needsCategory = !draft.categoryUuid;
+  const hasClassificationChanges =
+    draft.categoryUuid !== (transaction.categoryUuid ?? "") ||
+    draft.subcategoryUuid !== (transaction.subcategoryUuid ?? "");
+  const isSuggestedDraft = hasClassificationChanges && !needsCategory &&
+    suggestion?.categoryUuid === draft.categoryUuid &&
+    suggestion.subcategoryUuid === draft.subcategoryUuid;
+  const source = needsCategory ? null : !hasClassificationChanges
+    ? transaction.classificationSource ?? null
+    : isSuggestedDraft ? "SUGGESTION" as const : "MANUAL" as const;
+
+  return {
+    needsCategory,
+    hasClassificationChanges,
+    source,
+    classificationIntent: isSuggestedDraft ? "SUGGESTION" as const : undefined,
+    canUseRuleActions: Boolean(transaction.recipientUuid && transaction.categoryUuid) &&
+      !hasUnsavedChanges && !hasClassificationChanges && !isBusy,
+  };
 }
 
 export function getSubcategoryOptions(
@@ -224,22 +251,6 @@ export function getTransactionGoogleMapsHref(locationRaw: string | null | undefi
   return `https://www.google.com/maps/search/${encodeURIComponent(
     `${coordinates.latitude},${coordinates.longitude}`
   )}`;
-}
-
-function mapTransactionToMutationPayload(
-  transaction: TransactionRecord
-): TransactionMutationInput {
-  return {
-    amount: transaction.amount,
-    categoryUuid: transaction.categoryUuid,
-    subcategoryUuid: transaction.subcategoryUuid,
-    type: transaction.type,
-    timestamp: toDate(transaction.timestamp).toISOString(),
-    reference: toNullableTrimmedString(transaction.reference ?? ""),
-    accountLabel: toNullableTrimmedString(transaction.accountLabel ?? ""),
-    remarks: toNullableTrimmedString(transaction.remarks ?? ""),
-    locationRaw: toNullableTrimmedString(transaction.locationRaw ?? ""),
-  };
 }
 
 function toNullableTrimmedString(value: string) {
