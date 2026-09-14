@@ -188,6 +188,16 @@ model ApiToken {
   @@map("device_token")
 }
 
+model RateLimitBucket {
+  key         String   @id
+  count       Int
+  windowStart DateTime @map("window_start") @db.Timestamptz(6)
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("rate_limit_bucket")
+}
+
 enum ApiTokenScope {
   TRANSACTIONS_READ  @map("transactions:read")
   TRANSACTIONS_WRITE @map("transactions:write")
