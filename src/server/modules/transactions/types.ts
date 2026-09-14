@@ -138,6 +138,7 @@ export type TransactionCategoryUpdateResult = ServiceResult<
     category: string | null;
     subcategoryUuid: string | null;
     subcategory: string | null;
+    classificationSource: ClassificationSource | null;
   },
   | "NOT_FOUND"
   | "VALIDATION_ERROR"

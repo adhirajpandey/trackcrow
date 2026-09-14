@@ -4,12 +4,13 @@ This document describes the current runtime structure of the Next.js monolith.
 
 ## Runtime Shape
 
-TrackCrow has four top-level surfaces:
+TrackCrow has five top-level surfaces:
 
 - public marketing pages in `src/app/(marketing)`
 - authentication pages in `src/app/(auth)`
 - authenticated product pages in `src/app/(app)`
 - HTTP APIs in `src/app/api/*`
+- the stateless MCP endpoint at `/mcp`
 
 Current authenticated page routes are:
 
@@ -22,7 +23,7 @@ Current authenticated page routes are:
 - `/rules`
 - `/settings`
 
-`/settings` is still a placeholder page. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
+`/settings` manages personal API tokens. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
 
 ## Backend Boundaries
 
@@ -36,7 +37,7 @@ Business logic is grouped by module:
 
 - `categories`
 - `dashboard`
-- `device-tokens`
+- `api-tokens`, with legacy `device-tokens` route adapters
 - `imports`
 - `recipients`
 - `rules`
@@ -65,7 +66,11 @@ Authentication uses NextAuth with Google OAuth.
 - `requireSessionUser()` protects most API routes and returns the current `userUuid`.
 - `ensureUserBootstrap()` upserts the user on sign-in and seeds default categories when needed.
 
-SMS import is intentionally separate from the browser session. `POST /api/imports/sms` authenticates with `Authorization: Token <plain-token>` against `device_token` records.
+SMS import is separate from the browser session. `POST /api/imports/sms` accepts `Token` and `Bearer` credentials with `sms:import`. MCP accepts only Bearer credentials. The shared resolver hashes every supplied token, rejects revoked tokens, returns the owning user and scopes, and conditionally updates `lastUsedAt` at most once every ten minutes.
+
+`/mcp` runs on the Node runtime outside the authenticated page layout. Request protection checks the hashed client-IP failure budget before token lookup and consumes the token budget after authentication. The MCP layer constructs a new server for each request, enforces scopes, and calls domain services directly. Tools never import Prisma or call internal HTTP APIs.
+
+Rate-limit policy lives in `src/server/mcp/request-protection.ts`. Storage implements the `RateLimiter` interface in `src/server/rate-limit/`; PostgreSQL is the first adapter.
 
 ## Data Flow
 
@@ -82,6 +87,12 @@ HTTP API request
   -> src/app/api/*/route.ts
   -> controller
   -> service
+  -> Prisma
+
+MCP POST
+  -> origin, body, authentication, and rate-limit protection
+  -> fresh MCP server
+  -> domain service
   -> Prisma
 ```
 

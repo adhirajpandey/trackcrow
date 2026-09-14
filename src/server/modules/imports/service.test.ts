@@ -1,10 +1,6 @@
 jest.mock("@/lib/prisma-rewrite", () => ({
   __esModule: true,
   default: ((globalThis as any).__importsPrismaMock = {
-    deviceToken: {
-      findFirst: jest.fn(),
-      update: jest.fn(),
-    },
     rawMessage: {
       create: jest.fn(),
     },
@@ -25,7 +21,6 @@ jest.mock("@/server/modules/transactions/service", () => ({
 import { ParseStatus, TransactionSource } from "@/generated/prisma-rewrite";
 import { parseTransactionMessage } from "@/common/sms-parser";
 import { createTransaction } from "@/server/modules/transactions/service";
-import { hashDeviceToken } from "@/server/modules/device-tokens/service";
 
 import { importSmsTransaction } from "./service";
 
@@ -38,31 +33,7 @@ describe("importSmsTransaction", () => {
     jest.clearAllMocks();
   });
 
-  it("rejects missing and invalid device tokens", async () => {
-    await expect(
-      importSmsTransaction({ token: null, message: "sms" })
-    ).resolves.toMatchObject({ ok: false, error: "UNAUTHORIZED" });
-    expect(mockPrisma.deviceToken.findFirst).not.toHaveBeenCalled();
-
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce(null);
-    await expect(
-      importSmsTransaction({ token: "bad-token", message: "sms" })
-    ).resolves.toMatchObject({ ok: false, error: "UNAUTHORIZED" });
-
-    expect(mockPrisma.deviceToken.findFirst).toHaveBeenCalledWith({
-      where: {
-        tokenHash: hashDeviceToken("bad-token"),
-        revokedAt: null,
-      },
-      select: {
-        id: true,
-        userUuid: true,
-      },
-    });
-  });
-
-  it("updates lastUsedAt and persists a parsed SMS transaction", async () => {
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce({ id: 7, userUuid: "user-1" });
+  it("persists a parsed SMS transaction for the authenticated user", async () => {
     parseTransactionMessageMock.mockReturnValueOnce({
       amount: 125,
       recipient: "merchant@upi",
@@ -78,16 +49,12 @@ describe("importSmsTransaction", () => {
     mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 99 });
 
     const result = await importSmsTransaction({
-      token: "good-token",
+      userUuid: "user-1",
       message: "sms text",
       location: "Bangalore",
     });
 
     expect(result).toEqual({ ok: true, data: { uuid: "txn-uuid" } });
-    expect(mockPrisma.deviceToken.update).toHaveBeenCalledWith({
-      where: { id: 7 },
-      data: { lastUsedAt: expect.any(Date) },
-    });
     expect(createTransactionMock).toHaveBeenCalledWith({
       userUuid: "user-1",
       amount: 125,
@@ -117,7 +84,6 @@ describe("importSmsTransaction", () => {
   });
 
   it("stores an UNPARSEABLE raw message when amount or recipient is missing", async () => {
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce({ id: 7, userUuid: "user-1" });
     parseTransactionMessageMock.mockReturnValueOnce({
       amount: null,
       recipient: null,
@@ -125,7 +91,7 @@ describe("importSmsTransaction", () => {
     });
 
     const result = await importSmsTransaction({
-      token: "good-token",
+      userUuid: "user-1",
       message: "unknown sms",
       location: null,
     });
@@ -146,7 +112,6 @@ describe("importSmsTransaction", () => {
   });
 
   it("stores a FAILED raw message when transaction creation fails", async () => {
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce({ id: 7, userUuid: "user-1" });
     parseTransactionMessageMock.mockReturnValueOnce({
       amount: 50,
       recipient: "merchant@upi",
@@ -155,7 +120,7 @@ describe("importSmsTransaction", () => {
     createTransactionMock.mockResolvedValueOnce({ ok: false, error: "INTERNAL_ERROR" });
 
     const result = await importSmsTransaction({
-      token: "good-token",
+      userUuid: "user-1",
       message: "sms text",
     });
 

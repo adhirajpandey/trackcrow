@@ -6,7 +6,7 @@ This document describes the current HTTP API exposed from `src/app/api/*`.
 
 - All `:id` path params in these routes are UUIDs.
 - Most routes require a valid NextAuth session and return `401` with `{ "message": "Unauthorized" }` when the session is missing.
-- `POST /api/imports/sms` is the session exception. It uses `Authorization: Token <plain-token>`.
+- `POST /api/imports/sms` is the session exception. It accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
 - Controllers validate params, query strings, and JSON bodies with Zod before calling services.
 
 Common error responses:
@@ -21,8 +21,23 @@ Common error responses:
 | `409` | route-specific conflict message, optional `details` | uniqueness or alias-transfer conflict |
 | `422` | route-specific message, optional `details` | unprocessable SMS import |
 | `500` | `{ message: "Internal Server Error" }` | unexpected failure |
+| `503` | sanitized service-unavailable response | token or limiter storage failure |
 
 All success responses are JSON.
+
+### Personal API tokens
+
+`GET /api/tokens`, `POST /api/tokens`, and `DELETE /api/tokens/:id` require a browser session. Personal API tokens cannot manage tokens. Create requires a nonempty name and at least one immutable scope from `TRANSACTIONS_READ`, `TRANSACTIONS_WRITE`, and `SMS_IMPORT`. Creation returns plaintext once alongside the token record. List responses contain only UUID, prefix, scopes, creation time, approximate last-used source timestamp, and revocation time.
+
+The existing `/api/device-tokens` routes remain available. Legacy creation grants only `SMS_IMPORT`.
+
+### MCP
+
+`POST /mcp` is a stateless MCP endpoint and accepts only `Authorization: Bearer <token>`. It supports current MCP v2 requests and older stateless Streamable HTTP clients. `GET` and `DELETE` return `405`. An `Origin` header must match a comma-separated entry in `MCP_ALLOWED_ORIGINS`; native clients may omit it. Bodies above 64 KiB return `413`, including streamed bodies without `Content-Length`. Responses use `Cache-Control: no-store`.
+
+Authenticated tokens may make 120 POST requests per minute. Invalid credentials share a ten-attempt-per-minute client-IP budget. A blocked request returns `429` with `Retry-After`.
+
+The six tools are `search_transactions`, `get_spending_summary`, `list_categories`, `search_recipients`, `create_transaction`, and `categorize_transaction`. Read tools require `transactions:read`; mutation tools require `transactions:write`. Inputs reject unknown fields and never accept `userUuid`. Read dates are inclusive Asia/Kolkata calendar days. Manual creation uses INR, requires an existing recipient, and is non-idempotent. Do not retry creation after an uncertain response because the first call may have succeeded.
 
 ## Routes
 
@@ -452,7 +467,7 @@ Revokes an active token by setting `revokedAt`. Returns `{ "revoked": true }`.
 
 ### `POST /api/imports/sms`
 
-Does not use the browser session. Requires `Authorization: Token <plain-token>`.
+Does not use the browser session. Accepts `Authorization: Token <plain-token>` or `Authorization: Bearer <plain-token>` and requires `sms:import`.
 
 Request body:
 
@@ -465,8 +480,8 @@ Request body:
 
 Behavior:
 
-- resolves the device token by SHA-256 hash
-- updates `lastUsedAt`
+- resolves the API token by SHA-256 hash through the shared authentication boundary
+- conditionally updates `lastUsedAt` when it is empty or older than ten minutes
 - parses the SMS with deterministic templates in `src/common/sms-parser.ts`
 - creates a transaction with `source: "SMS"` when parsing succeeds
 - stores a `raw_message` record for parsed, failed, and unparseable cases

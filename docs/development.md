@@ -18,6 +18,7 @@ The code currently reads these variables directly:
 - `GOOGLE_CLIENT_SECRET`
 - `NEXT_PUBLIC_API_BASE_URL` for the frontend API client when a non-relative base URL is needed
 - `LOG_LEVEL` for logger verbosity
+- `MCP_ALLOWED_ORIGINS`, a comma-separated exact allowlist for browser-origin MCP requests. Native clients may omit `Origin`.
 
 `src/app/config.ts` also looks for `.env.local` in non-production and `.env.production` in production, but most of the app reads from `process.env` directly through Next.js runtime conventions.
 
@@ -105,11 +106,73 @@ These are the current durable rules distilled from the archived frontend TRD:
 - Current coverage is strongest in `src/common`, `src/server/modules`, and `src/server/page-data`.
 - `jest.setup.ts` installs `crypto` for tests and mocks the logger.
 
-## Current Runtime Notes
+## MCP client setup
+
+Create a token under `/settings`, copy it once, and give it only the permissions the client needs.
+
+Codex CLI supports remote HTTP MCP servers and reads the Bearer value from an environment variable:
+
+```bash
+export TRACKCROW_TOKEN="<one-time-token>"
+codex mcp add trackcrow \
+  --url https://your-trackcrow-domain/mcp \
+  --bearer-token-env-var TRACKCROW_TOKEN
+```
+
+For VS Code, create `.vscode/mcp.json` or a user-level MCP configuration. The password input is kept in VS Code's secret storage:
+
+```json
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "trackcrow-token",
+      "description": "TrackCrow personal API token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "trackcrow": {
+      "type": "http",
+      "url": "https://your-trackcrow-domain/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:trackcrow-token}"
+      }
+    }
+  }
+}
+```
+
+Configurations that use `${input:trackcrow-token}` are not forwarded to Agent Host because Agent Host does not support interactive inputs. To use TrackCrow from Agent Host, add this noninteractive configuration to a workspace `.mcp.json` or `~/.copilot/mcp-config.json`:
+
+```json
+{
+  "servers": {
+    "trackcrow": {
+      "type": "http",
+      "url": "https://your-trackcrow-domain/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-token>"
+      }
+    }
+  }
+}
+```
+
+This stores the token as plain text, so keep the file out of version control and restrict access to it. Continue using the password input above when running the server through VS Code so the token stays in VS Code's secret storage.
+
+The Codex command was checked against the installed CLI help. The VS Code fields match its current MCP configuration reference. Test discovery, one read, one mutation where allowed, revocation, and the next-call `401` against a preview deployment before production rollout.
+
+## Deployment order and rollback
+
+Deploy `20260914_generalize_api_tokens` and `20260914_add_rate_limit_buckets` before application code. These migrations only add scope data and the rate-limit table. Rolling back application code does not require deleting scopes or regenerating tokens. Keep the physical `device_token` table and compatibility routes.
+
+## Current runtime notes
 
 - authenticated app pages use a shared shell from `src/app/(app)/layout.tsx`
 - implemented page-data reads currently back dashboard, transactions, transaction detail, transaction create, recipients, and recipient detail routes
-- `/settings` is still a placeholder page
+- `/settings` manages scoped personal API tokens
+- `/mcp` runs stateless MCP v2 with legacy stateless compatibility
 - Next.js remote image loading is currently enabled for `lh3.googleusercontent.com`
 
 ## Docs Maintenance

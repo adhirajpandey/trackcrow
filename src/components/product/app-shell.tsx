@@ -183,13 +183,13 @@ function ProfileCard({ user }: { user: AppShellUser }) {
       </div>
       <div className="mt-3.5 h-px bg-border/25" />
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div
-          aria-disabled="true"
-          className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-border/25 bg-transparent px-3 text-sm font-bold text-secondary-foreground/55"
+        <Link
+          href="/settings"
+          className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border-2 border-border bg-transparent px-3 text-sm font-bold text-secondary-foreground hover:bg-secondary"
         >
-          <Settings className="h-3.5 w-3.5 text-secondary-foreground/45" />
+          <Settings className="h-3.5 w-3.5" />
           Settings
-        </div>
+        </Link>
         <Button
           type="button"
           variant="ghost"

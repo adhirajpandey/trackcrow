@@ -360,6 +360,7 @@ describe("transaction service", () => {
       uuid: "txn-1",
       categoryId: 11,
       subcategoryId: null,
+      classificationSource: ClassificationSource.MANUAL,
       category: { uuid: "cat-shopping", name: "Shopping" },
       subcategory: null,
     });
@@ -378,6 +379,7 @@ describe("transaction service", () => {
         category: "Shopping",
         subcategoryUuid: null,
         subcategory: null,
+        classificationSource: ClassificationSource.MANUAL,
       },
     });
 
@@ -430,6 +432,7 @@ describe("transaction service", () => {
       uuid: "txn-1",
       categoryId: 10,
       subcategoryId: 20,
+      classificationSource: ClassificationSource.RULE,
       category: { uuid: "cat-food", name: "Food" },
       subcategory: { uuid: "sub-dinner", name: "Dinner" },
     });
@@ -450,6 +453,7 @@ describe("transaction service", () => {
         category: "Food",
         subcategoryUuid: "sub-dinner",
         subcategory: "Dinner",
+        classificationSource: ClassificationSource.RULE,
       },
     });
     expect(mockPrisma.transaction.update).not.toHaveBeenCalled();

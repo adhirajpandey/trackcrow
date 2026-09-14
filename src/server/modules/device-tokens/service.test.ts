@@ -1,7 +1,7 @@
 jest.mock("@/lib/prisma-rewrite", () => ({
   __esModule: true,
   default: ((globalThis as any).__deviceTokensPrismaMock = {
-    deviceToken: {
+    apiToken: {
       create: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
@@ -32,7 +32,7 @@ describe("device token service", () => {
 
   it("creates a plain token once and stores only hash and prefix", async () => {
     const createdAt = new Date("2026-06-14T10:00:00.000Z");
-    mockPrisma.deviceToken.create.mockResolvedValueOnce({
+    mockPrisma.apiToken.create.mockResolvedValueOnce({
       id: 1,
       uuid: "token-uuid",
       label: "Phone",
@@ -60,7 +60,7 @@ describe("device token service", () => {
       lastUsedAt: null,
       revokedAt: null,
     });
-    expect(mockPrisma.deviceToken.create).toHaveBeenCalledWith({
+    expect(mockPrisma.apiToken.create).toHaveBeenCalledWith({
       data: {
         userUuid: "user-1",
         label: "Phone",
@@ -80,11 +80,11 @@ describe("device token service", () => {
   });
 
   it("lists user tokens newest first", async () => {
-    mockPrisma.deviceToken.findMany.mockResolvedValueOnce([]);
+    mockPrisma.apiToken.findMany.mockResolvedValueOnce([]);
 
     await listDeviceTokens({ userUuid: "user-1" });
 
-    expect(mockPrisma.deviceToken.findMany).toHaveBeenCalledWith({
+    expect(mockPrisma.apiToken.findMany).toHaveBeenCalledWith({
       where: { userUuid: "user-1" },
       select: {
         uuid: true,
@@ -99,16 +99,16 @@ describe("device token service", () => {
   });
 
   it("revokes only active user-owned tokens", async () => {
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.apiToken.findFirst.mockResolvedValueOnce(null);
     await expect(
       revokeDeviceToken({
         userUuid: "user-1",
         tokenUuid: "550e8400-e29b-41d4-a716-446655440000",
       })
     ).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
-    expect(mockPrisma.deviceToken.update).not.toHaveBeenCalled();
+    expect(mockPrisma.apiToken.update).not.toHaveBeenCalled();
 
-    mockPrisma.deviceToken.findFirst.mockResolvedValueOnce({
+    mockPrisma.apiToken.findFirst.mockResolvedValueOnce({
       id: 10,
       uuid: "550e8400-e29b-41d4-a716-446655440000",
     });
@@ -118,7 +118,7 @@ describe("device token service", () => {
         tokenUuid: "550e8400-e29b-41d4-a716-446655440000",
       })
     ).resolves.toEqual({ ok: true, data: { revoked: true } });
-    expect(mockPrisma.deviceToken.findFirst).toHaveBeenLastCalledWith({
+    expect(mockPrisma.apiToken.findFirst).toHaveBeenLastCalledWith({
       where: {
         uuid: "550e8400-e29b-41d4-a716-446655440000",
         userUuid: "user-1",
@@ -126,7 +126,7 @@ describe("device token service", () => {
       },
       select: { id: true, uuid: true },
     });
-    expect(mockPrisma.deviceToken.update).toHaveBeenCalledWith({
+    expect(mockPrisma.apiToken.update).toHaveBeenCalledWith({
       where: { id: 10 },
       data: { revokedAt: expect.any(Date) },
     });
