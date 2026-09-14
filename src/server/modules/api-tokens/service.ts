@@ -90,10 +90,19 @@ export async function createApiToken(input: {
   }
 }
 
-export async function revokeApiToken(input: { userUuid: string; tokenUuid: string }) {
+export async function revokeApiToken(input: {
+  userUuid: string;
+  tokenUuid: string;
+  requiredScope?: ApiTokenScope;
+}) {
   try {
     const updated = await prisma.apiToken.updateMany({
-      where: { uuid: input.tokenUuid, userUuid: input.userUuid, revokedAt: null },
+      where: {
+        uuid: input.tokenUuid,
+        userUuid: input.userUuid,
+        revokedAt: null,
+        ...(input.requiredScope ? { scopes: { has: input.requiredScope } } : {}),
+      },
       data: { revokedAt: new Date() },
     });
     if (updated.count === 0) return fail("NOT_FOUND" as const);

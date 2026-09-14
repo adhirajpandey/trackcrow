@@ -1,5 +1,5 @@
 import { withRouteLogging } from "@/server/api/logging";
-import { getApiTokens, postApiToken } from "@/server/modules/api-tokens/controller";
+import { getLegacyDeviceTokens, postApiToken } from "@/server/modules/api-tokens/controller";
 
-export const GET = withRouteLogging(getApiTokens);
+export const GET = withRouteLogging(getLegacyDeviceTokens);
 export const POST = withRouteLogging((request) => postApiToken(request, true));
