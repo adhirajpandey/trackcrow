@@ -143,6 +143,24 @@ For VS Code, create `.vscode/mcp.json` or a user-level MCP configuration. The pa
 }
 ```
 
+Configurations that use `${input:trackcrow-token}` are not forwarded to Agent Host because Agent Host does not support interactive inputs. To use TrackCrow from Agent Host, add this noninteractive configuration to a workspace `.mcp.json` or `~/.copilot/mcp-config.json`:
+
+```json
+{
+  "servers": {
+    "trackcrow": {
+      "type": "http",
+      "url": "https://your-trackcrow-domain/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-token>"
+      }
+    }
+  }
+}
+```
+
+This stores the token as plain text, so keep the file out of version control and restrict access to it. Continue using the password input above when running the server through VS Code so the token stays in VS Code's secret storage.
+
 The Codex command was checked against the installed CLI help. The VS Code fields match its current MCP configuration reference. Test discovery, one read, one mutation where allowed, revocation, and the next-call `401` against a preview deployment before production rollout.
 
 ## Deployment order and rollback
