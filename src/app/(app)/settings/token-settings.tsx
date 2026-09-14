@@ -69,10 +69,14 @@ export function TokenSettings({ initialTokens }: { initialTokens: TokenRecord[] 
   }
 
   async function revokeToken(uuid: string) {
-    const response = await fetch(`/api/tokens/${uuid}`, { method: "DELETE" });
-    if (!response.ok) return toast.error("Could not revoke the token");
-    setTokens((current) => current.map((token) => token.uuid === uuid ? { ...token, revokedAt: new Date().toISOString() } : token));
-    toast.success("Token revoked");
+    try {
+      const response = await fetch(`/api/tokens/${uuid}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Token revocation failed");
+      setTokens((current) => current.map((token) => token.uuid === uuid ? { ...token, revokedAt: new Date().toISOString() } : token));
+      toast.success("Token revoked");
+    } catch {
+      toast.error("Could not revoke the token");
+    }
   }
 
   return (
