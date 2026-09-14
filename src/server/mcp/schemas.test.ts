@@ -33,6 +33,18 @@ describe("MCP tool schemas", () => {
     expect(createTransactionInput.safeParse({ ...base, amount: Infinity, timestamp: "2026-09-14T10:00:00Z" }).success).toBe(false);
   });
 
+  it("requires a category when a subcategory is provided", () => {
+    const base = {
+      amount: 1,
+      recipientUuid: crypto.randomUUID(),
+      type: "UPI" as const,
+      timestamp: "2026-09-14T10:00:00+05:30",
+    };
+    expect(createTransactionInput.safeParse({ ...base, subcategoryUuid: crypto.randomUUID() }).success).toBe(false);
+    expect(createTransactionInput.safeParse({ ...base, categoryUuid: null, subcategoryUuid: crypto.randomUUID() }).success).toBe(false);
+    expect(createTransactionInput.safeParse(base).success).toBe(true);
+  });
+
   it("defaults summary grouping and period granularity", () => {
     expect(spendingSummaryInput.parse({ startDate: "2026-09-01", endDate: "2026-09-14" })).toMatchObject({ grouping: "none", periodGranularity: "month" });
   });

@@ -649,6 +649,7 @@ export async function updateTransactionCategory(
         uuid: true,
         categoryId: true,
         subcategoryId: true,
+        classificationSource: true,
         category: { select: { uuid: true, name: true } },
         subcategory: { select: { uuid: true, name: true } },
       },
@@ -685,6 +686,7 @@ export async function updateTransactionCategory(
         category: existing.category?.name ?? null,
         subcategoryUuid: existing.subcategory?.uuid ?? null,
         subcategory: existing.subcategory?.name ?? null,
+        classificationSource: existing.classificationSource,
       });
     }
 
@@ -728,6 +730,7 @@ export async function updateTransactionCategory(
       category: updated.category?.name ?? null,
       subcategoryUuid: updated.subcategory?.uuid ?? null,
       subcategory: updated.subcategory?.name ?? null,
+      classificationSource: updated.classificationSource,
     });
   } catch (error) {
     logger.error(

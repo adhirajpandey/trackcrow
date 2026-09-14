@@ -163,7 +163,7 @@ export function createTrackCrowMcpServer(identity: AuthenticatedToken) {
     handler: async (args: typeof categorizeTransactionInput._output) => {
       const result = await updateTransactionCategory({ userUuid: identity.userUuid, transactionUuid: args.transactionUuid, categoryUuid: args.categoryUuid, ...(Object.prototype.hasOwnProperty.call(args, "subcategoryUuid") ? { subcategoryUuid: args.subcategoryUuid } : {}) });
       if (!result.ok) return failure(result.error === "NOT_FOUND" ? "Transaction not found." : result.error === "VALIDATION_ERROR" ? "The category selection is invalid." : "The transaction could not be categorized.");
-      return success({ ...result.data, classificationSource: "MANUAL" as const });
+      return success(result.data);
     } });
 
   return server;

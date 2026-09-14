@@ -100,6 +100,7 @@ describe("transactions controller", () => {
         category: "Food",
         subcategoryUuid: null,
         subcategory: null,
+        classificationSource: "MANUAL",
       },
     });
 
@@ -119,6 +120,7 @@ describe("transactions controller", () => {
       category: "Food",
       subcategoryUuid: null,
       subcategory: null,
+      classificationSource: "MANUAL",
     });
     expect(updateTransactionCategoryMock).toHaveBeenCalledWith({
       transactionUuid: "550e8400-e29b-41d4-a716-446655440000",

@@ -116,7 +116,15 @@ export const createTransactionInput = z.object({
   reference: optionalText,
   accountLabel: optionalText,
   locationRaw: optionalText,
-}).strict();
+}).strict().superRefine((input, context) => {
+  if (input.subcategoryUuid != null && input.categoryUuid == null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["subcategoryUuid"],
+      message: "subcategoryUuid requires categoryUuid",
+    });
+  }
+});
 export const createTransactionOutput = z.object({ uuid: z.string().uuid() }).strict();
 
 export const categorizeTransactionInput = z.object({
@@ -125,5 +133,5 @@ export const categorizeTransactionInput = z.object({
   subcategoryUuid: nullableUuid.optional(),
 }).strict();
 export const categorizeTransactionOutput = z.object({
-  uuid: z.string().uuid(), categoryUuid: nullableUuid, category: z.string().nullable(), subcategoryUuid: nullableUuid, subcategory: z.string().nullable(), classificationSource: z.literal("MANUAL"),
+  uuid: z.string().uuid(), categoryUuid: nullableUuid, category: z.string().nullable(), subcategoryUuid: nullableUuid, subcategory: z.string().nullable(), classificationSource: z.nativeEnum(ClassificationSource).nullable(),
 }).strict();
