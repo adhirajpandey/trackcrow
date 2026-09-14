@@ -32,6 +32,8 @@ export function fromServiceError(result: ServiceFailure) {
       });
     case "UNPROCESSABLE":
       return jsonError("Unprocessable entity", 422, result.details ? { details: result.details } : undefined);
+    case "SERVICE_UNAVAILABLE":
+      return jsonError("Service unavailable", 503);
     default:
       return jsonError("Internal Server Error", 500);
   }

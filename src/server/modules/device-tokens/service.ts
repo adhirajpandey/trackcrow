@@ -42,7 +42,7 @@ export async function listDeviceTokens(
   input: DeviceTokenListInput
 ): Promise<ServiceResult<DeviceTokenDto[], "INTERNAL_ERROR">> {
   try {
-    const tokens = await prisma.deviceToken.findMany({
+    const tokens = await prisma.apiToken.findMany({
       where: { userUuid: input.userUuid },
       select: {
         uuid: true,
@@ -82,7 +82,7 @@ export async function createDeviceToken(
 > {
   try {
     const plainToken = randomBytes(24).toString("hex");
-    const tokenRecord = await prisma.deviceToken.create({
+    const tokenRecord = await prisma.apiToken.create({
       data: {
         userUuid: input.userUuid,
         label: input.label?.trim() || null,
@@ -127,7 +127,7 @@ export async function revokeDeviceToken(
   input: RevokeDeviceTokenInput
 ): Promise<ServiceResult<{ revoked: true }, "NOT_FOUND" | "INTERNAL_ERROR">> {
   try {
-    const existing = await prisma.deviceToken.findFirst({
+    const existing = await prisma.apiToken.findFirst({
       where: {
         uuid: input.tokenUuid,
         userUuid: input.userUuid,
@@ -140,7 +140,7 @@ export async function revokeDeviceToken(
       return fail("NOT_FOUND");
     }
 
-    await prisma.deviceToken.update({
+    await prisma.apiToken.update({
       where: { id: existing.id },
       data: { revokedAt: new Date() },
     });

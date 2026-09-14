@@ -1,5 +1,5 @@
 export type ImportSmsInput = {
-  token: string | null;
+  userUuid: string;
   message: string;
   location?: string | null;
 };

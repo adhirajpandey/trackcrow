@@ -23,7 +23,7 @@ model User {
   recipients    Recipient[]
   transactions  Transaction[]
   rawMessages   RawMessage[]
-  deviceTokens  DeviceToken[]
+  apiTokens     ApiToken[]
   rules         Rule[]
 
   @@map("user")
@@ -172,19 +172,26 @@ model RawMessage {
   @@map("raw_message")
 }
 
-model DeviceToken {
-  id          Int       @id @default(autoincrement())
-  uuid        String    @unique @default(uuid())
-  userUuid    String    @map("user_uuid")
+model ApiToken {
+  id          Int             @id @default(autoincrement())
+  uuid        String          @unique @default(uuid())
+  userUuid    String          @map("user_uuid")
   label       String?
-  tokenHash   String    @unique @map("token_hash")
-  tokenPrefix String    @map("token_prefix")
-  createdAt   DateTime  @default(now())
-  lastUsedAt  DateTime? @map("last_used_at")
-  revokedAt   DateTime? @map("revoked_at")
-  user        User      @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  tokenHash   String          @unique @map("token_hash")
+  tokenPrefix String          @map("token_prefix")
+  scopes      ApiTokenScope[] @default([SMS_IMPORT])
+  createdAt   DateTime        @default(now())
+  lastUsedAt  DateTime?       @map("last_used_at")
+  revokedAt   DateTime?       @map("revoked_at")
+  user        User            @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
 
   @@map("device_token")
+}
+
+enum ApiTokenScope {
+  TRANSACTIONS_READ  @map("transactions:read")
+  TRANSACTIONS_WRITE @map("transactions:write")
+  SMS_IMPORT         @map("sms:import")
 }
 
 enum TransactionType {

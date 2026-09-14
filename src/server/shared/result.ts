@@ -6,7 +6,8 @@ export type ServiceErrorCode =
   | "UNPROCESSABLE"
   | "RULE_RECIPIENT_CONFLICT"
   | "TRANSACTION_SUGGESTION_CONFLICT"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "SERVICE_UNAVAILABLE";
 
 export type ServiceSuccess<T> = { ok: true; data: T };
 export type ServiceFailure<E extends ServiceErrorCode = ServiceErrorCode> = {

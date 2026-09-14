@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { parseTransactionMessage } from "@/common/sms-parser";
 import { ParseStatus, TransactionSource } from "@/generated/prisma-rewrite";
-import { hashDeviceToken } from "@/server/modules/device-tokens/service";
 import { createTransaction } from "@/server/modules/transactions/service";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
@@ -13,47 +12,15 @@ export async function importSmsTransaction(
 ): Promise<
   ServiceResult<
     { uuid: string },
-    "UNAUTHORIZED" | "UNPROCESSABLE" | "INTERNAL_ERROR"
+    "UNPROCESSABLE" | "INTERNAL_ERROR"
   >
 > {
-  if (!input.token) {
-    logger.warn({
-      event: "auth.failed",
-      message: "SMS import rejected because the device token is missing",
-    });
-    return fail("UNAUTHORIZED");
-  }
-
   try {
-    const tokenRecord = await prisma.deviceToken.findFirst({
-      where: {
-        tokenHash: hashDeviceToken(input.token),
-        revokedAt: null,
-      },
-      select: {
-        id: true,
-        userUuid: true,
-      },
-    });
-
-    if (!tokenRecord) {
-      logger.warn({
-        event: "auth.failed",
-        message: "SMS import rejected because the device token is invalid",
-      });
-      return fail("UNAUTHORIZED");
-    }
-
-    await prisma.deviceToken.update({
-      where: { id: tokenRecord.id },
-      data: { lastUsedAt: new Date() },
-    });
-
     const parsed = parseTransactionMessage(input.message);
     if (!parsed?.amount || !parsed.recipient) {
       await prisma.rawMessage.create({
         data: {
-          userUuid: tokenRecord.userUuid,
+          userUuid: input.userUuid,
           body: input.message,
           parseStatus: ParseStatus.UNPARSEABLE,
           parserName: null,
@@ -65,7 +32,7 @@ export async function importSmsTransaction(
 
       logger.warn({
         event: "sms_import.parse_failed",
-        userId: tokenRecord.userUuid,
+        userId: input.userUuid,
         hasAmount: Boolean(parsed?.amount),
         hasRecipient: Boolean(parsed?.recipient),
         message: "SMS import could not extract required fields",
@@ -81,7 +48,7 @@ export async function importSmsTransaction(
     }
 
     const transaction = await createTransaction({
-      userUuid: tokenRecord.userUuid,
+      userUuid: input.userUuid,
       amount: parsed.amount,
       recipientRaw: parsed.recipient,
       recipientName: parsed.recipient_name ?? null,
@@ -97,7 +64,7 @@ export async function importSmsTransaction(
     if (!transaction.ok) {
       await prisma.rawMessage.create({
         data: {
-          userUuid: tokenRecord.userUuid,
+          userUuid: input.userUuid,
           body: input.message,
           parseStatus: ParseStatus.FAILED,
           parserName: null,
@@ -109,7 +76,7 @@ export async function importSmsTransaction(
       if (transaction.error === "VALIDATION_ERROR") {
         logger.warn({
           event: "sms_import.transaction_failed",
-          userId: tokenRecord.userUuid,
+          userId: input.userUuid,
           message: "SMS import produced an unprocessable transaction",
         });
         return fail("UNPROCESSABLE");
@@ -120,7 +87,7 @@ export async function importSmsTransaction(
     const createdTransaction = await prisma.transaction.findFirst({
       where: {
         uuid: transaction.data.uuid,
-        userUuid: tokenRecord.userUuid,
+        userUuid: input.userUuid,
       },
       select: { id: true },
     });
@@ -130,7 +97,7 @@ export async function importSmsTransaction(
 
     await prisma.rawMessage.create({
       data: {
-        userUuid: tokenRecord.userUuid,
+        userUuid: input.userUuid,
         transactionId: createdTransaction.id,
         body: input.message,
         parseStatus: ParseStatus.PARSED,
@@ -142,7 +109,7 @@ export async function importSmsTransaction(
 
     logger.info({
       event: "sms_import.created",
-      userId: tokenRecord.userUuid,
+      userId: input.userUuid,
       transactionId: createdTransaction.id,
       source: TransactionSource.SMS,
     });
