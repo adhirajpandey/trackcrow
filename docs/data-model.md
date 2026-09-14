@@ -109,15 +109,21 @@ Service behavior:
 
 Raw messages are not deleted automatically when transactions are created.
 
-### DeviceToken
+### ApiToken
 
-`DeviceToken` authorizes SMS import clients.
+`ApiToken` authorizes MCP and SMS clients. Prisma maps it to the existing `device_token` table.
 
 - belongs to one user
 - only a SHA-256 `tokenHash` and short `tokenPrefix` are stored
 - the plain token is generated once and returned only at creation time
+- `scopes` is a nonempty immutable selection of `transactions:read`, `transactions:write`, and `sms:import`
+- migrated and legacy-created tokens have only `sms:import`; the database retains that default for older app versions
 - `revokedAt` marks tokens as inactive
-- `lastUsedAt` is updated on successful token authentication
+- `lastUsedAt` is conditionally updated after successful authentication when empty or older than ten minutes
+
+### RateLimitBucket
+
+`RateLimitBucket` stores one fixed-window counter row per opaque bucket key. It contains the count, window start, and expiry. The PostgreSQL adapter resets and increments the row atomically and deletes a bounded batch of old rows during consumption.
 
 ## Relationship Summary
 
@@ -134,7 +140,8 @@ User
   |              -> Subcategory?
   |              -> Rule?
   |- RawMessage -> Transaction?
-  `- DeviceToken
+  |- ApiToken
+  `- RateLimitBucket (not user-owned; opaque request-protection key)
 ```
 
 ## Seeded Defaults
@@ -148,7 +155,7 @@ The current bootstrap seed creates these top-level categories:
 
 ## Delete Behavior
 
-- deleting a user cascades to categories, subcategories, recipients, rules, transactions, raw messages, and device tokens
+- deleting a user cascades to categories, subcategories, recipients, rules, transactions, raw messages, and API tokens
 - deleting a category sets `transaction.categoryId` to `null`
 - deleting a subcategory sets `transaction.subcategoryId` to `null`
 - deleting a category or subcategory disables affected rules and marks them `NEEDS_REPAIR`
