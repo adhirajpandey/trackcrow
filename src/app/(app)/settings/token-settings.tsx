@@ -39,7 +39,7 @@ function approximateDate(value: string | null) {
   return new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" }).format(new Date(value));
 }
 
-export function TokenSettings({ initialTokens }: { initialTokens: TokenRecord[] }) {
+export function TokenSettings({ initialTokens, mcpUrl }: { initialTokens: TokenRecord[]; mcpUrl: string }) {
   const [tokens, setTokens] = useState(initialTokens);
   const [label, setLabel] = useState("");
   const [scopes, setScopes] = useState<Scope[]>(["TRANSACTIONS_READ"]);
@@ -129,7 +129,7 @@ export function TokenSettings({ initialTokens }: { initialTokens: TokenRecord[] 
 
       <Card>
         <CardHeader><CardTitle>MCP setup</CardTitle><p className="mt-1 text-sm text-secondary-foreground">Use the token as an HTTP Bearer credential. Session cookies do not work here.</p></CardHeader>
-        <CardContent className="space-y-3 text-sm"><p>Server URL: <code className="rounded bg-secondary px-2 py-1">https://your-trackcrow-domain/mcp</code></p><pre className="overflow-x-auto rounded-md border bg-secondary p-3">{`Authorization: Bearer <your-token>`}</pre><p>Transaction creation uses INR and requires an existing recipient UUID. Dates are interpreted in Asia/Kolkata. Do not retry a create call after an uncertain response because it may create a duplicate.</p></CardContent>
+        <CardContent className="space-y-3 text-sm"><p>Server URL: <code className="rounded bg-secondary px-2 py-1">{mcpUrl}</code></p><pre className="overflow-x-auto rounded-md border bg-secondary p-3">{`Authorization: Bearer <your-token>`}</pre><p>Transaction creation uses INR and requires an existing recipient UUID. Dates are interpreted in Asia/Kolkata. Do not retry a create call after an uncertain response because it may create a duplicate.</p></CardContent>
       </Card>
     </div>
   );
