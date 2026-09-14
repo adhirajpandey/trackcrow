@@ -1,4 +1,5 @@
 import { Prisma } from "@/generated/prisma-rewrite";
+import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma-rewrite";
 
 import type { RateLimiter, RateLimitResult } from "./types";
@@ -36,7 +37,14 @@ export class PostgresRateLimiter implements RateLimiter {
       RETURNING "count", "window_start" AS "windowStart"
     `);
 
-    await this.cleanup();
+    try {
+      await this.cleanup();
+    } catch (error) {
+      logger.warn({
+        event: "rate_limit.cleanup_failed",
+        message: error instanceof Error ? error.message : "Unknown cleanup error",
+      });
+    }
     return result(rows[0], limit, windowSeconds);
   }
 
