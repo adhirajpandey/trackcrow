@@ -39,7 +39,7 @@ export const transactionDetailFormSchema = z.object({
       message: "Enter a valid date and time",
     }),
   reference: z.string().trim(),
-  accountLabel: z.string().trim(),
+  accountUuid: z.string(),
   remarks: z.string().trim(),
   locationRaw: z.string().trim(),
 });
@@ -93,7 +93,7 @@ export function mapTransactionToFormValues(
     type: transaction.type,
     timestamp: formatDateTimeLocalValue(transaction.timestamp),
     reference: transaction.reference ?? "",
-    accountLabel: transaction.accountLabel ?? "",
+    accountUuid: transaction.accountUuid ?? "",
     remarks: transaction.remarks ?? "",
     locationRaw: transaction.locationRaw ?? "",
   };
@@ -112,7 +112,7 @@ export function mapFormValuesToTransactionPayload(
       ? transaction.timestamp
       : parseDateTimeLocalAsIst(values.timestamp).toISOString(),
     reference: toNullableTrimmedString(values.reference),
-    accountLabel: toNullableTrimmedString(values.accountLabel),
+    accountUuid: toNullableUuid(values.accountUuid),
     remarks: toNullableTrimmedString(values.remarks),
     locationRaw: toNullableTrimmedString(values.locationRaw),
   };

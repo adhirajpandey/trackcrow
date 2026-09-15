@@ -65,9 +65,9 @@ export const createTransactionSchema = z.object({
   remarks: optionalNullableString,
   timestamp: z.coerce.date(),
   reference: optionalNullableString,
-  accountLabel: optionalNullableString,
+  accountUuid: optionalNullableUuid,
   locationRaw: optionalNullableString,
-});
+}).strict();
 
 function requireSuggestionPair(
   value: { categoryUuid?: string | null; subcategoryUuid?: string | null; classificationIntent?: "SUGGESTION" },

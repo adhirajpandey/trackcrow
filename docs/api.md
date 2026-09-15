@@ -37,7 +37,7 @@ The existing `/api/device-tokens` routes remain available. Legacy creation grant
 
 Authenticated tokens may make 120 POST requests per minute. Invalid credentials share a ten-attempt-per-minute client-IP budget. A blocked request returns `429` with `Retry-After`.
 
-The six tools are `search_transactions`, `get_spending_summary`, `list_categories`, `search_recipients`, `create_transaction`, and `categorize_transaction`. Read tools require `transactions:read`; mutation tools require `transactions:write`. Inputs reject unknown fields and never accept `userUuid`. Read dates are inclusive Asia/Kolkata calendar days. Manual creation uses INR, requires an existing recipient, and is non-idempotent. Do not retry creation after an uncertain response because the first call may have succeeded.
+The seven tools are `search_transactions`, `get_spending_summary`, `list_categories`, `list_accounts`, `search_recipients`, `create_transaction`, and `categorize_transaction`. Read tools require `transactions:read`; mutation tools require `transactions:write`. Inputs reject unknown fields and never accept `userUuid`. Read dates are inclusive Asia/Kolkata calendar days. Manual creation uses INR, requires an existing recipient, accepts an optional existing account UUID, and is non-idempotent. Do not retry creation after an uncertain response because the first call may have succeeded.
 
 ## Routes
 
@@ -112,6 +112,14 @@ Same body as create. Returns `{ "uuid": "..." }`.
 
 Returns `{ "uuid": "..." }`.
 
+### Accounts
+
+`GET /api/accounts` returns the current user's accounts as `{ "uuid", "name" }`, ordered by name.
+
+`POST /api/accounts` accepts `{ "name": "Kotak" }`. `PATCH /api/accounts/:accountUuid` accepts the same body. Names are trimmed and repeated whitespace is collapsed. Names that differ only by casing or whitespace conflict within one user and return `409`. Unknown accounts and accounts owned by another user both return `404` on rename.
+
+Accounts cannot be deleted through the API.
+
 ### Transactions
 
 ### `GET /api/transactions`
@@ -148,7 +156,7 @@ Each transaction includes:
 - `uuid`, `userUuid`, `recipientUuid`
 - `amount`, `currency`, `type`, `source`
 - `recipientDisplayName`
-- `reference`, `accountLabel`, `remarks`, `locationRaw`
+- `reference`, `accountUuid`, `accountName`, `remarks`, `locationRaw`
 - `timestamp`, `createdAt`, `updatedAt`
 - `category`, `subcategory`, `categoryUuid`, `subcategoryUuid`
 - `classificationSource` and `classificationChangedAt`
@@ -169,12 +177,12 @@ Request body:
   "remarks": "Dinner",
   "timestamp": "2026-06-21T10:00:00.000Z",
   "reference": "123",
-  "accountLabel": "HDFC",
+  "accountUuid": "...",
   "locationRaw": "Bangalore"
 }
 ```
 
-`categoryUuid` and `subcategoryUuid` may be `null`. Manual creation records `classificationSource: "MANUAL"`. Returns `201` with `{ "uuid": "..." }`.
+`categoryUuid`, `subcategoryUuid`, and `accountUuid` may be `null`. The server verifies that an account belongs to the authenticated user. `accountLabel` is no longer accepted. Manual creation records `classificationSource: "MANUAL"`. Returns `201` with `{ "uuid": "..." }`.
 
 ### `GET /api/transactions/:id`
 
@@ -184,7 +192,7 @@ Returns one transaction DTO with the same fields as the list item plus `recipien
 
 ### `PATCH /api/transactions/:id`
 
-Same shape as create, except `recipientUuid` is not accepted. The optional `classificationIntent: "SUGGESTION"` marks the category change as an accepted suggestion and requires both `categoryUuid` and `subcategoryUuid` to be present. Returns `{ "uuid": "..." }`.
+Same shape as create, except `recipientUuid` is not accepted. Omitting `accountUuid` preserves the current account; sending `null` clears it. The optional `classificationIntent: "SUGGESTION"` marks the category change as an accepted suggestion and requires both `categoryUuid` and `subcategoryUuid` to be present. Returns `{ "uuid": "..." }`.
 
 When the submitted category pair no longer matches the current suggestion, returns `409` with:
 

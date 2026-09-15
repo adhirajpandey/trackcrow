@@ -6,6 +6,7 @@ import type { TransactionDetailPageInitialData } from "@/features/transactions/t
 import {
   getTransaction,
   getCategories,
+  getAccounts,
   isInternalApiError,
 } from "@/lib/internal-api";
 import { requirePageSessionUser } from "@/server/auth/session";
@@ -16,6 +17,7 @@ export async function getTransactionDetailPageData(
   await requirePageSessionUser();
 
   const categoriesPromise = getCategories().catch(() => []);
+  const accountsPromise = getAccounts().catch(() => []);
 
   try {
     const transaction = await getTransaction(transactionUuid);
@@ -24,6 +26,7 @@ export async function getTransactionDetailPageData(
       transactionUuid,
       initialTransactionData: transaction,
       initialCategoriesData: await categoriesPromise,
+      initialAccountsData: await accountsPromise,
     };
   } catch (error) {
     if (isInternalApiError(error) && error.status === 404) {

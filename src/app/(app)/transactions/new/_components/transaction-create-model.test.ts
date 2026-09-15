@@ -17,7 +17,7 @@ describe("transaction create model", () => {
       type: "UPI",
       timestamp: "2026-07-12T20:42",
       reference: "",
-      accountLabel: "",
+      accountUuid: "",
       remarks: "",
       locationRaw: "",
     });
@@ -44,7 +44,7 @@ describe("transaction create model", () => {
         type: "UPI",
         timestamp: "2026-07-12T20:42",
         reference: "  UPI-123  ",
-        accountLabel: " ",
+        accountUuid: "",
         remarks: " Ride home ",
         locationRaw: " ",
       }),
@@ -56,7 +56,7 @@ describe("transaction create model", () => {
       type: "UPI",
       timestamp: "2026-07-12T15:12:00.000Z",
       reference: "UPI-123",
-      accountLabel: null,
+      accountUuid: null,
       remarks: "Ride home",
       locationRaw: null,
     });

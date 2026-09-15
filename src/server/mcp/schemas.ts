@@ -35,7 +35,8 @@ const transactionOutput = z.object({
   recipientUuid: z.string().uuid(),
   recipientDisplayName: z.string(),
   reference: z.string().nullable(),
-  accountLabel: z.string().nullable(),
+  accountUuid: nullableUuid,
+  accountName: z.string().nullable(),
   remarks: z.string().nullable(),
   locationRaw: z.string().nullable(),
   timestamp: z.string(),
@@ -95,6 +96,11 @@ export const listCategoriesOutput = z.object({ categories: z.array(z.object({
   uuid: z.string().uuid(), name: z.string(), subcategories: z.array(z.object({ uuid: z.string().uuid(), name: z.string() }).strict()),
 }).strict()) }).strict();
 
+export const listAccountsInput = z.object({}).strict();
+export const listAccountsOutput = z.object({
+  accounts: z.array(z.object({ uuid: z.string().uuid(), name: z.string() }).strict()),
+}).strict();
+
 export const searchRecipientsInput = z.object({
   query: query.optional(), page, limit,
 }).strict();
@@ -114,7 +120,7 @@ export const createTransactionInput = z.object({
   subcategoryUuid: nullableUuid.optional(),
   remarks: optionalText,
   reference: optionalText,
-  accountLabel: optionalText,
+  accountUuid: nullableUuid.optional(),
   locationRaw: optionalText,
 }).strict().superRefine((input, context) => {
   if (input.subcategoryUuid != null && input.categoryUuid == null) {

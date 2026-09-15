@@ -7,6 +7,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
     subcategory: {
       findFirst: jest.fn(),
     },
+    account: { findFirst: jest.fn() },
     rule: { findMany: jest.fn() },
     transaction: {
       count: jest.fn(),
@@ -57,7 +58,7 @@ function transactionRecord(overrides: Record<string, unknown> = {}) {
     recipientRaw: "merchant@upi",
     recipientName: "Merchant",
     reference: null,
-    accountLabel: null,
+    accountId: null,
     remarks: null,
     locationRaw: null,
     timestamp: now,
@@ -69,6 +70,7 @@ function transactionRecord(overrides: Record<string, unknown> = {}) {
     classificationRuleId: null,
     classificationChangedAt: now,
     classificationRule: null,
+    account: null,
     recipient: { uuid: "rcp-30", displayName: "Merchant" },
     category: { uuid: "cat-food", name: "Food" },
     subcategory: { uuid: "sub-dinner", name: "Dinner" },
@@ -122,6 +124,49 @@ describe("transaction service", () => {
     });
   });
 
+  it("resolves an owned account UUID before creating", async () => {
+    mockPrisma.account.findFirst.mockResolvedValueOnce({ id: 44 });
+    resolveRecipientMock.mockResolvedValueOnce({
+      ok: true,
+      data: { recipientId: 30, recipientUuid: "rcp-30", displayName: "Merchant" },
+    });
+    mockPrisma.rule.findMany.mockResolvedValueOnce([]);
+    mockPrisma.transaction.create.mockResolvedValueOnce({ id: 1, uuid: "txn-1" });
+
+    await expect(createTransaction({
+      userUuid: "user-1",
+      amount: 25,
+      recipientRaw: "merchant@upi",
+      accountUuid: "550e8400-e29b-41d4-a716-446655440001",
+      type: TransactionType.UPI,
+      timestamp: new Date(),
+      source: TransactionSource.SMS,
+    })).resolves.toEqual({ ok: true, data: { uuid: "txn-1" } });
+
+    expect(mockPrisma.account.findFirst).toHaveBeenCalledWith({
+      where: { uuid: "550e8400-e29b-41d4-a716-446655440001", userUuid: "user-1" },
+      select: { id: true },
+    });
+    expect(mockPrisma.transaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ accountId: 44 }),
+    }));
+  });
+
+  it("rejects an unknown or foreign account before creating", async () => {
+    mockPrisma.account.findFirst.mockResolvedValueOnce(null);
+    await expect(createTransaction({
+      userUuid: "user-1",
+      amount: 25,
+      recipientRaw: "merchant@upi",
+      accountUuid: "550e8400-e29b-41d4-a716-446655440002",
+      type: TransactionType.UPI,
+      timestamp: new Date(),
+      source: TransactionSource.SMS,
+    })).resolves.toEqual({ ok: false, error: "VALIDATION_ERROR" });
+    expect(resolveRecipientMock).not.toHaveBeenCalled();
+    expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a subcategory UUID that belongs to a different category", async () => {
     mockPrisma.category.findFirst.mockResolvedValueOnce({ id: 10 });
     mockPrisma.subcategory.findFirst.mockResolvedValueOnce({ id: 20, categoryId: 99 });
@@ -171,7 +216,6 @@ describe("transaction service", () => {
       remarks: " dinner ",
       timestamp,
       reference: " ref ",
-      accountLabel: " hdfc ",
       locationRaw: " office ",
       source: TransactionSource.MANUAL,
     });
@@ -182,7 +226,7 @@ describe("transaction service", () => {
         recipientRaw: "merchant@upi",
         recipientName: "Merchant",
         reference: "ref",
-        accountLabel: "hdfc",
+        accountId: null,
         remarks: "dinner",
         locationRaw: "office",
       }),

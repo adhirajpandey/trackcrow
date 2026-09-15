@@ -165,13 +165,13 @@ The Codex command was checked against the installed CLI help. The VS Code fields
 
 ## Deployment order and rollback
 
-Deploy `20260914_generalize_api_tokens` and `20260914_add_rate_limit_buckets` before application code. These migrations only add scope data and the rate-limit table. Rolling back application code does not require deleting scopes or regenerating tokens. Keep the physical `device_token` table and compatibility routes.
+Apply `20260915_track_accounts` during a coordinated write pause after taking a database backup. Rehearse it against a recent database copy first. The migration creates one account per user and normalized legacy label, links transactions, verifies the links, then drops `account_label`. Deploy the application immediately after the migration because older application versions require that dropped column. A rollback requires restoring the backup or writing a reverse data migration.
 
 ## Current runtime notes
 
 - authenticated app pages use a shared shell from `src/app/(app)/layout.tsx`
 - implemented page-data reads currently back dashboard, transactions, transaction detail, transaction create, recipients, and recipient detail routes
-- `/settings` manages scoped personal API tokens
+- `/settings` manages accounts and scoped personal API tokens
 - `/mcp` runs stateless MCP v2 with legacy stateless compatibility
 - Next.js remote image loading is currently enabled for `lh3.googleusercontent.com`
 

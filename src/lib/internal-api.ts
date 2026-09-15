@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 
 import type {
   CategoryOption,
+  AccountOption,
   DeviceTokenRecord,
   TransactionListResponse,
   TransactionRecord,
@@ -112,6 +113,10 @@ export async function getCategories() {
   return internalApiRequest<CategoryOption[]>("/api/categories");
 }
 
+export async function getAccounts() {
+  return internalApiRequest<AccountOption[]>("/api/accounts");
+}
+
 export async function getTransactions(pathnameQuery: string) {
   return internalApiRequest<TransactionListResponse>(`/api/transactions${pathnameQuery}`);
 }
@@ -137,7 +142,7 @@ export async function createManualTransaction(input: {
   remarks?: string | null;
   timestamp: string;
   reference?: string | null;
-  accountLabel?: string | null;
+  accountUuid?: string | null;
   locationRaw?: string | null;
 }) {
   return internalApiRequest<{ uuid: string }>(
@@ -156,7 +161,7 @@ export async function updateManualTransaction(
     remarks?: string | null;
     timestamp: string;
     reference?: string | null;
-    accountLabel?: string | null;
+    accountUuid?: string | null;
     locationRaw?: string | null;
     source?: TransactionSource;
   }

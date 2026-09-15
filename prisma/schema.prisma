@@ -21,12 +21,28 @@ model User {
   categories    Category[]
   subcategories Subcategory[]
   recipients    Recipient[]
+  accounts      Account[]
   transactions  Transaction[]
   rawMessages   RawMessage[]
   apiTokens     ApiToken[]
   rules         Rule[]
 
   @@map("user")
+}
+
+model Account {
+  id             Int           @id @default(autoincrement())
+  uuid           String        @unique @default(uuid())
+  userUuid       String        @map("user_uuid")
+  name           String
+  normalizedName String        @map("normalized_name")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  transactions   Transaction[]
+
+  @@unique([userUuid, normalizedName])
+  @@map("account")
 }
 
 model Category {
@@ -103,6 +119,7 @@ model Transaction {
   recipientId             Int                   @map("recipient_id")
   categoryId              Int?                  @map("category_id")
   subcategoryId           Int?                  @map("subcategory_id")
+  accountId               Int?                  @map("account_id")
   classificationSource    ClassificationSource? @map("classification_source")
   classificationRuleId    Int?                  @map("classification_rule_id")
   classificationChangedAt DateTime?             @map("classification_changed_at")
@@ -113,7 +130,6 @@ model Transaction {
   recipientRaw            String                @map("recipient_raw")
   recipientName           String?               @map("recipient_name")
   reference               String?
-  accountLabel            String?               @map("account_label")
   remarks                 String?
   locationRaw             String?               @map("location_raw")
   timestamp               DateTime              @db.Timestamptz(6)
@@ -123,10 +139,12 @@ model Transaction {
   recipient               Recipient             @relation(fields: [recipientId], references: [id], onDelete: Restrict)
   category                Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subcategory             Subcategory?          @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  account                 Account?              @relation(fields: [accountId], references: [id], onDelete: Restrict)
   classificationRule      Rule?                 @relation(fields: [classificationRuleId], references: [id], onDelete: SetNull)
   rawMessages             RawMessage[]
 
   @@map("transaction")
+  @@index([userUuid, accountId])
 }
 
 model Rule {

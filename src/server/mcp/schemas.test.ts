@@ -1,6 +1,7 @@
 import {
   categorizeTransactionInput,
   createTransactionInput,
+  listAccountsOutput,
   searchTransactionsInput,
   searchRecipientsOutput,
   spendingSummaryInput,
@@ -44,6 +45,18 @@ describe("MCP tool schemas", () => {
     expect(createTransactionInput.safeParse({ ...base, subcategoryUuid: crypto.randomUUID() }).success).toBe(false);
     expect(createTransactionInput.safeParse({ ...base, categoryUuid: null, subcategoryUuid: crypto.randomUUID() }).success).toBe(false);
     expect(createTransactionInput.safeParse(base).success).toBe(true);
+  });
+
+  it("accepts account UUIDs and rejects the removed account label", () => {
+    const base = {
+      amount: 1,
+      recipientUuid: crypto.randomUUID(),
+      type: "UPI" as const,
+      timestamp: "2026-09-14T10:00:00+05:30",
+    };
+    expect(createTransactionInput.safeParse({ ...base, accountUuid: crypto.randomUUID() }).success).toBe(true);
+    expect(createTransactionInput.safeParse({ ...base, accountLabel: "HDFC" }).success).toBe(false);
+    expect(listAccountsOutput.safeParse({ accounts: [{ uuid: crypto.randomUUID(), name: "HDFC" }] }).success).toBe(true);
   });
 
   it("defaults summary grouping and period granularity", () => {

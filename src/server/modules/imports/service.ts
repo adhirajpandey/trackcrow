@@ -4,6 +4,7 @@ import { parseTransactionMessage } from "@/common/sms-parser";
 import { ParseStatus, TransactionSource } from "@/generated/prisma-rewrite";
 import { createTransaction } from "@/server/modules/transactions/service";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
+import { matchAccountByName } from "@/server/modules/accounts/service";
 
 import type { ImportSmsInput } from "./types";
 
@@ -47,6 +48,12 @@ export async function importSmsTransaction(
       });
     }
 
+    const accountMatch = await matchAccountByName({
+      userUuid: input.userUuid,
+      name: parsed.account,
+    });
+    if (!accountMatch.ok) return fail("INTERNAL_ERROR");
+
     const transaction = await createTransaction({
       userUuid: input.userUuid,
       amount: parsed.amount,
@@ -56,7 +63,7 @@ export async function importSmsTransaction(
       remarks: null,
       timestamp: new Date(),
       reference: parsed.reference ?? null,
-      accountLabel: parsed.account ?? null,
+      accountUuid: accountMatch.data.accountUuid,
       locationRaw: input.location ?? null,
       source: TransactionSource.SMS,
     });

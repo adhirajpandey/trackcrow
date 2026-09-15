@@ -29,7 +29,7 @@ export const transactionCreateFormSchema = z.object({
       },
     ),
   reference: z.string().trim(),
-  accountLabel: z.string().trim(),
+  accountUuid: z.string(),
   remarks: z.string().trim(),
   locationRaw: z.string().trim(),
 });
@@ -51,7 +51,7 @@ export function getCreateTransactionDefaultValues(
     type: "UPI",
     timestamp: formatDateTimeLocalValue(now.toISOString()),
     reference: "",
-    accountLabel: "",
+    accountUuid: "",
     remarks: "",
     locationRaw: "",
   };
@@ -66,7 +66,7 @@ export function mapCreateFormValuesToPayload(
     type: values.type,
     timestamp: parseDateTimeLocalAsIst(values.timestamp).toISOString(),
     reference: toNullableValue(values.reference),
-    accountLabel: toNullableValue(values.accountLabel),
+    accountUuid: toNullableValue(values.accountUuid),
     remarks: toNullableValue(values.remarks),
     locationRaw: toNullableValue(values.locationRaw),
   };

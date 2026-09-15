@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import type { AccountOption } from "@/common/types";
+import { AccountSettings } from "./account-settings";
 
 type Scope = "TRANSACTIONS_READ" | "TRANSACTIONS_WRITE" | "SMS_IMPORT";
 type TokenRecord = {
@@ -39,7 +41,7 @@ function approximateDate(value: string | null) {
   return new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" }).format(new Date(value));
 }
 
-export function TokenSettings({ initialTokens, mcpUrl }: { initialTokens: TokenRecord[]; mcpUrl: string }) {
+export function TokenSettings({ initialTokens, initialAccounts, mcpUrl }: { initialTokens: TokenRecord[]; initialAccounts: AccountOption[]; mcpUrl: string }) {
   const [tokens, setTokens] = useState(initialTokens);
   const [label, setLabel] = useState("");
   const [scopes, setScopes] = useState<Scope[]>(["TRANSACTIONS_READ"]);
@@ -85,6 +87,8 @@ export function TokenSettings({ initialTokens, mcpUrl }: { initialTokens: TokenR
         <h1 className="text-3xl font-black tracking-tight">Settings</h1>
         <p className="mt-2 text-sm text-secondary-foreground">Create personal API tokens for MCP clients and SMS import.</p>
       </div>
+
+      <AccountSettings initialAccounts={initialAccounts} />
 
       {plainToken ? (
         <Card className="border-primary bg-[var(--paper-mint)]">

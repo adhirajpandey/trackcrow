@@ -25,6 +25,7 @@ import {
   dashboardPanelClassName,
 } from "@/app/(app)/dashboard/_components/dashboard-style";
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { AccountPicker } from "@/components/product/account-picker";
 import {
   MobileActionBar,
   MobilePageHeader,
@@ -33,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
+import { useAccountsQuery } from "@/features/accounts/queries";
 import { useCreateTransactionMutation } from "@/features/transactions/mutations";
 import type { TransactionCreatePageInitialData } from "@/features/transactions/types";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
@@ -54,12 +56,14 @@ const textAreaClassName = `${fieldClassName} min-h-[112px] py-3`;
 export function TransactionCreatePageView({
   initialCategoriesData,
   initialRecipientsData,
+  initialAccountsData,
 }: TransactionCreatePageInitialData) {
   const router = useRouter();
   const categoriesQuery = useCategoriesQuery({
     initialData: initialCategoriesData,
   });
   const createMutation = useCreateTransactionMutation();
+  const accountsQuery = useAccountsQuery({ initialData: initialAccountsData });
   const [banner, setBanner] = useState<string | null>(null);
   const [moreDetailsOpen, setMoreDetailsOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<{
@@ -67,6 +71,7 @@ export function TransactionCreatePageView({
     displayName: string;
   } | null>(null);
   const categories = categoriesQuery.data ?? initialCategoriesData;
+  const accounts = accountsQuery.data ?? initialAccountsData;
   const form = useForm<TransactionCreateFormSchema>({
     resolver: zodResolver(transactionCreateFormSchema),
     defaultValues: getCreateTransactionDefaultValues(),
@@ -226,7 +231,7 @@ export function TransactionCreatePageView({
                   />
                 </div>
               </Field>
-              <Field label="Type" error={form.formState.errors.type?.message}>
+              <Field label="Payment method" error={form.formState.errors.type?.message}>
                 <Controller
                   control={form.control}
                   name="type"
@@ -365,14 +370,13 @@ export function TransactionCreatePageView({
                 moreDetailsOpen ? "grid" : "hidden lg:grid",
               )}
             >
-              <Field
-                label="Account label"
-                error={form.formState.errors.accountLabel?.message}
-              >
-                <input
-                  autoComplete="off"
-                  className={fieldClassName}
-                  {...form.register("accountLabel")}
+              <Field label="Account" error={form.formState.errors.accountUuid?.message}>
+                <Controller
+                  control={form.control}
+                  name="accountUuid"
+                  render={({ field }) => (
+                    <AccountPicker value={field.value} accounts={accounts} onChange={field.onChange} triggerClassName={fieldClassName} />
+                  )}
                 />
               </Field>
               <Field
@@ -447,7 +451,7 @@ export function TransactionCreatePageView({
               label="Recipient"
               value={selectedRecipient?.displayName ?? "Not selected"}
             />
-            <SummaryItem label="Type" value={transactionType} />
+            <SummaryItem label="Payment method" value={transactionType} />
             <SummaryItem
               label="Classification"
               value={

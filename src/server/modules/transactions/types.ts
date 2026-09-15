@@ -13,7 +13,8 @@ export type TransactionDto = {
   recipientName?: string | null;
   recipientDisplayName: string;
   reference: string | null;
-  accountLabel: string | null;
+  accountUuid: string | null;
+  accountName: string | null;
   remarks: string | null;
   locationRaw: string | null;
   timestamp: string;
@@ -74,7 +75,7 @@ export type TransactionWriteBaseInput = {
   remarks?: string | null;
   timestamp: Date;
   reference?: string | null;
-  accountLabel?: string | null;
+  accountUuid?: string | null;
   locationRaw?: string | null;
   source: TransactionSource;
 };

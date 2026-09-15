@@ -94,11 +94,13 @@ export type TransactionDetailPageInitialData = {
   transactionUuid: string;
   initialTransactionData: TransactionRecord;
   initialCategoriesData: CategoryOption[];
+  initialAccountsData: import("@/common/types").AccountOption[];
 };
 
 export type TransactionCreatePageInitialData = {
   initialCategoriesData: CategoryOption[];
   initialRecipientsData: import("@/features/recipients/types").RecipientListItemDto[];
+  initialAccountsData: import("@/common/types").AccountOption[];
 };
 
 export type TransactionCreateInput = {
@@ -110,7 +112,7 @@ export type TransactionCreateInput = {
   remarks?: string | null;
   timestamp: string;
   reference?: string | null;
-  accountLabel?: string | null;
+  accountUuid?: string | null;
   locationRaw?: string | null;
 };
 
@@ -122,7 +124,7 @@ export type TransactionMutationInput = {
   remarks?: string | null;
   timestamp: string;
   reference?: string | null;
-  accountLabel?: string | null;
+  accountUuid?: string | null;
   locationRaw?: string | null;
 };
 
@@ -145,7 +147,7 @@ export type TransactionDetailFormValues = {
   type: TransactionType;
   timestamp: string;
   reference: string;
-  accountLabel: string;
+  accountUuid: string;
   remarks: string;
   locationRaw: string;
 };
