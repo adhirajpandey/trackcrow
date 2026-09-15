@@ -22,14 +22,15 @@ WITH cleaned AS (
   SELECT
     "id",
     "user_uuid",
-    regexp_replace(btrim("account_label"), '\s+', ' ', 'g') AS name,
-    lower(regexp_replace(btrim("account_label"), '\s+', ' ', 'g')) AS normalized_name,
+    btrim(regexp_replace("account_label", '\s+', ' ', 'g')) AS name,
+    lower(btrim(regexp_replace("account_label", '\s+', ' ', 'g'))) AS normalized_name,
     ROW_NUMBER() OVER (
-      PARTITION BY "user_uuid", lower(regexp_replace(btrim("account_label"), '\s+', ' ', 'g'))
+      PARTITION BY "user_uuid", lower(btrim(regexp_replace("account_label", '\s+', ' ', 'g')))
       ORDER BY "timestamp", "id"
     ) AS rank
   FROM "transaction"
-  WHERE "account_label" IS NOT NULL AND btrim("account_label") <> ''
+  WHERE "account_label" IS NOT NULL
+    AND btrim(regexp_replace("account_label", '\s+', ' ', 'g')) <> ''
 )
 INSERT INTO "account" ("uuid", "user_uuid", "name", "normalized_name", "createdAt", "updatedAt")
 SELECT gen_random_uuid()::text, "user_uuid", name, normalized_name, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
@@ -40,16 +41,16 @@ UPDATE "transaction" AS transaction
 SET "account_id" = account."id"
 FROM "account" AS account
 WHERE account."user_uuid" = transaction."user_uuid"
-  AND account."normalized_name" = lower(regexp_replace(btrim(transaction."account_label"), '\s+', ' ', 'g'))
+  AND account."normalized_name" = lower(btrim(regexp_replace(transaction."account_label", '\s+', ' ', 'g')))
   AND transaction."account_label" IS NOT NULL
-  AND btrim(transaction."account_label") <> '';
+  AND btrim(regexp_replace(transaction."account_label", '\s+', ' ', 'g')) <> '';
 
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM "transaction"
     WHERE "account_label" IS NOT NULL
-      AND btrim("account_label") <> ''
+      AND btrim(regexp_replace("account_label", '\s+', ' ', 'g')) <> ''
       AND "account_id" IS NULL
   ) THEN
     RAISE EXCEPTION 'Account backfill left labeled transactions unlinked';

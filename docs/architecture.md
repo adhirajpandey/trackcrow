@@ -23,7 +23,7 @@ Current authenticated page routes are:
 - `/rules`
 - `/settings`
 
-`/settings` manages personal API tokens. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
+`/settings` manages accounts and scoped personal API tokens. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
 
 ## Backend Boundaries
 
@@ -35,6 +35,7 @@ Current authenticated page routes are:
 
 Business logic is grouped by module:
 
+- `accounts`
 - `categories`
 - `dashboard`
 - `api-tokens`, with legacy `device-tokens` route adapters
