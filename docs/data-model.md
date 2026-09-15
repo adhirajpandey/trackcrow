@@ -46,6 +46,7 @@ Service behavior:
 
 - each transaction belongs to one user and one recipient
 - category and subcategory are optional
+- account is optional and references a user-owned `Account`
 - `currency` defaults to `INR`
 - `type` is one of `UPI`, `CARD`, `CASH`, `NETBANKING`, `OTHER`
 - `source` is either `SMS` or `MANUAL`
@@ -64,10 +65,16 @@ Important service rules:
 - imported transactions are classified by the single enabled, valid rule matching their resolved recipient; imports without a match remain unclassified
 - accepting a current recipient-history suggestion records `classificationSource: SUGGESTION`; direct category edits record `MANUAL`
 - changing a transaction classification clears any prior `classificationRuleId`
-- transaction create and update APIs use UUID references for recipient, category, and subcategory inputs
-- category and subcategory assignments are checked for user ownership
+- transaction create and update APIs use UUID references for recipient, account, category, and subcategory inputs
+- account, category, and subcategory assignments are checked for user ownership
 - changing a transaction category through the narrow category endpoint can update both category and subcategory, and clearing the category clears the subcategory as well
 - duplicate transactions are allowed
+
+### Account
+
+`Account` is a short user-managed list for identifying where a payment occurred. It contains a display `name` and a normalized name used for per-user uniqueness. Normalization trims the name, collapses whitespace, and lowercases it. It does not remove punctuation, numbers, or words.
+
+SMS parsers keep returning their existing account text. Import matches that text against normalized account names for the authenticated user. A unique exact normalized match links the transaction. Missing or unmatched names leave the account empty. Imports never create accounts.
 
 ### Rule
 
@@ -135,7 +142,9 @@ User
   |   |- RecipientIdentifier
   |   `- Rule -> Category
   |           -> Subcategory?
+  |- Account
   |- Transaction -> Recipient
+  |              -> Account?
   |              -> Category?
   |              -> Subcategory?
   |              -> Rule?

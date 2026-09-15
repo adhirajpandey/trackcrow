@@ -68,6 +68,8 @@ Authentication uses NextAuth with Google OAuth.
 
 SMS import is separate from the browser session. `POST /api/imports/sms` accepts `Token` and `Bearer` credentials with `sms:import`. MCP accepts only Bearer credentials. The shared resolver hashes every supplied token, rejects revoked tokens, returns the owning user and scopes, and conditionally updates `lastUsedAt` at most once every ten minutes.
 
+SMS parsing leaves account text in the parsed payload for auditability. The import service normalizes that text and links an existing account only when one account for the authenticated user matches. Account creation and renaming use the browser API.
+
 `/mcp` runs on the Node runtime outside the authenticated page layout. Request protection checks the hashed client-IP failure budget before token lookup and consumes the token budget after authentication. The MCP layer constructs a new server for each request, enforces scopes, and calls domain services directly. Tools never import Prisma or call internal HTTP APIs.
 
 Rate-limit policy lives in `src/server/mcp/request-protection.ts`. Storage implements the `RateLimiter` interface in `src/server/rate-limit/`; PostgreSQL is the first adapter.
