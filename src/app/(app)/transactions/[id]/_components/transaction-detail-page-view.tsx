@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 
 import type { TransactionRecord } from "@/common/types";
 import { AppPageHeader } from "@/components/product/app-page-header";
+import { AccountPicker } from "@/components/product/account-picker";
 import { AssignmentSourceBadge } from "@/components/product/assignment-source-badge";
 import {
   MobileActionBar,
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { useCategoriesQuery } from "@/features/categories/queries";
+import { useAccountsQuery } from "@/features/accounts/queries";
 import { useDeleteTransactionMutation, useUpdateTransactionMutation } from "@/features/transactions/mutations";
 import {
   getTransactionSuggestionData,
@@ -86,6 +88,7 @@ function TransactionDetailEditor({
   transactionUuid,
   initialTransactionData,
   initialCategoriesData,
+  initialAccountsData,
 }: TransactionDetailPageInitialData) {
   const router = useRouter();
   const [banner, setBanner] = useState<{
@@ -113,11 +116,13 @@ function TransactionDetailEditor({
   const categoriesQuery = useCategoriesQuery({
     initialData: initialCategoriesData,
   });
+  const accountsQuery = useAccountsQuery({ initialData: initialAccountsData });
   const updateMutation = useUpdateTransactionMutation();
   const deleteMutation = useDeleteTransactionMutation();
   const incomingTransaction = transactionQuery.data ?? initialTransactionData;
   const [transaction, setTransaction] = useState(incomingTransaction);
   const categories = categoriesQuery.data ?? initialCategoriesData;
+  const accounts = accountsQuery.data ?? initialAccountsData;
 
   const form = useForm<TransactionDetailFormSchema>({
     resolver: zodResolver(transactionDetailFormSchema),
@@ -131,7 +136,7 @@ function TransactionDetailEditor({
   const currentType = form.watch("type");
   const currentLocationRaw = form.watch("locationRaw");
   const currentReference = form.watch("reference");
-  const currentAccountLabel = form.watch("accountLabel");
+  const currentAccountUuid = form.watch("accountUuid");
   const currentRemarks = form.watch("remarks");
   const subcategoryOptions = getSubcategoryOptions(categories, selectedCategoryUuid);
   const googleMapsHref = getTransactionGoogleMapsHref(currentLocationRaw);
@@ -142,7 +147,7 @@ function TransactionDetailEditor({
     type: currentType,
     timestamp: currentTimestamp,
     reference: currentReference,
-    accountLabel: currentAccountLabel,
+    accountUuid: currentAccountUuid,
     remarks: currentRemarks,
     locationRaw: currentLocationRaw,
   };
@@ -592,7 +597,7 @@ function TransactionDetailEditor({
                 />
               </Field>
               <Field
-                label="Type"
+                label="Payment method"
                 error={form.formState.errors.type?.message}
                 className="order-2 lg:order-none"
               >
@@ -633,14 +638,20 @@ function TransactionDetailEditor({
                 />
               </Field>
               <Field
-                label="Account label"
-                error={form.formState.errors.accountLabel?.message}
+                label="Account"
+                error={form.formState.errors.accountUuid?.message}
                 className={cn(
                   "order-6 lg:order-none",
                   !isMoreDetailsOpen && "hidden lg:block"
                 )}
               >
-                <input disabled={isSaving} className={fieldClassName} {...form.register("accountLabel")} />
+                <Controller
+                  control={form.control}
+                  name="accountUuid"
+                  render={({ field }) => (
+                    <AccountPicker value={field.value} accounts={accounts} disabled={isSaving} onChange={field.onChange} triggerClassName={fieldClassName} />
+                  )}
+                />
               </Field>
 
               <ReadOnlyActionField
@@ -1017,7 +1028,7 @@ function isTransactionDetailField(value: string): value is keyof TransactionDeta
     "type",
     "timestamp",
     "reference",
-    "accountLabel",
+    "accountUuid",
     "remarks",
     "locationRaw",
   ].includes(value);

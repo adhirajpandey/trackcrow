@@ -5,6 +5,7 @@ import { resolveRecipient } from "@/server/modules/recipients/service";
 import { resolveCreateClassification } from "@/server/modules/rules/evaluator";
 import { loadEvaluatableRules } from "@/server/modules/rules/service";
 import { fail, ok } from "@/server/shared/result";
+import { resolveAccountId } from "@/server/modules/accounts/service";
 
 import type {
   ListTransactionsInput,
@@ -36,7 +37,7 @@ type TransactionRecord = {
   recipientRaw: string;
   recipientName: string | null;
   reference: string | null;
-  accountLabel: string | null;
+  accountId: number | null;
   remarks: string | null;
   locationRaw: string | null;
   timestamp: Date;
@@ -54,6 +55,7 @@ type TransactionRecord = {
   category: { uuid: string; name: string } | null;
   subcategory: { uuid: string; name: string } | null;
   classificationRule: { uuid: string; name: string; deletedAt: Date | null } | null;
+  account: { uuid: string; name: string } | null;
 };
 
 type ResolvedCategorySelection = {
@@ -74,7 +76,8 @@ function toTransactionDto(record: TransactionRecord): TransactionDto {
     recipientName: record.recipientName,
     recipientDisplayName: record.recipient.displayName,
     reference: record.reference,
-    accountLabel: record.accountLabel,
+    accountUuid: record.account?.uuid ?? null,
+    accountName: record.account?.name ?? null,
     remarks: record.remarks,
     locationRaw: record.locationRaw,
     timestamp: record.timestamp.toISOString(),
@@ -108,7 +111,8 @@ function toTransactionListItemDto(record: TransactionRecord): TransactionListIte
     recipientUuid: dto.recipientUuid,
     recipientDisplayName: dto.recipientDisplayName,
     reference: dto.reference,
-    accountLabel: dto.accountLabel,
+    accountUuid: dto.accountUuid,
+    accountName: dto.accountName,
     remarks: dto.remarks,
     locationRaw: dto.locationRaw,
     timestamp: dto.timestamp,
@@ -210,6 +214,7 @@ async function getOwnedTransaction(userUuid: string, transactionUuid: string) {
       classificationRule: {
         select: { uuid: true, name: true, deletedAt: true },
       },
+      account: { select: { uuid: true, name: true } },
     },
   });
 }
@@ -348,6 +353,7 @@ export async function listTransactions(
               category: { select: { uuid: true, name: true } },
               subcategory: { select: { uuid: true, name: true } },
               classificationRule: { select: { uuid: true, name: true, deletedAt: true } },
+              account: { select: { uuid: true, name: true } },
             },
             skip,
             take: pageSize,
@@ -425,6 +431,7 @@ export async function listTransactionsForRange(
         category: { select: { uuid: true, name: true } },
         subcategory: { select: { uuid: true, name: true } },
         classificationRule: { select: { uuid: true, name: true, deletedAt: true } },
+        account: { select: { uuid: true, name: true } },
       },
       orderBy: { timestamp: "desc" },
     });
@@ -449,6 +456,12 @@ export async function createTransaction(
   input: TransactionWriteInput
 ): Promise<TransactionCreateResult> {
   try {
+    const accountResult = await resolveAccountId({
+      userUuid: input.userUuid,
+      accountUuid: input.accountUuid,
+    });
+    if (!accountResult.ok) return accountResult;
+
     const isManual = Object.prototype.hasOwnProperty.call(input, "categoryUuid");
     const manualSelection = isManual
       ? await resolveCategorySelection({
@@ -525,7 +538,7 @@ export async function createTransaction(
         recipientRaw,
         recipientName,
         reference: input.reference?.trim() || null,
-        accountLabel: input.accountLabel?.trim() || null,
+        accountId: accountResult.data.accountId,
         remarks: input.remarks?.trim() || null,
         locationRaw: input.locationRaw?.trim() || null,
         timestamp: input.timestamp,
@@ -570,6 +583,11 @@ export async function updateTransaction(
       return fail("NOT_FOUND");
     }
 
+    const accountResult = Object.prototype.hasOwnProperty.call(input, "accountUuid")
+      ? await resolveAccountId({ userUuid: input.userUuid, accountUuid: input.accountUuid })
+      : null;
+    if (accountResult && !accountResult.ok) return accountResult;
+
     const categorySelection = await resolveCategorySelection({
       userUuid: input.userUuid,
       categoryUuid: input.categoryUuid,
@@ -609,7 +627,7 @@ export async function updateTransaction(
         amount: input.amount,
         type: input.type,
         reference: input.reference?.trim() || null,
-        accountLabel: input.accountLabel?.trim() || null,
+        ...(accountResult ? { accountId: accountResult.data.accountId } : {}),
         remarks: input.remarks?.trim() || null,
         locationRaw: input.locationRaw?.trim() || null,
         timestamp: input.timestamp,

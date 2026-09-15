@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { hasApiTokenScope } from "@/server/modules/api-tokens/service";
 import type { AuthenticatedToken } from "@/server/modules/api-tokens/types";
 import { listCategoriesForUser } from "@/server/modules/categories/service";
+import { listAccounts } from "@/server/modules/accounts/service";
 import { getDashboardSummary, getSpendingByCategory, getSpendingByPeriod } from "@/server/modules/dashboard/service";
 import { listRecipients } from "@/server/modules/recipients/service";
 import { createTransaction, listTransactions, updateTransactionCategory } from "@/server/modules/transactions/service";
@@ -16,6 +17,8 @@ import {
   createTransactionOutput,
   listCategoriesInput,
   listCategoriesOutput,
+  listAccountsInput,
+  listAccountsOutput,
   searchRecipientsInput,
   searchRecipientsOutput,
   searchTransactionsInput,
@@ -101,7 +104,8 @@ export function createTrackCrowMcpServer(identity: AuthenticatedToken) {
         recipientUuid: item.recipientUuid,
         recipientDisplayName: item.recipientDisplayName,
         reference: item.reference,
-        accountLabel: item.accountLabel,
+        accountUuid: item.accountUuid,
+        accountName: item.accountName,
         remarks: item.remarks,
         locationRaw: item.locationRaw,
         timestamp: item.timestamp,
@@ -135,6 +139,10 @@ export function createTrackCrowMcpServer(identity: AuthenticatedToken) {
     config: { title: "List categories", description: "List category and subcategory names and UUIDs.", inputSchema: listCategoriesInput, outputSchema: listCategoriesOutput, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
     handler: async () => { const result = await listCategoriesForUser({ userUuid: identity.userUuid }); return result.ok ? success({ categories: result.data }) : failure("Categories are temporarily unavailable."); } });
 
+  registerTool({ server, identity, name: "list_accounts", scope: ApiTokenScope.TRANSACTIONS_READ,
+    config: { title: "List accounts", description: "List account names and UUIDs for transaction creation.", inputSchema: listAccountsInput, outputSchema: listAccountsOutput, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
+    handler: async () => { const result = await listAccounts({ userUuid: identity.userUuid }); return result.ok ? success({ accounts: result.data }) : failure("Accounts are temporarily unavailable."); } });
+
   registerTool({ server, identity, name: "search_recipients", scope: ApiTokenScope.TRANSACTIONS_READ,
     config: { title: "Search recipients", description: "Find existing recipients for transaction creation.", inputSchema: searchRecipientsInput, outputSchema: searchRecipientsOutput, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
     handler: async (args: typeof searchRecipientsInput._output) => {
@@ -151,10 +159,10 @@ export function createTrackCrowMcpServer(identity: AuthenticatedToken) {
         ...(Object.prototype.hasOwnProperty.call(args, "subcategoryUuid") ? { subcategoryUuid: args.subcategoryUuid } : {}),
         ...(Object.prototype.hasOwnProperty.call(args, "remarks") ? { remarks: args.remarks } : {}),
         ...(Object.prototype.hasOwnProperty.call(args, "reference") ? { reference: args.reference } : {}),
-        ...(Object.prototype.hasOwnProperty.call(args, "accountLabel") ? { accountLabel: args.accountLabel } : {}),
+        ...(Object.prototype.hasOwnProperty.call(args, "accountUuid") ? { accountUuid: args.accountUuid } : {}),
         ...(Object.prototype.hasOwnProperty.call(args, "locationRaw") ? { locationRaw: args.locationRaw } : {}), };
       const result = await createTransaction(input);
-      if (!result.ok) return failure(result.error === "VALIDATION_ERROR" ? "The recipient or classification does not exist." : "The transaction could not be created.");
+      if (!result.ok) return failure(result.error === "VALIDATION_ERROR" ? "The recipient, account, or classification does not exist." : "The transaction could not be created.");
       return success(result.data);
     } });
 

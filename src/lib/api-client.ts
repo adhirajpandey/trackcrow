@@ -73,7 +73,7 @@ export async function createManualTransaction(input: {
   remarks?: string | null;
   timestamp: string;
   reference?: string | null;
-  accountLabel?: string | null;
+  accountUuid?: string | null;
   locationRaw?: string | null;
 }) {
   return apiRequest<{ uuid: string }>(
@@ -93,7 +93,7 @@ export async function updateManualTransaction(
     timestamp: string;
     source?: string;
     reference?: string | null;
-    accountLabel?: string | null;
+    accountUuid?: string | null;
     locationRaw?: string | null;
   }
 ) {

@@ -25,6 +25,11 @@ export type CategoryOption = {
   }>;
 };
 
+export type AccountOption = {
+  uuid: string;
+  name: string;
+};
+
 export type UserCategorySummary = {
   name: string;
   subcategories: string[];
@@ -49,7 +54,8 @@ export type TransactionRecord = {
   recipientName?: string | null;
   recipientDisplayName: string;
   reference: string | null;
-  accountLabel: string | null;
+  accountUuid: string | null;
+  accountName: string | null;
   remarks: string | null;
   locationRaw: string | null;
   timestamp: string;
