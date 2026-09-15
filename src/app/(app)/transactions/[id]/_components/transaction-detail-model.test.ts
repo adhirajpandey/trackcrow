@@ -78,7 +78,8 @@ const transaction: TransactionRecord = {
   recipientName: "Kotak Bank UPI",
   recipientDisplayName: "Kotak Bank UPI",
   reference: null,
-  accountLabel: "Kotak **1234",
+  accountUuid: "550e8400-e29b-41d4-a716-446655440001",
+  accountName: "Kotak **1234",
   remarks: null,
   locationRaw: null,
   timestamp: "2026-06-24T17:31:00.000Z",
@@ -175,7 +176,7 @@ describe("transaction detail model", () => {
       type: "UPI",
       timestamp: "2026-06-24T23:01",
       reference: "",
-      accountLabel: "Kotak **1234",
+      accountUuid: "550e8400-e29b-41d4-a716-446655440001",
       remarks: "",
       locationRaw: "",
     });
@@ -190,7 +191,7 @@ describe("transaction detail model", () => {
         type: "UPI",
         timestamp: "2026-06-24T23:01",
         reference: " ",
-        accountLabel: " Kotak **1234 ",
+        accountUuid: "550e8400-e29b-41d4-a716-446655440001",
         remarks: " dinner ",
         locationRaw: "",
       })
@@ -201,7 +202,7 @@ describe("transaction detail model", () => {
       type: "UPI",
       timestamp: "2026-06-24T17:31:00.000Z",
       reference: null,
-      accountLabel: "Kotak **1234",
+      accountUuid: "550e8400-e29b-41d4-a716-446655440001",
       remarks: "dinner",
       locationRaw: null,
     });
@@ -222,11 +223,11 @@ describe("transaction detail model", () => {
     ).toBe(true);
   });
 
-  it("ignores whitespace-only edits that normalize to the same payload", () => {
+  it("treats the same account UUID as unchanged", () => {
     expect(
       hasTransactionDetailChanges(transaction, {
         ...mapTransactionToFormValues(transaction),
-        accountLabel: " Kotak **1234 ",
+        accountUuid: "550e8400-e29b-41d4-a716-446655440001",
       })
     ).toBe(false);
   });
@@ -245,7 +246,8 @@ describe("transaction detail model", () => {
     const nullableTransaction: TransactionRecord = {
       ...transaction,
       reference: null,
-      accountLabel: null,
+      accountUuid: null,
+      accountName: null,
       remarks: null,
       locationRaw: null,
     };
@@ -254,7 +256,7 @@ describe("transaction detail model", () => {
       hasTransactionDetailChanges(nullableTransaction, {
         ...mapTransactionToFormValues(nullableTransaction),
         reference: " ",
-        accountLabel: "",
+        accountUuid: "",
         remarks: "  ",
         locationRaw: "",
       })

@@ -18,19 +18,26 @@ jest.mock("@/server/modules/transactions/service", () => ({
   createTransaction: jest.fn(),
 }));
 
+jest.mock("@/server/modules/accounts/service", () => ({
+  matchAccountByName: jest.fn(),
+}));
+
 import { ParseStatus, TransactionSource } from "@/generated/prisma-rewrite";
 import { parseTransactionMessage } from "@/common/sms-parser";
 import { createTransaction } from "@/server/modules/transactions/service";
+import { matchAccountByName } from "@/server/modules/accounts/service";
 
 import { importSmsTransaction } from "./service";
 
 const mockPrisma = (globalThis as any).__importsPrismaMock;
 const parseTransactionMessageMock = parseTransactionMessage as jest.Mock;
 const createTransactionMock = createTransaction as jest.Mock;
+const matchAccountByNameMock = matchAccountByName as jest.Mock;
 
 describe("importSmsTransaction", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    matchAccountByNameMock.mockResolvedValue({ ok: true, data: { accountUuid: null } });
   });
 
   it("persists a parsed SMS transaction for the authenticated user", async () => {
@@ -47,6 +54,7 @@ describe("importSmsTransaction", () => {
       data: { uuid: "txn-uuid" },
     });
     mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 99 });
+    matchAccountByNameMock.mockResolvedValueOnce({ ok: true, data: { accountUuid: "account-1" } });
 
     const result = await importSmsTransaction({
       userUuid: "user-1",
@@ -64,7 +72,7 @@ describe("importSmsTransaction", () => {
       remarks: null,
       timestamp: expect.any(Date),
       reference: "123",
-      accountLabel: "HDFC",
+      accountUuid: "account-1",
       locationRaw: "Bangalore",
       source: TransactionSource.SMS,
     });
