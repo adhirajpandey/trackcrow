@@ -27,7 +27,7 @@ This document describes the Prisma schema and the business rules enforced around
 
 Recipients normalize transaction counterparties.
 
-- `Recipient` stores a user-owned display name and normalized name
+- `Recipient` stores a user-owned display name, normalized name, and optional `note`. Notes are trimmed, limited to 500 characters by the API, and stored as `null` when cleared. Notes provide personal context and are searchable, but never participate in recipient matching or alias resolution. They are separate from transaction remarks.
 - `RecipientIdentifier` stores raw identifiers such as UPI ids, phone numbers, card merchants, or free text
 - identifiers are unique per user by `(userUuid, kind, normalizedValue)`
 - identifier kinds are `UPI_ID`, `CARD_MERCHANT`, and `TEXT`

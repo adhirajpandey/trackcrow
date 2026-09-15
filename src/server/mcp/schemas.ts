@@ -100,7 +100,7 @@ export const searchRecipientsInput = z.object({
 }).strict();
 export const searchRecipientsOutput = z.object({
   recipients: z.array(z.object({
-    uuid: z.string().uuid(), name: z.string(), aliases: z.array(z.object({ uuid: z.string().uuid(), type: z.string(), value: z.string() }).strict()), transactionCount: z.number(), totalAmount: z.number(),
+    uuid: z.string().uuid(), name: z.string(), note: z.string().nullable(), aliases: z.array(z.object({ uuid: z.string().uuid(), type: z.string(), value: z.string() }).strict()), transactionCount: z.number(), totalAmount: z.number(),
   }).strict()),
   pagination: z.object({ page: z.number(), limit: z.number(), total: z.number(), totalPages: z.number(), hasNext: z.boolean(), hasPrev: z.boolean() }).strict(),
 }).strict();

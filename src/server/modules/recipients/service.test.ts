@@ -3,6 +3,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
   default: ((globalThis as any).__recipientsPrismaMock = {
     recipient: {
       count: jest.fn(),
+      update: jest.fn(),
       create: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn(),
@@ -11,6 +12,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
     $transaction: jest.fn(),
     transaction: {
       groupBy: jest.fn(),
+      aggregate: jest.fn(),
     },
     recipientIdentifier: {
       create: jest.fn(),
@@ -21,7 +23,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
 
 import { RecipientIdentifierKind } from "@/generated/prisma-rewrite";
 
-import { createRecipient, listRecipients } from "./service";
+import { createRecipient, listRecipients, updateRecipient, resolveRecipient } from "./service";
 
 const mockPrisma = (globalThis as any).__recipientsPrismaMock;
 
@@ -31,6 +33,7 @@ function recipientRecord(overrides: Record<string, unknown> = {}) {
     uuid: "rcp-1",
     displayName: "Biraj Borah",
     normalizedName: "biraj borah",
+    note: null,
     identifiers: [
       {
         id: 11,
@@ -223,5 +226,57 @@ describe("recipient service", () => {
       },
     });
     expect(mockPrisma.recipient.findMany).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("recipient notes", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    mockPrisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: null } });
+  });
+
+  it.each([["  football turf  ", "football turf"], ["   ", null], [null, null]])(
+    "saves and normalizes a note without changing matching fields: %s",
+    async (note, expected) => {
+      mockPrisma.recipient.findFirst
+        .mockResolvedValueOnce({ id: 1 })
+        .mockResolvedValueOnce(recipientRecord({ note: expected }));
+      const result = await updateRecipient({ userUuid: "user-1", recipientUuid: "rcp-1", note });
+      expect(result).toMatchObject({ ok: true, data: { note: expected } });
+      expect(mockPrisma.recipient.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { note: expected } });
+      expect(mockPrisma.recipient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { uuid: "rcp-1", userUuid: "user-1" } }));
+      expect(mockPrisma.recipientIdentifier.create).not.toHaveBeenCalled();
+    }
+  );
+
+  it("preserves an omitted note when renaming", async () => {
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce({ id: 1 }).mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(recipientRecord({ note: "football turf" }));
+    await updateRecipient({ userUuid: "user-1", recipientUuid: "rcp-1", displayName: "Pada Arenas" });
+    expect(mockPrisma.recipient.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { displayName: "Pada Arenas", normalizedName: "pada arenas" } });
+  });
+
+  it("rejects an update to a recipient outside the user scope", async () => {
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce(null);
+    await expect(updateRecipient({ userUuid: "other-user", recipientUuid: "rcp-1", note: "test" })).resolves.toEqual({ ok: false, error: "NOT_FOUND" });
+    expect(mockPrisma.recipient.update).not.toHaveBeenCalled();
+  });
+
+  it("searches notes while retaining the user filter", async () => {
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: 0 }]);
+    await listRecipients({ userUuid: "user-1", q: "football turf" });
+    const query = mockPrisma.$queryRaw.mock.calls[0][0];
+    expect(query.sql).toContain('r.note ILIKE');
+    expect(query.values).toContain('%football turf%');
+    expect(query.values).toContain('user-1');
+  });
+
+  it("resolves using identifiers and normalized names without querying notes", async () => {
+    mockPrisma.recipientIdentifier.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce(recipientRecord({ note: "football turf" }));
+    await resolveRecipient({ userUuid: "user-1", recipientRaw: "Biraj Borah" });
+    expect(mockPrisma.recipient.findFirst).toHaveBeenCalledWith({ where: { userUuid: "user-1", normalizedName: "biraj borah" } });
+    expect(mockPrisma.recipientIdentifier.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { userUuid: "user-1", kind: RecipientIdentifierKind.TEXT, normalizedValue: "biraj borah" } }));
   });
 });

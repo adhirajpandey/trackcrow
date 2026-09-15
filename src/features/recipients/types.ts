@@ -10,6 +10,7 @@ export type RecipientAliasDto = {
 export type RecipientListItemDto = {
   uuid: string;
   displayName: string;
+  note: string | null;
   normalizedName: string;
   transactionCount: number;
   totalAmount: number;
@@ -73,6 +74,7 @@ export type RecipientAliasChip = {
 export type RecipientsPageRow = {
   uuid: string;
   displayName: string;
+  note: string | null;
   transactionCount: number;
   totalAmount: number;
   secondaryLabel: string;
@@ -196,6 +198,7 @@ export type RecipientDetailInsight = {
 export type RecipientDetailPageData = {
   recipientUuid: string;
   displayName: string;
+  note: string | null;
   normalizedName: string;
   transactionCount: number;
   aliasCount: number;

@@ -140,7 +140,7 @@ export function createTrackCrowMcpServer(identity: AuthenticatedToken) {
     handler: async (args: typeof searchRecipientsInput._output) => {
       const result = await listRecipients({ userUuid: identity.userUuid, q: args.query, page: args.page, size: args.limit });
       if (!result.ok) return failure("Recipients are temporarily unavailable.");
-      return success({ recipients: result.data.recipients.map((recipient) => ({ uuid: recipient.uuid, name: recipient.displayName, aliases: recipient.aliases.map((alias) => ({ uuid: alias.uuid, type: alias.aliasType, value: alias.value })), transactionCount: recipient.transactionCount, totalAmount: recipient.totalAmount })), pagination: { page: result.data.page, limit: result.data.pageSize, total: result.data.total, totalPages: result.data.totalPages, hasNext: result.data.hasNext, hasPrev: result.data.hasPrev } });
+      return success({ recipients: result.data.recipients.map((recipient) => ({ uuid: recipient.uuid, name: recipient.displayName, note: recipient.note, aliases: recipient.aliases.map((alias) => ({ uuid: alias.uuid, type: alias.aliasType, value: alias.value })), transactionCount: recipient.transactionCount, totalAmount: recipient.totalAmount })), pagination: { page: result.data.page, limit: result.data.pageSize, total: result.data.total, totalPages: result.data.totalPages, hasNext: result.data.hasNext, hasPrev: result.data.hasPrev } });
     } });
 
   registerTool({ server, identity, name: "create_transaction", scope: ApiTokenScope.TRANSACTIONS_WRITE,

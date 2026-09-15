@@ -67,6 +67,7 @@ model Recipient {
   uuid           String                @unique @default(uuid())
   userUuid       String                @map("user_uuid")
   displayName    String
+  note           String?
   normalizedName String                @map("normalized_name")
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt

@@ -62,12 +62,15 @@ export function useUpdateRecipientMutation() {
     mutationFn: ({
       recipientUuid,
       displayName,
+      note,
     }: {
       recipientUuid: string;
-      displayName: string;
+      displayName?: string;
+      note?: string | null;
     }) =>
       apiPatch<RecipientListItemDto>(`/api/recipients/${recipientUuid}`, {
         displayName,
+        note,
       }),
     onSuccess: async () => {
       await Promise.all([

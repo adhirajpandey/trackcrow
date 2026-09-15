@@ -509,3 +509,16 @@ describe("transaction service", () => {
     }));
   });
 });
+
+
+it("includes linked recipient notes in user-scoped transaction search", async () => {
+  mockPrisma.transaction.count.mockResolvedValueOnce(0);
+  mockPrisma.transaction.findMany.mockResolvedValueOnce([]);
+  await listTransactions({ userUuid: "user-1", q: "football turf" });
+  expect(mockPrisma.transaction.count).toHaveBeenCalledWith({ where: expect.objectContaining({
+    userUuid: "user-1",
+    AND: expect.arrayContaining([expect.objectContaining({ OR: expect.arrayContaining([
+      { recipient: { note: { contains: "football turf", mode: "insensitive" } } },
+    ]) })]),
+  }) });
+});

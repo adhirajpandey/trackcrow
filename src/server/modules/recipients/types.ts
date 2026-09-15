@@ -6,6 +6,7 @@ export type RecipientAliasType = RecipientIdentifierKind;
 export type RecipientDto = {
   uuid: string;
   displayName: string;
+  note: string | null;
   normalizedName: string;
   transactionCount: number;
   totalAmount: number;
@@ -45,6 +46,7 @@ export type RecipientDetailTransactionDto = {
 export type RecipientDetailDto = {
   uuid: string;
   displayName: string;
+  note: string | null;
   normalizedName: string;
   createdAt: string;
   updatedAt: string;
@@ -70,7 +72,8 @@ export type RecipientLookupInput = {
 };
 
 export type RecipientUpdateInput = RecipientLookupInput & {
-  displayName: string;
+  displayName?: string;
+  note?: string | null;
 };
 
 export type RecipientCreateInput = {

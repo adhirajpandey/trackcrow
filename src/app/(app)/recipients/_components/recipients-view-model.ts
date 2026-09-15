@@ -208,6 +208,7 @@ export function buildRecipientsPageData(input: {
       return {
         uuid: recipient.uuid,
         displayName: recipient.displayName,
+        note: recipient.note,
         transactionCount: recipient.transactionCount,
         totalAmount: recipient.totalAmount,
         secondaryLabel:

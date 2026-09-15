@@ -34,6 +34,7 @@ function toRecipientDto(record: {
   id: number;
   uuid: string;
   displayName: string;
+  note: string | null;
   normalizedName: string;
   totalAmount: number;
   identifiers: Array<{
@@ -47,6 +48,7 @@ function toRecipientDto(record: {
   return {
     uuid: record.uuid,
     displayName: record.displayName,
+    note: record.note,
     normalizedName: record.normalizedName,
     transactionCount: record._count.transactions,
     totalAmount: record.totalAmount,
@@ -89,6 +91,7 @@ function toRecipientDetailDto(record: {
   id: number;
   uuid: string;
   displayName: string;
+  note: string | null;
   normalizedName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -117,6 +120,7 @@ function toRecipientDetailDto(record: {
   return {
     uuid: record.uuid,
     displayName: record.displayName,
+    note: record.note,
     normalizedName: record.normalizedName,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
@@ -322,6 +326,7 @@ export async function listRecipients(
       ? Prisma.sql`
           AND (
             r."displayName" ILIKE ${`%${q}%`}
+            OR r.note ILIKE ${`%${q}%`}
             OR r."normalized_name" ILIKE ${`%${normalizedSearch}%`}
             OR EXISTS (
               SELECT 1
@@ -602,8 +607,8 @@ export async function getRecipientDetail(
 export async function updateRecipient(
   input: RecipientUpdateInput
 ): Promise<RecipientUpdateResult> {
-  const displayName = input.displayName.trim();
-  const normalizedName = normalizeValue(displayName);
+  const displayName = input.displayName?.trim();
+  const normalizedName = displayName === undefined ? undefined : normalizeValue(displayName);
 
   try {
     const existing = await prisma.recipient.findFirst({
@@ -614,7 +619,7 @@ export async function updateRecipient(
       return fail("NOT_FOUND");
     }
 
-    const duplicate = await prisma.recipient.findFirst({
+    const duplicate = normalizedName === undefined ? null : await prisma.recipient.findFirst({
       where: {
         userUuid: input.userUuid,
         normalizedName,
@@ -628,7 +633,10 @@ export async function updateRecipient(
 
     await prisma.recipient.update({
       where: { id: existing.id },
-      data: { displayName, normalizedName },
+      data: {
+        ...(displayName !== undefined ? { displayName, normalizedName } : {}),
+        ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
+      },
     });
 
     return getRecipient(input);

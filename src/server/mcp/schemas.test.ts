@@ -2,6 +2,7 @@ import {
   categorizeTransactionInput,
   createTransactionInput,
   searchTransactionsInput,
+  searchRecipientsOutput,
   spendingSummaryInput,
   toIstDateRange,
 } from "./schemas";
@@ -48,4 +49,14 @@ describe("MCP tool schemas", () => {
   it("defaults summary grouping and period granularity", () => {
     expect(spendingSummaryInput.parse({ startDate: "2026-09-01", endDate: "2026-09-14" })).toMatchObject({ grouping: "none", periodGranularity: "month" });
   });
+});
+
+
+it("exposes nullable notes in MCP recipient results", () => {
+  const result = {
+    recipients: [{ uuid: crypto.randomUUID(), name: "Pada Arenas", note: "Sector 43, Gurugram football turf", aliases: [], transactionCount: 4, totalAmount: 4800 }],
+    pagination: { page: 1, limit: 20, total: 1, totalPages: 1, hasNext: false, hasPrev: false },
+  };
+  expect(searchRecipientsOutput.parse(result).recipients[0].note).toBe("Sector 43, Gurugram football turf");
+  expect(searchRecipientsOutput.safeParse({ ...result, recipients: [{ ...result.recipients[0], note: null }] }).success).toBe(true);
 });

@@ -129,6 +129,7 @@ const columns: ColumnDef<RecipientsPageRow>[] = [
           {row.original.displayName}
         </p>
         <p className="mt-1 text-xs text-secondary-foreground/85">
+          {row.original.note && <span className="mb-1 block line-clamp-2 whitespace-pre-wrap break-words">{row.original.note}</span>}
           {row.original.secondaryLabel}
         </p>
       </div>
@@ -478,6 +479,7 @@ export function RecipientsPageView({
                         {row.displayName}
                       </p>
                       <p className="mt-1 text-sm text-secondary-foreground">
+                        {row.note && <span className="mb-1 block line-clamp-2 whitespace-pre-wrap break-words">{row.note}</span>}
                         {row.secondaryLabel}
                       </p>
                     </div>

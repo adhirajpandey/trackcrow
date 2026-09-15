@@ -5,6 +5,7 @@ describe("buildRecipientDetailPageData", () => {
     const pageData = buildRecipientDetailPageData({
       uuid: "rcp-7",
       displayName: "Sample Recipient",
+      note: null,
       normalizedName: "sample recipient",
       createdAt: "2026-06-01T00:00:00.000Z",
       updatedAt: "2026-06-30T00:00:00.000Z",
@@ -134,6 +135,7 @@ describe("buildRecipientDetailPageData", () => {
     const pageData = buildRecipientDetailPageData({
       uuid: "rcp-7",
       displayName: "Sample Recipient",
+      note: null,
       normalizedName: "sample recipient",
       createdAt: "2026-06-01T00:00:00.000Z",
       updatedAt: "2026-06-30T00:00:00.000Z",

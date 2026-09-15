@@ -30,6 +30,7 @@ const baseResult: RecipientsQueryResult = {
     {
       uuid: "rcp-1",
       displayName: "Biraj Borah",
+      note: null,
       normalizedName: "biraj borah",
       transactionCount: 19,
       totalAmount: 3200,
@@ -57,6 +58,7 @@ const baseResult: RecipientsQueryResult = {
     {
       uuid: "rcp-2",
       displayName: "Luxmi Enterprises",
+      note: null,
       normalizedName: "luxmi enterprises",
       transactionCount: 4,
       totalAmount: 900,

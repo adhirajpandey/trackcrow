@@ -112,6 +112,10 @@ export function RecipientDetailPageView({
   const [aliasType, setAliasType] = useState("AUTO");
   const [pendingTransfer, setPendingTransfer] = useState<AliasTransferImpact | null>(null);
   const [recipientName, setRecipientName] = useState(data.displayName);
+  const [recipientNote, setRecipientNote] = useState(data.note ?? "");
+  const [savedDetails, setSavedDetails] = useState({ name: data.displayName, note: data.note ?? null });
+  const detailsChanged = recipientName.trim() !== savedDetails.name ||
+    (recipientNote.trim() || null) !== savedDetails.note;
   const [relatedTransactionsPage, setRelatedTransactionsPage] = useState(1);
   const [relatedTransactionsSort, setRelatedTransactionsSort] = useState<{
     sortBy: TransactionSortBy;
@@ -208,37 +212,34 @@ export function RecipientDetailPageView({
     }
   }
 
-  async function handleRenameRecipient() {
+  async function handleSaveRecipient() {
     const trimmedName = recipientName.trim();
-    if (!trimmedName || trimmedName === data.displayName) {
-      setRecipientName(data.displayName);
-      return;
-    }
+    const note = recipientNote.trim() || null;
+    if (!trimmedName || !detailsChanged || updateRecipientMutation.isPending) return;
 
     try {
       await updateRecipientMutation.mutateAsync({
         recipientUuid: data.recipientUuid,
         displayName: trimmedName,
+        note,
       });
       setRecipientName(trimmedName);
+      setRecipientNote(note ?? "");
+      setSavedDetails({ name: trimmedName, note });
       toast({
         tone: "success",
-        title: "Recipient renamed",
-        description: "Canonical recipient name updated.",
+        title: "Recipient updated",
+        description: "Name and note saved.",
         durationMs: 3200,
       });
       router.refresh();
     } catch (error) {
       toast({
         tone: "warning",
-        title: "Name unavailable",
-        description: getApiClientErrorMessage(
-          error,
-          "Unable to rename this recipient right now."
-        ),
+        title: "Unable to save recipient",
+        description: getApiClientErrorMessage(error, "Your changes are still here. Try saving again."),
         durationMs: 4200,
       });
-      setRecipientName(data.displayName);
     }
   }
 
@@ -352,30 +353,43 @@ export function RecipientDetailPageView({
           <section className={cn(dashboardPanelClassName, "px-5 py-5")}>
             <h2 className="text-[1.05rem] font-semibold text-foreground">Recipient details</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <Field label="Name">
-                <div className="flex min-h-11 overflow-hidden rounded-[8px] border-2 border-input bg-card focus-within:ring-2 focus-within:ring-ring">
+              <div className="space-y-4 md:col-span-2">
+                <Field label="Name">
                   <input
-                    className="min-w-0 flex-1 bg-transparent px-3.5 text-sm text-foreground outline-none"
+                    aria-label="Name"
+                    className="min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     value={recipientName}
+                    maxLength={200}
                     onChange={(event) => setRecipientName(event.target.value)}
-                    onBlur={() => void handleRenameRecipient()}
                     disabled={updateRecipientMutation.isPending}
                   />
+                </Field>
+                <Field label="Note">
+                  <textarea
+                    aria-label="Note"
+                    aria-describedby="recipient-note-help"
+                    className="min-h-24 w-full resize-y rounded-[8px] border-2 border-input bg-card px-3.5 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+                    placeholder="e.g. Sector 43, Gurugram football turf"
+                    value={recipientNote}
+                    maxLength={500}
+                    onChange={(event) => setRecipientNote(event.target.value)}
+                    disabled={updateRecipientMutation.isPending}
+                  />
+                </Field>
+                <div className="flex items-center justify-between gap-3">
+                  <p id="recipient-note-help" className="text-xs text-muted-foreground">
+                    Optional · {recipientNote.length}/500 characters
+                  </p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-11 shrink-0 rounded-none border-l-2 border-border bg-secondary/35 shadow-none hover:bg-secondary/65"
-                    onClick={() => void handleRenameRecipient()}
-                    disabled={
-                      updateRecipientMutation.isPending ||
-                      !recipientName.trim() ||
-                      recipientName.trim() === data.displayName
-                    }
+                    onClick={() => void handleSaveRecipient()}
+                    disabled={updateRecipientMutation.isPending || !recipientName.trim() || !detailsChanged}
                   >
-                    Save
+                    {updateRecipientMutation.isPending ? "Saving…" : "Save"}
                   </Button>
                 </div>
-              </Field>
+              </div>
               <ReadOnlyDetailField
                 label="Total spent"
                 value={formatRecipientTotal(data.totalSpent)}

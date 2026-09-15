@@ -43,11 +43,18 @@ export const listRecipientsQuerySchema = z
     }
   });
 
+const displayNameSchema = z.string().trim().min(1).max(200);
+
 export const updateRecipientSchema = z.object({
-  displayName: z.string().trim().min(1).max(200),
+  displayName: displayNameSchema.optional(),
+  note: z.string().trim().max(500).nullable().optional(),
+}).refine((value) => value.displayName !== undefined || value.note !== undefined, {
+  message: "Provide a name or note to update",
 });
 
-export const createRecipientSchema = updateRecipientSchema;
+export const createRecipientSchema = z.object({
+  displayName: displayNameSchema,
+});
 
 export const aliasTypeSchema = z.union([
   z.enum([

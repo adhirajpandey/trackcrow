@@ -403,9 +403,17 @@ On duplicate name, returns `409` with `{ "message": "A recipient with this name 
 
 Returns one recipient with the same shape as the list item.
 
+Recipient list, detail, and update responses include `note: string | null`. Recipient search and transaction search include case-insensitive matching on recipient notes. MCP `search_recipients` uses the same search and includes `note` in each result.
+
 ### `PATCH /api/recipients/:id`
 
-Same body as create. Returns the full recipient DTO.
+Updates the name, note, or both. At least one field is required:
+
+```json
+{ "displayName": "Pada Arenas", "note": "Sector 43, Gurugram football turf" }
+```
+
+`displayName` must contain 1–200 characters after trimming. `note` accepts a string of at most 500 characters after trimming or `null`. Blank notes become `null`; omitted fields remain unchanged. Name conflicts return `409`. Notes do not affect matching or aliases. Creation still requires a name.
 
 ### `POST /api/recipients/:id/aliases`
 

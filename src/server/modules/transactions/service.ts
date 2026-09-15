@@ -273,6 +273,7 @@ export async function listTransactions(
         { recipientName: { contains: q, mode: "insensitive" } },
         { remarks: { contains: q, mode: "insensitive" } },
         { recipient: { displayName: { contains: q, mode: "insensitive" } } },
+        { recipient: { note: { contains: q, mode: "insensitive" } } },
         ...(Number.isFinite(amount) ? [{ amount }] : []),
       ],
     });

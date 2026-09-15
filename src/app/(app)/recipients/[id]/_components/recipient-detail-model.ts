@@ -170,6 +170,7 @@ export function buildRecipientDetailPageData(
   return {
     recipientUuid: recipient.uuid,
     displayName: recipient.displayName,
+    note: recipient.note,
     normalizedName: recipient.normalizedName,
     transactionCount: recipient.transactionCount,
     aliasCount: recipient.aliases.length,
