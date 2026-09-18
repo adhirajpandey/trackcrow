@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { AccountOption } from "@/common/types";
 import { AccountSettings } from "./account-settings";
+import { ConnectedApps } from "./connected-apps";
 
 type Scope = "TRANSACTIONS_READ" | "TRANSACTIONS_WRITE" | "SMS_IMPORT";
 type TokenRecord = {
@@ -89,6 +90,7 @@ export function TokenSettings({ initialTokens, initialAccounts, mcpUrl }: { init
       </div>
 
       <AccountSettings initialAccounts={initialAccounts} />
+      <ConnectedApps />
 
       {plainToken ? (
         <Card className="border-primary bg-[var(--paper-mint)]">

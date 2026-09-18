@@ -25,6 +25,7 @@ model User {
   transactions  Transaction[]
   rawMessages   RawMessage[]
   apiTokens     ApiToken[]
+  oauthConnections OAuthConnection[]
   rules         Rule[]
 
   @@map("user")
@@ -205,6 +206,70 @@ model ApiToken {
   user        User            @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
 
   @@map("device_token")
+}
+
+model OAuthConnection {
+  uuid         String @id @default(uuid())
+  userUuid     String @map("user_uuid")
+  clientId     String @map("client_id")
+  clientName   String @map("client_name")
+  scopes       ApiTokenScope[]
+  resource     String
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  user         User @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  codes        OAuthAuthorizationCode[]
+  accessTokens OAuthAccessToken[]
+  refreshTokens OAuthRefreshToken[]
+
+  @@index([userUuid, createdAt])
+  @@map("oauth_connection")
+}
+
+model OAuthAuthorizationCode {
+  uuid           String @id @default(uuid())
+  codeHash       String @unique
+  consentNonce   String @unique
+  connectionUuid String
+  redirectUri    String
+  codeChallenge  String
+  scopes         ApiTokenScope[]
+  expiresAt      DateTime
+  usedAt         DateTime?
+  connection     OAuthConnection @relation(fields: [connectionUuid], references: [uuid], onDelete: Cascade)
+
+  @@index([connectionUuid])
+  @@map("oauth_authorization_code")
+}
+
+model OAuthAccessToken {
+  uuid           String @id @default(uuid())
+  tokenHash      String @unique
+  connectionUuid String
+  scopes         ApiTokenScope[]
+  expiresAt      DateTime
+  connection     OAuthConnection @relation(fields: [connectionUuid], references: [uuid], onDelete: Cascade)
+
+  @@index([connectionUuid])
+  @@map("oauth_access_token")
+}
+
+model OAuthRefreshToken {
+  uuid                String @id @default(uuid())
+  tokenHash           String @unique
+  connectionUuid      String
+  scopes              ApiTokenScope[]
+  expiresAt           DateTime
+  usedAt              DateTime?
+  replacedByTokenUuid String? @unique
+  replacedBy          OAuthRefreshToken? @relation("RefreshRotation", fields: [replacedByTokenUuid], references: [uuid], onDelete: SetNull)
+  replaces            OAuthRefreshToken? @relation("RefreshRotation")
+  connection          OAuthConnection @relation(fields: [connectionUuid], references: [uuid], onDelete: Cascade)
+
+  @@index([connectionUuid])
+  @@map("oauth_refresh_token")
 }
 
 model RateLimitBucket {

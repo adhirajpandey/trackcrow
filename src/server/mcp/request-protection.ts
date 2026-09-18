@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 
 import { logger } from "@/lib/logger";
-import { resolveApiToken } from "@/server/modules/api-tokens/service";
+import { resolveMcpToken } from "./auth";
+import { oauthConfig } from "@/server/modules/oauth/config";
 import { PostgresRateLimiter } from "@/server/rate-limit/postgres";
 import type { RateLimiter, RateLimitResult } from "@/server/rate-limit/types";
 
@@ -20,6 +21,7 @@ function errorResponse(message: string, status: number, limit?: RateLimitResult)
     headers: {
       "content-type": "application/json",
       "cache-control": "no-store",
+      ...(status === 401 ? { "www-authenticate": process.env.OAUTH_ISSUER_URL ? `Bearer resource_metadata="${oauthConfig().metadata}"` : "Bearer" } : {}),
       ...(limit ? { "retry-after": retryAfter(limit) } : {}),
     },
   });
@@ -63,7 +65,7 @@ export async function protectMcpRequest(
       };
     }
 
-    const authentication = await resolveApiToken(token);
+    const authentication = await resolveMcpToken(token);
     if (!authentication.ok) {
       if (authentication.error === "SERVICE_UNAVAILABLE") {
         return { ok: false as const, response: errorResponse("Service unavailable", 503) };
@@ -78,7 +80,7 @@ export async function protectMcpRequest(
     }
 
     const tokenLimit = await limiter.consume(
-      `mcp:token:${authentication.data.tokenUuid}`,
+      authentication.data.connectionUuid ? `mcp:connection:${authentication.data.connectionUuid}` : `mcp:token:${authentication.data.tokenUuid}`,
       TOKEN_LIMIT,
       WINDOW_SECONDS
     );

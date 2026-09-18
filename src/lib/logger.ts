@@ -38,6 +38,12 @@ const redactedKeys = new Set([
   "reference",
   "session",
   "token",
+  "accesstoken",
+  "refreshtoken",
+  "code",
+  "codeverifier",
+  "consent",
+  "state",
 ]);
 
 const redactedValue = "[REDACTED]";

@@ -1,6 +1,8 @@
 jest.mock("@/server/modules/api-tokens/service", () => ({ resolveApiToken: jest.fn() }));
+jest.mock("@/server/modules/oauth/service", () => ({ resolveOAuthAccessToken: jest.fn() }));
 
 import { resolveApiToken } from "@/server/modules/api-tokens/service";
+import { resolveOAuthAccessToken } from "@/server/modules/oauth/service";
 import type { RateLimiter, RateLimitResult } from "@/server/rate-limit/types";
 
 import { enforceMcpBodyLimit, protectMcpRequest } from "./request-protection";
@@ -25,6 +27,25 @@ class FakeLimiter implements RateLimiter {
 
 describe("MCP request protection", () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it("uses the connection budget only after OAuth token authentication", async () => {
+    const limiter = new FakeLimiter();
+    process.env.OAUTH_ISSUER_URL = "https://trackcrow.example";
+    jest.mocked(resolveOAuthAccessToken).mockResolvedValueOnce({ ok: true, data: { userUuid: "user", tokenUuid: "access-1", connectionUuid: "connection", scopes: [] } });
+    const request = new Request("https://trackcrow.example/mcp", { method: "POST", headers: { authorization: "Bearer tc_at_valid" } });
+    expect((await protectMcpRequest(request, limiter)).ok).toBe(true);
+    expect(limiter.counts.get("mcp:connection:connection")).toBe(1);
+    expect(limiter.counts.has("mcp:token:access-1")).toBe(false);
+    jest.mocked(resolveOAuthAccessToken).mockResolvedValueOnce({ ok: false, error: "UNAUTHORIZED" });
+    const invalid = await protectMcpRequest(request, limiter);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) {
+      expect(invalid.response.status).toBe(401);
+      expect(invalid.response.headers.get("www-authenticate")).toContain("https://trackcrow.example/.well-known/oauth-protected-resource/mcp");
+    }
+    expect(limiter.counts.get("mcp:connection:connection")).toBe(1);
+    expect([...limiter.counts.keys()].filter((key) => key.startsWith("mcp:auth-failure:"))).toHaveLength(1);
+  });
 
   it("counts only invalid credentials against the IP budget", async () => {
     const limiter = new FakeLimiter();

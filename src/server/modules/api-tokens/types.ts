@@ -14,4 +14,5 @@ export type AuthenticatedToken = {
   userUuid: string;
   tokenUuid: string;
   scopes: ApiTokenScope[];
+  connectionUuid?: string;
 };
