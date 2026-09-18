@@ -33,6 +33,35 @@ The existing `/api/device-tokens` routes remain available. Legacy creation grant
 
 ### MCP
 
+MCP accepts personal API tokens and OAuth access tokens. Authentication failures include `WWW-Authenticate: Bearer resource_metadata="<issuer>/.well-known/oauth-protected-resource/mcp"` when OAuth is configured. OAuth credentials are valid only for `/mcp`, never SMS import. Authenticated OAuth traffic uses the connection's rate-limit budget, while each access token retains its own identity. Invalid credentials use the existing IP failure budget.
+
+### MCP OAuth
+
+TrackCrow acts as the authorization server using its existing Google/NextAuth session. Only public CIMD clients with `token_endpoint_auth_method: "none"` are supported. There is no registration endpoint or manual client registry.
+
+| Endpoint | Behavior |
+| --- | --- |
+| `GET /.well-known/oauth-protected-resource/mcp` | Resource, authorization server, and supported MCP scopes. |
+| `GET /.well-known/oauth-authorization-server` | Authorization/token endpoints, CIMD support, `S256`, and supported grants. |
+| `GET /oauth/authorize` | Validate CIMD client, redirect, `response_type=code`, explicit scopes, resource, and PKCE; start browser consent. |
+| `GET /oauth/consent` | Resume browser-bound consent; sign in with Google if needed. |
+| `POST /oauth/consent/submit` | Same-origin, session-authenticated form submission. Select a subset of requested scopes or deny. |
+| `POST /oauth/token` | Form-encoded authorization-code or refresh-token exchange. |
+| `GET /api/oauth/connections` | List the session user's connection snapshots, permissions, and timestamps. |
+| `DELETE /api/oauth/connections/:id` | Same-origin, session-authenticated revocation, scoped to the owning user. |
+
+Authorization requires `client_id`, `redirect_uri`, `response_type=code`, `scope`, `resource`, `code_challenge`, and `code_challenge_method=S256`. Optional client `state` is echoed unchanged. Only `transactions:read` and `transactions:write` are accepted. Read is preselected when requested; write requires explicit selection. Empty consent is denial. Each successful approval creates a distinct connection.
+
+The client ID is a public HTTPS metadata URL. Redirects must match its current metadata, with variable ports allowed only for HTTP loopback IP callbacks. Discovery supports public CORS; token and MCP browser requests use `MCP_ALLOWED_ORIGINS`. Consent never enables cross-origin credentials.
+
+Code exchange requires `grant_type=authorization_code`, `client_id`, `code`, `redirect_uri`, `resource`, and `code_verifier`. Refresh requires `grant_type=refresh_token`, `client_id`, `refresh_token`, and `resource`; optional `scope` may only narrow the current token's scopes. Both return `access_token`, `refresh_token`, `token_type: "Bearer"`, `expires_in`, and actual granted `scope` with `Cache-Control: no-store`. OAuth errors use an `error` field; storage failures return `503 temporarily_unavailable` and throttling returns `429` with `Retry-After`.
+
+Codes last five minutes; access tokens last one hour. Connections expire 90 days after initial approval, and all refresh tokens inherit that fixed deadline. Access expiry is capped at the deadline. Every refresh rotates the token and records its successor. Reusing a consumed refresh token revokes the entire connection. Revocation also invalidates access tokens and unredeemed codes. Client metadata is fetched only within new authorization flows; existing grants retain their stored identity and scopes.
+
+OAuth endpoints limit authorization and consent to 20 requests/minute per IP and token exchanges to 60. Form bodies are capped at 16 KiB. Tool permissions remain enforced by existing MCP tool checks; HTTP scope-upgrade challenges are deferred.
+
+### MCP transport
+
 `POST /mcp` is a stateless MCP endpoint and accepts only `Authorization: Bearer <token>`. It supports current MCP v2 requests and older stateless Streamable HTTP clients. `GET` and `DELETE` return `405`. An `Origin` header must match a comma-separated entry in `MCP_ALLOWED_ORIGINS`; native clients may omit it. Bodies above 64 KiB return `413`, including streamed bodies without `Content-Length`. Responses use `Cache-Control: no-store`.
 
 Authenticated tokens may make 120 POST requests per minute. Invalid credentials share a ten-attempt-per-minute client-IP budget. A blocked request returns `429` with `Retry-After`.

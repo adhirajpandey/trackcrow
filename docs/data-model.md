@@ -164,6 +164,12 @@ The current bootstrap seed creates these top-level categories:
 
 ## Delete Behavior
 
+OAuth persistence consists of `OAuthConnection`, `OAuthAuthorizationCode`, `OAuthAccessToken`, and `OAuthRefreshToken`, mapped to `oauth_*` tables. Connections belong to a user and snapshot the client ID/name, approved transaction scopes, resource, creation, last-use, revocation, and fixed 90-day expiry. Only successful access-token authentication updates last use, throttled to once every ten minutes.
+
+Codes store a unique credential hash and consent nonce, callback, PKCE challenge, approved scopes, expiry, and consumption time. Access tokens have independent UUIDs and hashed credentials. Refresh tokens store hashed credentials, effective scopes, consumption time, and a unique self-referencing `replacedByTokenUuid` successor. All records reference their connection. Only hashes are stored; token scope narrowing does not rewrite the connection's original grant.
+
+Refresh rotation does not change connection expiry. Consumed refresh records remain available through that deadline for replay detection. Revocation is recorded on the connection and checked for all its credentials, so individual token rows need no separate revocation flag. User deletion cascades through connections to all OAuth credentials.
+
 - deleting a user cascades to categories, subcategories, recipients, rules, transactions, raw messages, and API tokens
 - deleting a category sets `transaction.categoryId` to `null`
 - deleting a subcategory sets `transaction.subcategoryId` to `null`
