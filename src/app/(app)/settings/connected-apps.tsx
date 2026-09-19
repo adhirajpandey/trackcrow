@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useConnectionsQuery } from "@/features/oauth/queries";
 import { useRevokeConnectionMutation } from "@/features/oauth/mutations";
@@ -8,10 +9,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const date = (value: string | null) =>
   value ? new Date(value).toLocaleDateString() : "Never";
+const MAX_TIMER_MS = 2_147_000_000;
 
 export function ConnectedApps() {
   const connections = useConnectionsQuery();
   const revoke = useRevokeConnectionMutation();
+  const [currentTime, setCurrentTime] = useState<number>();
+
+  useEffect(() => {
+    let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const updateTime = () => {
+      const now = Date.now();
+      setCurrentTime(now);
+      const nextExpiry = Math.min(
+        ...(connections.data ?? [])
+          .filter((connection) => !connection.revokedAt)
+          .map((connection) => new Date(connection.expiresAt).getTime())
+          .filter((expiresAt) => expiresAt > now),
+      );
+      if (Number.isFinite(nextExpiry)) {
+        expiryTimer = setTimeout(
+          updateTime,
+          Math.min(nextExpiry - now + 1, MAX_TIMER_MS),
+        );
+      }
+    };
+
+    expiryTimer = setTimeout(updateTime, 0);
+    return () => {
+      if (expiryTimer !== undefined) clearTimeout(expiryTimer);
+    };
+  }, [connections.data]);
+
   return (
     <Card>
       <CardHeader>
@@ -42,7 +72,8 @@ export function ConnectedApps() {
         {connections.data?.map((connection) => {
           const inactive =
             Boolean(connection.revokedAt) ||
-            new Date(connection.expiresAt).getTime() <= connections.dataUpdatedAt;
+            (currentTime !== undefined &&
+              new Date(connection.expiresAt).getTime() <= currentTime);
           return (
             <div
               key={connection.uuid}

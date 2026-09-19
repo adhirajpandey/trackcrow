@@ -16,7 +16,7 @@ export function oauthFailure(error: unknown) {
       { error: error.code },
       { status: error.status, headers: noStoreHeaders },
     );
-  logger.error({ event: "oauth.request.failed" });
+  logger.error({ event: "oauth.request.failed" }, error);
   return NextResponse.json(
     { error: "temporarily_unavailable" },
     { status: 503, headers: noStoreHeaders },
@@ -27,10 +27,7 @@ export async function limitOAuth(
   operation: string,
   limit: number,
 ) {
-  const ip =
-    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    "unknown";
+  const ip = oauthClientIp(request);
   const result = await limiter.consume(
     `oauth:${operation}:${createHash("sha256").update(ip).digest("hex")}`,
     limit,
@@ -52,6 +49,13 @@ export async function limitOAuth(
         },
       },
     );
+}
+export function oauthClientIp(request: Request) {
+  return (
+    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown"
+  );
 }
 export function sameOrigin(request: Request) {
   if (request.headers.get("origin") !== oauthConfig().issuer)
