@@ -8,9 +8,15 @@ const metadataSchema = z.object({
   client_id: z.string().max(2048),
   client_name: z.string().trim().min(1).max(200),
   redirect_uris: z.array(z.string().max(2048)).min(1).max(50),
-  token_endpoint_auth_method: z.literal("none"),
+  token_endpoint_auth_method: z
+    .enum(["none", "private_key_jwt"])
+    .optional(),
+  token_endpoint_auth_methods_supported: z
+    .array(z.enum(["none", "private_key_jwt"]))
+    .optional(),
   grant_types: z.array(z.string().min(1).max(200)).max(20).optional(),
   response_types: z.array(z.string().min(1).max(200)).max(20).optional(),
+  jwks_uri: z.string().url().optional(),
   client_secret: z.never().optional(),
   client_secret_expires_at: z.never().optional(),
 });
@@ -89,8 +95,16 @@ export function redirectAllowed(value: string, allowed: string[]) {
 
 export function validateMetadata(clientId: string, body: unknown) {
   const parsed = metadataSchema.safeParse(body);
+  if (!parsed.success) throw new OAuthError("invalid_client");
+
+  const methods =
+    parsed.data.token_endpoint_auth_methods_supported ??
+    (parsed.data.token_endpoint_auth_method
+      ? [parsed.data.token_endpoint_auth_method]
+      : []);
+
   if (
-    !parsed.success ||
+    !methods.includes("none") ||
     parsed.data.client_id !== clientId ||
     !parsed.data.redirect_uris.every(validRedirect) ||
     (parsed.data.grant_types &&
