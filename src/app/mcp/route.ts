@@ -3,6 +3,7 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import { withRouteLogging } from "@/server/api/logging";
 import { createTrackCrowMcpServer } from "@/server/mcp/server";
 import { enforceMcpBodyLimit, protectMcpRequest } from "@/server/mcp/request-protection";
+import { cors } from "@/server/modules/oauth/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,7 @@ function methodNotAllowed() {
   return new Response(null, { status: 405, headers: { allow: "POST", "cache-control": "no-store" } });
 }
 
-export const POST = withRouteLogging(postMcp);
+export const POST = withRouteLogging(async (request: Request) => cors(request, await postMcp(request)));
+export function OPTIONS(request: Request) { return cors(request, new Response(null, { status: 204, headers: { "cache-control": "no-store" } })); }
 export const GET = withRouteLogging(methodNotAllowed);
 export const DELETE = withRouteLogging(methodNotAllowed);

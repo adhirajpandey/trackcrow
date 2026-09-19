@@ -9,6 +9,7 @@ This document tracks current implementation status and near-term priorities. For
 - Google sign-in, user bootstrap, category seeding, and session-protected app routes are in place.
 - SMS import, category/subcategory management APIs, transaction CRUD, dashboard summaries, recipient APIs, rule lifecycle APIs, and scoped personal API tokens are implemented.
 - MCP v1 exposes transaction search, summaries, categories, recipients, manual creation, and categorization with PostgreSQL-backed fixed-window limits.
+- MCP OAuth supports public CIMD clients, PKCE, selectable transaction scopes, rotating refresh tokens, and revocable Connected Apps while retaining PAT authentication.
 - Recipient-based rules classify new imported transactions while preserving manual, suggestion, and rule provenance.
 - The current authenticated product surface includes dashboard, transactions, transaction detail, transaction create, recipients, recipient detail, rules, and token settings.
 
@@ -33,7 +34,7 @@ This document tracks current implementation status and near-term priorities. For
 - recurring spend detection
 - exports or imports beyond SMS
 - subscription or billing complexity
-- MCP OAuth and token management through MCP
+- OAuth consent reuse, HTTP insufficient-scope upgrade challenges, and token management through MCP
 - richer backend-standardized field error payloads
 - top-level `dehydrate()` / `HydrationBoundary` adoption as a default pattern
 - repository or data-access extraction as optional architectural cleanup

@@ -14,6 +14,8 @@ The code currently reads these variables directly:
 
 - `DATABASE_URL`
 - `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`, matching the public origin used for Google sign-in
+- `OAUTH_ISSUER_URL`, the trusted public HTTPS origin for MCP OAuth, without a path. Must match the browser origin. Local HTTP loopback origins are accepted only outside production.
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `NEXT_PUBLIC_API_BASE_URL` for the frontend API client when a non-relative base URL is needed
@@ -107,6 +109,23 @@ These are the current durable rules distilled from the archived frontend TRD:
 - `jest.setup.ts` installs `crypto` for tests and mocks the logger.
 
 ## MCP client setup
+
+CIMD-capable public clients can connect to `/mcp` using browser OAuth. No client registration or client secret is needed. The client must supply its HTTPS metadata URL and use PKCE `S256`. Users choose permissions after Google sign-in and can revoke each connection in Settings → Connected Apps. A connection requires new consent after 90 days.
+
+Apply `20260918_add_mcp_oauth` before enabling OAuth and set `OAUTH_ISSUER_URL` plus the existing `NEXTAUTH_SECRET`. The secret also derives the authenticated-encryption key for short-lived consent state; rotation invalidates pending consent. Configure the same origin in `NEXTAUTH_URL`. Do not derive issuer/resource URLs from forwarded host headers. `MCP_ALLOWED_ORIGINS` controls cross-origin token/MCP browser requests; native clients can omit Origin. Discovery is public.
+
+Metadata fetching uses Node HTTPS with pinned, validated DNS results. Do not replace it with an unrestricted fetch or relax network protections for development. Public CIMD documents may advertise additional grant types, but TrackCrow only implements authorization-code and refresh grants with auth method `none`.
+
+OAuth regression tests are included in `pnpm test`. PostgreSQL concurrency tests run only when `OAUTH_TEST_DATABASE_URL` points to a local disposable database whose name contains `oauth_test`. Apply migrations to that database, then run:
+
+```bash
+OAUTH_TEST_DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:PORT/trackcrow_oauth_test \
+  pnpm exec jest src/server/modules/oauth/service.integration.test.ts --runInBand --detectOpenHandles
+```
+
+The integration suite creates and deletes only its own test users. It verifies concurrent redemption/rotation, replay revocation, owner isolation, deadline preservation, throttled usage writes, and real MCP tool/PAT behavior. Before deployment, verify Google login, consent, refresh, a read/write permission check, and revocation against the deployed origin. Record client versions tested; protocol support alone does not guarantee every Codex/Claude release supports public CIMD.
+
+For clients without compatible OAuth support, use the existing PAT flow below.
 
 Create a token under `/settings`, copy it once, and give it only the permissions the client needs.
 

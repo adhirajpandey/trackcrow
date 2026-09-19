@@ -4,13 +4,14 @@ This document describes the current runtime structure of the Next.js monolith.
 
 ## Runtime Shape
 
-TrackCrow has five top-level surfaces:
+TrackCrow has six top-level surfaces:
 
 - public marketing pages in `src/app/(marketing)`
 - authentication pages in `src/app/(auth)`
 - authenticated product pages in `src/app/(app)`
 - HTTP APIs in `src/app/api/*`
 - the stateless MCP endpoint at `/mcp`
+- MCP OAuth discovery and authorization under `/.well-known/*` and `/oauth/*`
 
 Current authenticated page routes are:
 
@@ -23,7 +24,7 @@ Current authenticated page routes are:
 - `/rules`
 - `/settings`
 
-`/settings` manages accounts and scoped personal API tokens. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
+`/settings` manages accounts, scoped personal API tokens, and OAuth Connected Apps. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
 
 ## Backend Boundaries
 
@@ -39,6 +40,7 @@ Business logic is grouped by module:
 - `categories`
 - `dashboard`
 - `api-tokens`, with legacy `device-tokens` route adapters
+- `oauth`, with CIMD fetching, consent state, token exchange, and connection management
 - `imports`
 - `recipients`
 - `rules`
@@ -74,6 +76,14 @@ SMS parsing leaves account text in the parsed payload for auditability. The impo
 `/mcp` runs on the Node runtime outside the authenticated page layout. Request protection checks the hashed client-IP failure budget before token lookup and consumes the token budget after authentication. The MCP layer constructs a new server for each request, enforces scopes, and calls domain services directly. Tools never import Prisma or call internal HTTP APIs.
 
 Rate-limit policy lives in `src/server/mcp/request-protection.ts`. Storage implements the `RateLimiter` interface in `src/server/rate-limit/`; PostgreSQL is the first adapter.
+
+OAuth uses the same Google/NextAuth user identity. Its routes delegate to the OAuth controller and service; browser consent and Connected Apps mutations use API routes, not Server Actions. Consent page data lives in `src/server/page-data/oauth-consent.ts`; Settings queries and mutations live in `src/features/oauth`.
+
+The CIMD helper owns all outbound metadata security: public HTTPS addresses, DNS pinning, IPv4/IPv6 range checks, no redirects, timeout, size limits, and bounded caching. Metadata is consulted only during new authorization flows. Connections retain immutable client identity and granted scopes.
+
+Encrypted, expiring consent state is bound to an HttpOnly browser cookie and the displayed account. The code record's unique consent nonce prevents duplicate approval. PostgreSQL connection-row locks serialize token exchanges against rotation and revocation. Used refresh tokens retain successor links so replay revokes the whole connection.
+
+The MCP-specific resolver combines PAT and OAuth authentication into `AuthenticatedToken`. OAuth adds optional `connectionUuid`; `tokenUuid` remains the access-token UUID. Successful authentication selects the connection rate-limit key. OAuth access use updates `lastUsedAt` at most once every ten minutes. The SMS resolver remains PAT-only.
 
 ## Data Flow
 
