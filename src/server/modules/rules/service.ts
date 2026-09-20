@@ -1,4 +1,4 @@
-import { Prisma, RuleActionStatus } from "@/generated/prisma-rewrite";
+import { Prisma, RuleActionStatus, RuleActionType } from "@/generated/prisma-rewrite";
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { fail, ok } from "@/server/shared/result";
@@ -24,6 +24,7 @@ function toRuleDto(rule: {
   name: string;
   isEnabled: boolean;
   actionStatus: RuleActionStatus;
+  actionType: RuleActionType;
   recipient: { uuid: string; displayName: string };
   category: { uuid: string; name: string } | null;
   subcategory: { uuid: string; name: string } | null;
@@ -38,6 +39,7 @@ function toRuleDto(rule: {
     conditions: { recipient: { equals: rule.recipient.uuid } },
     recipient: rule.recipient,
     action: {
+      type: rule.actionType,
       categoryUuid: rule.category?.uuid ?? null,
       categoryName: rule.category?.name ?? null,
       subcategoryUuid: rule.subcategory?.uuid ?? null,
@@ -55,10 +57,19 @@ async function resolveRecipient(userUuid: string, recipientUuid: string) {
   });
 }
 
-async function resolveAction(
-  userUuid: string,
-  action: { categoryUuid: string; subcategoryUuid: string | null }
-) {
+type RuleActionInput =
+  | { type?: "CATEGORIZE"; categoryUuid: string; subcategoryUuid: string | null }
+  | { type: "IGNORE" };
+
+async function resolveAction(userUuid: string, action: RuleActionInput) {
+  if (action.type === "IGNORE") {
+    return ok({
+      actionType: RuleActionType.IGNORE,
+      categoryId: null,
+      subcategoryId: null,
+    });
+  }
+
   const category = await prisma.category.findFirst({
     where: { userUuid, uuid: action.categoryUuid },
     select: { id: true },
@@ -70,7 +81,11 @@ async function resolveAction(
   }
 
   if (!action.subcategoryUuid) {
-    return ok({ categoryId: category.id, subcategoryId: null });
+    return ok({
+      actionType: RuleActionType.CATEGORIZE,
+      categoryId: category.id,
+      subcategoryId: null,
+    });
   }
   const subcategory = await prisma.subcategory.findFirst({
     where: { userUuid, uuid: action.subcategoryUuid },
@@ -84,7 +99,11 @@ async function resolveAction(
       },
     ]);
   }
-  return ok({ categoryId: category.id, subcategoryId: subcategory.id });
+  return ok({
+    actionType: RuleActionType.CATEGORIZE,
+    categoryId: category.id,
+    subcategoryId: subcategory.id,
+  });
 }
 
 async function findEnabledConflict(
@@ -194,6 +213,7 @@ export async function createRule(input: CreateRuleInput): Promise<RuleMutationRe
       data: {
         userUuid: input.userUuid,
         recipientId: recipient.id,
+        actionType: action.data.actionType,
         categoryId: action.data.categoryId,
         subcategoryId: action.data.subcategoryId,
         name: input.name.trim(),
@@ -226,6 +246,7 @@ export async function updateRule(input: UpdateRuleInput): Promise<RuleMutationRe
         name: true,
         isEnabled: true,
         actionStatus: true,
+        actionType: true,
         recipientId: true,
         categoryId: true,
         subcategoryId: true,
@@ -247,16 +268,21 @@ export async function updateRule(input: UpdateRuleInput): Promise<RuleMutationRe
     let categoryId = current.categoryId;
     let subcategoryId = current.subcategoryId;
     let actionStatus = current.actionStatus;
+    let actionType = current.actionType;
     if (input.action) {
       const action = await resolveAction(input.userUuid, input.action);
       if (!action.ok) return action;
+      actionType = action.data.actionType;
       categoryId = action.data.categoryId;
       subcategoryId = action.data.subcategoryId;
       actionStatus = RuleActionStatus.VALID;
     }
 
+    const actionIsUsable =
+      actionStatus === RuleActionStatus.VALID &&
+      (actionType === RuleActionType.IGNORE || categoryId != null);
     const isEnabled = input.isEnabled ?? current.isEnabled;
-    if (isEnabled && (actionStatus !== RuleActionStatus.VALID || categoryId == null)) {
+    if (isEnabled && !actionIsUsable) {
       return fail("VALIDATION_ERROR", [
         { path: ["isEnabled"], message: "Repair the rule action before enabling it" },
       ]);
@@ -271,7 +297,7 @@ export async function updateRule(input: UpdateRuleInput): Promise<RuleMutationRe
       data: {
         ...(input.name !== undefined ? { name: input.name.trim() } : {}),
         ...(input.conditions ? { recipientId } : {}),
-        ...(input.action ? { categoryId, subcategoryId, actionStatus } : {}),
+        ...(input.action ? { actionType, categoryId, subcategoryId, actionStatus } : {}),
         ...(input.isEnabled !== undefined ? { isEnabled } : {}),
       },
       include: ruleInclude,
@@ -319,12 +345,19 @@ export async function loadEvaluatableRules(userUuid: string): Promise<Evaluatabl
       isEnabled: true,
       deletedAt: null,
       actionStatus: RuleActionStatus.VALID,
-      categoryId: { not: null },
-      category: { is: { userUuid } },
+      OR: [
+        {
+          actionType: RuleActionType.CATEGORIZE,
+          categoryId: { not: null },
+          category: { is: { userUuid } },
+        },
+        { actionType: RuleActionType.IGNORE },
+      ],
     },
     select: {
       id: true,
       uuid: true,
+      actionType: true,
       categoryId: true,
       subcategoryId: true,
       recipient: { select: { uuid: true } },
@@ -334,7 +367,8 @@ export async function loadEvaluatableRules(userUuid: string): Promise<Evaluatabl
     id: rule.id,
     uuid: rule.uuid,
     recipientUuid: rule.recipient.uuid,
-    categoryId: rule.categoryId as number,
+    actionType: rule.actionType,
+    categoryId: rule.categoryId,
     subcategoryId: rule.subcategoryId,
   }));
 }

@@ -2,6 +2,7 @@ import type { CategoryOption } from "@/common/types";
 import type { RecipientListItemDto } from "@/features/recipients/types";
 
 export type RuleStatus = "enabled" | "disabled" | "needsRepair";
+export type RuleActionType = "CATEGORIZE" | "IGNORE";
 export type RuleDto = {
   uuid: string;
   name: string;
@@ -10,6 +11,7 @@ export type RuleDto = {
   conditions: { recipient: { equals: string } };
   recipient: { uuid: string; displayName: string };
   action: {
+    type: RuleActionType;
     categoryUuid: string | null;
     categoryName: string | null;
     subcategoryUuid: string | null;
@@ -32,7 +34,9 @@ export type RuleMutationInput = {
   name: string;
   isEnabled: boolean;
   conditions: { recipient: { equals: string } };
-  action: { categoryUuid: string; subcategoryUuid: string | null };
+  action:
+    | { type?: "CATEGORIZE"; categoryUuid: string; subcategoryUuid: string | null }
+    | { type: "IGNORE" };
 };
 export type RulesPageInitialData = {
   initialRules: RuleListResponse;

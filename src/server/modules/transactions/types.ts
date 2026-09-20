@@ -87,6 +87,8 @@ export type ManualTransactionWriteInput = TransactionWriteBaseInput & {
 export type ImportedTransactionWriteInput = TransactionWriteBaseInput & {
   recipientRaw: string;
   recipientName?: string | null;
+  /** Only the SMS import honors IGNORE rules; manual and MCP writes always persist. */
+  honorIgnoreRules?: boolean;
 };
 
 export type TransactionWriteInput = ManualTransactionWriteInput | ImportedTransactionWriteInput;
@@ -121,8 +123,11 @@ export type TransactionGetResult = ServiceResult<
   TransactionDto,
   "NOT_FOUND" | "INTERNAL_ERROR"
 >;
+export type TransactionCreateOutcome =
+  | { ignored: false; uuid: string }
+  | { ignored: true; ruleUuid: string };
 export type TransactionCreateResult = ServiceResult<
-  { uuid: string },
+  TransactionCreateOutcome,
   "VALIDATION_ERROR" | "INTERNAL_ERROR"
 >;
 export type TransactionUpdateResult = ServiceResult<

@@ -63,6 +63,8 @@ Important service rules:
 - SMS import creation sets `source` to `SMS`
 - manual creation records `classificationSource: MANUAL`, including when the transaction is left uncategorized
 - imported transactions are classified by the single enabled, valid rule matching their resolved recipient; imports without a match remain unclassified
+- an SMS import that matches an enabled `IGNORE` rule creates no transaction at all; only an `IGNORED` raw message is stored
+- manual and MCP creation never honor `IGNORE` rules; a deliberately entered transaction is always persisted, uncategorized when an `IGNORE` rule matches
 - accepting a current recipient-history suggestion records `classificationSource: SUGGESTION`; direct category edits record `MANUAL`
 - changing a transaction classification clears any prior `classificationRuleId`
 - transaction create and update APIs use UUID references for recipient, account, category, and subcategory inputs
@@ -78,14 +80,16 @@ SMS parsers keep returning their existing account text. Import matches that text
 
 ### Rule
 
-`Rule` assigns a category and optional subcategory to future imported transactions for one resolved recipient.
+`Rule` decides what happens to future imported transactions for one resolved recipient: it either assigns a category and optional subcategory, or ignores the import.
 
 - each rule belongs to one user and one recipient
 - the current condition shape is a recipient UUID equality match
-- the action requires a category and may include a subcategory from that category
+- `actionType` is `CATEGORIZE` or `IGNORE`, and defaults to `CATEGORIZE`
+- a `CATEGORIZE` action requires a category and may include a subcategory from that category
+- an `IGNORE` action carries no category or subcategory, and the `rule_ignore_no_category_check` constraint enforces that
 - `isEnabled` controls whether the rule participates in classification
 - `actionStatus` is `VALID` or `NEEDS_REPAIR`
-- an enabled rule must be valid and retain a category
+- an enabled rule must be valid, and `rule_enabled_action_check` requires either a `CATEGORIZE` action with a category or an `IGNORE` action without one
 - at most one non-deleted enabled rule may exist for a user and recipient
 - deletion is soft: the service disables the rule and sets `deletedAt`
 
@@ -106,13 +110,14 @@ Cross-domain behavior:
 - belongs to one user
 - may optionally link to the created transaction
 - stores parser status, parser metadata, parsed payload, and optional location
-- `parseStatus` is `PARSED`, `UNPARSEABLE`, or `FAILED`
+- `parseStatus` is `PARSED`, `UNPARSEABLE`, `FAILED`, or `IGNORED`
 
 Service behavior:
 
 - successful imports create a `PARSED` raw message linked to the new transaction
 - imports that cannot extract required fields create an `UNPARSEABLE` raw message
 - imports whose parsed result fails later transaction creation create a `FAILED` raw message
+- imports matched by an enabled `IGNORE` rule create an `IGNORED` raw message with no transaction link and no failure reason; the matching rule UUID is recorded in `parsedPayload.ignoredByRuleUuid`
 
 Raw messages are not deleted automatically when transactions are created.
 

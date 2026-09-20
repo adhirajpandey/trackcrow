@@ -24,7 +24,7 @@ jest.mock("@/server/modules/recipients/service", () => ({
   resolveRecipient: jest.fn(),
 }));
 
-import { ClassificationSource, TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
+import { ClassificationSource, RuleActionType, TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
 import { resolveRecipient } from "@/server/modules/recipients/service";
 
 import {
@@ -141,7 +141,7 @@ describe("transaction service", () => {
       type: TransactionType.UPI,
       timestamp: new Date(),
       source: TransactionSource.SMS,
-    })).resolves.toEqual({ ok: true, data: { uuid: "txn-1" } });
+    })).resolves.toEqual({ ok: true, data: { ignored: false, uuid: "txn-1" } });
 
     expect(mockPrisma.account.findFirst).toHaveBeenCalledWith({
       where: { uuid: "550e8400-e29b-41d4-a716-446655440001", userUuid: "user-1" },
@@ -220,7 +220,7 @@ describe("transaction service", () => {
       source: TransactionSource.MANUAL,
     });
 
-    expect(result).toEqual({ ok: true, data: { uuid: "txn-1" } });
+    expect(result).toEqual({ ok: true, data: { ignored: false, uuid: "txn-1" } });
     expect(mockPrisma.transaction.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         recipientRaw: "merchant@upi",
@@ -241,6 +241,7 @@ describe("transaction service", () => {
     mockPrisma.rule.findMany.mockResolvedValueOnce([{
       id: 7,
       uuid: "rule-7",
+      actionType: RuleActionType.CATEGORIZE,
       categoryId: 10,
       subcategoryId: 20,
       recipient: { uuid: "rcp-30" },
@@ -278,6 +279,72 @@ describe("transaction service", () => {
         classificationChangedAt: expect.any(Date),
       }),
     }));
+  });
+
+  it("skips the transaction entirely when an import honors a matching IGNORE rule", async () => {
+    resolveRecipientMock.mockResolvedValueOnce({
+      ok: true,
+      data: { recipientId: 30, recipientUuid: "rcp-30", displayName: "Me" },
+    });
+    mockPrisma.rule.findMany.mockResolvedValueOnce([{
+      id: 8,
+      uuid: "rule-8",
+      actionType: RuleActionType.IGNORE,
+      categoryId: null,
+      subcategoryId: null,
+      recipient: { uuid: "rcp-30" },
+    }]);
+
+    const result = await createTransaction({
+      userUuid: "user-1",
+      amount: 25,
+      recipientRaw: "me@upi",
+      type: TransactionType.UPI,
+      timestamp: new Date(),
+      source: TransactionSource.SMS,
+      honorIgnoreRules: true,
+    });
+
+    expect(result).toEqual({ ok: true, data: { ignored: true, ruleUuid: "rule-8" } });
+    expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it("still creates an uncategorized transaction when the caller does not honor IGNORE rules", async () => {
+    resolveRecipientMock.mockResolvedValueOnce({
+      ok: true,
+      data: { recipientId: 30, recipientUuid: "rcp-30", displayName: "Me" },
+    });
+    mockPrisma.rule.findMany.mockResolvedValueOnce([{
+      id: 8,
+      uuid: "rule-8",
+      actionType: RuleActionType.IGNORE,
+      categoryId: null,
+      subcategoryId: null,
+      recipient: { uuid: "rcp-30" },
+    }]);
+    mockPrisma.transaction.create.mockResolvedValueOnce({ id: 5, uuid: "txn-manual" });
+
+    const result = await createTransaction({
+      userUuid: "user-1",
+      amount: 25,
+      recipientRaw: "me@upi",
+      type: TransactionType.UPI,
+      timestamp: new Date(),
+      source: TransactionSource.MANUAL,
+    });
+
+    expect(result).toEqual({ ok: true, data: { ignored: false, uuid: "txn-manual" } });
+    expect(mockPrisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          categoryId: null,
+          subcategoryId: null,
+          classificationSource: null,
+          classificationRuleId: null,
+          classificationChangedAt: null,
+        }),
+      })
+    );
   });
 
   it("maps list filters, pagination, search, and amount sorting", async () => {

@@ -6,16 +6,11 @@ import { createTransaction } from "@/server/modules/transactions/service";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 import { matchAccountByName } from "@/server/modules/accounts/service";
 
-import type { ImportSmsInput } from "./types";
+import type { ImportSmsInput, ImportSmsOutcome } from "./types";
 
 export async function importSmsTransaction(
   input: ImportSmsInput
-): Promise<
-  ServiceResult<
-    { uuid: string },
-    "UNPROCESSABLE" | "INTERNAL_ERROR"
-  >
-> {
+): Promise<ServiceResult<ImportSmsOutcome, "UNPROCESSABLE" | "INTERNAL_ERROR">> {
   try {
     const parsed = parseTransactionMessage(input.message);
     if (!parsed?.amount || !parsed.recipient) {
@@ -66,6 +61,7 @@ export async function importSmsTransaction(
       accountUuid: accountMatch.data.accountUuid,
       locationRaw: input.location ?? null,
       source: TransactionSource.SMS,
+      honorIgnoreRules: true,
     });
 
     if (!transaction.ok) {
@@ -89,6 +85,28 @@ export async function importSmsTransaction(
         return fail("UNPROCESSABLE");
       }
       return fail("INTERNAL_ERROR");
+    }
+
+    if (transaction.data.ignored) {
+      await prisma.rawMessage.create({
+        data: {
+          userUuid: input.userUuid,
+          body: input.message,
+          parseStatus: ParseStatus.IGNORED,
+          parserName: null,
+          parsedPayload: { ...parsed, ignoredByRuleUuid: transaction.data.ruleUuid },
+          locationRaw: input.location ?? null,
+        },
+      });
+
+      logger.info({
+        event: "sms_import.ignored_by_rule",
+        userId: input.userUuid,
+        ruleUuid: transaction.data.ruleUuid,
+        source: TransactionSource.SMS,
+      });
+
+      return ok(transaction.data);
     }
 
     const createdTransaction = await prisma.transaction.findFirst({

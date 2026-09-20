@@ -1,0 +1,1 @@
+ALTER TYPE "ParseStatus" ADD VALUE 'IGNORED';

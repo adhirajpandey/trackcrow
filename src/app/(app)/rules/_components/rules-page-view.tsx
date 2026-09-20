@@ -19,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useRuleMutations } from "@/features/rules/mutations";
 import { buildRulesSearchParams } from "@/features/rules/query-state";
 import { useRulesQuery } from "@/features/rules/queries";
-import type { RuleDto, RulesPageInitialData } from "@/features/rules/types";
+import type { RuleActionType, RuleDto, RuleMutationInput, RulesPageInitialData } from "@/features/rules/types";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
@@ -168,12 +168,17 @@ function StatusBadge({ rule }: { rule: RuleDto }) {
   </span>;
 }
 
+function ruleActionLabel(rule: RuleDto) {
+  if (rule.action.type === "IGNORE") return "Ignore transaction";
+  return `${rule.action.categoryName ?? "Missing category"}${rule.action.subcategoryName ? ` · ${rule.action.subcategoryName}` : ""}`;
+}
+
 function RuleCard({ rule, onEdit }: { rule: RuleDto; onEdit: () => void }) {
-  return <div className={cn(mobileCardClassName, "p-4")}><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{rule.name}</p><p className="mt-1 text-sm text-secondary-foreground">{rule.recipient.displayName}</p></div><StatusBadge rule={rule} /></div><p className="mt-3 text-sm">{rule.action.categoryName ?? "Missing category"}{rule.action.subcategoryName ? ` · ${rule.action.subcategoryName}` : ""}</p><div className="mt-3 flex justify-end"><Button variant="secondary" onClick={onEdit}><Pencil className="h-4 w-4" />Edit</Button></div></div>;
+  return <div className={cn(mobileCardClassName, "p-4")}><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{rule.name}</p><p className="mt-1 text-sm text-secondary-foreground">{rule.recipient.displayName}</p></div><StatusBadge rule={rule} /></div><p className="mt-3 text-sm">{ruleActionLabel(rule)}</p><div className="mt-3 flex justify-end"><Button variant="secondary" onClick={onEdit}><Pencil className="h-4 w-4" />Edit</Button></div></div>;
 }
 
 function RuleRow({ rule, onEdit }: { rule: RuleDto; onEdit: () => void }) {
-  return <TableRow><TableCell className="font-semibold">{rule.name}</TableCell><TableCell>{rule.recipient.displayName}</TableCell><TableCell>{rule.action.categoryName ?? "Missing category"}{rule.action.subcategoryName ? ` · ${rule.action.subcategoryName}` : ""}</TableCell><TableCell><StatusBadge rule={rule} /></TableCell><TableCell><div className="flex justify-end gap-2"><Button size="sm" variant="secondary" onClick={onEdit}><Pencil className="h-4 w-4" />Edit</Button><DeleteRule rule={rule} /></div></TableCell></TableRow>;
+  return <TableRow><TableCell className="font-semibold">{rule.name}</TableCell><TableCell>{rule.recipient.displayName}</TableCell><TableCell>{ruleActionLabel(rule)}</TableCell><TableCell><StatusBadge rule={rule} /></TableCell><TableCell><div className="flex justify-end gap-2"><Button size="sm" variant="secondary" onClick={onEdit}><Pencil className="h-4 w-4" />Edit</Button><DeleteRule rule={rule} /></div></TableCell></TableRow>;
 }
 
 function DeleteRule({ rule }: { rule: RuleDto }) {
@@ -194,6 +199,7 @@ function RuleForm({ initialRule, prefill, categories, recipients, onDone }: { in
   const mutations = useRuleMutations();
   const [name, setName] = useState(initialRule?.name ?? "");
   const [recipientUuid, setRecipientUuid] = useState(initialRule?.recipient.uuid ?? prefill?.recipientUuid ?? "");
+  const [actionType, setActionType] = useState<RuleActionType>(initialRule?.action.type ?? "CATEGORIZE");
   const [categoryUuid, setCategoryUuid] = useState(initialRule?.action.categoryUuid ?? prefill?.categoryUuid ?? "");
   const [subcategoryUuid, setSubcategoryUuid] = useState(initialRule?.action.subcategoryUuid ?? prefill?.subcategoryUuid ?? "");
   const [enabled, setEnabled] = useState(initialRule?.isEnabled ?? true);
@@ -201,8 +207,12 @@ function RuleForm({ initialRule, prefill, categories, recipients, onDone }: { in
   const subcategories = useMemo(() => categories.find((category) => category.uuid === categoryUuid)?.subcategories ?? [], [categories, categoryUuid]);
   async function submit(event: FormEvent) {
     event.preventDefault(); setError(null);
-    if (!name.trim() || !recipientUuid || !categoryUuid) { setError("Name, recipient, and category are required."); return; }
-    const input = { name: name.trim(), isEnabled: enabled, conditions: { recipient: { equals: recipientUuid } }, action: { categoryUuid, subcategoryUuid: subcategoryUuid || null } };
+    if (!name.trim() || !recipientUuid) { setError("Name and recipient are required."); return; }
+    if (actionType === "CATEGORIZE" && !categoryUuid) { setError("Name, recipient, and category are required."); return; }
+    const action: RuleMutationInput["action"] = actionType === "IGNORE"
+      ? { type: "IGNORE" }
+      : { type: "CATEGORIZE", categoryUuid, subcategoryUuid: subcategoryUuid || null };
+    const input = { name: name.trim(), isEnabled: enabled, conditions: { recipient: { equals: recipientUuid } }, action };
     try {
       if (initialRule) await mutations.update.mutateAsync({ ruleUuid: initialRule.uuid, input }); else await mutations.create.mutateAsync(input);
       toast({
@@ -221,5 +231,5 @@ function RuleForm({ initialRule, prefill, categories, recipients, onDone }: { in
       } else setError(getApiClientErrorMessage(caught, "Unable to save the rule."));
     }
   }
-  return <form onSubmit={submit} className="mt-4 space-y-4"><label className="block text-sm font-semibold">Name<input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className={cn(inputClassName, "mt-1.5")} /></label><label className="block text-sm font-semibold">Recipient<div className="mt-1.5"><RecipientPicker value={recipientUuid} initialRecipients={recipients} onChange={setRecipientUuid} /></div></label><label className="block text-sm font-semibold">Category<div className="mt-1.5"><Select ariaLabel="Rule category" value={categoryUuid} onValueChange={(value) => { setCategoryUuid(value); setSubcategoryUuid(""); }} options={[{ value: "", label: "Choose category" }, ...categories.map((category) => ({ value: category.uuid, label: category.name }))]} /></div></label><label className="block text-sm font-semibold">Subcategory<div className="mt-1.5"><Select ariaLabel="Rule subcategory" value={subcategoryUuid} disabled={!categoryUuid || subcategories.length === 0} onValueChange={setSubcategoryUuid} options={[{ value: "", label: "No subcategory" }, ...subcategories.map((subcategory) => ({ value: subcategory.uuid, label: subcategory.name }))]} /></div></label><label className="flex min-h-11 items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-5 w-5 accent-primary" />Enabled</label>{initialRule?.actionStatus === "NEEDS_REPAIR" ? <p className="rounded-[8px] border-2 border-border bg-[#fff1bd] p-3 text-sm">Choose a valid category action to repair this rule. It remains disabled until saved with a valid action.</p> : null}{error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onDone}>Cancel</Button><Button type="submit" disabled={mutations.create.isPending || mutations.update.isPending}>Save rule</Button></div></form>;
+  return <form onSubmit={submit} className="mt-4 space-y-4"><label className="block text-sm font-semibold">Name<input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className={cn(inputClassName, "mt-1.5")} /></label><label className="block text-sm font-semibold">Recipient<div className="mt-1.5"><RecipientPicker value={recipientUuid} initialRecipients={recipients} onChange={setRecipientUuid} /></div></label><fieldset className="space-y-2"><legend className="text-sm font-semibold">Action</legend><label className="flex min-h-11 items-center gap-3 text-sm"><input type="radio" name="rule-action-type" value="CATEGORIZE" checked={actionType === "CATEGORIZE"} onChange={() => setActionType("CATEGORIZE")} className="h-5 w-5 accent-primary" />Categorize transaction</label><label className="flex min-h-11 items-center gap-3 text-sm"><input type="radio" name="rule-action-type" value="IGNORE" checked={actionType === "IGNORE"} onChange={() => setActionType("IGNORE")} className="h-5 w-5 accent-primary" />Ignore transaction</label></fieldset>{actionType === "IGNORE" ? <p className="rounded-[8px] border-2 border-border bg-secondary/40 p-3 text-sm">Future imports matching this recipient will not create transactions. Existing transactions will not change.</p> : <><label className="block text-sm font-semibold">Category<div className="mt-1.5"><Select ariaLabel="Rule category" value={categoryUuid} onValueChange={(value) => { setCategoryUuid(value); setSubcategoryUuid(""); }} options={[{ value: "", label: "Choose category" }, ...categories.map((category) => ({ value: category.uuid, label: category.name }))]} /></div></label><label className="block text-sm font-semibold">Subcategory<div className="mt-1.5"><Select ariaLabel="Rule subcategory" value={subcategoryUuid} disabled={!categoryUuid || subcategories.length === 0} onValueChange={setSubcategoryUuid} options={[{ value: "", label: "No subcategory" }, ...subcategories.map((subcategory) => ({ value: subcategory.uuid, label: subcategory.name }))]} /></div></label></>}<label className="flex min-h-11 items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-5 w-5 accent-primary" />Enabled</label>{initialRule?.actionStatus === "NEEDS_REPAIR" ? <p className="rounded-[8px] border-2 border-border bg-[#fff1bd] p-3 text-sm">Choose a valid category action to repair this rule. It remains disabled until saved with a valid action.</p> : null}{error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onDone}>Cancel</Button><Button type="submit" disabled={mutations.create.isPending || mutations.update.isPending}>Save rule</Button></div></form>;
 }

@@ -29,6 +29,43 @@ describe("rule mutation schemas", () => {
     expect(updateRuleSchema.parse({ name: " New name " })).toEqual({ name: "New name" });
   });
 
+  it("treats an action without a type as CATEGORIZE", () => {
+    expect(createRuleSchema.parse(validRule).action).toEqual({
+      categoryUuid: validRule.action.categoryUuid,
+      subcategoryUuid: null,
+    });
+    expect(
+      createRuleSchema.safeParse({
+        ...validRule,
+        action: { type: "CATEGORIZE", ...validRule.action },
+      }).success
+    ).toBe(true);
+  });
+
+  it("accepts an IGNORE action only without a category selection", () => {
+    expect(
+      createRuleSchema.safeParse({ ...validRule, action: { type: "IGNORE" } }).success
+    ).toBe(true);
+    expect(
+      createRuleSchema.safeParse({
+        ...validRule,
+        action: { type: "IGNORE", categoryUuid: validRule.action.categoryUuid },
+      }).success
+    ).toBe(false);
+    expect(
+      createRuleSchema.safeParse({
+        ...validRule,
+        action: { type: "IGNORE", subcategoryUuid: null },
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects a CATEGORIZE action without a category", () => {
+    expect(
+      createRuleSchema.safeParse({ ...validRule, action: { type: "CATEGORIZE" } }).success
+    ).toBe(false);
+  });
+
   it("requires complete nested replacements in a patch", () => {
     expect(updateRuleSchema.safeParse({ action: { categoryUuid: validRule.action.categoryUuid } }).success).toBe(false);
     expect(updateRuleSchema.safeParse({ conditions: { recipient: {} } }).success).toBe(false);

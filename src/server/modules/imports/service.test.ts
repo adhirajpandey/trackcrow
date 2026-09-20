@@ -51,7 +51,7 @@ describe("importSmsTransaction", () => {
     });
     createTransactionMock.mockResolvedValueOnce({
       ok: true,
-      data: { uuid: "txn-uuid" },
+      data: { ignored: false, uuid: "txn-uuid" },
     });
     mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 99 });
     matchAccountByNameMock.mockResolvedValueOnce({ ok: true, data: { accountUuid: "account-1" } });
@@ -62,7 +62,7 @@ describe("importSmsTransaction", () => {
       location: "Bangalore",
     });
 
-    expect(result).toEqual({ ok: true, data: { uuid: "txn-uuid" } });
+    expect(result).toEqual({ ok: true, data: { ignored: false, uuid: "txn-uuid" } });
     expect(createTransactionMock).toHaveBeenCalledWith({
       userUuid: "user-1",
       amount: 125,
@@ -75,6 +75,7 @@ describe("importSmsTransaction", () => {
       accountUuid: "account-1",
       locationRaw: "Bangalore",
       source: TransactionSource.SMS,
+      honorIgnoreRules: true,
     });
     expect(mockPrisma.rawMessage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -89,6 +90,39 @@ describe("importSmsTransaction", () => {
       where: { uuid: "txn-uuid", userUuid: "user-1" },
       select: { id: true },
     });
+  });
+
+  it("records an IGNORED raw message and no transaction when a rule ignores the message", async () => {
+    parseTransactionMessageMock.mockReturnValueOnce({
+      amount: 500,
+      recipient: "me@upi",
+      recipient_name: "Me",
+      type: "UPI",
+    });
+    createTransactionMock.mockResolvedValueOnce({
+      ok: true,
+      data: { ignored: true, ruleUuid: "rule-ignore" },
+    });
+
+    const result = await importSmsTransaction({
+      userUuid: "user-1",
+      message: "self transfer sms",
+      location: null,
+    });
+
+    expect(result).toEqual({ ok: true, data: { ignored: true, ruleUuid: "rule-ignore" } });
+    expect(mockPrisma.rawMessage.create).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.rawMessage.create).toHaveBeenCalledWith({
+      data: {
+        userUuid: "user-1",
+        body: "self transfer sms",
+        parseStatus: ParseStatus.IGNORED,
+        parserName: null,
+        parsedPayload: expect.objectContaining({ ignoredByRuleUuid: "rule-ignore" }),
+        locationRaw: null,
+      },
+    });
+    expect(mockPrisma.transaction.findFirst).not.toHaveBeenCalled();
   });
 
   it("stores an UNPARSEABLE raw message when amount or recipient is missing", async () => {
