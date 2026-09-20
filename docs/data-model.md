@@ -145,7 +145,7 @@ User
   |   `- Subcategory
   |- Recipient
   |   |- RecipientIdentifier
-  |   `- Rule -> Category
+  |   `- Rule -> Category?
   |           -> Subcategory?
   |- Account
   |- Transaction -> Recipient
