@@ -5,7 +5,7 @@ import type { RulesPageInitialData } from "@/features/rules/types";
 import { getRulesQuery } from "@/features/rules/query-state";
 import { requirePageSessionUser } from "@/server/auth/session";
 import { listCategoriesForUser } from "@/server/modules/categories/service";
-import { listRecipients } from "@/server/modules/recipients/service";
+import { getRecipient, listRecipients } from "@/server/modules/recipients/service";
 import { getRule, listRules } from "@/server/modules/rules/service";
 
 export async function getRulesPageData(
@@ -26,9 +26,10 @@ export async function getRulesPageData(
   const categoryUuid = Array.isArray(params.category) ? params.category[0] : params.category;
   const subcategoryUuid = Array.isArray(params.subcategory) ? params.subcategory[0] : params.subcategory;
   let initialPrefill: RulesPageInitialData["initialPrefill"] = null;
+  const recipientOptions = recipients.ok ? [...recipients.data.recipients] : [];
   if (recipientUuid) {
     const [recipient, category, subcategory] = await Promise.all([
-      prisma.recipient.findFirst({ where: { userUuid, uuid: recipientUuid }, select: { uuid: true } }),
+      getRecipient({ userUuid, recipientUuid }),
       categoryUuid
         ? prisma.category.findFirst({ where: { userUuid, uuid: categoryUuid }, select: { id: true, uuid: true } })
         : null,
@@ -36,7 +37,10 @@ export async function getRulesPageData(
         ? prisma.subcategory.findFirst({ where: { userUuid, uuid: subcategoryUuid }, select: { uuid: true, categoryId: true } })
         : null,
     ]);
-    if (recipient) {
+    if (recipient.ok) {
+      if (!recipientOptions.some((option) => option.uuid === recipient.data.uuid)) {
+        recipientOptions.push(recipient.data);
+      }
       initialPrefill = {
         recipientUuid,
         categoryUuid: category?.uuid ?? null,
@@ -52,7 +56,7 @@ export async function getRulesPageData(
       ...category,
       subcategories: category.subcategories.map((subcategory) => ({ ...subcategory, categoryUuid: category.uuid })),
     })) : [],
-    recipients: recipients.ok ? recipients.data.recipients : [],
+    recipients: recipientOptions,
     createMode: create === "1",
     initialForm: editedRule && editedRule.ok ? editedRule.data : null,
     initialPrefill,

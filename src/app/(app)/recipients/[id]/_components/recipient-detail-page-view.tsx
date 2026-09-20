@@ -10,6 +10,7 @@ import {
   Copy,
   LoaderCircle,
   Plus,
+  ScrollText,
 } from "lucide-react";
 
 import { AppPageHeader } from "@/components/product/app-page-header";
@@ -96,11 +97,17 @@ const aliasTypeOptions: SelectOption[] = [
 ];
 
 export function RecipientDetailPageView({
+  existingRuleUuid,
   initialRecipientDetailData,
   initialCategoriesData,
 }: RecipientDetailPageInitialData) {
   const router = useRouter();
   const data = initialRecipientDetailData;
+  const ruleHref = existingRuleUuid
+    ? `/rules?edit=${encodeURIComponent(existingRuleUuid)}`
+    : `/rules?create=1&recipient=${encodeURIComponent(data.recipientUuid)}`;
+  const ruleLabel = existingRuleUuid ? "Open rule" : "Create rule";
+  const RuleIcon = existingRuleUuid ? ScrollText : Plus;
   const categoriesQuery = useCategoriesQuery({ initialData: initialCategoriesData });
   const categories = categoriesQuery.data ?? initialCategoriesData;
   const updateCategoryMutation = useUpdateTransactionCategoryMutation();
@@ -302,12 +309,17 @@ export function RecipientDetailPageView({
         title="Recipient detail"
         description="Fix categorization gaps, manage matching aliases, and trace linked payments."
         actions={
-          <Button asChild variant="secondary" className="w-full min-w-0">
-            <Link href="/recipients">
-              <ArrowLeft className="h-4 w-4" />
-              Back to recipients
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button asChild className="w-full min-w-0">
+              <Link href={ruleHref}><RuleIcon className="h-4 w-4" />{ruleLabel}</Link>
+            </Button>
+            <Button asChild variant="secondary" className="w-full min-w-0">
+              <Link href="/recipients">
+                <ArrowLeft className="h-4 w-4" />
+                Back to recipients
+              </Link>
+            </Button>
+          </div>
         }
       />
       <div className="hidden lg:block">
@@ -316,12 +328,17 @@ export function RecipientDetailPageView({
           title="Recipient detail"
           description="Fix categorization gaps, manage matching aliases, and trace linked payments."
           actions={
-            <Button asChild variant="secondary" className="min-w-[176px]">
-              <Link href="/recipients">
-                <ArrowLeft className="h-4 w-4" />
-                Back to recipients
-              </Link>
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild>
+                <Link href={ruleHref}><RuleIcon className="h-4 w-4" />{ruleLabel}</Link>
+              </Button>
+              <Button asChild variant="secondary" className="min-w-[176px]">
+                <Link href="/recipients">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to recipients
+                </Link>
+              </Button>
+            </div>
           }
         />
       </div>

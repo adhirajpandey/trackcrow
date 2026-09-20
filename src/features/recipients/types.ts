@@ -219,6 +219,7 @@ export type RecipientDetailPageData = {
 };
 
 export type RecipientDetailPageInitialData = {
+  existingRuleUuid: string | null;
   initialRecipientDetailData: RecipientDetailPageData;
   initialCategoriesData: CategoryOption[];
 };

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import type { RecipientDetailPageInitialData } from "@/features/recipients/types";
 import { getCategories } from "@/lib/internal-api";
+import prisma from "@/lib/prisma-rewrite";
 import { requirePageSessionUser } from "@/server/auth/session";
 import { getRecipientDetail } from "@/server/modules/recipients/service";
 
@@ -27,7 +28,19 @@ export async function getRecipientDetailPageData(
     throw new Error("Recipient detail is temporarily unavailable.");
   }
 
+  // Prefer the enabled rule; otherwise open the most recently updated saved rule.
+  const existingRule = await prisma.rule.findFirst({
+    where: {
+      userUuid: sessionUser.userUuid,
+      recipient: { uuid: recipientUuid },
+      deletedAt: null,
+    },
+    orderBy: [{ isEnabled: "desc" }, { updatedAt: "desc" }, { uuid: "asc" }],
+    select: { uuid: true },
+  });
+
   return {
+    existingRuleUuid: existingRule?.uuid ?? null,
     initialRecipientDetailData: buildRecipientDetailPageData(result.data),
     initialCategoriesData: await categoriesPromise,
   };

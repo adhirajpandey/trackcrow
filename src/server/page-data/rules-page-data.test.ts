@@ -7,6 +7,7 @@ jest.mock("@/server/modules/categories/service", () => ({
 }));
 
 jest.mock("@/server/modules/recipients/service", () => ({
+  getRecipient: jest.fn(),
   listRecipients: jest.fn(),
 }));
 
@@ -27,7 +28,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
 import prisma from "@/lib/prisma-rewrite";
 import { requirePageSessionUser } from "@/server/auth/session";
 import { listCategoriesForUser } from "@/server/modules/categories/service";
-import { listRecipients } from "@/server/modules/recipients/service";
+import { getRecipient, listRecipients } from "@/server/modules/recipients/service";
 import { getRule, listRules } from "@/server/modules/rules/service";
 
 import { getRulesPageData } from "./rules-page-data";
@@ -37,7 +38,7 @@ const mockListCategoriesForUser = jest.mocked(listCategoriesForUser);
 const mockListRecipients = jest.mocked(listRecipients);
 const mockGetRule = jest.mocked(getRule);
 const mockListRules = jest.mocked(listRules);
-const mockFindRecipient = jest.mocked(prisma.recipient.findFirst);
+const mockGetRecipient = jest.mocked(getRecipient);
 const mockFindCategory = jest.mocked(prisma.category.findFirst);
 const mockFindSubcategory = jest.mocked(prisma.subcategory.findFirst);
 
@@ -79,12 +80,16 @@ describe("getRulesPageData", () => {
   });
 
   it("opens create mode with a validated recipient-only prefill", async () => {
-    mockFindRecipient.mockResolvedValue({ uuid: "rcp-cafe" } as never);
+    mockGetRecipient.mockResolvedValue({ ok: true, data: {
+      uuid: "rcp-cafe", displayName: "Cafe", normalizedName: "cafe", note: null,
+      aliases: [], transactionCount: 0, totalAmount: 0,
+    } });
 
     await expect(
       getRulesPageData({ create: "1", recipient: "rcp-cafe" })
     ).resolves.toMatchObject({
       createMode: true,
+      recipients: [expect.objectContaining({ uuid: "rcp-cafe", displayName: "Cafe" })],
       initialPrefill: {
         recipientUuid: "rcp-cafe",
         categoryUuid: null,
@@ -92,16 +97,15 @@ describe("getRulesPageData", () => {
       },
     });
 
-    expect(mockFindRecipient).toHaveBeenCalledWith({
-      where: { userUuid: "user-1", uuid: "rcp-cafe" },
-      select: { uuid: true },
+    expect(mockGetRecipient).toHaveBeenCalledWith({
+      userUuid: "user-1", recipientUuid: "rcp-cafe",
     });
     expect(mockFindCategory).not.toHaveBeenCalled();
     expect(mockFindSubcategory).not.toHaveBeenCalled();
   });
 
   it("rejects a recipient that is not owned by the current user", async () => {
-    mockFindRecipient.mockResolvedValue(null);
+    mockGetRecipient.mockResolvedValue({ ok: false, error: "NOT_FOUND" });
 
     await expect(
       getRulesPageData({ create: "1", recipient: "rcp-other-user" })
