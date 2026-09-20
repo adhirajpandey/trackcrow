@@ -128,7 +128,7 @@ function ShellSidebarContent({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <SidebarBrand />
+      <SidebarBrand linkHome={!onNavigate} />
 
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
         <ShellNav pathname={pathname} onNavigate={onNavigate} />
@@ -139,24 +139,23 @@ function ShellSidebarContent({
   );
 }
 
-function SidebarBrand() {
+function SidebarBrand({ linkHome }: { linkHome: boolean }) {
+  const content = (
+    <>
+      <BrandMark size="compact" showText={false} markClassName="h-11 w-11 rounded-[12px] border shadow-none" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-base font-black uppercase leading-none tracking-[0.08em] text-foreground">TrackCrow</p>
+        <p className="mt-1.5 truncate text-[0.78rem] font-semibold leading-tight text-secondary-foreground">Spending, made clear.</p>
+      </div>
+    </>
+  );
   return (
     <div className="border-b border-border/35 px-1 pb-5 pt-0.5">
-      <div className="flex items-center gap-3">
-        <BrandMark
-          size="compact"
-          showText={false}
-          markClassName="h-11 w-11 rounded-[12px] border shadow-none"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-black uppercase leading-none tracking-[0.08em] text-foreground">
-            TrackCrow
-          </p>
-          <p className="mt-1.5 truncate text-[0.78rem] font-semibold leading-tight text-secondary-foreground">
-            Spending, made clear.
-          </p>
-        </div>
-      </div>
+      {linkHome ? (
+        <Link href="/" aria-label="TrackCrow home" className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          {content}
+        </Link>
+      ) : <div className="flex items-center gap-3">{content}</div>}
     </div>
   );
 }

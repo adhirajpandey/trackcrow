@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 
 import { BrandMark } from "@/components/product/brand-mark";
+import { LandingNavigationGate } from "@/components/product/landing-navigation";
+import { getLandingPageData } from "@/server/page-data/landing-page-data";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -62,23 +64,26 @@ const workflowSteps: WorkflowStep[] = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { authenticated } = await getLandingPageData();
   return (
+    <LandingNavigationGate authenticated={authenticated}>
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
-      <HeroSection />
+      <HeroSection authenticated={authenticated} />
       <WorkflowSection />
       <InsightsSection />
-      <ControlSection />
+      <ControlSection authenticated={authenticated} />
     </main>
+    </LandingNavigationGate>
   );
 }
 
-function HeroSection() {
+function HeroSection({ authenticated }: { authenticated: boolean }) {
   return (
     <section className="relative isolate px-4 pb-16 pt-4 sm:px-6 sm:pt-5 lg:min-h-screen lg:px-8 lg:pb-20">
       <HeroDecorations />
       <div className="relative z-10 mx-auto max-w-[1440px]">
-        <MarketingTopNav />
+        <MarketingTopNav authenticated={authenticated} />
 
         <div className="grid items-center gap-12 pb-3 pt-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 lg:pt-14 xl:gap-16">
           <div className="landing-reveal max-w-[620px]">
@@ -94,7 +99,7 @@ function HeroSection() {
               repeat spends get sorted—without tagging them one by one.
             </p>
 
-            <HeroActions />
+            <HeroActions authenticated={authenticated} />
 
             <div className="mt-7 grid gap-3 border-t-2 border-dashed border-border/50 pt-5 text-sm font-bold sm:grid-cols-2">
               <TrustPoint icon={LockKeyhole}>Private by default</TrustPoint>
@@ -109,7 +114,7 @@ function HeroSection() {
   );
 }
 
-function MarketingTopNav() {
+function MarketingTopNav({ authenticated }: { authenticated: boolean }) {
   return (
     <header className="relative flex min-h-[72px] items-center justify-between gap-3 rounded-[10px] border-2 border-border bg-card px-3 py-2.5 shadow-[3px_4px_0_var(--foreground)] sm:px-4 lg:px-5">
       <Link
@@ -139,8 +144,10 @@ function MarketingTopNav() {
       <nav aria-label="Primary" className="shrink-0">
         <Button asChild className="min-h-13 rounded-[7px] px-4 text-sm sm:px-6">
           <Link href="/dashboard">
-            <span className="hidden sm:inline">Start tracking free</span>
-            <span className="sm:hidden">Start free</span>
+            {authenticated ? "Open Dashboard" : <>
+              <span className="hidden sm:inline">Start tracking free</span>
+              <span className="sm:hidden">Start free</span>
+            </>}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -149,12 +156,12 @@ function MarketingTopNav() {
   );
 }
 
-function HeroActions() {
+function HeroActions({ authenticated }: { authenticated: boolean }) {
   return (
     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
       <Button asChild className="min-h-13 rounded-[7px] px-6 text-sm sm:min-w-[200px]">
         <Link href="/dashboard">
-          Start tracking free
+          {authenticated ? "Open Dashboard" : "Start tracking free"}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </Button>
@@ -471,7 +478,7 @@ function CategoryShare({
   );
 }
 
-function ControlSection() {
+function ControlSection({ authenticated }: { authenticated: boolean }) {
   return (
     <section id="privacy" className="bg-[#e5f6ed] px-4 pb-0 pt-16 sm:px-6 sm:pb-7 lg:px-8 lg:pt-20">
       <div className="mx-auto max-w-7xl">
@@ -502,7 +509,7 @@ function ControlSection() {
             <div className="lg:min-w-[230px]">
               <Button asChild className="min-h-13 w-full rounded-[7px] bg-primary px-6 text-sm">
                 <Link href="/dashboard">
-                  Start tracking free
+                  {authenticated ? "Open Dashboard" : "Start tracking free"}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

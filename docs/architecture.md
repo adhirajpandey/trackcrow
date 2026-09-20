@@ -64,6 +64,8 @@ The current frontend pattern is server-first:
 
 Authentication uses NextAuth with Google OAuth.
 
+The landing page resolves an optional server session. A root-layout navigation provider tracks pathname changes in memory: authenticated initial visits to `/` replace the route with `/dashboard`, while internal returns show the landing page with "Open Dashboard" buttons. Refreshes and new tabs reset this distinction. The desktop app logo links home; the mobile logo continues to open navigation. Session lookup failures leave the public landing page available.
+
 - `src/lib/auth.ts` defines the auth configuration.
 - `requirePageSessionUser()` protects authenticated pages and redirects unauthenticated users to `/login`.
 - `requireSessionUser()` protects most API routes and returns the current `userUuid`.

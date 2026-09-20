@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Kalam } from "next/font/google";
 import "./globals.css";
+import { LandingNavigationProvider } from "@/components/product/landing-navigation";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -32,7 +33,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${bricolage.variable} ${kalam.variable}`}>{children}</body>
+      <body className={`${bricolage.variable} ${kalam.variable}`}>
+        <LandingNavigationProvider>{children}</LandingNavigationProvider>
+      </body>
     </html>
   );
 }
