@@ -508,6 +508,26 @@ export async function createTransaction(
       );
     }
 
+    if (classification.type === "IGNORED") {
+      if ("honorIgnoreRules" in input && input.honorIgnoreRules) {
+        logger.info({
+          event: "transaction.create.ignored_by_rule",
+          userId: input.userUuid,
+          recipientUuid: recipientResult.data.recipientUuid,
+          ruleUuid: classification.ruleUuid,
+          source: input.source,
+        });
+        return ok({ ignored: true as const, ruleUuid: classification.ruleUuid });
+      }
+      logger.info({
+        event: "transaction.create.ignore_rule_skipped",
+        userId: input.userUuid,
+        recipientUuid: recipientResult.data.recipientUuid,
+        ruleUuid: classification.ruleUuid,
+        source: input.source,
+      });
+    }
+
     if (classification.type === "MULTIPLE_MATCHES") {
       logger.error({
         event: "transaction.classification.multiple_rules",
@@ -556,7 +576,7 @@ export async function createTransaction(
       source: input.source,
     });
 
-    return ok({ uuid: created.uuid });
+    return ok({ ignored: false as const, uuid: created.uuid });
   } catch (error) {
     logger.error(
       {

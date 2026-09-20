@@ -163,7 +163,9 @@ export function createTrackCrowMcpServer(identity: AuthenticatedToken) {
         ...(Object.prototype.hasOwnProperty.call(args, "locationRaw") ? { locationRaw: args.locationRaw } : {}), };
       const result = await createTransaction(input);
       if (!result.ok) return failure(result.error === "VALIDATION_ERROR" ? "The recipient, account, or classification does not exist." : "The transaction could not be created.");
-      return success(result.data);
+      // Unreachable: MCP writes never opt into IGNORE rules.
+      if (result.data.ignored) return failure("The transaction could not be created.");
+      return success({ uuid: result.data.uuid });
     } });
 
   registerTool({ server, identity, name: "categorize_transaction", scope: ApiTokenScope.TRANSACTIONS_WRITE,

@@ -309,6 +309,7 @@ export async function getImportHealth(
       parsedCount: number;
       failedCount: number;
       unparseableCount: number;
+      ignoredCount: number;
     },
     "INTERNAL_ERROR"
   >
@@ -319,13 +320,14 @@ export async function getImportHealth(
   };
 
   try {
-    const [parsedCount, failedCount, unparseableCount] = await Promise.all([
+    const [parsedCount, failedCount, unparseableCount, ignoredCount] = await Promise.all([
       prisma.rawMessage.count({ where: { ...where, parseStatus: "PARSED" } }),
       prisma.rawMessage.count({ where: { ...where, parseStatus: "FAILED" } }),
       prisma.rawMessage.count({ where: { ...where, parseStatus: "UNPARSEABLE" } }),
+      prisma.rawMessage.count({ where: { ...where, parseStatus: "IGNORED" } }),
     ]);
 
-    return ok({ parsedCount, failedCount, unparseableCount });
+    return ok({ parsedCount, failedCount, unparseableCount, ignoredCount });
   } catch (error) {
     logger.error(
       {

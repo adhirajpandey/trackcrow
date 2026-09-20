@@ -64,7 +64,7 @@ describe("getDashboardPageData", () => {
     });
     mockGetImportHealth.mockResolvedValue({
       ok: true,
-      data: { parsedCount: 8, failedCount: 1, unparseableCount: 2 },
+      data: { parsedCount: 8, failedCount: 1, unparseableCount: 2, ignoredCount: 0 },
     });
     mockGetLargeTransactionCount.mockResolvedValue({
       ok: true,
@@ -162,7 +162,7 @@ describe("getDashboardPageData", () => {
         uncategorizedCount: 1,
         averageSpend: 150,
       },
-      importHealth: { parsedCount: 8, failedCount: 1, unparseableCount: 2 },
+      importHealth: { parsedCount: 8, failedCount: 1, unparseableCount: 2, ignoredCount: 0 },
       largeTransactionCount: 1,
       importIssueCount: 3,
       sectionStatus: {
@@ -335,7 +335,7 @@ describe("getDashboardPageData", () => {
         uncategorizedCount: 0,
         averageSpend: 0,
       },
-      importHealth: { parsedCount: 0, failedCount: 0, unparseableCount: 0 },
+      importHealth: { parsedCount: 0, failedCount: 0, unparseableCount: 0, ignoredCount: 0 },
       largeTransactionCount: 0,
       importIssueCount: 0,
       sectionStatus: {
@@ -367,7 +367,7 @@ describe("getDashboardPageData", () => {
     });
     mockGetImportHealth.mockResolvedValueOnce({
       ok: true,
-      data: { parsedCount: 0, failedCount: 0, unparseableCount: 0 },
+      data: { parsedCount: 0, failedCount: 0, unparseableCount: 0, ignoredCount: 0 },
     });
     mockGetSpendingByCategory.mockResolvedValueOnce({
       ok: true,

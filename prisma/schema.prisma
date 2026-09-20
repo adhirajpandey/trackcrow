@@ -158,6 +158,7 @@ model Rule {
   name          String
   isEnabled     Boolean          @default(true) @map("is_enabled")
   actionStatus  RuleActionStatus @default(VALID) @map("action_status")
+  actionType    RuleActionType   @default(CATEGORIZE) @map("action_type")
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   deletedAt     DateTime?        @map("deleted_at")
@@ -312,6 +313,11 @@ enum RuleActionStatus {
   NEEDS_REPAIR
 }
 
+enum RuleActionType {
+  CATEGORIZE
+  IGNORE
+}
+
 enum RawMessageSource {
   SMS
 }
@@ -320,6 +326,7 @@ enum ParseStatus {
   PARSED
   UNPARSEABLE
   FAILED
+  IGNORED
 }
 
 enum RecipientIdentifierKind {

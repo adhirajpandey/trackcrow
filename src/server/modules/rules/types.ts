@@ -1,4 +1,4 @@
-import type { RuleActionStatus } from "@/generated/prisma-rewrite";
+import type { RuleActionStatus, RuleActionType } from "@/generated/prisma-rewrite";
 import type { ServiceResult } from "@/server/shared/result";
 
 import type { CreateRuleBody, UpdateRuleBody } from "./schemas";
@@ -11,6 +11,7 @@ export type RuleDto = {
   conditions: { recipient: { equals: string } };
   recipient: { uuid: string; displayName: string };
   action: {
+    type: RuleActionType;
     categoryUuid: string | null;
     categoryName: string | null;
     subcategoryUuid: string | null;

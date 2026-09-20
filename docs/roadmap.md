@@ -11,6 +11,7 @@ This document tracks current implementation status and near-term priorities. For
 - MCP v1 exposes transaction search, summaries, categories, recipients, manual creation, and categorization with PostgreSQL-backed fixed-window limits.
 - MCP OAuth supports public CIMD clients, PKCE, selectable transaction scopes, rotating refresh tokens, and revocable Connected Apps while retaining PAT authentication.
 - Recipient-based rules classify new imported transactions while preserving manual, suggestion, and rule provenance.
+- Rules can also ignore a recipient, so matching SMS imports record an `IGNORED` raw message instead of creating a transaction.
 - The current authenticated product surface includes dashboard, transactions, transaction detail, transaction create, recipients, recipient detail, rules, and token settings.
 
 ## Active Work

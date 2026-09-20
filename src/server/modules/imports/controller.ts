@@ -60,6 +60,10 @@ export async function postSmsImport(request: Request) {
     return data;
   }
 
+  if (data.ignored) {
+    return jsonOk({ message: "Message ignored by rule" }, 201);
+  }
+
   return jsonOk(
     {
       message: "Transaction created",

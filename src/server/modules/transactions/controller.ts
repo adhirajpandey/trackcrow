@@ -129,7 +129,12 @@ export async function postTransaction(request: Request) {
     source: TransactionSource.MANUAL,
   });
   const data = unwrapOrResponse(result);
-  return data instanceof Response ? data : jsonOk(data, 201);
+  if (data instanceof Response) return data;
+  if (data.ignored) {
+    // Unreachable: manual writes never opt into IGNORE rules.
+    return jsonError("Unable to create transaction", 500);
+  }
+  return jsonOk({ uuid: data.uuid }, 201);
 }
 
 export async function getTransaction(

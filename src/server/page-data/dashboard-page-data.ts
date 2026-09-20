@@ -50,6 +50,7 @@ export type DashboardImportHealthDto = {
   parsedCount: number;
   failedCount: number;
   unparseableCount: number;
+  ignoredCount: number;
 };
 
 export type DashboardSectionStatus = {
@@ -131,6 +132,7 @@ const emptyImportHealth: DashboardImportHealthDto = {
   parsedCount: 0,
   failedCount: 0,
   unparseableCount: 0,
+  ignoredCount: 0,
 };
 
 const emptySectionStatus: DashboardSectionStatus = {
@@ -148,7 +150,8 @@ function getDashboardSectionStatus(input: {
   const importCount =
     input.importHealth.parsedCount +
     input.importHealth.failedCount +
-    input.importHealth.unparseableCount;
+    input.importHealth.unparseableCount +
+    input.importHealth.ignoredCount;
   const importIssueCount =
     input.importHealth.failedCount + input.importHealth.unparseableCount;
   const hasTransactions = input.summary.transactionCount > 0;

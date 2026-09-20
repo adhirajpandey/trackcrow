@@ -8,12 +8,16 @@ export const ruleConditionsSchema = z
   })
   .strict();
 
-export const ruleActionSchema = z
-  .object({
-    categoryUuid: z.string().uuid(),
-    subcategoryUuid: z.string().uuid().nullable(),
-  })
-  .strict();
+export const ruleActionSchema = z.union([
+  z
+    .object({
+      type: z.literal("CATEGORIZE").optional(),
+      categoryUuid: z.string().uuid(),
+      subcategoryUuid: z.string().uuid().nullable(),
+    })
+    .strict(),
+  z.object({ type: z.literal("IGNORE") }).strict(),
+]);
 
 export const createRuleSchema = z
   .object({

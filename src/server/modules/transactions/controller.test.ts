@@ -133,7 +133,7 @@ describe("transactions controller", () => {
   it("creates a manual transaction for the authenticated user", async () => {
     createTransactionMock.mockResolvedValueOnce({
       ok: true,
-      data: { uuid: "txn-created" },
+      data: { ignored: false, uuid: "txn-created" },
     });
 
     const response = await postTransaction(

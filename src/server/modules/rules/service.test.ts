@@ -1,4 +1,4 @@
-import { ClassificationSource } from "@/generated/prisma-rewrite";
+import { ClassificationSource, RuleActionType } from "@/generated/prisma-rewrite";
 
 import { evaluateRule, resolveCreateClassification } from "./evaluator";
 
@@ -6,8 +6,18 @@ const validRule = {
   id: 7,
   uuid: "5ac11b5c-f9af-41e6-a621-bd085836338e",
   recipientUuid: "7a4bfec7-f109-4d37-bf9b-41f909f25dad",
+  actionType: RuleActionType.CATEGORIZE,
   categoryId: 11,
   subcategoryId: 12,
+};
+
+const ignoreRule = {
+  ...validRule,
+  id: 9,
+  uuid: "c0a1d1de-2b8f-4f1b-8f02-0b9b6f6a3e21",
+  actionType: RuleActionType.IGNORE,
+  categoryId: null,
+  subcategoryId: null,
 };
 
 describe("rule evaluation", () => {
@@ -45,6 +55,26 @@ describe("rule evaluation", () => {
       classificationSource: ClassificationSource.RULE,
       classificationRuleId: 7,
     });
+  });
+
+  it("reports an ignore decision for a matching IGNORE rule", () => {
+    expect(
+      resolveCreateClassification(
+        { recipientUuid: ignoreRule.recipientUuid },
+        { type: "AUTO" },
+        [ignoreRule]
+      )
+    ).toEqual({ type: "IGNORED", ruleId: 9, ruleUuid: ignoreRule.uuid });
+  });
+
+  it("leaves classification empty when an IGNORE rule does not match", () => {
+    expect(
+      resolveCreateClassification(
+        { recipientUuid: "b4b5477e-98da-4270-b3f8-c9dfb7d2381d" },
+        { type: "AUTO" },
+        [ignoreRule]
+      )
+    ).toEqual({ type: "UNASSIGNED" });
   });
 
   it("defensively leaves classification empty for multiple matches", () => {

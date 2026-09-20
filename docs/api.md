@@ -279,8 +279,10 @@ Each rule DTO contains:
 - `uuid`, `name`, `isEnabled`, `actionStatus`
 - `conditions: { recipient: { equals: recipientUuid } }`
 - `recipient: { uuid, displayName }`
-- `action` with `categoryUuid`, `categoryName`, `subcategoryUuid`, and `subcategoryName`
+- `action` with `type`, `categoryUuid`, `categoryName`, `subcategoryUuid`, and `subcategoryName`
 - `createdAt`, `updatedAt`
+
+`action.type` is `CATEGORIZE` or `IGNORE`. An `IGNORE` rule reports every category field as `null`.
 
 `actionStatus` is `VALID` or `NEEDS_REPAIR`. Deleted rules are omitted from rule reads, but may remain visible as historical `classificationRule` metadata on transaction details.
 
@@ -316,6 +318,14 @@ Request body:
 }
 ```
 
+`action` is one of two shapes. A categorizing action carries `categoryUuid` and `subcategoryUuid`, with an optional `"type": "CATEGORIZE"`; omitting `type` means `CATEGORIZE`. An ignoring action is exactly `{ "type": "IGNORE" }` and must carry no category fields:
+
+```json
+{ "action": { "type": "IGNORE" } }
+```
+
+An enabled `IGNORE` rule makes future SMS imports for that recipient create no transaction. Manual and MCP transaction creation is unaffected. Mixing the two shapes, such as sending `categoryUuid` with `"type": "IGNORE"`, returns `400`.
+
 The name is trimmed and must contain 1–100 characters. Recipient, category, and optional subcategory UUIDs must belong to the current user, and the subcategory must belong to the selected category. Returns `201` with the full rule DTO.
 
 Only one non-deleted enabled rule may exist per recipient. Creating or enabling a conflicting rule returns `409` with:
@@ -336,7 +346,7 @@ Returns the full rule DTO, or `404` when the rule is missing, deleted, or not ow
 
 ### `PATCH /api/rules/:ruleUuid`
 
-Accepts any non-empty subset of `name`, `isEnabled`, `conditions`, and `action` using the same shapes and ownership validation as creation. A `NEEDS_REPAIR` rule cannot be enabled until a valid action is supplied. Returns the updated rule DTO.
+Accepts any non-empty subset of `name`, `isEnabled`, `conditions`, and `action` using the same shapes and ownership validation as creation. A `NEEDS_REPAIR` rule cannot be enabled until a valid action is supplied. An `IGNORE` rule may be enabled without a category. Returns the updated rule DTO.
 
 ### `DELETE /api/rules/:ruleUuid`
 
@@ -529,12 +539,19 @@ Behavior:
 - conditionally updates `lastUsedAt` when it is empty or older than ten minutes
 - parses the SMS with deterministic templates in `src/common/sms-parser.ts`
 - creates a transaction with `source: "SMS"` when parsing succeeds
-- stores a `raw_message` record for parsed, failed, and unparseable cases
+- creates no transaction when an enabled `IGNORE` rule matches the resolved recipient
+- stores a `raw_message` record for parsed, ignored, failed, and unparseable cases
 
 Success response:
 
 ```json
 { "message": "Transaction created", "uuid": "..." }
+```
+
+When an `IGNORE` rule matches, the route still returns `201`, with no transaction UUID:
+
+```json
+{ "message": "Message ignored by rule" }
 ```
 
 If parsing cannot extract both amount and recipient, the route returns `422` with `"Unable to extract required fields from message"`.

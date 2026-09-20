@@ -1,4 +1,4 @@
-import { ClassificationSource } from "@/generated/prisma-rewrite";
+import { ClassificationSource, RuleActionType } from "@/generated/prisma-rewrite";
 
 export type RuleFacts = { recipientUuid: string };
 
@@ -6,7 +6,8 @@ export type EvaluatableRule = {
   id: number;
   uuid: string;
   recipientUuid: string;
-  categoryId: number;
+  actionType: RuleActionType;
+  categoryId: number | null;
   subcategoryId: number | null;
 };
 
@@ -42,6 +43,9 @@ export function resolveCreateClassification(
   }
 
   const [rule] = matches;
+  if (rule.actionType === RuleActionType.IGNORE) {
+    return { type: "IGNORED" as const, ruleId: rule.id, ruleUuid: rule.uuid };
+  }
   return {
     type: "ASSIGNED" as const,
     categoryId: rule.categoryId,
