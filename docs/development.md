@@ -55,7 +55,7 @@ pnpm test
 pnpm test:unit
 pnpm test:db
 pnpm db:reset
-pnpm exec prisma migrate dev --name <change>
+pnpm db:migrate --name <change>
 pnpm exec prisma generate
 ```
 
@@ -78,7 +78,7 @@ Notes:
 Typical workflow:
 
 1. Update `prisma/schema.prisma`.
-2. Run `pnpm exec prisma migrate dev --name <change>` against the local database.
+2. Run `pnpm db:migrate --name <change>`. It runs `prisma migrate dev` against the local database only, even if a `DATABASE_URL` is exported in your shell.
 3. Run `pnpm exec prisma generate` if needed.
 4. Update `prisma/seed.sql` if the migration changes seeded tables, then check that `pnpm db:reset` still succeeds.
 5. Verify affected tests and flows.

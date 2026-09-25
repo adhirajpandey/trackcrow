@@ -37,7 +37,7 @@ pnpm test
 pnpm test:unit
 pnpm test:db
 pnpm db:reset
-pnpm exec prisma migrate dev --name <change>
+pnpm db:migrate --name <change>
 pnpm exec prisma generate
 ```
 

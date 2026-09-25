@@ -24,12 +24,11 @@
 - `pnpm test:unit`: run focused unit tests under `src/common` and `src/server`.
 - `pnpm test:db`: run the PostgreSQL OAuth integration suite against a disposable database in the local container (needs Docker).
 - `pnpm db:reset`: recreate the local database from migrations and `prisma/seed.sql` (needs Docker).
-- Prisma workflow examples, against the local database only:
-  - `pnpm exec prisma migrate dev --name <change>`
-  - `pnpm exec prisma generate`
+- `pnpm db:migrate --name <change>`: create and apply a migration against the local database (needs Docker). Use it instead of calling `prisma migrate dev` directly.
+- `pnpm exec prisma generate`: regenerate the Prisma client.
 
 ## Database Rules
-- Develop and test against the local Docker Compose database on `127.0.0.1:5434`. `db:reset` and `test:db` use hardcoded local URLs and ignore `DATABASE_URL`.
+- Develop and test against the local Docker Compose database on `127.0.0.1:5434`. `db:reset`, `db:migrate`, and `test:db` use hardcoded local URLs and ignore `DATABASE_URL`.
 - Never connect to the production database. A checkout's `.env` holds local values only; never put production credentials in it.
 - Never run `prisma migrate dev` or `prisma migrate reset` against production: they can drop data. The owner applies production migrations with `prisma migrate deploy` as described in `docs/development.md`.
 - A schema change needs a migration, and `pnpm db:reset` must still load `prisma/seed.sql`. Update the seed in the same change when a migration alters seeded tables.

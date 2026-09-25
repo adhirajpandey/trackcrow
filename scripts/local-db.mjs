@@ -1,6 +1,7 @@
 // Local Docker Compose database tasks.
 //   node scripts/local-db.mjs reset  recreate trackcrow from migrations and load prisma/seed.sql
 //   node scripts/local-db.mjs test   recreate trackcrow_oauth_test and run the OAuth integration suite
+//   node scripts/local-db.mjs migrate [prisma migrate dev options]  create and apply a migration locally
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,6 +43,8 @@ if (task === "reset") {
   const url = recreateDatabase("trackcrow");
   prisma(["db", "execute", "--url", url, "--file", "prisma/seed.sql"]);
   console.log("Local database reset from prisma/seed.sql.");
+} else if (task === "migrate") {
+  prisma(["migrate", "dev", ...process.argv.slice(3)], { env: { DATABASE_URL: `${SERVER_URL}/trackcrow` } });
 } else if (task === "test") {
   const url = recreateDatabase("trackcrow_oauth_test");
   run(
@@ -50,6 +53,6 @@ if (task === "reset") {
     { env: { DATABASE_URL: url, OAUTH_TEST_DATABASE_URL: url } },
   );
 } else {
-  console.error("Usage: node scripts/local-db.mjs reset|test");
+  console.error("Usage: node scripts/local-db.mjs reset|test|migrate");
   process.exit(1);
 }
