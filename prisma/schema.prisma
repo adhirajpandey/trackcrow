@@ -9,24 +9,24 @@ datasource db {
 }
 
 model User {
-  uuid          String        @id @default(uuid())
-  id            Int           @unique @default(autoincrement())
-  email         String        @unique
-  name          String
-  image         String?
-  provider      String
-  subscription  Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  categories    Category[]
-  subcategories Subcategory[]
-  recipients    Recipient[]
-  accounts      Account[]
-  transactions  Transaction[]
-  rawMessages   RawMessage[]
-  apiTokens     ApiToken[]
+  uuid             String            @id @default(uuid())
+  id               Int               @unique @default(autoincrement())
+  email            String            @unique
+  name             String
+  image            String?
+  provider         String
+  subscription     Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  categories       Category[]
+  subcategories    Subcategory[]
+  recipients       Recipient[]
+  accounts         Account[]
+  transactions     Transaction[]
+  rawMessages      RawMessage[]
+  apiTokens        ApiToken[]
   oauthConnections OAuthConnection[]
-  rules         Rule[]
+  rules            Rule[]
 
   @@map("user")
 }
@@ -144,8 +144,8 @@ model Transaction {
   classificationRule      Rule?                 @relation(fields: [classificationRuleId], references: [id], onDelete: SetNull)
   rawMessages             RawMessage[]
 
-  @@map("transaction")
   @@index([userUuid, accountId])
+  @@map("transaction")
 }
 
 model Rule {
@@ -210,19 +210,19 @@ model ApiToken {
 }
 
 model OAuthConnection {
-  uuid         String @id @default(uuid())
-  userUuid     String @map("user_uuid")
-  clientId     String @map("client_id")
-  clientName   String @map("client_name")
-  scopes       ApiTokenScope[]
-  resource     String
-  createdAt    DateTime @default(now())
-  lastUsedAt   DateTime?
-  revokedAt    DateTime?
-  expiresAt    DateTime
-  user         User @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
-  codes        OAuthAuthorizationCode[]
-  accessTokens OAuthAccessToken[]
+  uuid          String                   @id @default(uuid())
+  userUuid      String                   @map("user_uuid")
+  clientId      String                   @map("client_id")
+  clientName    String                   @map("client_name")
+  scopes        ApiTokenScope[]
+  resource      String
+  createdAt     DateTime                 @default(now())
+  lastUsedAt    DateTime?
+  revokedAt     DateTime?
+  expiresAt     DateTime
+  user          User                     @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+  codes         OAuthAuthorizationCode[]
+  accessTokens  OAuthAccessToken[]
   refreshTokens OAuthRefreshToken[]
 
   @@index([userUuid, createdAt])
@@ -230,9 +230,9 @@ model OAuthConnection {
 }
 
 model OAuthAuthorizationCode {
-  uuid           String @id @default(uuid())
-  codeHash       String @unique
-  consentNonce   String @unique
+  uuid           String          @id @default(uuid())
+  codeHash       String          @unique
+  consentNonce   String          @unique
   connectionUuid String
   redirectUri    String
   codeChallenge  String
@@ -246,8 +246,8 @@ model OAuthAuthorizationCode {
 }
 
 model OAuthAccessToken {
-  uuid           String @id @default(uuid())
-  tokenHash      String @unique
+  uuid           String          @id @default(uuid())
+  tokenHash      String          @unique
   connectionUuid String
   scopes         ApiTokenScope[]
   expiresAt      DateTime
@@ -258,16 +258,16 @@ model OAuthAccessToken {
 }
 
 model OAuthRefreshToken {
-  uuid                String @id @default(uuid())
-  tokenHash           String @unique
+  uuid                String             @id @default(uuid())
+  tokenHash           String             @unique
   connectionUuid      String
   scopes              ApiTokenScope[]
   expiresAt           DateTime
   usedAt              DateTime?
-  replacedByTokenUuid String? @unique
+  replacedByTokenUuid String?            @unique
   replacedBy          OAuthRefreshToken? @relation("RefreshRotation", fields: [replacedByTokenUuid], references: [uuid], onDelete: SetNull)
   replaces            OAuthRefreshToken? @relation("RefreshRotation")
-  connection          OAuthConnection @relation(fields: [connectionUuid], references: [uuid], onDelete: Cascade)
+  connection          OAuthConnection    @relation(fields: [connectionUuid], references: [uuid], onDelete: Cascade)
 
   @@index([connectionUuid])
   @@map("oauth_refresh_token")
