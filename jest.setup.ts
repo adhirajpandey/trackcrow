@@ -14,3 +14,7 @@ jest.mock('@/lib/logger', () => ({
     error: jest.fn(),
   },
 }));
+
+// Unit tests never use a real Prisma client. Test files that need one replace this mock,
+// including the PostgreSQL integration suite.
+jest.mock('@/lib/prisma-rewrite', () => ({ __esModule: true, default: {} }));
