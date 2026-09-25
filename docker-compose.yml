@@ -1,0 +1,21 @@
+# Local Postgres for development and tests. Not used in production.
+services:
+  db:
+    image: postgres:17
+    container_name: trackcrow-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trackcrow
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - trackcrow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "trackcrow"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  trackcrow-db:

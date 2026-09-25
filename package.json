@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:unit": "jest src/common src/server --runInBand"
+    "test:unit": "jest src/common src/server --runInBand",
+    "test:db": "node scripts/test-db.mjs",
+    "db:reset": "node scripts/db-reset.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
