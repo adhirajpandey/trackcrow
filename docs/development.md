@@ -60,6 +60,7 @@ pnpm exec prisma generate
 
 Notes:
 
+- `pnpm install` runs `prisma generate`, so a fresh checkout has the generated client that tests and builds import
 - `pnpm build` runs `prisma generate` before `next build`
 - `pnpm test` runs the full Jest suite
 - `pnpm test:unit` scopes Jest to `src/common` and `src/server`
