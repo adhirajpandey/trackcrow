@@ -6,10 +6,13 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:unit": "jest src/common src/server --runInBand"
+    "test:unit": "jest src/common src/server --runInBand",
+    "test:db": "node scripts/local-db.mjs test",
+    "db:reset": "node scripts/local-db.mjs reset"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

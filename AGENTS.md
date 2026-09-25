@@ -8,9 +8,10 @@
 - `src/server/page-data/`: server-only page read models that prepare page props for App Router pages.
 - `src/server/auth/` and `src/server/api/`: session helpers and shared API response helpers.
 - `src/lib/` and `src/common/`: cross-cutting utilities (auth, logger, Prisma client, parsers, shared helpers).
-- `prisma/`: schema and migration history; update this for any data-model change.
+- `prisma/`: schema, migration history, and `seed.sql` for the local database; update the schema and migrations for any data-model change.
 - `docs/`: active docs live flat at the top level (`architecture.md`, `api.md`, `data-model.md`, `development.md`, `roadmap.md`); historical material lives in `docs/archive/`.
-- `public/`: static assets. `scripts/` contains rewrite migration and environment utilities.
+- `public/`: static assets. `scripts/` contains the local database reset and test scripts, screenshot automation, and data utilities.
+- `docker-compose.yml`: local Postgres 17 for development and tests.
 
 ## Build, Test, and Development Commands
 - `pnpm install`: install dependencies.
@@ -20,10 +21,17 @@
 - `pnpm lint`: run ESLint checks.
 - `pnpm test`: run the full Jest suite.
 - `pnpm test:unit`: run focused unit tests under `src/common` and `src/server`.
-- Prisma workflow examples:
-  - `pnpm dlx prisma migrate dev --name <change>`
-  - `pnpm dlx prisma migrate deploy`
-  - `pnpm dlx prisma generate`
+- `pnpm test:db`: run the PostgreSQL OAuth integration suite against a disposable database in the local container (needs Docker).
+- `pnpm db:reset`: recreate the local database from migrations and `prisma/seed.sql` (needs Docker).
+- Prisma workflow examples, against the local database only:
+  - `pnpm exec prisma migrate dev --name <change>`
+  - `pnpm exec prisma generate`
+
+## Database Rules
+- Develop and test against the local Docker Compose database on `127.0.0.1:5434`. `db:reset` and `test:db` use hardcoded local URLs and ignore `DATABASE_URL`.
+- Never connect to the production database. A checkout's `.env` holds local values only; never put production credentials in it.
+- Never run `prisma migrate dev` or `prisma migrate reset` against production: they can drop data. The owner applies production migrations with `prisma migrate deploy` as described in `docs/development.md`.
+- A schema change needs a migration, and `pnpm db:reset` must still load `prisma/seed.sql`. Update the seed in the same change when a migration alters seeded tables.
 
 ## Coding Style & Naming Conventions
 - Language: TypeScript with `strict` mode enabled (`tsconfig.json`).
