@@ -29,3 +29,10 @@ it("logs lookup failures and leaves the public landing page available", async ()
     expect.objectContaining({ event: "auth.landing_session_resolution_failed" }), error
   );
 });
+
+it("rethrows Next.js dynamic rendering signals without logging them", async () => {
+  const signal = Object.assign(new Error("Dynamic server usage"), { digest: "DYNAMIC_SERVER_USAGE" });
+  session.mockRejectedValueOnce(signal);
+  await expect(getLandingPageData()).rejects.toBe(signal);
+  expect(logger.error).not.toHaveBeenCalled();
+});
