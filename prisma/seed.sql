@@ -3,13 +3,12 @@
 -- recipients, categories, accounts, rules, and SMS imports they reference. Rules named
 -- "seed: ..." and the FAILED import are synthetic edge cases. The second user is a
 -- placeholder account holding copies of 20 sampled rows for per-user isolation checks.
--- db:reset shifts transaction and import timestamps so the newest lands on the current day.
+-- The final statement moves transaction and import timestamps so the newest lands on the current day.
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict athDaJicg0jw2O8mWkB80mgwSmERj2IDS7ki70nhj2YvATlK0SGR5LlFjVcYGn4
 
 
 SET statement_timeout = 0;
@@ -1171,5 +1170,22 @@ SELECT pg_catalog.setval('public.user_id_seq', 32, true);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict athDaJicg0jw2O8mWkB80mgwSmERj2IDS7ki70nhj2YvATlK0SGR5LlFjVcYGn4
+--
+-- Move seeded activity forward so the newest transaction falls on the current day.
+--
 
+WITH shift AS (
+  SELECT date_trunc('day', now()) - date_trunc('day', max("timestamp")) AS d FROM public."transaction"
+), shifted_transactions AS (
+  UPDATE public."transaction" t
+  SET "timestamp" = t."timestamp" + shift.d,
+      "createdAt" = t."createdAt" + shift.d,
+      "updatedAt" = t."updatedAt" + shift.d,
+      classification_changed_at = t.classification_changed_at + shift.d
+  FROM shift
+  RETURNING 1
+)
+UPDATE public.raw_message r
+SET received_at = r.received_at + shift.d,
+    "createdAt" = r."createdAt" + shift.d
+FROM shift;

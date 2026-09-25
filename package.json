@@ -11,8 +11,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:unit": "jest src/common src/server --runInBand",
-    "test:db": "node scripts/test-db.mjs",
-    "db:reset": "node scripts/db-reset.mjs"
+    "test:db": "node scripts/local-db.mjs test",
+    "db:reset": "node scripts/local-db.mjs reset"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
