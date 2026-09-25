@@ -2,7 +2,6 @@
 services:
   db:
     image: postgres:17
-    container_name: trackcrow-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

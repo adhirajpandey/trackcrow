@@ -39,7 +39,7 @@ The app runs at `http://localhost:3000` by default. Sign in with the Google acco
 
 ## Local Database
 
-`docker-compose.yml` runs Postgres 17 in the `trackcrow-db` container on `127.0.0.1:5434`. `pnpm db:reset` starts it, drops and recreates the `public` schema, applies every migration with `prisma migrate deploy`, and loads `prisma/seed.sql`. It then moves transaction and import timestamps forward so the newest seeded day is today, which keeps the dashboard's current month populated. The script uses a hardcoded local URL and ignores `DATABASE_URL`. Run it again at any time to return to a clean state.
+`docker-compose.yml` runs Postgres 17 as the `db` service on `127.0.0.1:5434`. `pnpm db:reset` starts it, drops and recreates the `public` schema, applies every migration with `prisma migrate deploy`, and loads `prisma/seed.sql`. It then moves transaction and import timestamps forward so the newest seeded day is today, which keeps the dashboard's current month populated. The script uses a hardcoded local URL and ignores `DATABASE_URL`. Run it again at any time to return to a clean state.
 
 `prisma/seed.sql` is a one-time sample of production taken in September 2026. It holds about 200 transactions from the previous six months across every category, source, type, classification, and account, plus the recipients, identifiers, rules, and SMS imports they reference. Rules named `seed: ...` (needs repair, disabled, deleted) and one `FAILED` import are added edge cases. A second placeholder user holds copies of 20 rows for checking that users can't see each other's data. The seed is not refreshed from production. Edit it by hand when a migration changes seeded tables.
 
