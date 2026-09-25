@@ -50,6 +50,7 @@ pnpm dev
 pnpm build
 pnpm start
 pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:unit
 pnpm test:db
@@ -62,6 +63,7 @@ Notes:
 
 - `pnpm install` runs `prisma generate`, so a fresh checkout has the generated client that tests and builds import
 - `pnpm build` runs `prisma generate` before `next build`
+- `pnpm typecheck` runs `tsc --noEmit`. Jest compiles tests without type-checking them, so run it alongside `pnpm test`
 - `pnpm test` runs the full Jest suite
 - `pnpm test:unit` scopes Jest to `src/common` and `src/server`
 - `pnpm test:db` runs the PostgreSQL OAuth integration suite against a fresh `trackcrow_oauth_test` database in the local container

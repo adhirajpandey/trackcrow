@@ -19,6 +19,7 @@
 - `pnpm build`: run `prisma generate` and create a production build.
 - `pnpm start`: run the production server.
 - `pnpm lint`: run ESLint checks.
+- `pnpm typecheck`: run the TypeScript compiler without emitting files. Jest does not type-check tests.
 - `pnpm test`: run the full Jest suite.
 - `pnpm test:unit`: run focused unit tests under `src/common` and `src/server`.
 - `pnpm test:db`: run the PostgreSQL OAuth integration suite against a disposable database in the local container (needs Docker).
@@ -45,7 +46,7 @@
 ## Testing Guidelines
 - Jest is configured for TypeScript tests, with current coverage concentrated in `src/common/**/*.test.ts` and `src/server/modules/**/*.test.ts`.
 - Run `pnpm test` for the full test suite or `pnpm test:unit` for the focused common/server unit suite.
-- Minimum quality gate today is `pnpm lint`, `pnpm test`, and manual verification of modified flows.
+- Minimum quality gate today is `pnpm lint`, `pnpm typecheck`, `pnpm test`, and manual verification of modified flows.
 - Do not run `pnpm lint` or `pnpm build` after every small iterative change. Run the relevant final checks once before pushing, or earlier only when the user explicitly requests them or they are needed to diagnose a relevant issue.
 - When adding tests, colocate them with the module or feature they exercise.
 - Prefer service-level backend tests for business logic introduced under `src/server/modules/*`; keep route-handler tests targeted when route wiring itself is the risk.
