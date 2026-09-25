@@ -5,10 +5,12 @@ This document covers local setup, commands, and the current contributor workflow
 ## Requirements
 
 - Node.js with `pnpm`
-- PostgreSQL reachable through `DATABASE_URL`
-- Google OAuth credentials for NextAuth sign-in
+- Docker, for the local Postgres container
+- A Google OAuth client that allows `http://localhost:3000`, for NextAuth sign-in
 
 ## Environment Variables
+
+Copy `.env.example` to `.env`. It holds local values for every variable below, plus the screenshot script's settings. Fill in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. A checkout's `.env` must never hold production credentials: every local command reads it.
 
 The code currently reads these variables directly:
 
@@ -28,11 +30,18 @@ The code currently reads these variables directly:
 
 ```bash
 pnpm install
-pnpm dlx prisma migrate deploy
+cp .env.example .env
+pnpm db:reset
 pnpm dev
 ```
 
-The app runs at `http://localhost:3000` by default.
+The app runs at `http://localhost:3000` by default. Sign in with the Google account whose email matches the seeded user to see the sample data. Any other account starts empty.
+
+## Local Database
+
+`docker-compose.yml` runs Postgres 17 in the `trackcrow-db` container on `127.0.0.1:5434`. `pnpm db:reset` starts it, drops and recreates the `public` schema, applies every migration with `prisma migrate deploy`, and loads `prisma/seed.sql`. It then moves transaction and import timestamps forward so the newest seeded day is today, which keeps the dashboard's current month populated. The script uses a hardcoded local URL and ignores `DATABASE_URL`. Run it again at any time to return to a clean state.
+
+`prisma/seed.sql` is a one-time sample of production taken in September 2026. It holds about 200 transactions from the previous six months across every category, source, type, classification, and account, plus the recipients, identifiers, rules, and SMS imports they reference. Rules named `seed: ...` (needs repair, disabled, deleted) and one `FAILED` import are added edge cases. A second placeholder user holds copies of 20 rows for checking that users can't see each other's data. The seed is not refreshed from production. Edit it by hand when a migration changes seeded tables.
 
 ## Build And Test Commands
 
@@ -43,9 +52,10 @@ pnpm start
 pnpm lint
 pnpm test
 pnpm test:unit
-pnpm dlx prisma migrate dev --name <change>
-pnpm dlx prisma migrate deploy
-pnpm dlx prisma generate
+pnpm test:db
+pnpm db:reset
+pnpm exec prisma migrate dev --name <change>
+pnpm exec prisma generate
 ```
 
 Notes:
@@ -53,6 +63,7 @@ Notes:
 - `pnpm build` runs `prisma generate` before `next build`
 - `pnpm test` runs the full Jest suite
 - `pnpm test:unit` scopes Jest to `src/common` and `src/server`
+- `pnpm test:db` recreates the `trackcrow_oauth_test` database in the local container, applies migrations, and runs the PostgreSQL OAuth integration suite
 
 ## Database Workflow
 
@@ -64,9 +75,25 @@ Notes:
 Typical workflow:
 
 1. Update `prisma/schema.prisma`.
-2. Run `pnpm dlx prisma migrate dev --name <change>`.
-3. Run `pnpm dlx prisma generate` if needed.
-4. Verify affected tests and flows.
+2. Run `pnpm exec prisma migrate dev --name <change>` against the local database.
+3. Run `pnpm exec prisma generate` if needed.
+4. Update `prisma/seed.sql` if the migration changes seeded tables, then check that `pnpm db:reset` still succeeds.
+5. Verify affected tests and flows.
+
+## Production Migrations
+
+Vercel deploys code from `main` but never runs migrations, so a migration must reach production before the code that depends on it. Only run `prisma migrate deploy` against production. `prisma migrate dev` and `prisma migrate reset` can drop data.
+
+1. Write the migration so the currently deployed code keeps working after it runs.
+2. Check it locally with `pnpm db:reset`, `pnpm test`, and `pnpm test:db`.
+3. Confirm a recent database backup exists.
+4. Apply it with the Supabase session pooler URL on port `5432`, set for this one command only. Do not save it in `.env`:
+
+   ```bash
+   DATABASE_URL='<session pooler URL>' pnpm exec prisma migrate deploy
+   ```
+
+5. Merge the pull request and check the changed screens after Vercel deploys.
 
 ## Code Organization
 
@@ -116,12 +143,7 @@ Apply `20260918_add_mcp_oauth` before enabling OAuth and set `OAUTH_ISSUER_URL` 
 
 Metadata fetching uses Node HTTPS with pinned, validated DNS results. Do not replace it with an unrestricted fetch or relax network protections for development. Public CIMD documents may advertise additional grant types, but TrackCrow only implements authorization-code and refresh grants with auth method `none`.
 
-OAuth regression tests are included in `pnpm test`. PostgreSQL concurrency tests run only when `OAUTH_TEST_DATABASE_URL` points to a local disposable database whose name contains `oauth_test`. Apply migrations to that database, then run:
-
-```bash
-OAUTH_TEST_DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:PORT/trackcrow_oauth_test \
-  pnpm exec jest src/server/modules/oauth/service.integration.test.ts --runInBand --detectOpenHandles
-```
+OAuth regression tests are included in `pnpm test`. PostgreSQL concurrency tests run only when `OAUTH_TEST_DATABASE_URL` points to a local disposable database whose name contains `oauth_test`. `pnpm test:db` sets this up in the local container and runs them.
 
 The integration suite creates and deletes only its own test users. It verifies concurrent redemption/rotation, replay revocation, owner isolation, deadline preservation, throttled usage writes, and real MCP tool/PAT behavior. Before deployment, verify Google login, consent, refresh, a read/write permission check, and revocation against the deployed origin. Record client versions tested; protocol support alone does not guarantee every Codex/Claude release supports public CIMD.
 

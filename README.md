@@ -14,26 +14,16 @@ TrackCrow is a Next.js expense tracking app that turns SMS transaction messages 
 
 ## Quick Setup
 
+Local development uses a Postgres container loaded with sample data. It needs Docker.
+
 ```bash
 pnpm install
-```
-
-Required environment variables:
-
-```bash
-DATABASE_URL=
-NEXTAUTH_SECRET=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-MCP_ALLOWED_ORIGINS=
-```
-
-```bash
-pnpm dlx prisma migrate deploy
+cp .env.example .env    # then fill in GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+pnpm db:reset
 pnpm dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. See [docs/development.md](docs/development.md) for the local database, environment variables, and production migrations.
 
 ## Commands
 
@@ -44,9 +34,10 @@ pnpm start
 pnpm lint
 pnpm test
 pnpm test:unit
-pnpm dlx prisma migrate dev --name <change>
-pnpm dlx prisma migrate deploy
-pnpm dlx prisma generate
+pnpm test:db
+pnpm db:reset
+pnpm exec prisma migrate dev --name <change>
+pnpm exec prisma generate
 ```
 
 ## Architecture Snapshot
