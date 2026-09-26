@@ -29,8 +29,6 @@ All success responses are JSON.
 
 `GET /api/tokens`, `POST /api/tokens`, and `DELETE /api/tokens/:id` require a browser session. Personal API tokens cannot manage tokens. Create requires a nonempty name and at least one immutable scope from `TRANSACTIONS_READ`, `TRANSACTIONS_WRITE`, and `SMS_IMPORT`. Creation returns plaintext once alongside the token record. List responses contain only UUID, prefix, scopes, creation time, approximate last-used source timestamp, and revocation time.
 
-The existing `/api/device-tokens` routes remain available. Legacy creation grants only `SMS_IMPORT`.
-
 ### MCP
 
 MCP accepts personal API tokens and OAuth access tokens. Authentication failures include `WWW-Authenticate: Bearer resource_metadata="<issuer>/.well-known/oauth-protected-resource/mcp"` when OAuth is configured. OAuth credentials are valid only for `/mcp`, never SMS import. Authenticated OAuth traffic uses the connection's rate-limit budget, while each access token retains its own identity. Invalid credentials use the existing IP failure budget.
@@ -485,38 +483,6 @@ Request body:
 If the alias already belongs to another recipient and `transfer` is not set, the route returns `409` with transfer-impact `details`.
 
 If the transfer would merge two recipients that each have an enabled rule, it returns `409` with `code: "RULE_RECIPIENT_CONFLICT"` and the target recipient's `existingRule` details.
-
-### Device Tokens
-
-### `GET /api/device-tokens`
-
-Returns device token records ordered by newest first:
-
-- `uuid`
-- `label`
-- `tokenPrefix`
-- `createdAt`
-- `lastUsedAt`
-- `revokedAt`
-
-### `POST /api/device-tokens`
-
-Request body:
-
-```json
-{ "label": "Phone" }
-```
-
-Returns `201` with:
-
-- `token`
-- `record`
-
-`record` contains the stored token metadata. The plain token is returned only once.
-
-### `DELETE /api/device-tokens/:id`
-
-Revokes an active token by setting `revokedAt`. Returns `{ "revoked": true }`.
 
 ### Imports
 

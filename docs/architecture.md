@@ -39,7 +39,7 @@ Business logic is grouped by module:
 - `accounts`
 - `categories`
 - `dashboard`
-- `api-tokens`, with legacy `device-tokens` route adapters
+- `api-tokens`
 - `oauth`, with CIMD fetching, consent state, token exchange, and connection management
 - `imports`
 - `recipients`
