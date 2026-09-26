@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import type {
   CategoryOption,
   AccountOption,
-  DeviceTokenRecord,
   TransactionListResponse,
   TransactionRecord,
   TransactionSource,
@@ -127,10 +126,6 @@ export async function getRecipients(pathnameQuery: string) {
 
 export async function getTransaction(transactionUuid: string) {
   return internalApiRequest<TransactionRecord>(`/api/transactions/${transactionUuid}`);
-}
-
-export async function getDeviceTokens() {
-  return internalApiRequest<DeviceTokenRecord[]>("/api/device-tokens");
 }
 
 export async function createManualTransaction(input: {

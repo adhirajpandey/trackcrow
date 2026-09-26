@@ -81,12 +81,3 @@ export type TransactionListResponse = {
   firstTxnDate: string | null;
   lastTxnDate: string | null;
 };
-
-export type DeviceTokenRecord = {
-  uuid: string;
-  label: string | null;
-  tokenPrefix: string;
-  createdAt: string;
-  lastUsedAt: string | null;
-  revokedAt: string | null;
-};
