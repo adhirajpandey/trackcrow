@@ -24,7 +24,7 @@ Current authenticated page routes are:
 - `/rules`
 - `/settings`
 
-`/settings` manages accounts, scoped personal API tokens, and OAuth Connected Apps. `/categories` and `/imports/review` are not current App Router pages even though category and import APIs already exist.
+`/settings` manages accounts, scoped personal API tokens, and OAuth Connected Apps. `/categories` is not a current App Router page even though category APIs already exist.
 
 ## Backend Boundaries
 
@@ -113,7 +113,7 @@ MCP POST
 
 ## Persistence
 
-The persistence layer is defined in [prisma/schema.prisma](/D:/projects/trackcrow/prisma/schema.prisma:1).
+The persistence layer is defined in [prisma/schema.prisma](../prisma/schema.prisma).
 
 - Prisma client output is generated into `src/generated/prisma-rewrite`.
 - `src/lib/prisma-rewrite.ts` exposes the singleton Prisma client.
