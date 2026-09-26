@@ -133,7 +133,7 @@ These are the current durable rules distilled from the archived frontend TRD:
 
 ## Testing Conventions
 
-- Jest is configured through [jest.config.mjs](/D:/projects/trackcrow/jest.config.mjs:1).
+- Jest is configured through [jest.config.mjs](../jest.config.mjs).
 - Test files live next to the code they exercise.
 - Current coverage is strongest in `src/common`, `src/server/modules`, and `src/server/page-data`.
 - `jest.setup.ts` installs `crypto` for tests and mocks the logger.

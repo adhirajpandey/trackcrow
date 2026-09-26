@@ -93,7 +93,6 @@ export async function createApiToken(input: {
 export async function revokeApiToken(input: {
   userUuid: string;
   tokenUuid: string;
-  requiredScope?: ApiTokenScope;
 }) {
   try {
     const updated = await prisma.apiToken.updateMany({
@@ -101,7 +100,6 @@ export async function revokeApiToken(input: {
         uuid: input.tokenUuid,
         userUuid: input.userUuid,
         revokedAt: null,
-        ...(input.requiredScope ? { scopes: { has: input.requiredScope } } : {}),
       },
       data: { revokedAt: new Date() },
     });

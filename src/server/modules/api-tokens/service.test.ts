@@ -59,18 +59,4 @@ describe("API token service", () => {
     await expect(revokeApiToken({ userUuid: "other", tokenUuid: "token" })).resolves.toMatchObject({ ok: false, error: "NOT_FOUND" });
     await expect(revokeApiToken({ userUuid: "user", tokenUuid: "token" })).resolves.toEqual({ ok: true, data: { revoked: true } });
   });
-
-  it("can restrict revocation to a required scope", async () => {
-    prisma.apiToken.updateMany.mockResolvedValueOnce({ count: 1 });
-
-    await revokeApiToken({
-      userUuid: "user",
-      tokenUuid: "token",
-      requiredScope: ApiTokenScope.SMS_IMPORT,
-    });
-
-    expect(prisma.apiToken.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ scopes: { has: ApiTokenScope.SMS_IMPORT } }),
-    }));
-  });
 });

@@ -29,7 +29,6 @@ This document tracks current implementation status and near-term priorities. For
 
 ## Deferred
 
-- `crowbot/chat`
 - AI extraction beyond deterministic SMS parsing
 - advanced categorization suggestions beyond current recipient-history behavior
 - recurring spend detection
