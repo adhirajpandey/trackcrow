@@ -131,6 +131,7 @@ A release build and a development build share the package name `app.trackcrow.mo
 | `unexpected end of stream` at `127.0.0.1:8082` | Confirm Metro listens on IPv4 `127.0.0.1`. Restart with `NODE_OPTIONS=--dns-result-order=ipv4first`. |
 | Source edits do not appear | Confirm Metro serves this checkout and `CI` is unset. Check a visible label. Use `--clear` only if the cache is stale. |
 | Google sign-in fails with a developer error | Check that an Android OAuth client with package `app.trackcrow.mobile` and this build's SHA-1 exists in the same project as the server's web client. |
+| Release build fails with `Filename longer than 260 characters` | On Windows, enable long paths (`LongPathsEnabled` in the registry) and build with an SDK CMake whose ninja is 1.12 or newer, for example CMake 3.31, by setting `cmake.dir` in `android/local.properties`. The SDK's default CMake 3.22 ships an older ninja. |
 | Native build fails | Inspect the first compiler error in the build log. Keep the existing short checkout path and hoisted dependencies. |
 
 Run `corepack pnpm dlx expo-doctor` when diagnosing dependency compatibility. Do not use an automatic dependency upgrade as a startup fix. Expo Doctor can flag newer patch releases while the pinned setup still builds; review that result separately from build failures.
