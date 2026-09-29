@@ -4,14 +4,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, radii, shadows } from '../theme';
 
-type TabButtonProps = TabTriggerSlotProps & { icon: LucideIcon; label: string };
+type TabButtonProps = TabTriggerSlotProps & { icon: LucideIcon; label: string; a11yLabel: string };
 
-export function TabButton({ icon: Icon, label, isFocused, ...props }: TabButtonProps) {
+export function TabButton({ icon: Icon, label, a11yLabel, isFocused, ...props }: TabButtonProps) {
   return (
     <Pressable
       {...props}
       accessibilityRole="tab"
-      accessibilityLabel={label}
+      accessibilityLabel={a11yLabel}
       accessibilityState={{ selected: isFocused }}
       style={styles.button}
     >

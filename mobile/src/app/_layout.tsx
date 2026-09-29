@@ -22,7 +22,8 @@ import { colors } from '../theme';
 // Section names follow the web app's navigation.
 const tabs = [
   { name: 'index', href: '/', label: 'Overview', icon: Gauge },
-  { name: 'transactions', href: '/transactions', label: 'Transactions', icon: ReceiptText },
+  // Shortened so all five labels fit; screen readers still hear the full name.
+  { name: 'transactions', href: '/transactions', label: 'Txns', a11yLabel: 'Transactions', icon: ReceiptText },
   { name: 'recipients', href: '/recipients', label: 'Recipients', icon: Users },
   { name: 'rules', href: '/rules', label: 'Rules', icon: ScrollText },
   { name: 'settings', href: '/settings', label: 'Settings', icon: Settings },
@@ -36,7 +37,7 @@ function AppTabs() {
       <TabList style={[tabBarStyles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         {tabs.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
-            <TabButton icon={tab.icon} label={tab.label} />
+            <TabButton icon={tab.icon} label={tab.label} a11yLabel={'a11yLabel' in tab ? tab.a11yLabel : tab.label} />
           </TabTrigger>
         ))}
       </TabList>
