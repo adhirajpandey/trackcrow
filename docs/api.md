@@ -6,7 +6,7 @@ This document describes the current HTTP API exposed from `src/app/api/*`.
 
 - All `:id` path params in these routes are UUIDs.
 - Most routes require a valid NextAuth session and return `401` with `{ "message": "Unauthorized" }` when the session is missing.
-- `POST /api/imports/sms` is the session exception. It accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
+- `GET /api/transactions` also accepts a PAT with `transactions:read`. `POST /api/imports/sms` uses PAT authentication only. SMS import accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
 - Controllers validate params, query strings, and JSON bodies with Zod before calling services.
 
 Common error responses:
@@ -17,6 +17,7 @@ Common error responses:
 | `400` | `{ message: "Invalid JSON body" }` | malformed JSON |
 | `400` | `{ message: "Invalid payload", issues? }` | malformed SMS import payload |
 | `401` | `{ message: "Unauthorized" }` | missing session or invalid import token |
+| `403` | `{ message: "Forbidden" }` | PAT lacks the required scope |
 | `404` | `{ message: "Not found" }` | missing user-owned resource |
 | `409` | route-specific conflict message, optional `details` | uniqueness or alias-transfer conflict |
 | `422` | route-specific message, optional `details` | unprocessable SMS import |
@@ -150,6 +151,10 @@ Accounts cannot be deleted through the API.
 ### Transactions
 
 ### `GET /api/transactions`
+
+With no Authorization header, this route uses the browser session. A supplied `Authorization: Bearer <PAT>` or `Token <PAT>` requires `transactions:read` (`TRANSACTIONS_READ`). Empty, malformed, unknown, or revoked credentials return `401` without session fallback. A valid PAT lacking the scope returns `403`; token-service failure returns `503`. All queries use the authenticated user's UUID. Other transaction routes remain session-only.
+
+Clients can request `?page=1&size=50&sortBy=timestamp&sortOrder=desc`. Timestamp sorting uses ID in the same direction as its tie-breaker, giving `timestamp DESC, id DESC` for this request. The response DTO is unchanged.
 
 Supported query params:
 
@@ -494,10 +499,12 @@ Request body:
 
 ```json
 {
-  "data": { "message": "..." },
-  "metadata": { "location": "Bangalore" }
+  "data": { "message": "...", "timestamp": "2026-09-28T12:00:00.000Z" },
+  "metadata": { "location": null }
 }
 ```
+
+`data.timestamp` is optional. When supplied, it must be an ISO timestamp with a timezone (`Z` or an explicit offset); invalid values return `400`. It sets only `Transaction.timestamp`. Omission preserves the server-time fallback. `RawMessage.receivedAt` and `RawMessage.createdAt` keep their database defaults. Clients can supply the original SMS occurrence time and a null location without a sender.
 
 Behavior:
 

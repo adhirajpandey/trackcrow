@@ -347,7 +347,7 @@ export async function listTransactions(
             orderBy:
               sortBy === "amount"
                 ? { amount: sortOrder }
-                : { timestamp: sortOrder },
+                : [{ timestamp: sortOrder }, { id: sortOrder }],
             include: {
               recipient: { select: { uuid: true, displayName: true } },
               category: { select: { uuid: true, name: true } },
