@@ -22,7 +22,7 @@
 - `pnpm typecheck`: run the TypeScript compiler without emitting files. Jest does not type-check tests.
 - `pnpm test`: run the full Jest suite.
 - `pnpm test:unit`: run focused unit tests under `src/common` and `src/server`.
-- `pnpm test:db`: run the PostgreSQL OAuth integration suite against a disposable database in the local container (needs Docker).
+- `pnpm test:db`: run the PostgreSQL OAuth and mobile auth integration suites against a disposable database in the local container (needs Docker).
 - `pnpm db:reset`: recreate the local database from migrations and `prisma/seed.sql` (needs Docker).
 - `pnpm db:migrate --name <change>`: create and apply a migration against the local database (needs Docker). Use it instead of calling `prisma migrate dev` directly.
 - `pnpm exec prisma generate`: regenerate the Prisma client.

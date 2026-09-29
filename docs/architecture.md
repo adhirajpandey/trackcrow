@@ -76,6 +76,8 @@ SMS import is separate from the browser session. `POST /api/imports/sms` accepts
 
 SMS parsing leaves account text in the parsed payload for auditability. The import service normalizes that text and links an existing account only when one account for the authenticated user matches. Account creation and renaming use the browser API.
 
+The Android app signs in with Google through Credential Manager and sends the Google ID token to `POST /api/mobile/auth/google`. The mobile-auth service verifies it against the server's `GOOGLE_CLIENT_ID` with `google-auth-library`, requires a verified email, and calls `ensureUserBootstrap()`. The app user is therefore the same email-keyed user as web sign-in. NextAuth uses JWT sessions without a database adapter, so the Google `sub` is not stored; moving to `sub` would require changing both paths together. The service then issues a personal API token labelled `Android app` with read and write scopes. Google only proves identity: the app's session is that TrackCrow token, and signing out revokes it through `DELETE /api/mobile/auth/session`. Each sign-in creates a new token. There is no device registry.
+
 `/mcp` runs on the Node runtime outside the authenticated page layout. Request protection checks the hashed client-IP failure budget before token lookup and consumes the token budget after authentication. The MCP layer constructs a new server for each request, enforces scopes, and calls domain services directly. Tools never import Prisma or call internal HTTP APIs.
 
 Rate-limit policy lives in `src/server/mcp/request-protection.ts`. Storage implements the `RateLimiter` interface in `src/server/rate-limit/`; PostgreSQL is the first adapter.
@@ -122,4 +124,4 @@ The persistence layer is defined in [prisma/schema.prisma](../prisma/schema.pris
 
 ## Android client
 
-`mobile/` is an independent Expo Router package with its own pnpm lockfile and checks. Root Next.js typechecking and linting exclude it. It currently contains one static screen and native theme colors aligned with the web app. It has no API calls, persisted app state, or SMS module. See [Android development setup](android.md).
+`mobile/` is an independent Expo Router package with its own pnpm lockfile and checks. Root Next.js typechecking and linting exclude it. Its native theme matches the web app. It stores a server URL and a TrackCrow token in SecureStore, obtained through Google sign-in or a pasted personal access token, and calls the read routes with that token. It has no SMS module. See [Android development setup](android.md).

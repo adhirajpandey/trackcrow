@@ -24,7 +24,7 @@ Common error responses:
 | `500` | `{ message: "Internal Server Error" }` | unexpected failure |
 | `503` | sanitized service-unavailable response | token or limiter storage failure |
 
-All success responses are JSON.
+All success responses are JSON, except `204` responses, which have no body.
 
 ### Personal API tokens
 
@@ -74,6 +74,32 @@ The seven tools are `search_transactions`, `get_spending_summary`, `list_categor
 ### `GET|POST /api/auth/[...nextauth]`
 
 NextAuth handler for Google sign-in and session flows.
+
+### Mobile auth
+
+The Android app signs in with Google through these routes. None of them use the browser session.
+
+### `GET /api/mobile/auth/google`
+
+Returns `{ webClientId }`, the server's Google web OAuth client ID. The app requests Google ID tokens for this audience. Returns `503` when `GOOGLE_CLIENT_ID` is unset.
+
+### `POST /api/mobile/auth/google`
+
+Body: `{ idToken }`, a Google ID token issued for `webClientId`.
+
+The server verifies the token's signature, issuer, expiry, and audience. It requires an `email` claim and `email_verified: true`, otherwise it returns `401` before any database write. The user is resolved by email through the same bootstrap as web sign-in, so a new email creates a user with default categories. Each sign-in creates a new personal API token labelled `Android app` with `TRANSACTIONS_READ` and `TRANSACTIONS_WRITE`. It appears in web Settings and can be revoked there.
+
+Response:
+
+```json
+{ "token": "<plain-token>", "user": { "name": "…", "email": "…" } }
+```
+
+The plaintext token is returned only once.
+
+### `DELETE /api/mobile/auth/session`
+
+Requires `Authorization: Bearer <plain-token>`. Revokes only the presented token and returns `204` with no body. A missing, unknown, or already revoked token returns `401`.
 
 ### User
 

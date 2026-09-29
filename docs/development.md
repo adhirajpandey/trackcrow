@@ -66,7 +66,7 @@ Notes:
 - `pnpm typecheck` runs `tsc --noEmit`. Jest compiles tests without type-checking them, so run it alongside `pnpm test`
 - `pnpm test` runs the full Jest suite
 - `pnpm test:unit` scopes Jest to `src/common` and `src/server`
-- `pnpm test:db` runs the PostgreSQL OAuth integration suite against a fresh `trackcrow_oauth_test` database in the local container
+- `pnpm test:db` runs the PostgreSQL OAuth and mobile auth integration suites against a fresh `trackcrow_oauth_test` database in the local container
 
 ## Database Workflow
 
