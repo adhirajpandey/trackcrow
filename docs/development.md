@@ -66,7 +66,7 @@ Notes:
 - `pnpm typecheck` runs `tsc --noEmit`. Jest compiles tests without type-checking them, so run it alongside `pnpm test`
 - `pnpm test` runs the full Jest suite
 - `pnpm test:unit` scopes Jest to `src/common` and `src/server`
-- `pnpm test:db` runs the PostgreSQL OAuth integration suite against a fresh `trackcrow_oauth_test` database in the local container
+- `pnpm test:db` runs the PostgreSQL OAuth and mobile auth integration suites against a fresh `trackcrow_oauth_test` database in the local container
 
 ## Database Workflow
 
@@ -228,3 +228,7 @@ Apply `20260915_track_accounts` during a coordinated write pause after taking a 
 - Update `docs/development.md` when setup, scripts, or contributor workflow changes.
 - Update `docs/roadmap.md` when priorities or product status change.
 - Move superseded plans and reviews into `docs/archive/` instead of extending live docs with historical context.
+
+## Android development app
+
+Run mobile commands from `mobile/`. Root checks cover only the web and backend package. Follow [Android development setup](android.md) for the existing toolchain, builds, Metro, and wireless debugging.

@@ -46,6 +46,7 @@ export async function postSmsImport(request: Request) {
   const result = await importSmsTransaction({
     userUuid: authentication.data.userUuid,
     message: parsed.data.data.message,
+    ...(parsed.data.data.timestamp ? { timestamp: new Date(parsed.data.data.timestamp) } : {}),
     location: parsed.data.metadata.location,
   });
   const data = unwrapOrResponse(result);

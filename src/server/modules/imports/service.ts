@@ -56,7 +56,7 @@ export async function importSmsTransaction(
       recipientName: parsed.recipient_name ?? null,
       type: parsed.type,
       remarks: null,
-      timestamp: new Date(),
+      timestamp: input.timestamp ?? new Date(),
       reference: parsed.reference ?? null,
       accountUuid: accountMatch.data.accountUuid,
       locationRaw: input.location ?? null,
@@ -140,13 +140,13 @@ export async function importSmsTransaction(
     });
 
     return ok(transaction.data);
-  } catch (error) {
+  } catch {
+    // Prisma errors may embed the raw SMS in their message. Do not log them.
     logger.error(
       {
         event: "sms_import.db_failed",
         message: "Failed to import SMS transaction",
-      },
-      error
+      }
     );
     return fail("INTERNAL_ERROR");
   }

@@ -1,6 +1,6 @@
 # TrackCrow Architecture
 
-This document describes the current runtime structure of the Next.js monolith.
+This document describes the Next.js monolith and its independent Android client.
 
 ## Runtime Shape
 
@@ -69,11 +69,14 @@ The landing page resolves an optional server session. A root-layout navigation p
 - `src/lib/auth.ts` defines the auth configuration.
 - `requirePageSessionUser()` protects authenticated pages and redirects unauthenticated users to `/login`.
 - `requireSessionUser()` protects most API routes and returns the current `userUuid`.
+- `requireSessionOrTokenUser()` lets read routes used by the Android app accept either the session or a PAT with a required scope. A supplied Authorization header never falls back to the session.
 - `ensureUserBootstrap()` upserts the user on sign-in and seeds default categories when needed.
 
 SMS import is separate from the browser session. `POST /api/imports/sms` accepts `Token` and `Bearer` credentials with `sms:import`. MCP accepts only Bearer credentials. The shared resolver hashes every supplied token, rejects revoked tokens, returns the owning user and scopes, and conditionally updates `lastUsedAt` at most once every ten minutes.
 
 SMS parsing leaves account text in the parsed payload for auditability. The import service normalizes that text and links an existing account only when one account for the authenticated user matches. Account creation and renaming use the browser API.
+
+The Android app signs in with Google through Credential Manager and sends the Google ID token to `POST /api/mobile/auth/google`. The mobile-auth service verifies it against the server's `GOOGLE_CLIENT_ID` with `google-auth-library`, requires a verified email, and calls `ensureUserBootstrap()`. The app user is therefore the same email-keyed user as web sign-in. NextAuth uses JWT sessions without a database adapter, so the Google `sub` is not stored; moving to `sub` would require changing both paths together. The service then issues a personal API token labelled `Android app` with read and write scopes. Google only proves identity: the app's session is that TrackCrow token, and signing out revokes it through `DELETE /api/mobile/auth/session`. Each sign-in creates a new token. There is no device registry.
 
 `/mcp` runs on the Node runtime outside the authenticated page layout. Request protection checks the hashed client-IP failure budget before token lookup and consumes the token budget after authentication. The MCP layer constructs a new server for each request, enforces scopes, and calls domain services directly. Tools never import Prisma or call internal HTTP APIs.
 
@@ -118,3 +121,7 @@ The persistence layer is defined in [prisma/schema.prisma](../prisma/schema.pris
 - Prisma client output is generated into `src/generated/prisma-rewrite`.
 - `src/lib/prisma-rewrite.ts` exposes the singleton Prisma client.
 - The datasource is PostgreSQL.
+
+## Android client
+
+`mobile/` is an independent Expo Router package with its own pnpm lockfile and checks. Root Next.js typechecking and linting exclude it. Its native theme matches the web app. It stores a server URL and a TrackCrow token in SecureStore, obtained through Google sign-in or a pasted personal access token, and calls the read routes with that token. It has no SMS module. See [Android development setup](android.md).

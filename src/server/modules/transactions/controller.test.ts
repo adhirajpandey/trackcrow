@@ -1,3 +1,10 @@
+jest.mock("@/server/modules/api-tokens/service", () => ({
+  resolveApiToken: jest.fn(),
+  hasApiTokenScope: (identity: { scopes: string[] }, scope: string) => identity.scopes.includes(scope),
+}));
+import { resolveApiToken } from "@/server/modules/api-tokens/service";
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
+
 jest.mock("@/server/auth/session", () => ({
   requireSessionUser: jest.fn(),
 }));
@@ -192,5 +199,65 @@ describe("transactions controller", () => {
       message: "Invalid request",
     });
     expect(updateTransactionCategoryMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("transaction list PAT authentication", () => {
+  const resolveToken = jest.mocked(resolveApiToken);
+  beforeEach(() => {
+    jest.resetAllMocks();
+    requireSessionUserMock.mockResolvedValue({ ok: true, data: { userUuid: "session-user" } });
+    listTransactionsMock.mockResolvedValue({ ok: true, data: {
+      transactions: [], page: 1, pageSize: 50, total: 0, totalPages: 0,
+      hasNext: false, hasPrev: false, firstTxnDate: null, lastTxnDate: null,
+    } });
+  });
+  const request = (authorization?: string) => new Request(
+    "http://localhost/api/transactions?page=1&size=50&sortBy=timestamp&sortOrder=desc&userUuid=attacker",
+    { headers: authorization === undefined ? {} : { authorization } },
+  );
+  it("preserves session authentication when no Authorization header exists", async () => {
+    expect((await getTransactions(request())).status).toBe(200);
+    expect(resolveToken).not.toHaveBeenCalled();
+    expect(listTransactionsMock).toHaveBeenCalledWith(expect.objectContaining({ userUuid: "session-user" }));
+  });
+  it("returns 401 when neither a session nor a token exists", async () => {
+    requireSessionUserMock.mockResolvedValueOnce({ ok: false, error: "UNAUTHORIZED" });
+    expect((await getTransactions(request())).status).toBe(401);
+  });
+  it.each(["", "Basic abc", "Bearer", "Bearer abc def"])("rejects malformed header %p without session fallback", async (header) => {
+    expect((await getTransactions(request(header))).status).toBe(401);
+    expect(requireSessionUserMock).not.toHaveBeenCalled();
+    expect(listTransactionsMock).not.toHaveBeenCalled();
+  });
+  it.each(["Bearer", "Token"])("accepts %s PAT and scopes results to its owner", async (scheme) => {
+    resolveToken.mockResolvedValueOnce({ ok: true, data: {
+      userUuid: "pat-user", tokenUuid: "token-1", scopes: [ApiTokenScope.TRANSACTIONS_READ],
+    } });
+    expect((await getTransactions(request(`${scheme} test-pat`))).status).toBe(200);
+    expect(resolveToken).toHaveBeenCalledWith("test-pat");
+    expect(requireSessionUserMock).not.toHaveBeenCalled();
+    expect(listTransactionsMock).toHaveBeenCalledWith(expect.objectContaining({
+      userUuid: "pat-user", page: 1, size: 50, sortBy: "timestamp", sortOrder: "desc",
+    }));
+  });
+  it("returns 403 for a valid PAT lacking read scope", async () => {
+    resolveToken.mockResolvedValueOnce({ ok: true, data: {
+      userUuid: "pat-user", tokenUuid: "token-1", scopes: [ApiTokenScope.SMS_IMPORT],
+    } });
+    expect((await getTransactions(request("Bearer test-pat"))).status).toBe(403);
+    expect(listTransactionsMock).not.toHaveBeenCalled();
+    expect(requireSessionUserMock).not.toHaveBeenCalled();
+  });
+  it.each([["UNAUTHORIZED", 401], ["SERVICE_UNAVAILABLE", 503]] as const)("maps %s without session fallback", async (error, status) => {
+    resolveToken.mockResolvedValueOnce({ ok: false, error });
+    expect((await getTransactions(request("Bearer test-pat"))).status).toBe(status);
+    expect(listTransactionsMock).not.toHaveBeenCalled();
+    expect(requireSessionUserMock).not.toHaveBeenCalled();
+  });
+  it("does not add PAT authentication to transaction writes", async () => {
+    requireSessionUserMock.mockResolvedValueOnce({ ok: false, error: "UNAUTHORIZED" });
+    expect((await postTransaction(request("Bearer test-pat"))).status).toBe(401);
+    expect(resolveToken).not.toHaveBeenCalled();
   });
 });

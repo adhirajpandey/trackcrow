@@ -177,3 +177,24 @@ describe("importSmsTransaction", () => {
     });
   });
 });
+
+describe("SMS occurrence and receipt timestamps", () => {
+  afterEach(() => jest.useRealTimers());
+  it.each([true, false])("uses supplied occurrence time when present (%s), leaving raw receipt defaults untouched", async (supplied) => {
+    jest.clearAllMocks();
+    const now = new Date("2026-09-28T12:00:00Z");
+    const occurred = new Date("2026-09-27T11:00:00Z");
+    jest.useFakeTimers().setSystemTime(now);
+    parseTransactionMessageMock.mockReturnValue({ amount: 125, recipient: "merchant", type: "UPI" });
+    matchAccountByNameMock.mockResolvedValue({ ok: true, data: { accountUuid: null } });
+    createTransactionMock.mockResolvedValue({ ok: true, data: { ignored: false, uuid: "txn" } });
+    mockPrisma.transaction.findFirst.mockResolvedValue({ id: 1 });
+    const result = await importSmsTransaction({ userUuid: "user", message: "sms", ...(supplied ? { timestamp: occurred } : {}) });
+    expect(result.ok).toBe(true);
+    expect(createTransactionMock).toHaveBeenCalledWith(expect.objectContaining({ timestamp: supplied ? occurred : now }));
+    const raw = mockPrisma.rawMessage.create.mock.calls[0][0].data;
+    expect(raw).not.toHaveProperty("receivedAt");
+    expect(raw).not.toHaveProperty("createdAt");
+    expect(raw).not.toHaveProperty("timestamp");
+  });
+});

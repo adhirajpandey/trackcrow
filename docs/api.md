@@ -6,7 +6,7 @@ This document describes the current HTTP API exposed from `src/app/api/*`.
 
 - All `:id` path params in these routes are UUIDs.
 - Most routes require a valid NextAuth session and return `401` with `{ "message": "Unauthorized" }` when the session is missing.
-- `POST /api/imports/sms` is the session exception. It accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
+- `GET /api/transactions`, `GET /api/dashboard/summary`, and `GET /api/dashboard/spending-by-category` also accept a PAT with `transactions:read`. `POST /api/imports/sms` uses PAT authentication only. SMS import accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
 - Controllers validate params, query strings, and JSON bodies with Zod before calling services.
 
 Common error responses:
@@ -17,13 +17,14 @@ Common error responses:
 | `400` | `{ message: "Invalid JSON body" }` | malformed JSON |
 | `400` | `{ message: "Invalid payload", issues? }` | malformed SMS import payload |
 | `401` | `{ message: "Unauthorized" }` | missing session or invalid import token |
+| `403` | `{ message: "Forbidden" }` | PAT lacks the required scope |
 | `404` | `{ message: "Not found" }` | missing user-owned resource |
 | `409` | route-specific conflict message, optional `details` | uniqueness or alias-transfer conflict |
 | `422` | route-specific message, optional `details` | unprocessable SMS import |
 | `500` | `{ message: "Internal Server Error" }` | unexpected failure |
 | `503` | sanitized service-unavailable response | token or limiter storage failure |
 
-All success responses are JSON.
+All success responses are JSON, except `204` responses, which have no body.
 
 ### Personal API tokens
 
@@ -73,6 +74,32 @@ The seven tools are `search_transactions`, `get_spending_summary`, `list_categor
 ### `GET|POST /api/auth/[...nextauth]`
 
 NextAuth handler for Google sign-in and session flows.
+
+### Mobile auth
+
+The Android app signs in with Google through these routes. None of them use the browser session.
+
+### `GET /api/mobile/auth/google`
+
+Returns `{ webClientId }`, the server's Google web OAuth client ID. The app requests Google ID tokens for this audience. Returns `503` when `GOOGLE_CLIENT_ID` is unset.
+
+### `POST /api/mobile/auth/google`
+
+Body: `{ idToken }`, a Google ID token issued for `webClientId`.
+
+The server verifies the token's signature, issuer, expiry, and audience. It requires an `email` claim and `email_verified: true`, otherwise it returns `401` before any database write. The user is resolved by email through the same bootstrap as web sign-in, so a new email creates a user with default categories. Each sign-in creates a new personal API token labelled `Android app` with `TRANSACTIONS_READ` and `TRANSACTIONS_WRITE`. It appears in web Settings and can be revoked there.
+
+Response:
+
+```json
+{ "token": "<plain-token>", "user": { "name": "…", "email": "…" } }
+```
+
+The plaintext token is returned only once.
+
+### `DELETE /api/mobile/auth/session`
+
+Requires `Authorization: Bearer <plain-token>`. Revokes only the presented token and returns `204` with no body. A missing, unknown, or already revoked token returns `401`.
 
 ### User
 
@@ -150,6 +177,10 @@ Accounts cannot be deleted through the API.
 ### Transactions
 
 ### `GET /api/transactions`
+
+With no Authorization header, this route uses the browser session. A supplied `Authorization: Bearer <PAT>` or `Token <PAT>` requires `transactions:read` (`TRANSACTIONS_READ`). Empty, malformed, unknown, or revoked credentials return `401` without session fallback. A valid PAT lacking the scope returns `403`; token-service failure returns `503`. All queries use the authenticated user's UUID. Other transaction routes remain session-only.
+
+Clients can request `?page=1&size=50&sortBy=timestamp&sortOrder=desc`. Timestamp sorting uses ID in the same direction as its tie-breaker, giving `timestamp DESC, id DESC` for this request. The response DTO is unchanged.
 
 Supported query params:
 
@@ -354,6 +385,8 @@ Soft-deletes the rule by disabling it and setting `deletedAt`. Existing transact
 
 ### `GET /api/dashboard/summary`
 
+This route and `GET /api/dashboard/spending-by-category` authenticate like `GET /api/transactions`: the browser session, or a supplied PAT with `transactions:read`. `GET /api/dashboard/spending-by-period` remains session-only. `startDate` and `endDate` are parsed as dates, so clients should send ISO timestamps for exact boundaries.
+
 Optional query params:
 
 - `startDate`
@@ -494,10 +527,12 @@ Request body:
 
 ```json
 {
-  "data": { "message": "..." },
-  "metadata": { "location": "Bangalore" }
+  "data": { "message": "...", "timestamp": "2026-09-28T12:00:00.000Z" },
+  "metadata": { "location": null }
 }
 ```
+
+`data.timestamp` is optional. When supplied, it must be an ISO timestamp with a timezone (`Z` or an explicit offset); invalid values return `400`. It sets only `Transaction.timestamp`. Omission preserves the server-time fallback. `RawMessage.receivedAt` and `RawMessage.createdAt` keep their database defaults. Clients can supply the original SMS occurrence time and a null location without a sender.
 
 Behavior:
 

@@ -1,6 +1,7 @@
 export type ImportSmsInput = {
   userUuid: string;
   message: string;
+  timestamp?: Date;
   location?: string | null;
 };
 

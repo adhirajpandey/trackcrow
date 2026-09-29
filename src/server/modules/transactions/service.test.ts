@@ -633,3 +633,21 @@ it("includes linked recipient notes in user-scoped transaction search", async ()
     ]) })]),
   }) });
 });
+
+it("orders equal transaction timestamps by descending ID and scopes every list read to its owner", async () => {
+  jest.clearAllMocks();
+  mockPrisma.transaction.findFirst.mockResolvedValue(null);
+  mockPrisma.transaction.count.mockResolvedValue(2);
+  mockPrisma.transaction.findMany.mockResolvedValue([
+    transactionRecord({ id: 2, uuid: "second" }), transactionRecord({ id: 1, uuid: "first" }),
+  ]);
+  const result = await listTransactions({ userUuid: "user-1", page: 1, size: 50, sortBy: "timestamp", sortOrder: "desc" });
+  expect(result.ok).toBe(true);
+  expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
+    where: { userUuid: "user-1" }, orderBy: [{ timestamp: "desc" }, { id: "desc" }], take: 50, skip: 0,
+  }));
+  expect(mockPrisma.transaction.count).toHaveBeenCalledWith({ where: { userUuid: "user-1" } });
+  for (const [args] of mockPrisma.transaction.findFirst.mock.calls) {
+    expect(args.where).toEqual({ userUuid: "user-1" });
+  }
+});
