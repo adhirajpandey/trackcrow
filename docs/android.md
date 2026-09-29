@@ -1,6 +1,6 @@
 # Develop the Android app
 
-The `mobile/` package runs a single screen with Trackcrow's web color palette. It needs no backend, token, or SMS permission.
+The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. It has five tabs named after the web sections. Overview shows month-to-date spending, review work, top categories, and recent transactions. Settings connects the app to a server with a personal access token. Transactions, Recipients, and Rules are placeholders. The app does not read SMS.
 
 ## Use the installed toolchain
 
@@ -58,7 +58,19 @@ adb -s <device> reverse tcp:8082 tcp:8082
 adb -s <device> shell am start -a android.intent.action.VIEW -d "exp+trackcrow-mobile://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8082" app.trackcrow.mobile
 ```
 
-Expect the Trackcrow heading and **A fresh start.** card. Reapply the reverse mapping after each reconnect. Port 3000 and a database are unnecessary for this screen.
+Expect the TrackCrow header and the **Connect TrackCrow** card on Overview. Reapply the reverse mapping after each reconnect.
+
+## Connect to a backend
+
+Overview reads `GET /api/dashboard/summary`, `GET /api/dashboard/spending-by-category`, and `GET /api/transactions` with a personal access token that has `transactions:read` (the **Read only** preset in web Settings). The token is kept in SecureStore.
+
+For a local backend, run it on port 3000 on the development computer, then:
+
+```sh
+adb -s <device> reverse tcp:3000 tcp:3000
+```
+
+In the app's Settings, enter `http://127.0.0.1:3000` and the token. Saving validates access with a one-row transactions request before storing anything.
 
 For JavaScript changes, keep Metro running and edit this checkout. Verify Fast Refresh by changing a visible label, then reverting it, without reloading or restarting Metro.
 
