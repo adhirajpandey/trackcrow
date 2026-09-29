@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Trackcrow",
+    "name": "TrackCrow",
     "slug": "trackcrow-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,7 +22,8 @@
     ],
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

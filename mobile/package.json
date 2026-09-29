@@ -3,21 +3,26 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
+    "@expo-google-fonts/kalam": "^0.4.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@tanstack/react-query": "^5.104.0",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",
     "expo-dev-client": "~57.0.19",
+    "expo-font": "~57.0.4",
     "expo-linking": "~57.0.11",
     "expo-router": "~57.0.23",
     "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
+    "lucide-react-native": "^1.48.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
@@ -33,7 +38,8 @@
     "android": "expo run:android --device",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "check": "pnpm typecheck && pnpm lint"
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "test": "tsx --test src/lib/*.test.ts"
   },
   "private": true,
   "packageManager": "pnpm@10.28.2"
