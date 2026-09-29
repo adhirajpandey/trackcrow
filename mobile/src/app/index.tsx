@@ -63,7 +63,7 @@ function Overview({ credentials }: { credentials: Credentials }) {
   // Recomputed on each refresh so the month rolls over while the app stays open.
   const [now, setNow] = useState(() => new Date());
   const month = useMemo(() => getMonthToDate(now), [now]);
-  // Settings clears the query cache when the token changes, so the URL is enough to key data.
+  // Settings clears the query cache on every sign-in and sign-out, so the URL is enough to key data.
   const key = [credentials.apiUrl];
   const monthRange = { startDate: month.startDate, endDate: month.endDate };
 
@@ -167,7 +167,7 @@ function ConnectCard() {
         <KeyRound size={20} color={colors.foreground} />
         <Text style={type.heading}>Connect TrackCrow</Text>
       </View>
-      <Text style={type.muted}>Add your server URL and a Read only access token to see your spending here.</Text>
+      <Text style={type.muted}>Sign in with Google in Settings to see your spending here.</Text>
       <Button label="Open settings" trailingIcon={ArrowRight} onPress={() => router.navigate('/settings')} />
     </Panel>
   );

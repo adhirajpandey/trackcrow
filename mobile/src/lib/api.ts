@@ -1,4 +1,12 @@
-export type Credentials = { apiUrl: string; token: string };
+export const DEFAULT_API_URL = 'https://trackcrow.in';
+
+/** How the stored token was obtained. Google sessions show the account and revoke on sign-out. */
+export type Credentials = { apiUrl: string; token: string } & (
+  | { method: 'google'; email: string }
+  | { method: 'token' }
+);
+
+export type GoogleSession = { token: string; user: { name: string; email: string } };
 
 export type DashboardSummary = {
   totalSpend: number;
@@ -53,37 +61,84 @@ export function normalizeApiUrl(value: string): string {
 }
 
 function errorForStatus(status: number): ApiError {
-  if (status === 401) return new ApiError('The access token is invalid or revoked. Update it in Settings.', status);
+  if (status === 401) return new ApiError('Your sign-in has expired or was revoked. Sign in again in Settings.', status);
   if (status === 403) return new ApiError('The access token needs the transactions:read scope.', status);
   if (status === 503) return new ApiError('TrackCrow is temporarily unavailable. Try again shortly.', status);
   return new ApiError(`TrackCrow returned an error (HTTP ${status}).`, status);
 }
 
-async function getJson<T>(credentials: Credentials, path: string, signal?: AbortSignal): Promise<T> {
+async function send(url: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort);
   if (signal?.aborted) controller.abort();
   const timeout = setTimeout(abort, 20000);
-  let response: Response;
   try {
-    response = await fetch(`${credentials.apiUrl}${path}`, {
-      headers: { Authorization: `Bearer ${credentials.token}` },
-      signal: controller.signal,
-      credentials: 'omit',
-    });
+    return await fetch(url, { ...init, signal: controller.signal, credentials: 'omit' });
   } catch {
     throw new ApiError('Could not reach TrackCrow. Check your connection and server URL.', null);
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abort);
   }
-  if (!response.ok) throw errorForStatus(response.status);
+}
+
+async function readJson<T>(response: Response): Promise<T> {
   try {
     return (await response.json()) as T;
   } catch {
     throw new ApiError('TrackCrow returned an unreadable response.', response.status);
   }
+}
+
+async function getJson<T>(credentials: Credentials, path: string, signal?: AbortSignal): Promise<T> {
+  const response = await send(
+    `${credentials.apiUrl}${path}`,
+    { headers: { Authorization: `Bearer ${credentials.token}` } },
+    signal,
+  );
+  if (!response.ok) throw errorForStatus(response.status);
+  return readJson<T>(response);
+}
+
+/** Reads the Google web client ID the server verifies ID tokens against. */
+export async function fetchGoogleClientId(apiUrl: string): Promise<string> {
+  const response = await send(`${normalizeApiUrl(apiUrl)}/api/mobile/auth/google`, {});
+  if (response.status === 404) throw new ApiError('This server does not support Google sign-in.', 404);
+  if (response.status === 503) throw new ApiError('Google sign-in is not configured on this server.', 503);
+  if (!response.ok) throw errorForStatus(response.status);
+  const { webClientId } = await readJson<{ webClientId?: unknown }>(response);
+  if (typeof webClientId !== 'string' || !webClientId) {
+    throw new ApiError('TrackCrow returned an unreadable response.', response.status);
+  }
+  return webClientId;
+}
+
+/** Exchanges a Google ID token for a TrackCrow token. */
+export async function exchangeGoogleIdToken(apiUrl: string, idToken: string): Promise<GoogleSession> {
+  const response = await send(`${normalizeApiUrl(apiUrl)}/api/mobile/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  });
+  if (response.status === 401) {
+    throw new ApiError('TrackCrow could not verify this Google account. Use a verified Google account.', 401);
+  }
+  if (!response.ok) throw errorForStatus(response.status);
+  const session = await readJson<Partial<GoogleSession>>(response);
+  if (typeof session.token !== 'string' || typeof session.user?.email !== 'string') {
+    throw new ApiError('TrackCrow returned an unreadable response.', response.status);
+  }
+  return { token: session.token, user: { name: session.user.name ?? '', email: session.user.email } };
+}
+
+/** Revokes the stored token on the server. A token that is already invalid counts as revoked. */
+export async function revokeSession(credentials: Credentials): Promise<void> {
+  const response = await send(`${normalizeApiUrl(credentials.apiUrl)}/api/mobile/auth/session`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${credentials.token}` },
+  });
+  if (!response.ok && response.status !== 401) throw errorForStatus(response.status);
 }
 
 function rangeQuery(range?: DateRange) {

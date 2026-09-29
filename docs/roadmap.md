@@ -16,7 +16,8 @@ This document tracks current implementation status and near-term priorities. For
 
 ## Active Work
 
-- Android: SMS reading feasibility is established. `mobile/` now starts from one themed screen; application features remain to be built. See [Android development setup](android.md).
+- Android: SMS reading feasibility is established. `mobile/` has Google sign-in, a personal access token fallback, and a read-only Overview; other sections remain to be built. See [Android development setup](android.md).
+- Android sign-in follow-ups: have the server issue and verify a nonce for Google ID tokens, and create a release keystore with its production SHA-1 registered before a production build.
 
 - The authenticated workspace shell and drilldown UX are still being refined.
 - Transactions and recipients are the main active frontend patterns for server-first list pages with client-side query refetch.
