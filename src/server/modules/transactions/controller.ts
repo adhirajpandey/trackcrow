@@ -1,8 +1,8 @@
 import { ApiTokenScope, TransactionSource } from "@/generated/prisma-rewrite";
 import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import { requireSessionUser } from "@/server/auth/session";
-import { hasApiTokenScope, resolveApiToken } from "@/server/modules/api-tokens/service";
 
 import {
   createTransactionSchema,
@@ -50,7 +50,7 @@ async function parseTransactionUuid(context: RouteContext, path: string) {
 
 export async function getTransactions(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireListUser(request);
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -104,22 +104,6 @@ export async function getTransactions(request: Request) {
   });
   const data = unwrapOrResponse(result);
   return data instanceof Response ? data : jsonOk(data);
-}
-
-async function requireListUser(request: Request) {
-  // Even an empty or malformed supplied header must not fall back to cookies.
-  if (!request.headers.has("authorization")) return requireUserUuid();
-  const token = request.headers.get("authorization")?.match(/^(?:Token|Bearer)\s+(\S+)$/i)?.[1];
-  if (!token) return jsonError("Unauthorized", 401);
-  const authentication = await resolveApiToken(token);
-  if (!authentication.ok) {
-    const unavailable = authentication.error === "SERVICE_UNAVAILABLE";
-    return jsonError(unavailable ? "Service unavailable" : "Unauthorized", unavailable ? 503 : 401);
-  }
-  if (!hasApiTokenScope(authentication.data, ApiTokenScope.TRANSACTIONS_READ)) {
-    return jsonError("Forbidden", 403);
-  }
-  return { userUuid: authentication.data.userUuid };
 }
 
 export async function postTransaction(request: Request) {

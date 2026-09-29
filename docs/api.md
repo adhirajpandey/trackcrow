@@ -6,7 +6,7 @@ This document describes the current HTTP API exposed from `src/app/api/*`.
 
 - All `:id` path params in these routes are UUIDs.
 - Most routes require a valid NextAuth session and return `401` with `{ "message": "Unauthorized" }` when the session is missing.
-- `GET /api/transactions` also accepts a PAT with `transactions:read`. `POST /api/imports/sms` uses PAT authentication only. SMS import accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
+- `GET /api/transactions`, `GET /api/dashboard/summary`, and `GET /api/dashboard/spending-by-category` also accept a PAT with `transactions:read`. `POST /api/imports/sms` uses PAT authentication only. SMS import accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
 - Controllers validate params, query strings, and JSON bodies with Zod before calling services.
 
 Common error responses:
@@ -358,6 +358,8 @@ Soft-deletes the rule by disabling it and setting `deletedAt`. Existing transact
 ### Dashboard
 
 ### `GET /api/dashboard/summary`
+
+This route and `GET /api/dashboard/spending-by-category` authenticate like `GET /api/transactions`: the browser session, or a supplied PAT with `transactions:read`. `GET /api/dashboard/spending-by-period` remains session-only. `startDate` and `endDate` are parsed as dates, so clients should send ISO timestamps for exact boundaries.
 
 Optional query params:
 

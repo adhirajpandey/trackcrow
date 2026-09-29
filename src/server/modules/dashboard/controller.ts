@@ -1,5 +1,7 @@
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
 import { logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import { requireSessionUser } from "@/server/auth/session";
 
 import { dashboardRangeQuerySchema, spendingByPeriodQuerySchema } from "./schemas";
@@ -16,7 +18,7 @@ async function requireUserUuid() {
 
 export async function getSummary(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -41,7 +43,7 @@ export async function getSummary(request: Request) {
 
 export async function getCategorySpending(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }

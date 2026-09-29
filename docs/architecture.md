@@ -69,6 +69,7 @@ The landing page resolves an optional server session. A root-layout navigation p
 - `src/lib/auth.ts` defines the auth configuration.
 - `requirePageSessionUser()` protects authenticated pages and redirects unauthenticated users to `/login`.
 - `requireSessionUser()` protects most API routes and returns the current `userUuid`.
+- `requireSessionOrTokenUser()` lets read routes used by the Android app accept either the session or a PAT with a required scope. A supplied Authorization header never falls back to the session.
 - `ensureUserBootstrap()` upserts the user on sign-in and seeds default categories when needed.
 
 SMS import is separate from the browser session. `POST /api/imports/sms` accepts `Token` and `Bearer` credentials with `sms:import`. MCP accepts only Bearer credentials. The shared resolver hashes every supplied token, rejects revoked tokens, returns the owning user and scopes, and conditionally updates `lastUsedAt` at most once every ten minutes.
