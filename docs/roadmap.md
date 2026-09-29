@@ -16,6 +16,8 @@ This document tracks current implementation status and near-term priorities. For
 
 ## Active Work
 
+- Android: SMS reading feasibility is established. `mobile/` now starts from one themed screen; application features remain to be built. See [Android development setup](android.md).
+
 - The authenticated workspace shell and drilldown UX are still being refined.
 - Transactions and recipients are the main active frontend patterns for server-first list pages with client-side query refetch.
 - Shared table semantics and consistent URL-driven filter state are still being standardized across full data workspaces.

@@ -1,6 +1,6 @@
 # TrackCrow Architecture
 
-This document describes the current runtime structure of the Next.js monolith.
+This document describes the Next.js monolith and its independent Android client.
 
 ## Runtime Shape
 
@@ -118,3 +118,7 @@ The persistence layer is defined in [prisma/schema.prisma](../prisma/schema.pris
 - Prisma client output is generated into `src/generated/prisma-rewrite`.
 - `src/lib/prisma-rewrite.ts` exposes the singleton Prisma client.
 - The datasource is PostgreSQL.
+
+## Android client
+
+`mobile/` is an independent Expo Router package with its own pnpm lockfile and checks. Root Next.js typechecking and linting exclude it. It currently contains one static screen and native theme colors aligned with the web app. It has no API calls, persisted app state, or SMS module. See [Android development setup](android.md).

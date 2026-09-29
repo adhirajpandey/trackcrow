@@ -228,3 +228,7 @@ Apply `20260915_track_accounts` during a coordinated write pause after taking a 
 - Update `docs/development.md` when setup, scripts, or contributor workflow changes.
 - Update `docs/roadmap.md` when priorities or product status change.
 - Move superseded plans and reviews into `docs/archive/` instead of extending live docs with historical context.
+
+## Android development app
+
+Run mobile commands from `mobile/`. Root checks cover only the web and backend package. Follow [Android development setup](android.md) for the existing toolchain, builds, Metro, and wireless debugging.
