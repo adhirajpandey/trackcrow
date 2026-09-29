@@ -2,13 +2,14 @@
   "expo": {
     "name": "TrackCrow",
     "slug": "trackcrow-mobile",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/brand.png",
     "userInterfaceStyle": "light",
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "app.trackcrow.mobile",
+      "versionCode": 1,
       "blockedPermissions": [
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS",
@@ -23,7 +24,8 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "./plugins/with-release-signing"
     ],
     "experiments": {
       "typedRoutes": true

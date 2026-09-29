@@ -88,7 +88,38 @@ Google issues the ID token for the server's **web** OAuth client, which is the `
 
 The native module comes from `react-native-nitro-google-signin` through autolinking. Its Expo config plugin is not used, because it only configures iOS and Firebase files. The app passes the web client ID at runtime.
 
-Debug builds are signed with the public Android debug keystore. Register its SHA-1 only in a local or development Google Cloud project, never in the production project. A production build needs a release keystore and its own SHA-1 registered in the production project.
+Debug builds are signed with the public Android debug keystore. Register its SHA-1 only in a local or development Google Cloud project, never in the production project. For release builds, register the release key's SHA-1 in the production project. Print it with `keytool -list -v -keystore <release.keystore> -alias <alias>`.
+
+## Build a release APK
+
+A release APK carries its own JavaScript, so it runs without Metro. It is signed with the TrackCrow release key. Android installs an update only when it is signed with the same key as the installed app, so every release must use that key.
+
+Before each release:
+
+1. Increase `android.versionCode` in `app.json` by one. Change `version` when the release is noticeably different. Settings shows both at the bottom of the screen.
+2. Check that the build machine's Gradle properties file (`$GRADLE_USER_HOME/gradle.properties`, by default `~/.gradle/gradle.properties`) has the release key settings:
+
+   ```properties
+   TRACKCROW_RELEASE_STORE_FILE=/absolute/path/to/release.keystore
+   TRACKCROW_RELEASE_STORE_PASSWORD=...
+   TRACKCROW_RELEASE_KEY_ALIAS=...
+   TRACKCROW_RELEASE_KEY_PASSWORD=...
+   ```
+
+   The `with-release-signing` config plugin reads these. If any are missing, the release build stops with an error instead of signing with the debug key. Keep these values out of the repository.
+
+Build from `mobile/`:
+
+```sh
+corepack pnpm check
+corepack pnpm exec expo prebuild --platform android --no-install
+cd android
+./gradlew assembleRelease
+```
+
+The APK is written to `android/app/build/outputs/apk/release/app-release.apk`. On the configured Windows machine, the release build helper runs these steps and copies the APK to a file named after the version.
+
+A release build and a development build share the package name `app.trackcrow.mobile` but are signed with different keys. Uninstall one before installing the other. Uninstalling removes the app's saved sign-in.
 
 ## Troubleshoot the existing setup
 
