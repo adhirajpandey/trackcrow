@@ -541,7 +541,7 @@ Only `data.message` (at most 4,000 characters) and `metadata` are required. Exis
 
 - `data.timestamp` must be an ISO timestamp with a timezone (`Z` or an explicit offset); invalid values return `400`. It sets `Transaction.timestamp` and `RawMessage.receivedAt`. Omission preserves the server-time fallback.
 - `data.sender` is the SMS sender ID, stored on the raw message for debugging.
-- `data.idempotencyKey` is a client-generated UUID, reused on every retry of the same SMS. When a raw message with the same key already exists for the user, the route returns the earlier outcome without parsing again. Clients must not send the same key concurrently.
+- `data.idempotencyKey` is a client-generated UUID, reused on every retry of the same SMS. When a raw message with the same key already exists for the user, the route returns the earlier outcome without parsing again. Concurrent requests reserve the key before parsing and commit the raw-message outcome and financial transaction atomically. A unique-key race returns the winning outcome; transient failures roll back so the same key can be retried.
 - `metadata.storeMessageBody: false` stores the raw message without its text. Parser name, status, sender, and parsed fields are still stored.
 
 Behavior:

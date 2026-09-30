@@ -338,8 +338,9 @@ export async function deleteRule(input: RuleLookupInput) {
   }
 }
 
-export async function loadEvaluatableRules(userUuid: string): Promise<EvaluatableRule[]> {
-  const rules = await prisma.rule.findMany({
+/** Loads enabled, valid rules using the supplied transaction's database snapshot. */
+export async function loadEvaluatableRules(userUuid: string, db: Prisma.TransactionClient = prisma): Promise<EvaluatableRule[]> {
+  const rules = await db.rule.findMany({
     where: {
       userUuid,
       isEnabled: true,

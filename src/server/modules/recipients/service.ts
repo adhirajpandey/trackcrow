@@ -903,8 +903,10 @@ export async function addRecipientAlias(
   }
 }
 
+/** Resolves or creates a recipient and identifier within the supplied database transaction. */
 export async function resolveRecipient(
-  input: ResolveRecipientInput
+  input: ResolveRecipientInput,
+  db: Prisma.TransactionClient = prisma
 ): Promise<
   ServiceResult<
     {
@@ -922,7 +924,7 @@ export async function resolveRecipient(
   const aliasType = detectAliasType(recipientRaw);
 
   try {
-    const existingIdentifier = await prisma.recipientIdentifier.findFirst({
+    const existingIdentifier = await db.recipientIdentifier.findFirst({
       where: {
         userUuid: input.userUuid,
         kind: aliasType,
@@ -941,7 +943,7 @@ export async function resolveRecipient(
       });
     }
 
-    const existingRecipient = await prisma.recipient.findFirst({
+    const existingRecipient = await db.recipient.findFirst({
       where: {
         userUuid: input.userUuid,
         normalizedName,
@@ -950,7 +952,7 @@ export async function resolveRecipient(
 
     const recipient =
       existingRecipient ??
-      (await prisma.recipient.create({
+      (await db.recipient.create({
         data: {
           userUuid: input.userUuid,
           displayName,
@@ -958,7 +960,7 @@ export async function resolveRecipient(
         },
       }));
 
-    await prisma.recipientIdentifier.create({
+    await db.recipientIdentifier.create({
       data: {
         userUuid: input.userUuid,
         recipientId: recipient.id,

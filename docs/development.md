@@ -146,7 +146,7 @@ Apply `20260918_add_mcp_oauth` before enabling OAuth and set `OAUTH_ISSUER_URL` 
 
 Metadata fetching uses Node HTTPS with pinned, validated DNS results. Do not replace it with an unrestricted fetch or relax network protections for development. Public CIMD documents may advertise additional grant types, but TrackCrow only implements authorization-code and refresh grants with auth method `none`.
 
-OAuth regression tests are included in `pnpm test`. PostgreSQL concurrency tests run only when `OAUTH_TEST_DATABASE_URL` points to a local disposable database whose name contains `oauth_test`. `pnpm test:db` sets this up in the local container and runs them.
+OAuth regression tests are included in `pnpm test`. OAuth, mobile auth, and SMS import PostgreSQL concurrency tests run only when `OAUTH_TEST_DATABASE_URL` points to a local disposable database whose name contains `oauth_test`. `pnpm test:db` sets this up in the local container and runs them.
 
 The integration suite creates and deletes only its own test users. It verifies concurrent redemption/rotation, replay revocation, owner isolation, deadline preservation, throttled usage writes, and real MCP tool/PAT behavior. Before deployment, verify Google login, consent, refresh, a read/write permission check, and revocation against the deployed origin. Record client versions tested; protocol support alone does not guarantee every Codex/Claude release supports public CIMD.
 

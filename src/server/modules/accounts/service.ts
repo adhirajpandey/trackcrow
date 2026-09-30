@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma-rewrite";
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
@@ -58,10 +59,11 @@ export async function updateAccount(input: AccountUpdateInput): Promise<AccountW
   }
 }
 
-export async function resolveAccountId(input: { userUuid: string; accountUuid: string | null | undefined }) {
+/** Validates account ownership using the caller's database transaction when supplied. */
+export async function resolveAccountId(input: { userUuid: string; accountUuid: string | null | undefined }, db: Prisma.TransactionClient = prisma) {
   if (!input.accountUuid) return ok({ accountId: null });
   try {
-    const account = await prisma.account.findFirst({
+    const account = await db.account.findFirst({
       where: { uuid: input.accountUuid, userUuid: input.userUuid },
       select: { id: true },
     });
@@ -72,10 +74,11 @@ export async function resolveAccountId(input: { userUuid: string; accountUuid: s
   }
 }
 
-export async function matchAccountByName(input: { userUuid: string; name: string | null | undefined }) {
+/** Matches a bank name only when it identifies one account owned by the user. */
+export async function matchAccountByName(input: { userUuid: string; name: string | null | undefined }, db: Prisma.TransactionClient = prisma) {
   if (!input.name?.trim()) return ok({ accountUuid: null });
   try {
-    const matches = await prisma.account.findMany({
+    const matches = await db.account.findMany({
       where: { userUuid: input.userUuid, normalizedName: normalizeAccountName(input.name) },
       select: { uuid: true },
       take: 2,

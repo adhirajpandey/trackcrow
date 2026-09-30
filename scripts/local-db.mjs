@@ -1,6 +1,6 @@
 // Local Docker Compose database tasks.
 //   node scripts/local-db.mjs reset  recreate trackcrow from migrations and load prisma/seed.sql
-//   node scripts/local-db.mjs test   recreate trackcrow_oauth_test and run the OAuth and mobile auth integration suites
+//   node scripts/local-db.mjs test   recreate trackcrow_oauth_test and run the OAuth, mobile auth, and SMS import integration suites
 //   node scripts/local-db.mjs migrate [prisma migrate dev options]  create and apply a migration locally
 import { execFileSync } from "node:child_process";
 import path from "node:path";
@@ -53,6 +53,7 @@ if (task === "reset") {
       bin("jest", "bin/jest.js"),
       "src/server/modules/oauth/service.integration.test.ts",
       "src/server/modules/mobile-auth/service.integration.test.ts",
+      "src/server/modules/imports/service.integration.test.ts",
       "--runInBand",
       "--detectOpenHandles",
     ],
