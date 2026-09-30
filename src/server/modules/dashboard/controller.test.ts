@@ -1,3 +1,7 @@
+import * as tokenAuth from "@/server/modules/api-tokens/service";
+import * as sessionAuth from "@/server/auth/session";
+import * as handlers from "./controller";
+import * as services from "./service";
 jest.mock("@/server/modules/api-tokens/service", () => ({
   resolveApiToken: jest.fn(),
   hasApiTokenScope: (identity: { scopes: string[] }, scope: string) => identity.scopes.includes(scope),
@@ -17,7 +21,7 @@ import { ApiTokenScope } from "@/generated/prisma-rewrite";
 import { requireSessionUser } from "@/server/auth/session";
 import { resolveApiToken } from "@/server/modules/api-tokens/service";
 
-import { getCategorySpending, getPeriodSpending, getSummary } from "./controller";
+import { getCategorySpending, getSummary } from "./controller";
 import { getDashboardSummary, getSpendingByCategory } from "./service";
 
 const requireSessionUserMock = jest.mocked(requireSessionUser);
@@ -109,12 +113,58 @@ describe("dashboard controller authentication", () => {
     }
   );
 
-  it("keeps spending by period session-only", async () => {
-    requireSessionUserMock.mockResolvedValueOnce({ ok: false, error: "UNAUTHORIZED" });
+});
 
-    expect(
-      (await getPeriodSpending(request("/api/dashboard/spending-by-period", "Bearer test-pat"))).status
-    ).toBe(401);
-    expect(resolveTokenMock).not.toHaveBeenCalled();
+
+describe("dashboard scoped bearer authentication", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    jest.mocked(sessionAuth.requireSessionUser).mockResolvedValue({ ok: true, data: { userUuid: "session-user" } });
+  });
+
+  const cases = [
+    {
+      name: "GET /api/dashboard/spending-by-period?granularity=month",
+      scope: ApiTokenScope.TRANSACTIONS_READ,
+      mock: jest.mocked(services.getSpendingByPeriod),
+      data: [],
+      status: 200,
+      invoke: () => {
+        const request = new Request("http://localhost/api/dashboard/spending-by-period?granularity=month", { method: "GET", headers: { authorization: "Bearer test-pat" } });
+        return handlers.getPeriodSpending(request);
+      },
+    },
+  ];
+
+  describe.each(cases)("$name", ({ scope, mock, data, status, invoke }) => {
+    it("accepts the required scope and uses the token owner", async () => {
+      jest.mocked(tokenAuth.resolveApiToken).mockResolvedValue({ ok: true, data: {
+        userUuid: "pat-user", tokenUuid: "token-1", scopes: [scope],
+      } });
+      // Each handler receives a successful service result; auth stays real.
+      (mock as jest.Mock).mockResolvedValue({ ok: true, data });
+      expect((await invoke()).status).toBe(status);
+      expect(mock).toHaveBeenCalledWith(expect.objectContaining({ userUuid: "pat-user" }));
+      expect(tokenAuth.resolveApiToken).toHaveBeenCalledWith("test-pat");
+      expect(sessionAuth.requireSessionUser).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 for the opposite ledger scope", async () => {
+      const wrongScope = scope === ApiTokenScope.TRANSACTIONS_READ
+        ? ApiTokenScope.TRANSACTIONS_WRITE : ApiTokenScope.TRANSACTIONS_READ;
+      jest.mocked(tokenAuth.resolveApiToken).mockResolvedValue({ ok: true, data: {
+        userUuid: "pat-user", tokenUuid: "token-1", scopes: [wrongScope],
+      } });
+      expect((await invoke()).status).toBe(403);
+      expect(mock).not.toHaveBeenCalled();
+      expect(sessionAuth.requireSessionUser).not.toHaveBeenCalled();
+    });
+
+    it("returns 401 for revoked credentials without session fallback", async () => {
+      jest.mocked(tokenAuth.resolveApiToken).mockResolvedValue({ ok: false, error: "UNAUTHORIZED" });
+      expect((await invoke()).status).toBe(401);
+      expect(mock).not.toHaveBeenCalled();
+      expect(sessionAuth.requireSessionUser).not.toHaveBeenCalled();
+    });
   });
 });

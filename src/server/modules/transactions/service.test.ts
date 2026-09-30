@@ -651,3 +651,46 @@ it("orders equal transaction timestamps by descending ID and scopes every list r
     expect(args.where).toEqual({ userUuid: "user-1" });
   }
 });
+
+describe("transaction list recipient filter", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    mockPrisma.transaction.findFirst.mockResolvedValue(null);
+  });
+
+  it("combines the recipient with ownership, search, category, date, and pagination", async () => {
+    mockPrisma.transaction.count.mockResolvedValue(3);
+    mockPrisma.transaction.findMany.mockResolvedValue([transactionRecord()]);
+    const startDate = new Date("2026-09-01T00:00:00Z");
+    const result = await listTransactions({
+      userUuid: "user-1", recipientUuid: "rcp-30", q: "Merchant",
+      categories: ["Uncategorized"], startDate, page: 2, size: 1,
+    });
+    expect(result).toMatchObject({ ok: true, data: { total: 3, page: 2, totalPages: 3, hasNext: true } });
+    const expectedWhere = {
+      userUuid: "user-1", recipient: { uuid: "rcp-30" },
+      AND: [expect.objectContaining({ OR: expect.any(Array) }), { OR: [{ categoryId: null }] }, { timestamp: { gte: startDate } }],
+    };
+    expect(mockPrisma.transaction.count).toHaveBeenCalledWith({ where: expectedWhere });
+    expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expectedWhere, skip: 1, take: 1 }));
+    // Date bounds continue to describe the user's entire ledger.
+    expect(mockPrisma.transaction.findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { userUuid: "user-1" } }));
+  });
+
+  it("returns an empty page for an unknown or another user's recipient", async () => {
+    mockPrisma.transaction.count.mockResolvedValue(0);
+    await expect(listTransactions({ userUuid: "user-1", recipientUuid: "foreign-recipient" })).resolves.toMatchObject({
+      ok: true, data: { transactions: [], total: 0, totalPages: 0 },
+    });
+    expect(mockPrisma.transaction.count).toHaveBeenCalledWith({ where: { userUuid: "user-1", recipient: { uuid: "foreign-recipient" } } });
+    expect(mockPrisma.transaction.findMany).not.toHaveBeenCalled();
+  });
+
+  it("keeps the unfiltered list when the recipient UUID is omitted", async () => {
+    mockPrisma.transaction.count.mockResolvedValue(1);
+    mockPrisma.transaction.findMany.mockResolvedValue([transactionRecord()]);
+    await listTransactions({ userUuid: "user-1" });
+    expect(mockPrisma.transaction.count).toHaveBeenCalledWith({ where: { userUuid: "user-1" } });
+    expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userUuid: "user-1" } }));
+  });
+});

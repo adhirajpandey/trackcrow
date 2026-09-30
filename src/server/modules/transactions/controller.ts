@@ -2,7 +2,6 @@ import { ApiTokenScope, TransactionSource } from "@/generated/prisma-rewrite";
 import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
 import { requireSessionOrTokenUser } from "@/server/auth/request-user";
-import { requireSessionUser } from "@/server/auth/session";
 
 import {
   createTransactionSchema,
@@ -30,11 +29,6 @@ async function parseJsonBody(request: Request) {
     logInvalidJson(new URL(request.url).pathname);
     return jsonError("Invalid JSON body", 400);
   }
-}
-
-async function requireUserUuid() {
-  const session = await requireSessionUser();
-  return unwrapOrResponse(session);
 }
 
 async function parseTransactionUuid(context: RouteContext, path: string) {
@@ -84,6 +78,7 @@ export async function getTransactions(request: Request) {
     page: searchParams.get("page") ?? undefined,
     size: searchParams.get("size") ?? undefined,
     q: searchParams.get("q") ?? undefined,
+    recipientUuid: searchParams.get("recipientUuid") ?? undefined,
     sortBy: searchParams.get("sortBy") ?? undefined,
     sortOrder: searchParams.get("sortOrder") ?? undefined,
     startDate: searchParams.get("startDate") ?? undefined,
@@ -108,7 +103,7 @@ export async function getTransactions(request: Request) {
 
 export async function postTransaction(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -143,7 +138,7 @@ export async function getTransaction(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -166,7 +161,7 @@ export async function patchTransaction(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -202,7 +197,7 @@ export async function patchTransactionCategory(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -239,7 +234,7 @@ export async function removeTransaction(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -262,7 +257,7 @@ export async function getTransactionSuggestion(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }

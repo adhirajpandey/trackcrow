@@ -1,6 +1,7 @@
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
-import { requireSessionUser } from "@/server/auth/session";
 
 import {
   createRuleSchema,
@@ -11,10 +12,6 @@ import {
 import { createRule, deleteRule, getRule, listRules, updateRule } from "./service";
 
 type RuleRouteContext = { params: Promise<{ ruleUuid: string }> };
-
-async function requireUserUuid() {
-  return unwrapOrResponse(await requireSessionUser());
-}
 
 async function parseJson(request: Request) {
   try {
@@ -46,7 +43,7 @@ function unwrapRuleMutation(result: Awaited<ReturnType<typeof createRule>>) {
 }
 
 export async function getRules(request: Request) {
-  const session = await requireUserUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (session instanceof Response) return session;
   const params = new URL(request.url).searchParams;
   const parsed = listRulesQuerySchema.safeParse({
@@ -64,7 +61,7 @@ export async function getRules(request: Request) {
 }
 
 export async function postRule(request: Request) {
-  const session = await requireUserUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (session instanceof Response) return session;
   const json = await parseJson(request);
   if (json instanceof Response) return json;
@@ -78,7 +75,7 @@ export async function postRule(request: Request) {
 }
 
 export async function getRuleByUuid(request: Request, context: RuleRouteContext) {
-  const session = await requireUserUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (session instanceof Response) return session;
   const ruleUuid = await parseRuleUuid(context, new URL(request.url).pathname);
   if (ruleUuid instanceof Response) return ruleUuid;
@@ -87,7 +84,7 @@ export async function getRuleByUuid(request: Request, context: RuleRouteContext)
 }
 
 export async function patchRule(request: Request, context: RuleRouteContext) {
-  const session = await requireUserUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (session instanceof Response) return session;
   const ruleUuid = await parseRuleUuid(context, new URL(request.url).pathname);
   if (ruleUuid instanceof Response) return ruleUuid;
@@ -103,7 +100,7 @@ export async function patchRule(request: Request, context: RuleRouteContext) {
 }
 
 export async function removeRule(request: Request, context: RuleRouteContext) {
-  const session = await requireUserUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (session instanceof Response) return session;
   const ruleUuid = await parseRuleUuid(context, new URL(request.url).pathname);
   if (ruleUuid instanceof Response) return ruleUuid;
