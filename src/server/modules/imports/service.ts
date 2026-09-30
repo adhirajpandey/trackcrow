@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
-import { parseTransactionMessage } from "@/common/sms-parser";
+import { matchTransactionMessage } from "@/common/sms-parser";
 import { ParseStatus, TransactionSource } from "@/generated/prisma-rewrite";
 import { createTransaction } from "@/server/modules/transactions/service";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
@@ -8,21 +8,53 @@ import { matchAccountByName } from "@/server/modules/accounts/service";
 
 import type { ImportSmsInput, ImportSmsOutcome } from "./types";
 
+// Fields shared by every raw message this import writes. Clients can opt out of storing the SMS
+// text; the idempotency key lets a retried upload return the first attempt's outcome.
+function rawMessageFields(input: ImportSmsInput, parserName: string | null) {
+  return {
+    userUuid: input.userUuid,
+    body: input.storeMessageBody === false ? null : input.message,
+    parserName,
+    locationRaw: input.location ?? null,
+    ...(input.sender ? { sender: input.sender } : {}),
+    ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
+    ...(input.timestamp ? { receivedAt: input.timestamp } : {}),
+  };
+}
+
 export async function importSmsTransaction(
   input: ImportSmsInput
 ): Promise<ServiceResult<ImportSmsOutcome, "UNPROCESSABLE" | "INTERNAL_ERROR">> {
   try {
-    const parsed = parseTransactionMessage(input.message);
+    if (input.idempotencyKey) {
+      const previous = await prisma.rawMessage.findFirst({
+        where: { userUuid: input.userUuid, idempotencyKey: input.idempotencyKey },
+        select: { parseStatus: true, transaction: { select: { uuid: true } } },
+      });
+      if (previous) {
+        logger.info({
+          event: "sms_import.duplicate",
+          userId: input.userUuid,
+          previousStatus: previous.parseStatus,
+        });
+        return ok({
+          status: "DUPLICATE",
+          previousStatus: previous.parseStatus,
+          uuid: previous.transaction?.uuid ?? null,
+        });
+      }
+    }
+
+    const match = matchTransactionMessage(input.message);
+    const parsed = match?.details ?? null;
+    const parserName = match?.parserName ?? null;
     if (!parsed?.amount || !parsed.recipient) {
       await prisma.rawMessage.create({
         data: {
-          userUuid: input.userUuid,
-          body: input.message,
+          ...rawMessageFields(input, parserName),
           parseStatus: ParseStatus.UNPARSEABLE,
-          parserName: null,
           failureReason: "Unable to extract amount or recipient",
           parsedPayload: parsed ?? undefined,
-          locationRaw: input.location ?? null,
         },
       });
 
@@ -67,13 +99,10 @@ export async function importSmsTransaction(
     if (!transaction.ok) {
       await prisma.rawMessage.create({
         data: {
-          userUuid: input.userUuid,
-          body: input.message,
+          ...rawMessageFields(input, parserName),
           parseStatus: ParseStatus.FAILED,
-          parserName: null,
           failureReason: "Transaction creation failed",
           parsedPayload: parsed,
-          locationRaw: input.location ?? null,
         },
       });
       if (transaction.error === "VALIDATION_ERROR") {
@@ -90,12 +119,9 @@ export async function importSmsTransaction(
     if (transaction.data.ignored) {
       await prisma.rawMessage.create({
         data: {
-          userUuid: input.userUuid,
-          body: input.message,
+          ...rawMessageFields(input, parserName),
           parseStatus: ParseStatus.IGNORED,
-          parserName: null,
           parsedPayload: { ...parsed, ignoredByRuleUuid: transaction.data.ruleUuid },
-          locationRaw: input.location ?? null,
         },
       });
 
@@ -106,7 +132,7 @@ export async function importSmsTransaction(
         source: TransactionSource.SMS,
       });
 
-      return ok(transaction.data);
+      return ok({ status: "IGNORED", ruleUuid: transaction.data.ruleUuid });
     }
 
     const createdTransaction = await prisma.transaction.findFirst({
@@ -122,13 +148,10 @@ export async function importSmsTransaction(
 
     await prisma.rawMessage.create({
       data: {
-        userUuid: input.userUuid,
+        ...rawMessageFields(input, parserName),
         transactionId: createdTransaction.id,
-        body: input.message,
         parseStatus: ParseStatus.PARSED,
-        parserName: null,
         parsedPayload: parsed,
-        locationRaw: input.location ?? null,
       },
     });
 
@@ -139,7 +162,7 @@ export async function importSmsTransaction(
       source: TransactionSource.SMS,
     });
 
-    return ok(transaction.data);
+    return ok({ status: "CREATED", uuid: transaction.data.uuid });
   } catch {
     // Prisma errors may embed the raw SMS in their message. Do not log them.
     logger.error(

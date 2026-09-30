@@ -178,7 +178,9 @@ model RawMessage {
   uuid          String           @unique @default(uuid())
   userUuid      String           @map("user_uuid")
   transactionId Int?             @map("transaction_id")
-  body          String
+  body          String?
+  sender        String?
+  idempotencyKey String?         @map("idempotency_key")
   source        RawMessageSource @default(SMS)
   parseStatus   ParseStatus      @map("parse_status")
   parserName    String?          @map("parser_name")
@@ -190,6 +192,7 @@ model RawMessage {
   user          User             @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
   transaction   Transaction?     @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 
+  @@unique([userUuid, idempotencyKey])
   @@map("raw_message")
 }
 

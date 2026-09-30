@@ -87,7 +87,7 @@ Returns `{ webClientId }`, the server's Google web OAuth client ID. The app requ
 
 Body: `{ idToken }`, a Google ID token issued for `webClientId`.
 
-The server verifies the token's signature, issuer, expiry, and audience. It requires an `email` claim and `email_verified: true`, otherwise it returns `401` before any database write. The user is resolved by email through the same bootstrap as web sign-in, so a new email creates a user with default categories. Each sign-in creates a new personal API token labelled `Android app` with `TRANSACTIONS_READ` and `TRANSACTIONS_WRITE`. It appears in web Settings and can be revoked there.
+The server verifies the token's signature, issuer, expiry, and audience. It requires an `email` claim and `email_verified: true`, otherwise it returns `401` before any database write. The user is resolved by email through the same bootstrap as web sign-in, so a new email creates a user with default categories. Each sign-in creates a new personal API token labelled `Android app` with `TRANSACTIONS_READ`, `TRANSACTIONS_WRITE`, and `SMS_IMPORT`. It appears in web Settings and can be revoked there.
 
 Response:
 
@@ -527,12 +527,22 @@ Request body:
 
 ```json
 {
-  "data": { "message": "...", "timestamp": "2026-09-28T12:00:00.000Z" },
-  "metadata": { "location": null }
+  "data": {
+    "message": "...",
+    "timestamp": "2026-09-28T12:00:00.000Z",
+    "sender": "AX-HDFCBK",
+    "idempotencyKey": "7d3b8f64-5f0b-4a47-9a55-1f0f4e2b6c11"
+  },
+  "metadata": { "location": null, "storeMessageBody": false }
 }
 ```
 
-`data.timestamp` is optional. When supplied, it must be an ISO timestamp with a timezone (`Z` or an explicit offset); invalid values return `400`. It sets only `Transaction.timestamp`. Omission preserves the server-time fallback. `RawMessage.receivedAt` and `RawMessage.createdAt` keep their database defaults. Clients can supply the original SMS occurrence time and a null location without a sender.
+Only `data.message` (at most 4,000 characters) and `metadata` are required. Existing clients that send only `message`, `timestamp`, and `location` behave as before.
+
+- `data.timestamp` must be an ISO timestamp with a timezone (`Z` or an explicit offset); invalid values return `400`. It sets `Transaction.timestamp` and `RawMessage.receivedAt`. Omission preserves the server-time fallback.
+- `data.sender` is the SMS sender ID, stored on the raw message for debugging.
+- `data.idempotencyKey` is a client-generated UUID, reused on every retry of the same SMS. When a raw message with the same key already exists for the user, the route returns the earlier outcome without parsing again. Clients must not send the same key concurrently.
+- `metadata.storeMessageBody: false` stores the raw message without its text. Parser name, status, sender, and parsed fields are still stored.
 
 Behavior:
 
@@ -541,18 +551,24 @@ Behavior:
 - parses the SMS with deterministic templates in `src/common/sms-parser.ts`
 - creates a transaction with `source: "SMS"` when parsing succeeds
 - creates no transaction when an enabled `IGNORE` rule matches the resolved recipient
-- stores a `raw_message` record for parsed, ignored, failed, and unparseable cases
+- stores a `raw_message` record for parsed, ignored, failed, and unparseable cases, including the name of the parser that matched
 
-Success response:
+Success responses carry a `status` discriminant:
 
 ```json
-{ "message": "Transaction created", "uuid": "..." }
+{ "status": "CREATED", "message": "Transaction created", "uuid": "..." }
 ```
 
 When an `IGNORE` rule matches, the route still returns `201`, with no transaction UUID:
 
 ```json
-{ "message": "Message ignored by rule" }
+{ "status": "IGNORED", "message": "Message ignored by rule" }
+```
+
+A repeated `idempotencyKey` returns `200` with the first attempt's raw-message status and its transaction UUID, or `null` when it created none:
+
+```json
+{ "status": "DUPLICATE", "message": "Message already imported", "previousStatus": "PARSED", "uuid": "..." }
 ```
 
 If parsing cannot extract both amount and recipient, the route returns `422` with `"Unable to extract required fields from message"`.
