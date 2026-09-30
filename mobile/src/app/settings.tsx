@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { LogIn, LogOut, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
@@ -11,6 +12,8 @@ import { Button, Panel, type } from '../components/ui';
 import { DEFAULT_API_URL } from '../lib/api';
 import { useCredentials } from '../lib/credentials';
 import { colors, fonts, radii } from '../theme';
+
+const appVersion = `Version ${Constants.expoConfig?.version ?? 'unknown'} (${Constants.expoConfig?.android?.versionCode ?? '?'})`;
 
 export default function SettingsScreen() {
   const { state, signInWithGoogle, disconnect } = useCredentials();
@@ -132,6 +135,7 @@ export default function SettingsScreen() {
             <TokenSignIn apiUrl={apiUrl} inputStyle={styles.input} onConnected={connected} />
           </Panel>
         )}
+        <Text style={[type.muted, styles.version]}>{appVersion}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -142,6 +146,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   panel: { padding: 16, gap: 10 },
   notice: { padding: 14 },
+  version: { textAlign: 'center', paddingTop: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   connected: {
     gap: 2,

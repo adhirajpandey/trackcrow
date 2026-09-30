@@ -9,6 +9,7 @@ Read [the development setup](../docs/android.md) before running or troubleshooti
 - Read the matching [Expo SDK 57 documentation](https://docs.expo.dev/versions/v57.0.0/) before changing Expo or React Native APIs.
 - Configure native changes through `app.json` and config plugins. Do not hand-edit generated `android/` files.
 - Run `corepack pnpm check` for mobile changes. Rebuild and verify on the device after native or app configuration changes.
+- Increase `android.versionCode` in `app.json` for every release APK. Release signing comes from Gradle properties outside the repository; see Build a release APK in the setup doc.
 - Overview needs a backend. Settings signs in with Google (see Configure Google sign-in in the setup doc), or takes a `transactions:read` access token as a fallback. The app does not request SMS access.
 - `src/lib/google-sign-in.ts` is the only file that imports the native Google sign-in module.
 - Keep amounts, dates, and wording consistent with the web app: rupees with Indian grouping and no decimals, IST dates, and the section names from the web navigation.
