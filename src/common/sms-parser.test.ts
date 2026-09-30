@@ -1,4 +1,4 @@
-import { parseTransactionMessage } from "./sms-parser";
+import { matchTransactionMessage, parseTransactionMessage } from "./sms-parser";
 
 describe("parseTransactionMessage", () => {
   beforeEach(() => {
@@ -108,5 +108,19 @@ describe("parseTransactionMessage", () => {
 
   it("returns null for unsupported messages", () => {
     expect(parseTransactionMessage("hello from a bank with no known format")).toBeNull();
+  });
+});
+
+describe("matchTransactionMessage", () => {
+  it("names the parser that matched", () => {
+    const match = matchTransactionMessage(
+      "Sent Rs.90.00 from Kotak Bank AC X5213 to paytmqr68kufv@ptys on 16-09-25.UPI Ref 525982708197."
+    );
+    expect(match?.parserName).toBe("KOTAK_UPI");
+    expect(match?.details.amount).toBe(90);
+  });
+
+  it("returns null when no parser matches", () => {
+    expect(matchTransactionMessage("hello from a bank with no known format")).toBeNull();
   });
 });

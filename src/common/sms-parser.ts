@@ -108,11 +108,21 @@ const smsParsers: SmsParser[] = [
   },
 ];
 
+export type ParsedTransactionMatch = {
+  parserName: string;
+  details: ParsedTransactionDetails;
+};
+
 /**
  * Parses a transaction message by trying all available parsers.
  * Returns the details of the first successful parse, or null if no parser matches.
  */
 export function parseTransactionMessage(message: string): ParsedTransactionDetails | null {
+  return matchTransactionMessage(message)?.details ?? null;
+}
+
+/** Like parseTransactionMessage, but also names the parser that matched. */
+export function matchTransactionMessage(message: string): ParsedTransactionMatch | null {
   for (const parser of smsParsers) {
     if (parser.test(message)) {
       const match = message.match(parser.regex);
@@ -127,7 +137,7 @@ export function parseTransactionMessage(message: string): ParsedTransactionDetai
             hasAmount: result.amount != null,
             hasRecipient: result.recipient != null,
           });
-          return result;
+          return { parserName: parser.name, details: result };
         } catch (error) {
           logger.warn({
             event: "sms_parser.mapping_failed",
