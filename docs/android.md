@@ -125,7 +125,7 @@ A release build and a development build share the package name `app.trackcrow.mo
 
 ## Build a test APK for one phone
 
-To test a change on one phone, build native code only for that phone's CPU type. Most current phones are `arm64-v8a`. Compiling one CPU type instead of two roughly halves the native build. On a Windows build machine, run from `mobile/`:
+To test a change on one phone, build native code only for that phone's CPU type. Most current phones are `arm64-v8a`. Measured on 2026-09-30, a first arm64-only build took about 11 minutes, compared with about 17 for both CPU types, and a repeat build in the same checkout took under a minute. The APK was 45 MB instead of 60 MB. On a Windows build machine, run from `mobile/`:
 
 ```sh
 corepack pnpm check
