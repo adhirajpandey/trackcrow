@@ -610,3 +610,45 @@ A repeated `idempotencyKey` returns `200` with the first attempt's raw-message s
 ```
 
 If parsing cannot extract both amount and recipient, the route returns `422` with `"Unable to extract required fields from message"`.
+
+## Mobile sender config
+
+### `GET /api/mobile/config`
+
+Public. Returns the current SMS sender allowlist, without templates, keywords, or regular expressions:
+
+```json
+{
+  "schemaVersion": 1,
+  "configVersion": "1",
+  "banks": [
+    { "id": "KOTAK", "name": "Kotak", "senderHeaders": ["KOTAKB"] },
+    { "id": "HDFC", "name": "HDFC", "senderHeaders": ["HDFCBK"] }
+  ]
+}
+```
+
+`schemaVersion` identifies the supported wire format. `configVersion` identifies the server template/header revision and changes whenever either changes. Headers contain 1-9 ASCII alphanumeric characters. Responses include a content-derived `ETag` and `Cache-Control: public, max-age=0, must-revalidate`. Send `If-None-Match` to receive a bodyless `304` when unchanged; otherwise the response is `200`.
+
+## Mobile diagnostics
+
+### `POST /api/mobile/diagnostics`
+
+Requires a valid app session or personal access token in `Authorization: Bearer <token>`. Any token scope is accepted. Cookie-only requests are rejected.
+
+```json
+{
+  "kind": "report",
+  "appVersion": "0.1.0",
+  "versionCode": 3,
+  "device": { "androidVersion": "16", "model": "Example device", "pendingQueueItems": 0 },
+  "note": "Optional description",
+  "entries": [{ "event": "sms.config.fetch.304" }]
+}
+```
+
+`kind` is `report` (default) or `bank_request`. For a bank request, put the bank name in `note`; `entries` may be omitted and defaults to `[]`. `appVersion` is a nonempty string up to 64 characters; `versionCode` is a nonnegative 32-bit integer. `device` is a JSON object. `note` is optional, nullable, trimmed, and capped at 4,000 characters. `entries` contains at most 500 JSON objects. Unknown top-level fields, including client-supplied ownership, are rejected.
+
+The entire UTF-8 request body is capped at 256 KiB (262,144 bytes), including requests without `Content-Length`. The server assigns ownership from the token and persists the report without logging its contents. Clients must redact event attributes before sending; the server stores the submitted JSON, including any user-entered note. Nothing should be sent until the user chooses to send a report.
+
+Returns `201` with `{ "uuid": "<report UUID>" }`. Both report kinds and all of a user's tokens share an atomic limit of 10 validated submissions per 24-hour window, starting with the first submission. A failed database insert can consume a slot. The eleventh submission returns `429` with `Retry-After` in seconds. Other errors are `400` for invalid JSON/schema, `401` for missing/invalid/revoked bearer tokens, `413` for an oversized body, and `503` for unavailable authentication or storage. Reports currently have no read endpoint or automatic retention policy.

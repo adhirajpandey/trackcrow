@@ -1,4 +1,9 @@
 import { logger } from "@/lib/logger";
+import {
+  smsBanks,
+  SMS_CONFIG_VERSION,
+  type SmsTemplate,
+} from "./sms-templates";
 
 export type ParsedTransactionDetails = {
   amount: number | null;
@@ -9,107 +14,36 @@ export type ParsedTransactionDetails = {
   account?: string | null;
 };
 
-type SmsParser = {
-  name: string;
-  test: (message: string) => boolean;
-  regex: RegExp;
-  mapper: (match: RegExpMatchArray) => ParsedTransactionDetails;
-};
-
-// Configuration for all supported SMS templates
-const smsParsers: SmsParser[] = [
-  // Kotak UPI supports both the legacy UPI-ID alert and the newer recipient-name alert.
-  {
-    name: 'KOTAK_UPI',
-    test: (message) =>
-      /Sent\s+Rs\./i.test(message) &&
-      /Kotak\s+Bank/i.test(message) &&
-      /UPI\s+Ref/i.test(message),
-    regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s+from\s+Kotak\s+Bank\s+A\/?C\s+\w+\s+to\s+(?<recipient>[^\r\n]+?)\s+on\s+\d{2}-\d{2}-\d{2}\.\s*UPI\s+Ref\s+(?<reference>\d+)/i,
-    mapper: (match) => {
-      const groups = match.groups ?? {};
-      const recipient = groups.recipient?.trim() ?? null;
-      const recipientName = recipient?.includes('@') ? null : recipient;
-
-      return {
-        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
-        recipient,
-        ...(recipientName ? { recipient_name: recipientName } : {}),
-        reference: groups.reference ?? null,
-        type: 'UPI',
-        account: 'KOTAK',
-      };
-    },
-  },
-  // Kotak Debit Card: "Rs.240.46 spent via Kotak Debit Card XX3971 at CONNAUGHT PLAZA GURGAON on 13/09/2025."
-  {
-    name: 'KOTAK_CARD',
-    test: (message) => message.includes('Kotak Debit Card') && message.includes('spent via'),
-    regex: /Rs\.(?<amount>[\d,.]+)\s+spent\s+via\s+Kotak\s+Debit\s+Card\s+(?<card_number>\w+)\s+at\s+(?<recipient>[^.]+)\s+on\s+\d{2}\/\d{2}\/\d{4}/i,
-    mapper: (match) => {
-      const groups = match.groups ?? {};
-      return {
-        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
-        recipient: groups.recipient?.trim() ?? null,
-        type: 'CARD',
-        account: 'KOTAK',
-      };
-    },
-  },
-  // Kotak Credit Card: "INR 200 spent on Kotak Credit Card x6387 on 28-FEB-2026 at UPI-600117529647-HAMAN. Avl limit INR 29668.72 ..."
-  {
-    name: 'KOTAK_CREDIT_CARD',
-    test: (message) => message.includes('Kotak Credit Card') && message.includes('spent on') && message.includes(' at '),
-    regex: /INR\s+(?<amount>[\d,.]+)\s+spent\s+on\s+Kotak\s+Credit\s+Card\s+(?<card_number>x\d+)\s+on\s+.+?\s+at\s+UPI-(?:K-)?(?<reference>\d+)-(?<recipient_name>[^.]+)\./i,
-    mapper: (match) => {
-      const groups = match.groups ?? {};
-      return {
-        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
-        recipient: groups.recipient_name?.trim() ?? null,
-        recipient_name: groups.recipient_name?.trim() ?? null,
-        reference: groups.reference ?? null,
-        type: 'CARD',
-        account: 'KOTAK',
-      };
-    },
-  },
-
-  // HDFC UPI: Format with line breaks
-  {
-    name: 'HDFC_UPI_FORMATTED',
-    test: (message) => message.includes('HDFC Bank') && message.includes('From') && message.includes('To') && message.includes('\n'),
-    regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s*\nFrom\s+HDFC\s+Bank\s+A\/C\s+[^\n]+\nTo\s+(?<recipient>[^\n]+)\nOn\s+\d{2}\/\d{2}\/\d{2}\nRef\s+(?<reference>\d+)/i,
-    mapper: (match) => {
-      const groups = match.groups ?? {};
-      return {
-        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
-        recipient: groups.recipient?.trim() ?? null,
-        reference: groups.reference ?? null,
-        type: 'UPI',
-        account: 'HDFC',
-      };
-    },
-  },
-  // HDFC UPI: Single-line format (original)
-  {
-    name: 'HDFC_UPI',
-    test: (message) => message.includes('HDFC Bank') && message.includes('From') && message.includes('To') && !message.includes('\n'),
-    regex: /Sent\s+Rs\.(?<amount>[\d,.]+)\s+From\s+HDFC\s+Bank\s+A\/C\s+\w+\s+To\s+(?<recipient>[^O]+?)\s+On\s+\d{2}\/\d{2}\/\d{2}\s+Ref\s+(?<reference>\d+)/i,
-    mapper: (match) => {
-      const groups = match.groups ?? {};
-      return {
-        amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, '')) : null,
-        recipient: groups.recipient?.trim() ?? null,
-        reference: groups.reference ?? null,
-        type: 'UPI',
-        account: 'HDFC',
-      };
-    },
-  },
-];
+function mapTemplate(
+  groups: Record<string, string>,
+  template: SmsTemplate,
+  account: string,
+): ParsedTransactionDetails {
+  const recipient = (groups.recipient ?? groups.recipient_name)?.trim() ?? null;
+  const recipientName =
+    template.recipientNameFrom === "recipient_name"
+      ? (groups.recipient_name?.trim() ?? null)
+      : template.recipientNameFrom === "recipientWithoutUpiId" &&
+          !recipient?.includes("@")
+        ? recipient
+        : null;
+  return {
+    amount: groups.amount ? parseFloat(groups.amount.replace(/,/g, "")) : null,
+    recipient,
+    ...(recipientName ? { recipient_name: recipientName } : {}),
+    ...(groups.reference
+      ? { reference: groups.reference }
+      : template.type === "UPI"
+        ? { reference: null }
+        : {}),
+    type: template.type,
+    account,
+  };
+}
 
 export type ParsedTransactionMatch = {
   parserName: string;
+  configVersion: string;
   details: ParsedTransactionDetails;
 };
 
@@ -117,40 +51,57 @@ export type ParsedTransactionMatch = {
  * Parses a transaction message by trying all available parsers.
  * Returns the details of the first successful parse, or null if no parser matches.
  */
-export function parseTransactionMessage(message: string): ParsedTransactionDetails | null {
+export function parseTransactionMessage(
+  message: string,
+): ParsedTransactionDetails | null {
   return matchTransactionMessage(message)?.details ?? null;
 }
 
 /** Like parseTransactionMessage, but also names the parser that matched. */
-export function matchTransactionMessage(message: string): ParsedTransactionMatch | null {
-  for (const parser of smsParsers) {
-    if (parser.test(message)) {
-      const match = message.match(parser.regex);
-      if (match && match.groups) {
-        try {
-          const result = parser.mapper(match);
-          logger.debug({
-            event: "sms_parser.matched",
-            parserName: parser.name,
-            type: result.type,
-            account: result.account,
-            hasAmount: result.amount != null,
-            hasRecipient: result.recipient != null,
-          });
-          return { parserName: parser.name, details: result };
-        } catch (error) {
-          logger.warn({
-            event: "sms_parser.mapping_failed",
-            parserName: parser.name,
-            message: "SMS parser mapper failed",
-            error: error instanceof Error ? error.message : String(error),
-          });
-          // Continue to the next parser
-        } 
+export function matchTransactionMessage(
+  message: string,
+): ParsedTransactionMatch | null {
+  for (const bank of smsBanks) {
+    for (const parser of bank.templates) {
+      if (
+        parser.keywords.every((keyword) =>
+          typeof keyword === "string"
+            ? message.includes(keyword)
+            : keyword.test(message),
+        ) &&
+        !parser.excludeKeywords?.some((keyword) => message.includes(keyword))
+      ) {
+        const match = message.match(parser.regex);
+        if (match && match.groups) {
+          try {
+            const result = mapTemplate(match.groups, parser, bank.id);
+            logger.debug({
+              event: "sms_parser.matched",
+              parserName: parser.name,
+              type: result.type,
+              account: result.account,
+              hasAmount: result.amount != null,
+              hasRecipient: result.recipient != null,
+            });
+            return {
+              parserName: parser.name,
+              configVersion: SMS_CONFIG_VERSION,
+              details: result,
+            };
+          } catch (error) {
+            logger.warn({
+              event: "sms_parser.mapping_failed",
+              parserName: parser.name,
+              message: "SMS parser mapper failed",
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Continue to the next parser
+          }
+        }
       }
     }
   }
-  
+
   logger.debug({
     event: "sms_parser.no_match",
     message: "No SMS parser matched the message",

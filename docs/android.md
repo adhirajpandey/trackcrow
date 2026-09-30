@@ -139,7 +139,11 @@ Before using this build with real SMS, deploy the server's extended SMS import c
 
 After sign-in and on app start, Android requests `RECEIVE_SMS` once if needed. A denial is remembered. Settings then shows **No SMS permission**, with an explicit **Grant** button or **Open app settings** link. There is no separate SMS opt-in. `READ_SMS` remains blocked, so only new arrivals are captured.
 
-The native receiver accepts Kotak/HDFC sender headers, including operator prefixes, and joins multipart SMS. It assigns a UUID before starting Headless JS. The task reads the saved token and posts this payload with Bearer authentication:
+SMS parsing remains on the server. `src/common/sms-templates.ts` defines the banks, sender headers, and named parsing templates. To add or change a bank, edit that file and bump `SMS_CONFIG_VERSION`; deploy the server change. The app fetches `GET /api/mobile/config` on launch and after sign-in. Foreground fetches are throttled to once every four hours, including failed attempts, and use `If-None-Match` when a valid cached config has an ETag. Bank names are available in the same config for future onboarding and coverage text.
+
+`src/lib/sms-config.ts` validates schema version 1, bank metadata, and 1-9 character ASCII alphanumeric headers before calling `TrackCrowSms.setSenderConfig(json)`. Kotlin validates again and saves accepted JSON in private SharedPreferences. The receiver reads those preferences without JavaScript; a malformed fetch or native rejection preserves the working config. On restart the app restores its validated per-server cache before fetching. With no valid cache, the native matcher uses bundled `KOTAKB` and `HDFCBK` headers. It accepts optional two-letter operator prefixes and one-letter suffixes, such as `AD-HDFCBK-S`. It builds its own escaped matcher; the server sends no regex. This native change requires a new APK.
+
+The native receiver accepts the configured bank sender headers and joins multipart SMS. It assigns a UUID before starting Headless JS. The task reads the saved token and posts this payload with Bearer authentication:
 
 ```json
 {
@@ -235,3 +239,9 @@ Run `corepack pnpm dlx expo-doctor` when diagnosing dependency compatibility. Do
 ## Preserve the verified SMS installation path
 
 SMS reading was verified during the completed POC on a Pixel 10a with an adb-installed build. That installation had `RESTRICTION_INSTALLER_EXEMPT` for `READ_SMS`; `adb install -g` alone did not establish inbox access. The import app uses `RECEIVE_SMS` only. Verify runtime consent and actual incoming SMS delivery separately on a manually installed release. Check permission flags without printing message contents.
+
+## Diagnostics upload contract
+
+`POST /api/mobile/diagnostics` accepts a valid bearer token with any scope and stores a `report` or `bank_request` owned by that user. Reports carry app version, version code, device/queue JSON, an optional note, and up to 500 structured event objects. Bodies are capped at 256 KiB; both kinds share ten validated submissions per user per 24-hour window. See [the API reference](api.md#mobile-diagnostics) for the exact contract and errors.
+
+This change provides server storage only. The diagnostics screen, event logger, redaction, report preview, and Send action remain for the later mobile diagnostics work. Those clients must redact events when written and upload only after an explicit Send action. The endpoint stores submitted JSON and does not log report contents. Apply the diagnostic-report migration before enabling report uploads. SMS import body retention is unchanged.

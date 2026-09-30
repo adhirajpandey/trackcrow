@@ -9,24 +9,25 @@ datasource db {
 }
 
 model User {
-  uuid             String            @id @default(uuid())
-  id               Int               @unique @default(autoincrement())
-  email            String            @unique
-  name             String
-  image            String?
-  provider         String
-  subscription     Int               @default(0)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  categories       Category[]
-  subcategories    Subcategory[]
-  recipients       Recipient[]
-  accounts         Account[]
-  transactions     Transaction[]
-  rawMessages      RawMessage[]
-  apiTokens        ApiToken[]
-  oauthConnections OAuthConnection[]
-  rules            Rule[]
+  uuid              String             @id @default(uuid())
+  id                Int                @unique @default(autoincrement())
+  email             String             @unique
+  name              String
+  image             String?
+  provider          String
+  subscription      Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  categories        Category[]
+  subcategories     Subcategory[]
+  recipients        Recipient[]
+  accounts          Account[]
+  transactions      Transaction[]
+  rawMessages       RawMessage[]
+  apiTokens         ApiToken[]
+  oauthConnections  OAuthConnection[]
+  rules             Rule[]
+  diagnosticReports DiagnosticReport[]
 
   @@map("user")
 }
@@ -284,6 +285,22 @@ model RateLimitBucket {
 
   @@index([expiresAt])
   @@map("rate_limit_bucket")
+}
+
+model DiagnosticReport {
+  uuid        String   @id @default(uuid())
+  userUuid    String   @map("user_uuid")
+  kind        String   @default("report")
+  appVersion  String   @map("app_version")
+  versionCode Int      @map("version_code")
+  device      Json
+  note        String?
+  entries     Json
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+
+  @@index([userUuid, createdAt])
+  @@map("diagnostic_report")
 }
 
 enum ApiTokenScope {

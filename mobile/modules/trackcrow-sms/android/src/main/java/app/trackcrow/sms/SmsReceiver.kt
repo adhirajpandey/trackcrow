@@ -13,7 +13,7 @@ class SmsReceiver : BroadcastReceiver() {
     val parts = Telephony.Sms.Intents.getMessagesFromIntent(intent)
     if (parts.isEmpty()) return
     val sender = parts.first().originatingAddress ?: return
-    if (!SmsSenders.isAllowed(sender) || parts.any { it.originatingAddress != sender }) return
+    if (!SmsSenders.isAllowed(context, sender) || parts.any { it.originatingAddress != sender }) return
     val service = Intent(context, SmsHeadlessTaskService::class.java)
       .putExtra("sender", sender)
       .putExtra("body", parts.joinToString("") { it.messageBody ?: "" })

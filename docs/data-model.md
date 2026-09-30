@@ -110,6 +110,7 @@ Cross-domain behavior:
 - belongs to one user
 - may optionally link to the created transaction
 - stores parser status, the matching parser's name, parsed payload, and optional location and sender
+- `parsedPayload` includes `parserName` (null when unmatched) and `configVersion`, alongside parsed details, for every recorded outcome; older records may lack this provenance
 - `body` is null when the client opted out of storing the SMS text
 - `receivedAt` is the SMS occurrence time when the client supplied one, otherwise the server receipt time
 - `idempotencyKey` is optional and unique per user; a retried upload with the same key returns the first outcome
@@ -136,6 +137,21 @@ Raw messages are not deleted automatically when transactions are created.
 - `revokedAt` marks tokens as inactive
 - `lastUsedAt` is conditionally updated after successful authentication when empty or older than ten minutes
 
+### DiagnosticReport
+
+`DiagnosticReport` stores a user-submitted Android debug report or unsupported-bank request in `diagnostic_report`.
+
+- `uuid` is the primary key; `userUuid` owns the report and cascades on user deletion
+- `kind` is `report` or `bank_request`, enforced by an API schema and database check constraint
+- `appVersion` and `versionCode` identify the installed app
+- `device` and `entries` are JSON; `note` is optional text
+- `createdAt` records receipt time; `(userUuid, createdAt)` is indexed
+- submissions use the shared per-user PostgreSQL rate limiter, capped at ten per 24-hour window
+- report contents are not logged; client event redaction is required before submission
+- there is no automatic retention or admin UI; reports can be inspected through database tooling
+
+The additive migration creates an empty table and leaves existing seed data unchanged.
+
 ### RateLimitBucket
 
 `RateLimitBucket` stores one fixed-window counter row per opaque bucket key. It contains the count, window start, and expiry. The PostgreSQL adapter resets and increments the row atomically and deletes a bounded batch of old rows during consumption.
@@ -158,6 +174,7 @@ User
   |              -> Rule?
   |- RawMessage -> Transaction?
   |- ApiToken
+  |- DiagnosticReport
   `- RateLimitBucket (not user-owned; opaque request-protection key)
 ```
 
@@ -178,7 +195,7 @@ Codes store a unique credential hash and consent nonce, callback, PKCE challenge
 
 Refresh rotation does not change connection expiry. Consumed refresh records remain available through that deadline for replay detection. Revocation is recorded on the connection and checked for all its credentials, so individual token rows need no separate revocation flag. User deletion cascades through connections to all OAuth credentials.
 
-- deleting a user cascades to categories, subcategories, recipients, rules, transactions, raw messages, and API tokens
+- deleting a user cascades to categories, subcategories, recipients, rules, transactions, raw messages, diagnostic reports, and API tokens
 - deleting a category sets `transaction.categoryId` to `null`
 - deleting a subcategory sets `transaction.subcategoryId` to `null`
 - deleting a category or subcategory disables affected rules and marks them `NEEDS_REPAIR`

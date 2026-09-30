@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
+import { SMS_CONFIG_VERSION } from "@/common/sms-templates";
 import { matchTransactionMessage } from "@/common/sms-parser";
 import {
   ParseStatus,
@@ -114,12 +115,13 @@ async function processSms(
   const match = matchTransactionMessage(input.message);
   const parsed = match?.details ?? null;
   const parserName = match?.parserName ?? null;
+  const parsedPayload = { ...parsed, parserName, configVersion: SMS_CONFIG_VERSION };
   if (!parsed?.amount || !parsed.recipient) {
     await persistRaw({
       ...rawMessageFields(input, parserName),
       parseStatus: ParseStatus.UNPARSEABLE,
       failureReason: "Unable to extract amount or recipient",
-      parsedPayload: parsed ?? undefined,
+      parsedPayload,
     });
 
     logger.warn({
@@ -171,7 +173,7 @@ async function processSms(
       ...rawMessageFields(input, parserName),
       parseStatus: ParseStatus.FAILED,
       failureReason: "Transaction creation failed",
-      parsedPayload: parsed,
+      parsedPayload,
     });
     if (transaction.error === "VALIDATION_ERROR") {
       logger.warn({
@@ -189,7 +191,7 @@ async function processSms(
       ...rawMessageFields(input, parserName),
       parseStatus: ParseStatus.IGNORED,
       parsedPayload: {
-        ...parsed,
+        ...parsedPayload,
         ignoredByRuleUuid: transaction.data.ruleUuid,
       },
     });
@@ -219,7 +221,7 @@ async function processSms(
     ...rawMessageFields(input, parserName),
     transactionId: createdTransaction.id,
     parseStatus: ParseStatus.PARSED,
-    parsedPayload: parsed,
+    parsedPayload,
   });
 
   logger.info({
