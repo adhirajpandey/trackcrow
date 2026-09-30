@@ -13,11 +13,17 @@ import { TextLink, type } from './ui';
 export type SheetProps = { open: boolean; title: string; onClose: () => void; children: ReactNode };
 export function Sheet({ open, title, onClose, children }: SheetProps) {
   const modal = useRef<BottomSheetModal>(null);
+  const presented = useRef(false);
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   useEffect(() => {
-    if (open) modal.current?.present();
-    else modal.current?.dismiss();
+    if (open) {
+      presented.current = true;
+      modal.current?.present();
+    } else if (presented.current) {
+      presented.current = false;
+      modal.current?.dismiss();
+    }
   }, [open]);
   useEffect(() => {
     if (!open) return;
@@ -40,7 +46,10 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
       enableDynamicSizing={false}
       enablePanDownToClose
       animateOnMount={!reducedMotion}
-      onDismiss={onClose}
+      onDismiss={() => {
+        presented.current = false;
+        onClose();
+      }}
       backdropComponent={backdrop}
       backgroundStyle={styles.paper}
       handleIndicatorStyle={{ backgroundColor: colors.border }}
