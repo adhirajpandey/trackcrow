@@ -114,8 +114,10 @@ Build from `mobile/`:
 corepack pnpm check
 corepack pnpm exec expo prebuild --platform android --no-install
 cd android
-./gradlew assembleRelease
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
 ```
+
+`reactNativeArchitectures` limits native code to the two CPU types Android phones use. The default also includes `x86` and `x86_64`, which only emulators need. Leaving them in grew the APK from 60 MB to 106 MB when this was measured.
 
 The APK is written to `android/app/build/outputs/apk/release/app-release.apk`. On the configured Windows machine, the release build helper runs these steps and copies the APK to a file named after the version.
 
