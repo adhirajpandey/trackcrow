@@ -1,6 +1,20 @@
 # Develop the Android app
 
-The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. It has five tabs named after the web sections. Overview shows month-to-date spending, review work, top categories, and recent transactions. Settings signs in with Google, or connects with a personal access token as a fallback. Transactions, Recipients, and Rules are placeholders. While signed in with permission, the app captures new Kotak/HDFC bank SMS for server import.
+The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. Its root Stack contains four tabs: **Overview**, **Txns**, **Insights**, and **More**. Overview shows month-to-date spending, review work, top categories, and recent transactions. More links to Recipients, Rules, Categories, Accounts, Settings, and Diagnostics. Settings signs in with Google, or connects with a personal access token as a fallback. While signed in with permission, the app captures new Kotak/HDFC bank SMS for server import.
+
+## App shell
+
+Routes outside `(tabs)` open in the root Stack. Transaction detail (`transactions/[id]`), add transaction (`transactions/new`), review, recipient list and detail, rules, categories, accounts, diagnostics, and onboarding reuse `ComingSoon` until their screens are implemented. Settings keeps its existing behavior as a stack route. Android Back returns to the previous screen. The review badge and **Review now** open the review placeholder; **Add expense** opens the add placeholder. The existing `TabButton`, theme, and base UI components are unchanged.
+
+Shared components live in `src/components/`: `TextField`, `AmountField`, `Sheet`, `SelectSheet`, `CategorySheet`, `TransactionRow`, `EmptyState`, `ConfirmDialog`, `StickySaveBar`, and `ToastHost`. Sheets have one 75% snap point and disable dynamic sizing. Category selection has search, caller-provided recent categories, and all categories. Transaction rows announce recipient, amount, classification, payment type, account, and date/time together. Toasts support Undo, live-region announcements, Android's recommended timeout, and reduced motion.
+
+The exact native dependency pins are gesture-handler 2.32.0, bottom-sheet 5.2.14, FlashList 2.3.2, datetimepicker 9.1.0, and expo-haptics 57.0.3. Rebuild the development client after installing this shell. FlashList v2 uses the New Architecture; later screens can use the Android date picker's imperative API. Charts can use the existing SVG dependency.
+
+`src/lib/api/` separates the HTTP client, auth, dashboard, transactions, recipients, rules, categories, and accounts. Its typed functions target the existing routes documented in [the API reference](api.md); unused functions prepare later screens and do not add server endpoints. The index export keeps auth and SMS imports compatible. Errors preserve `message`, `code`, `issues`, and conflict `details`; 403 wording applies to the requested action. A 401 from an authenticated ledger request clears the rejected session and pending SMS through the existing sign-out flow, cancels cached queries, and opens Settings with **Sign in again**. A late response for a different session cannot sign out the current session. Query keys in `src/lib/query-keys.ts` share list and summary prefixes for mutation invalidation and contain no tokens.
+
+### Verify the shell on a development client
+
+Run `corepack pnpm check`, rebuild the development client, and open each tab and stack route. In **More → Diagnostics**, development builds show **App shell preview**. Open the category sheet, check search and the Recent row, and select a category. Use **Show toast**, then **Undo**. This preview uses in-memory sample options and writes no ledger data. It is hidden in release builds. Check Android Back dismisses the sheet and returns from stack routes. Repeat a row check with a large system font size.
 
 ## Use the installed toolchain
 

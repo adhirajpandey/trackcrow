@@ -46,7 +46,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
-    "test": "tsx --test src/lib/*.test.ts",
+    "test": "tsx --test src/lib/*.test.ts src/lib/api/*.test.ts",
     "android:release:device": "cd android && gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a"
   },
   "private": true,

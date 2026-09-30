@@ -1,5 +1,5 @@
 import { ComingSoon } from '../components/coming-soon';
 
 export default function Screen() {
-  return <ComingSoon section="Rules" />;
+  return <ComingSoon section="Categories" />;
 }
