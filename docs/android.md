@@ -123,6 +123,18 @@ The APK is written to `android/app/build/outputs/apk/release/app-release.apk`. O
 
 A release build and a development build share the package name `app.trackcrow.mobile` but are signed with different keys. Uninstall one before installing the other. Uninstalling removes the app's saved sign-in.
 
+## Build a test APK for one phone
+
+To test a change on one phone, build native code only for that phone's CPU type. Most current phones are `arm64-v8a`. Compiling one CPU type instead of two roughly halves the native build. On a Windows build machine, run from `mobile/`:
+
+```sh
+corepack pnpm check
+corepack pnpm exec expo prebuild --platform android --no-install
+corepack pnpm android:release:device
+```
+
+Run `prebuild` only on the first build, or after `app.json`, a config plugin, or a native dependency changed. Reuse the same checkout between builds. Its `android/app/.cxx` native build output is what makes later builds fast, and a fresh checkout recompiles everything. Run `gradlew clean` in `android/` after native dependency versions change. Use the full command in Build a release APK for APKs you share.
+
 ## Troubleshoot the existing setup
 
 | Symptom | Recovery |

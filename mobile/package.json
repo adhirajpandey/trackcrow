@@ -38,6 +38,7 @@
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android --device",
+    "android:release:device": "cd android && gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
