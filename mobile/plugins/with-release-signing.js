@@ -10,7 +10,12 @@ const PROPERTIES = [
   'TRACKCROW_RELEASE_KEY_PASSWORD',
 ];
 
-const RELEASE_SIGNING_CONFIG = `
+// Generated blocks are marked so each prebuild replaces them with the current version.
+const BEGIN = '// @generated begin with-release-signing';
+const END = '// @generated end with-release-signing';
+const GENERATED_BLOCK = /\n[ \t]*\/\/ @generated begin with-release-signing[\s\S]*?\/\/ @generated end with-release-signing/g;
+
+const RELEASE_SIGNING_CONFIG = `        ${BEGIN}
         release {
             if (project.findProperty('TRACKCROW_RELEASE_STORE_FILE')) {
                 storeFile file(project.findProperty('TRACKCROW_RELEASE_STORE_FILE'))
@@ -18,17 +23,21 @@ const RELEASE_SIGNING_CONFIG = `
                 keyAlias project.findProperty('TRACKCROW_RELEASE_KEY_ALIAS')
                 keyPassword project.findProperty('TRACKCROW_RELEASE_KEY_PASSWORD')
             }
-        }`;
+        }
+        ${END}`;
 
+// Only tasks that sign or package a release need the key. Lint and unit test tasks do not.
 const MISSING_KEY_GUARD = `
+${BEGIN}
 // Fail a release build without the release key instead of signing it with the debug key.
 gradle.taskGraph.whenReady { graph ->
     def missing = [${PROPERTIES.map((name) => `'${name}'`).join(', ')}].findAll { !project.findProperty(it) }
-    def buildsRelease = graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') }
-    if (missing && buildsRelease) {
+    def signsRelease = graph.allTasks.any { it.project == project && it.name in ['validateSigningRelease', 'packageRelease', 'signReleaseBundle'] }
+    if (missing && signsRelease) {
         throw new GradleException("Release signing is not configured. Missing Gradle properties: \${missing.join(', ')}")
     }
 }
+${END}
 `;
 
 function replaceOnce(contents, pattern, replacement, description) {
@@ -39,20 +48,14 @@ function replaceOnce(contents, pattern, replacement, description) {
 }
 
 function addReleaseSigning(contents) {
-  // Prebuild without --clean runs mods again on an already modified file.
-  if (contents.includes('TRACKCROW_RELEASE_STORE_FILE')) return contents;
-  let result = replaceOnce(
-    contents,
-    /(buildTypes \{[\s\S]*?release \{[\s\S]*?)signingConfig signingConfigs\.debug/,
+  let result = contents.replace(GENERATED_BLOCK, '').trimEnd() + '\n';
+  result = replaceOnce(
+    result,
+    /(buildTypes \{[\s\S]*?release \{[\s\S]*?)signingConfig signingConfigs\.(debug|release)/,
     '$1signingConfig signingConfigs.release',
     'the release build type',
   );
-  result = replaceOnce(
-    result,
-    /(signingConfigs \{\s*debug \{[\s\S]*?\n\s*\})/,
-    `$1${RELEASE_SIGNING_CONFIG}`,
-    'the debug signing config',
-  );
+  result = replaceOnce(result, /(signingConfigs \{\n)/, `$1${RELEASE_SIGNING_CONFIG}\n`, 'the signing configs');
   return `${result}${MISSING_KEY_GUARD}`;
 }
 
