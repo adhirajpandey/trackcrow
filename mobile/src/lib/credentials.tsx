@@ -1,4 +1,3 @@
-import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
@@ -11,11 +10,8 @@ import {
 } from './api';
 import { getGoogleIdToken, googleSignOut } from './google-sign-in';
 import * as session from './session';
-
-const API_URL_KEY = 'trackcrow.apiUrl';
-const TOKEN_KEY = 'trackcrow.token';
-const METHOD_KEY = 'trackcrow.method';
-const EMAIL_KEY = 'trackcrow.email';
+import { readStoredCredentials, storeCredentials, clearCredentials } from './credential-store';
+import { smsImporter } from './sms-import-native';
 
 type CredentialsState =
   | { status: 'loading' }
@@ -34,34 +30,10 @@ type CredentialsContextValue = {
 
 const CredentialsContext = createContext<CredentialsContextValue | null>(null);
 
-// Installs from before Google sign-in have no stored method and load as token credentials.
-function loadCredentials(
-  apiUrl: string | null,
-  token: string | null,
-  method: string | null,
-  email: string | null,
-): Credentials | null {
-  if (!apiUrl || !token) return null;
-  if (method === 'google' && email) return { apiUrl, token, method: 'google', email };
-  return { apiUrl, token, method: 'token' };
-}
-
-async function storeCredentials(credentials: Credentials) {
-  await SecureStore.setItemAsync(API_URL_KEY, credentials.apiUrl);
-  await SecureStore.setItemAsync(TOKEN_KEY, credentials.token);
-  await SecureStore.setItemAsync(METHOD_KEY, credentials.method);
-  if (credentials.method === 'google') {
-    await SecureStore.setItemAsync(EMAIL_KEY, credentials.email);
-  } else {
-    await SecureStore.deleteItemAsync(EMAIL_KEY);
-  }
-}
-
-async function clearCredentials() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(EMAIL_KEY);
-  await SecureStore.deleteItemAsync(METHOD_KEY);
-  await SecureStore.deleteItemAsync(API_URL_KEY);
+async function storeNewSession(credentials: Credentials) {
+  await smsImporter.clear();
+  await clearCredentials();
+  await storeCredentials(credentials);
 }
 
 export function CredentialsProvider({ children }: { children: ReactNode }) {
@@ -69,10 +41,9 @@ export function CredentialsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([API_URL_KEY, TOKEN_KEY, METHOD_KEY, EMAIL_KEY].map((key) => SecureStore.getItemAsync(key)))
-      .then(([apiUrl, token, method, email]) => {
+    readStoredCredentials()
+      .then((credentials) => {
         if (!active) return;
-        const credentials = loadCredentials(apiUrl, token, method, email);
         setState(credentials ? { status: 'ready', credentials } : { status: 'missing' });
       })
       .catch(() => {
@@ -88,7 +59,7 @@ export function CredentialsProvider({ children }: { children: ReactNode }) {
       fetchGoogleClientId,
       getGoogleIdToken,
       exchangeGoogleIdToken,
-      storeCredentials,
+      storeCredentials: storeNewSession,
     });
     if (result.status === 'signed-in') setState({ status: 'ready', credentials: result.credentials });
     return result;
@@ -97,14 +68,14 @@ export function CredentialsProvider({ children }: { children: ReactNode }) {
   const connectWithToken = useCallback(async (apiUrl: string, token: string) => {
     const credentials: Credentials = { apiUrl: normalizeApiUrl(apiUrl), token: token.trim(), method: 'token' };
     await fetchRecentTransactions(credentials, 1);
-    await storeCredentials(credentials);
+    await storeNewSession(credentials);
     setState({ status: 'ready', credentials });
   }, []);
 
   const current = state.status === 'ready' ? state.credentials : null;
   const disconnect = useCallback(async () => {
     try {
-      return await session.signOut(current, { revokeSession, googleSignOut, clearCredentials });
+      return await session.signOut(current, { revokeSession, googleSignOut, clearCredentials, clearSmsQueue: smsImporter.clear });
     } finally {
       setState({ status: 'missing' });
     }

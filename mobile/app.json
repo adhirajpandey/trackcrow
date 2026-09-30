@@ -9,13 +9,16 @@
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "app.trackcrow.mobile",
-      "versionCode": 1,
+      "versionCode": 2,
       "blockedPermissions": [
         "android.permission.READ_SMS",
-        "android.permission.RECEIVE_SMS",
         "android.permission.RECORD_AUDIO"
       ],
-      "allowBackup": false
+      "allowBackup": false,
+      "permissions": [
+        "android.permission.RECEIVE_SMS",
+        "android.permission.WAKE_LOCK"
+      ]
     },
     "scheme": "trackcrow",
     "platforms": [
@@ -25,7 +28,8 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "./plugins/with-release-signing"
+      "./plugins/with-release-signing",
+      "./plugins/with-sms-ingestion"
     ],
     "experiments": {
       "typedRoutes": true

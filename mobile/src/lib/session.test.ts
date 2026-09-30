@@ -63,10 +63,11 @@ test('signs out locally even when server revocation fails', async () => {
     clearCredentials: async () => {
       calls.push('clear');
     },
+    clearSmsQueue: async () => { calls.push('sms'); },
   });
 
   assert.equal(revocation, 'failed');
-  assert.deepEqual(calls, ['revoke', 'google', 'clear']);
+  assert.deepEqual(calls, ['revoke', 'google', 'clear', 'sms']);
 });
 
 test('does not revoke personal access tokens on sign-out', async () => {
@@ -83,9 +84,32 @@ test('does not revoke personal access tokens on sign-out', async () => {
       clearCredentials: async () => {
         calls.push('clear');
       },
+      clearSmsQueue: async () => { calls.push('sms'); },
     },
   );
 
   assert.equal(revocation, 'not-applicable');
-  assert.deepEqual(calls, ['google', 'clear']);
+  assert.deepEqual(calls, ['google', 'clear', 'sms']);
+});
+
+test('clears credentials and SMS even if Google sign-out fails', async () => {
+  const calls: string[] = [];
+  await assert.rejects(signOut(googleCredentials, {
+    revokeSession: async () => undefined,
+    googleSignOut: async () => { throw new Error('credential manager failed'); },
+    clearCredentials: async () => { calls.push('clear'); },
+    clearSmsQueue: async () => { calls.push('sms'); },
+  }), /credential manager failed/);
+  assert.deepEqual(calls, ['clear', 'sms']);
+});
+
+test('clears the SMS queue even if local credential removal fails', async () => {
+  let queueCleared = false;
+  await assert.rejects(signOut(null, {
+    revokeSession: async () => undefined,
+    googleSignOut: async () => undefined,
+    clearCredentials: async () => { throw new Error('storage unavailable'); },
+    clearSmsQueue: async () => { queueCleared = true; },
+  }), /storage unavailable/);
+  assert.equal(queueCleared, true);
 });

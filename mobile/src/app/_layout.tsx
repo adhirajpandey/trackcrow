@@ -17,6 +17,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 import { TabButton, tabBarStyles } from '../components/tab-bar';
 import { CredentialsProvider } from '../lib/credentials';
+import { SmsIngestionProvider } from '../lib/sms-ingestion';
 import { colors } from '../theme';
 
 // Section names follow the web app's navigation.
@@ -64,7 +65,9 @@ export default function Layout() {
       {fontsLoaded ? (
         <QueryClientProvider client={queryClient}>
           <CredentialsProvider>
-            <AppTabs />
+            <SmsIngestionProvider>
+              <AppTabs />
+            </SmsIngestionProvider>
           </CredentialsProvider>
         </QueryClientProvider>
       ) : (

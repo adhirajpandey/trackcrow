@@ -7,6 +7,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '../components/screen-header';
+import { SmsImportStatus } from '../components/sms-import-status';
 import { TokenSignIn } from '../components/token-sign-in';
 import { Button, Panel, type } from '../components/ui';
 import { DEFAULT_API_URL } from '../lib/api';
@@ -135,6 +136,7 @@ export default function SettingsScreen() {
             <TokenSignIn apiUrl={apiUrl} inputStyle={styles.input} onConnected={connected} />
           </Panel>
         )}
+        {saved ? <SmsImportStatus /> : null}
         <Text style={[type.muted, styles.version]}>{appVersion}</Text>
       </ScrollView>
     </SafeAreaView>

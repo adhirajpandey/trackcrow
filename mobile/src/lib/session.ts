@@ -35,6 +35,7 @@ export type SignOutDeps = {
   revokeSession: (credentials: Credentials) => Promise<void>;
   googleSignOut: () => Promise<void>;
   clearCredentials: () => Promise<void>;
+  clearSmsQueue: () => Promise<void>;
 };
 
 export type ServerRevocation = 'revoked' | 'failed' | 'not-applicable';
@@ -50,7 +51,14 @@ export async function signOut(credentials: Credentials | null, deps: SignOutDeps
       revocation = 'failed';
     }
   }
-  await deps.googleSignOut();
-  await deps.clearCredentials();
+  try {
+    await deps.googleSignOut();
+  } finally {
+    try {
+      await deps.clearCredentials();
+    } finally {
+      await deps.clearSmsQueue();
+    }
+  }
   return revocation;
 }
