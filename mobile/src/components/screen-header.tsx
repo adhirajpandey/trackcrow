@@ -20,7 +20,7 @@ export function ScreenHeader({ section, reviewCount }: { section: string; review
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${reviewCount} transactions to review`}
-          onPress={() => router.navigate('/transactions')}
+          onPress={() => router.navigate('/review')}
           style={({ pressed }) => [styles.review, pressed ? styles.reviewPressed : styles.reviewShadow]}
         >
           <ReceiptText size={16} color={colors.foreground} strokeWidth={2.25} />

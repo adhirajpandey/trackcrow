@@ -1,23 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import {
-  ArrowRight,
-  Banknote,
-  CircleCheck,
-  CreditCard,
-  Inbox,
-  KeyRound,
-  Landmark,
-  Receipt,
-  Smartphone,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { ArrowRight, CircleCheck, Inbox, KeyRound, Receipt } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenHeader } from '../components/screen-header';
-import { Button, Chip, InlineError, Panel, SectionHeader, Skeleton, TextLink, type Tone, type } from '../components/ui';
+import { ScreenHeader } from '../../components/screen-header';
+import { Button, InlineError, Panel, SectionHeader, Skeleton, TextLink, type Tone, type } from '../../components/ui';
 import {
   ApiError,
   fetchCategorySpending,
@@ -27,11 +16,13 @@ import {
   type Credentials,
   type DashboardSummary,
   type Transaction,
-  type TransactionType,
-} from '../lib/api';
-import { useCredentials } from '../lib/credentials';
-import { formatCurrency, formatPercent, formatTransactionTime, getMonthToDate, type MonthToDate } from '../lib/format';
-import { colors, fonts, radii } from '../theme';
+} from '../../lib/api';
+import { useCredentials } from '../../lib/credentials';
+import { formatCurrency, formatPercent, getMonthToDate, type MonthToDate } from '../../lib/format';
+import { colors, fonts, radii } from '../../theme';
+
+import { TransactionRow } from '../../components/transaction-row';
+import { queryKeys } from '../../lib/query-keys';
 
 const RECENT_COUNT = 5;
 const CATEGORY_TILES = 4;
@@ -64,28 +55,35 @@ function Overview({ credentials }: { credentials: Credentials }) {
   const [now, setNow] = useState(() => new Date());
   const month = useMemo(() => getMonthToDate(now), [now]);
   // Settings clears the query cache on every sign-in and sign-out, so the URL is enough to key data.
-  const key = [credentials.apiUrl];
   const monthRange = { startDate: month.startDate, endDate: month.endDate };
 
   const summary = useQuery({
-    queryKey: ['summary', ...key, month.startDate.toISOString(), month.endDate.toISOString()],
+    queryKey: queryKeys.summary(credentials.apiUrl, monthRange),
     queryFn: ({ signal }) => fetchSummary(credentials, monthRange, signal),
   });
   const previous = useQuery({
-    queryKey: ['summary', ...key, month.previousStartDate.toISOString(), month.previousEndDate.toISOString()],
+    queryKey: queryKeys.summary(credentials.apiUrl, {
+      startDate: month.previousStartDate,
+      endDate: month.previousEndDate,
+    }),
     queryFn: ({ signal }) =>
       fetchSummary(credentials, { startDate: month.previousStartDate, endDate: month.previousEndDate }, signal),
   });
   const allTime = useQuery({
-    queryKey: ['summary', ...key, 'all-time'],
+    queryKey: queryKeys.summary(credentials.apiUrl),
     queryFn: ({ signal }) => fetchSummary(credentials, undefined, signal),
   });
   const categories = useQuery({
-    queryKey: ['categories', ...key, month.startDate.toISOString(), month.endDate.toISOString()],
+    queryKey: queryKeys.categorySpending(credentials.apiUrl, monthRange),
     queryFn: ({ signal }) => fetchCategorySpending(credentials, monthRange, signal),
   });
   const recent = useQuery({
-    queryKey: ['recent', ...key, RECENT_COUNT],
+    queryKey: queryKeys.transactions(credentials.apiUrl, {
+      page: 1,
+      size: RECENT_COUNT,
+      sortBy: 'timestamp',
+      sortOrder: 'desc',
+    }),
     queryFn: ({ signal }) => fetchRecentTransactions(credentials, RECENT_COUNT, signal),
   });
 
@@ -113,6 +111,7 @@ function Overview({ credentials }: { credentials: Credentials }) {
         }
       >
         <Text style={type.note}>spent so far this month</Text>
+        <Button label="Add expense" variant="secondary" onPress={() => router.push('/transactions/new')} />
 
         {summary.isPending ? (
           <Skeleton height={206} />
@@ -147,7 +146,10 @@ function Overview({ credentials }: { credentials: Credentials }) {
           <CategoryGrid categories={categories.data} />
         )}
 
-        <SectionHeader title="Recent transactions" right={<TextLink label="See all" onPress={() => router.navigate('/transactions')} />} />
+        <SectionHeader
+          title="Recent transactions"
+          right={<TextLink label="See all" onPress={() => router.navigate('/transactions')} />}
+        />
         {recent.isPending ? (
           <Skeleton height={RECENT_COUNT * 76} />
         ) : recent.isError ? (
@@ -264,7 +266,7 @@ function ReviewCard({ count }: { count: number }) {
         label="Review now"
         variant="destructive"
         trailingIcon={ArrowRight}
-        onPress={() => router.navigate('/transactions')}
+        onPress={() => router.navigate('/review')}
       />
     </Panel>
   );
@@ -310,22 +312,6 @@ function CategoryGrid({ categories }: { categories: CategorySpend[] }) {
   );
 }
 
-const typeIcons: Record<TransactionType, LucideIcon> = {
-  UPI: Smartphone,
-  CARD: CreditCard,
-  CASH: Banknote,
-  NETBANKING: Landmark,
-  OTHER: Receipt,
-};
-
-const typeLabels: Record<TransactionType, string> = {
-  UPI: 'UPI',
-  CARD: 'Card',
-  CASH: 'Cash',
-  NETBANKING: 'Net banking',
-  OTHER: 'Other',
-};
-
 function RecentList({ transactions }: { transactions: Transaction[] }) {
   if (transactions.length === 0) {
     return (
@@ -337,42 +323,9 @@ function RecentList({ transactions }: { transactions: Transaction[] }) {
   }
   return (
     <Panel raised>
-      {transactions.map((transaction, index) => {
-        const Icon = typeIcons[transaction.type] ?? Receipt;
-        return (
-          <View key={transaction.uuid} style={[styles.transaction, index > 0 && styles.transactionDivider]}>
-            <View style={styles.typeIcon}>
-              <Icon size={18} color={colors.foreground} />
-            </View>
-            <View style={styles.flex}>
-              <View style={styles.row}>
-                <Text style={[styles.recipient, styles.shrink]} numberOfLines={1}>
-                  {transaction.recipientDisplayName}
-                </Text>
-                <Chip label={typeLabels[transaction.type] ?? transaction.type} />
-              </View>
-              <View style={[styles.row, styles.meta]}>
-                <Text style={[type.muted, styles.tabular]}>{formatTransactionTime(transaction.timestamp)}</Text>
-                {transaction.category ? (
-                  <Text style={[type.muted, styles.shrink]} numberOfLines={1}>
-                    · {transaction.category}
-                  </Text>
-                ) : (
-                  <Chip label="Uncategorized" tone="uncategorized" />
-                )}
-              </View>
-            </View>
-            <View style={styles.amountColumn}>
-              <Text style={[type.number, styles.amount]}>{formatCurrency(transaction.amount)}</Text>
-              {transaction.accountName ? (
-                <Text style={[type.muted, styles.account]} numberOfLines={1}>
-                  {transaction.accountName}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        );
-      })}
+      {transactions.map((transaction, index) => (
+        <TransactionRow key={transaction.uuid} transaction={transaction} divider={index > 0} />
+      ))}
     </Panel>
   );
 }
@@ -404,21 +357,4 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   tile: { flexBasis: '46%', flexGrow: 1, padding: 14, gap: 6, minHeight: 112 },
   tileAmount: { fontSize: 24, lineHeight: 30, marginTop: 'auto' },
-  transaction: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, minHeight: 72 },
-  transactionDivider: { borderTopWidth: 1, borderTopColor: colors.border },
-  typeIcon: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.muted,
-  },
-  recipient: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-  meta: { marginTop: 3 },
-  amountColumn: { alignItems: 'flex-end', maxWidth: '34%' },
-  amount: { fontSize: 16 },
-  account: { fontSize: 12, marginTop: 3 },
 });
