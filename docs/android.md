@@ -133,7 +133,7 @@ corepack pnpm exec expo prebuild --platform android --no-install
 corepack pnpm android:release:device
 ```
 
-Run `prebuild` only on the first build, or after `app.json`, a config plugin, or a native dependency changed. Reuse the same checkout between builds. Its `android/app/.cxx` native build output is what makes later builds fast, and a fresh checkout recompiles everything. Run `gradlew clean` in `android/` after native dependency versions change. Use the full command in Build a release APK for APKs you share.
+Run `prebuild` only on the first build, or after `app.json`, a config plugin, or a native dependency changed. Reuse the same checkout between builds, and keep its `node_modules`. Native libraries keep their C++ build output in `node_modules/<package>/android/.cxx`, so later builds are fast, while a fresh checkout or reinstall recompiles everything. Run `gradlew clean` in `android/` after native dependency versions change. Use the full command in Build a release APK for APKs you share.
 
 ## Troubleshoot the existing setup
 
