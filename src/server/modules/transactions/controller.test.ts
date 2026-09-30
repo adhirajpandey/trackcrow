@@ -1,3 +1,7 @@
+import * as tokenAuth from "@/server/modules/api-tokens/service";
+import * as sessionAuth from "@/server/auth/session";
+import * as handlers from "./controller";
+import * as services from "./service";
 jest.mock("@/server/modules/api-tokens/service", () => ({
   resolveApiToken: jest.fn(),
   hasApiTokenScope: (identity: { scopes: string[] }, scope: string) => identity.scopes.includes(scope),
@@ -10,6 +14,10 @@ jest.mock("@/server/auth/session", () => ({
 }));
 
 jest.mock("./service", () => ({
+  suggestTransactionCategory: jest.fn(),
+  deleteTransaction: jest.fn(),
+  updateTransaction: jest.fn(),
+  getTransactionById: jest.fn(),
   createTransaction: jest.fn(),
   listTransactions: jest.fn(),
   updateTransactionCategory: jest.fn(),
@@ -202,6 +210,28 @@ describe("transactions controller", () => {
   });
 });
 
+describe("transaction recipient filter", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    requireSessionUserMock.mockResolvedValue({ ok: true, data: { userUuid: "user-1" } });
+    listTransactionsMock.mockResolvedValue({ ok: true, data: {
+      transactions: [], page: 1, pageSize: 20, total: 0, totalPages: 0,
+      hasNext: false, hasPrev: false, firstTxnDate: null, lastTxnDate: null,
+    } });
+  });
+
+  it("passes a validated recipient UUID to the service", async () => {
+    const recipientUuid = "550e8400-e29b-41d4-a716-446655440000";
+    expect((await getTransactions(new Request(`http://localhost/api/transactions?recipientUuid=${recipientUuid}`))).status).toBe(200);
+    expect(listTransactionsMock).toHaveBeenCalledWith(expect.objectContaining({ userUuid: "user-1", recipientUuid }));
+  });
+
+  it.each(["123", "", "merchant"])("rejects invalid recipient UUID %p", async (recipientUuid) => {
+    expect((await getTransactions(new Request(`http://localhost/api/transactions?recipientUuid=${recipientUuid}`))).status).toBe(400);
+    expect(listTransactionsMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("transaction list PAT authentication", () => {
   const resolveToken = jest.mocked(resolveApiToken);
   beforeEach(() => {
@@ -255,9 +285,113 @@ describe("transaction list PAT authentication", () => {
     expect(listTransactionsMock).not.toHaveBeenCalled();
     expect(requireSessionUserMock).not.toHaveBeenCalled();
   });
-  it("does not add PAT authentication to transaction writes", async () => {
-    requireSessionUserMock.mockResolvedValueOnce({ ok: false, error: "UNAUTHORIZED" });
-    expect((await postTransaction(request("Bearer test-pat"))).status).toBe(401);
-    expect(resolveToken).not.toHaveBeenCalled();
+});
+
+
+describe("transactions scoped bearer authentication", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    jest.mocked(sessionAuth.requireSessionUser).mockResolvedValue({ ok: true, data: { userUuid: "session-user" } });
+  });
+
+  const cases = [
+    {
+      name: "POST /api/transactions",
+      scope: ApiTokenScope.TRANSACTIONS_WRITE,
+      mock: jest.mocked(services.createTransaction),
+      data: {"ignored": false, "uuid": "550e8400-e29b-41d4-a716-446655440000"},
+      status: 201,
+      invoke: () => {
+        const request = new Request("http://localhost/api/transactions", { method: "POST", headers: { authorization: "Bearer test-pat" }, body: JSON.stringify({"amount": 250, "recipientUuid": "550e8400-e29b-41d4-a716-446655440000", "type": "UPI", "timestamp": "2026-09-01T00:00:00Z"}) });
+        return handlers.postTransaction(request);
+      },
+    },
+    {
+      name: "GET /api/transactions/550e8400-e29b-41d4-a716-446655440000",
+      scope: ApiTokenScope.TRANSACTIONS_READ,
+      mock: jest.mocked(services.getTransactionById),
+      data: {"uuid": "550e8400-e29b-41d4-a716-446655440000"},
+      status: 200,
+      invoke: () => {
+        const request = new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000", { method: "GET", headers: { authorization: "Bearer test-pat" } });
+        return handlers.getTransaction(request, { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) });
+      },
+    },
+    {
+      name: "PATCH /api/transactions/550e8400-e29b-41d4-a716-446655440000",
+      scope: ApiTokenScope.TRANSACTIONS_WRITE,
+      mock: jest.mocked(services.updateTransaction),
+      data: {"uuid": "550e8400-e29b-41d4-a716-446655440000"},
+      status: 200,
+      invoke: () => {
+        const request = new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000", { method: "PATCH", headers: { authorization: "Bearer test-pat" }, body: JSON.stringify({"amount": 250, "type": "UPI", "timestamp": "2026-09-01T00:00:00Z"}) });
+        return handlers.patchTransaction(request, { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) });
+      },
+    },
+    {
+      name: "PATCH /api/transactions/550e8400-e29b-41d4-a716-446655440000/category",
+      scope: ApiTokenScope.TRANSACTIONS_WRITE,
+      mock: jest.mocked(services.updateTransactionCategory),
+      data: {"uuid": "550e8400-e29b-41d4-a716-446655440000"},
+      status: 200,
+      invoke: () => {
+        const request = new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000/category", { method: "PATCH", headers: { authorization: "Bearer test-pat" }, body: JSON.stringify({"categoryUuid": "550e8400-e29b-41d4-a716-446655440000"}) });
+        return handlers.patchTransactionCategory(request, { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) });
+      },
+    },
+    {
+      name: "DELETE /api/transactions/550e8400-e29b-41d4-a716-446655440000",
+      scope: ApiTokenScope.TRANSACTIONS_WRITE,
+      mock: jest.mocked(services.deleteTransaction),
+      data: {"uuid": "550e8400-e29b-41d4-a716-446655440000"},
+      status: 200,
+      invoke: () => {
+        const request = new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000", { method: "DELETE", headers: { authorization: "Bearer test-pat" } });
+        return handlers.removeTransaction(request, { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) });
+      },
+    },
+    {
+      name: "GET /api/transactions/550e8400-e29b-41d4-a716-446655440000/suggest",
+      scope: ApiTokenScope.TRANSACTIONS_READ,
+      mock: jest.mocked(services.suggestTransactionCategory),
+      data: {"suggestedCategoryUuid": null},
+      status: 200,
+      invoke: () => {
+        const request = new Request("http://localhost/api/transactions/550e8400-e29b-41d4-a716-446655440000/suggest", { method: "GET", headers: { authorization: "Bearer test-pat" } });
+        return handlers.getTransactionSuggestion(request, { params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440000" }) });
+      },
+    },
+  ];
+
+  describe.each(cases)("$name", ({ scope, mock, data, status, invoke }) => {
+    it("accepts the required scope and uses the token owner", async () => {
+      jest.mocked(tokenAuth.resolveApiToken).mockResolvedValue({ ok: true, data: {
+        userUuid: "pat-user", tokenUuid: "token-1", scopes: [scope],
+      } });
+      // Each handler receives a successful service result; auth stays real.
+      (mock as jest.Mock).mockResolvedValue({ ok: true, data });
+      expect((await invoke()).status).toBe(status);
+      expect(mock).toHaveBeenCalledWith(expect.objectContaining({ userUuid: "pat-user" }));
+      expect(tokenAuth.resolveApiToken).toHaveBeenCalledWith("test-pat");
+      expect(sessionAuth.requireSessionUser).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 for the opposite ledger scope", async () => {
+      const wrongScope = scope === ApiTokenScope.TRANSACTIONS_READ
+        ? ApiTokenScope.TRANSACTIONS_WRITE : ApiTokenScope.TRANSACTIONS_READ;
+      jest.mocked(tokenAuth.resolveApiToken).mockResolvedValue({ ok: true, data: {
+        userUuid: "pat-user", tokenUuid: "token-1", scopes: [wrongScope],
+      } });
+      expect((await invoke()).status).toBe(403);
+      expect(mock).not.toHaveBeenCalled();
+      expect(sessionAuth.requireSessionUser).not.toHaveBeenCalled();
+    });
+
+    it("returns 401 for revoked credentials without session fallback", async () => {
+      jest.mocked(tokenAuth.resolveApiToken).mockResolvedValue({ ok: false, error: "UNAUTHORIZED" });
+      expect((await invoke()).status).toBe(401);
+      expect(mock).not.toHaveBeenCalled();
+      expect(sessionAuth.requireSessionUser).not.toHaveBeenCalled();
+    });
   });
 });

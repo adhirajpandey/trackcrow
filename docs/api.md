@@ -5,8 +5,9 @@ This document describes the current HTTP API exposed from `src/app/api/*`.
 ## Common Behavior
 
 - All `:id` path params in these routes are UUIDs.
-- Most routes require a valid NextAuth session and return `401` with `{ "message": "Unauthorized" }` when the session is missing.
-- `GET /api/transactions`, `GET /api/dashboard/summary`, and `GET /api/dashboard/spending-by-category` also accept a PAT with `transactions:read`. `POST /api/imports/sms` uses PAT authentication only. SMS import accepts `Authorization: Token <plain-token>` and `Authorization: Bearer <plain-token>` and requires `sms:import`.
+- Ledger routes accept a NextAuth browser session or a personal API token (PAT), including the Android app token. Reads require `transactions:read` (`TRANSACTIONS_READ`); mutations require `transactions:write` (`TRANSACTIONS_WRITE`). The scopes are independent: write does not grant read.
+- A supplied `Authorization: Bearer <plain-token>` or `Authorization: Token <plain-token>` takes precedence over the session. Empty, malformed, unknown, or revoked credentials return `401` without session fallback. A valid token lacking the required scope returns `403`; token-service failure returns `503`. Without an Authorization header, ledger routes use the browser session. All operations use the authenticated user's UUID.
+- Token management and OAuth connection management remain session-only. `POST /api/imports/sms` accepts PATs only and requires `sms:import`. OAuth access tokens are valid only for `/mcp`.
 - Controllers validate params, query strings, and JSON bodies with Zod before calling services.
 
 Common error responses:
@@ -16,7 +17,7 @@ Common error responses:
 | `400` | `{ message: "Invalid request", issues? }` | schema validation failure |
 | `400` | `{ message: "Invalid JSON body" }` | malformed JSON |
 | `400` | `{ message: "Invalid payload", issues? }` | malformed SMS import payload |
-| `401` | `{ message: "Unauthorized" }` | missing session or invalid import token |
+| `401` | `{ message: "Unauthorized" }` | missing session or invalid, malformed, or revoked token |
 | `403` | `{ message: "Forbidden" }` | PAT lacks the required scope |
 | `404` | `{ message: "Not found" }` | missing user-owned resource |
 | `409` | route-specific conflict message, optional `details` | uniqueness or alias-transfer conflict |
@@ -25,6 +26,29 @@ Common error responses:
 | `503` | sanitized service-unavailable response | token or limiter storage failure |
 
 All success responses are JSON, except `204` responses, which have no body.
+
+### Route authentication
+
+| Routes | Auth |
+| --- | --- |
+| `GET /api/me` | Session or PAT with `transactions:read` |
+| `GET /api/transactions`, `GET /api/transactions/:id`, `GET /api/transactions/:id/suggest` | Session or PAT with `transactions:read` |
+| `POST /api/transactions`, `PATCH /api/transactions/:id`, `PATCH /api/transactions/:id/category`, `DELETE /api/transactions/:id` | Session or PAT with `transactions:write` |
+| `GET /api/recipients`, `GET /api/recipients/:id`, `GET /api/recipients/:id/detail` | Session or PAT with `transactions:read` |
+| `POST /api/recipients`, `PATCH /api/recipients/:id`, `POST /api/recipients/:id/aliases` | Session or PAT with `transactions:write` |
+| `GET /api/rules`, `GET /api/rules/:ruleUuid` | Session or PAT with `transactions:read` |
+| `POST /api/rules`, `PATCH /api/rules/:ruleUuid`, `DELETE /api/rules/:ruleUuid` | Session or PAT with `transactions:write` |
+| `GET /api/categories` | Session or PAT with `transactions:read` |
+| `POST /api/categories`, `PATCH /api/categories/:id`, `DELETE /api/categories/:id`, `POST /api/categories/reset-defaults` | Session or PAT with `transactions:write` |
+| `POST /api/subcategories`, `PATCH /api/subcategories/:id`, `DELETE /api/subcategories/:id` | Session or PAT with `transactions:write` |
+| `GET /api/accounts` | Session or PAT with `transactions:read` |
+| `POST /api/accounts`, `PATCH /api/accounts/:accountUuid` | Session or PAT with `transactions:write` |
+| `GET /api/dashboard/summary`, `GET /api/dashboard/spending-by-category`, `GET /api/dashboard/spending-by-period` | Session or PAT with `transactions:read` |
+| `GET /api/tokens`, `POST /api/tokens`, `DELETE /api/tokens/:id` | Session only |
+| `GET /api/oauth/connections`, `DELETE /api/oauth/connections/:id` | Session only |
+| `POST /api/imports/sms` | PAT with `sms:import` |
+
+PATs with `transactions:write` can edit rules, categories, and subcategories, including resetting category defaults. They can also create, edit, and delete transactions, create and edit recipients and aliases, and create and rename accounts. Existing tokens gain this access through their existing scopes; no new scope or token reissue is needed.
 
 ### Personal API tokens
 
@@ -178,7 +202,7 @@ Accounts cannot be deleted through the API.
 
 ### `GET /api/transactions`
 
-With no Authorization header, this route uses the browser session. A supplied `Authorization: Bearer <PAT>` or `Token <PAT>` requires `transactions:read` (`TRANSACTIONS_READ`). Empty, malformed, unknown, or revoked credentials return `401` without session fallback. A valid PAT lacking the scope returns `403`; token-service failure returns `503`. All queries use the authenticated user's UUID. Other transaction routes remain session-only.
+Requires a browser session or a PAT with `transactions:read`. Transaction mutations require `transactions:write`; transaction detail and suggestions require `transactions:read`.
 
 Clients can request `?page=1&size=50&sortBy=timestamp&sortOrder=desc`. Timestamp sorting uses ID in the same direction as its tie-breaker, giving `timestamp DESC, id DESC` for this request. The response DTO is unchanged.
 
@@ -194,8 +218,9 @@ Supported query params:
 - repeated `category` params or comma-separated `categories`
 - repeated `subcategory` params or comma-separated `subcategories`
 - repeated `classificationSource=MANUAL|SUGGESTION|RULE` params
+- `recipientUuid` (optional UUID; limits results to that recipient within the authenticated user's ledger)
 
-Transaction list filters are validated as UUID/string inputs. `startDate` and `endDate` are interpreted as day boundaries in IST when sent as `YYYY-MM-DD`.
+An invalid `recipientUuid` returns `400`. An unknown recipient or one owned by another user returns an empty list. The recipient filter combines with search, categories, dates, and pagination. `total` and page counts reflect the filters; `firstTxnDate` and `lastTxnDate` continue to describe the user's entire ledger. Transaction list filters are validated as UUID/string inputs. `startDate` and `endDate` are interpreted as day boundaries in IST when sent as `YYYY-MM-DD`.
 
 Returns:
 
@@ -301,7 +326,7 @@ The suggestion is based on prior categorized transactions for the same resolved 
 
 ### Rules
 
-Rules classify future imported transactions by resolved recipient. All rule routes require a valid session and operate only on the current user's data.
+Rules classify future imported transactions by resolved recipient. Rule reads accept a browser session or a PAT with `transactions:read`; mutations accept a session or a PAT with `transactions:write`. All rule routes operate only on the authenticated user's data.
 
 Each rule DTO contains:
 
@@ -385,7 +410,7 @@ Soft-deletes the rule by disabling it and setting `deletedAt`. Existing transact
 
 ### `GET /api/dashboard/summary`
 
-This route and `GET /api/dashboard/spending-by-category` authenticate like `GET /api/transactions`: the browser session, or a supplied PAT with `transactions:read`. `GET /api/dashboard/spending-by-period` remains session-only. `startDate` and `endDate` are parsed as dates, so clients should send ISO timestamps for exact boundaries.
+All three dashboard routes accept a browser session or a supplied PAT with `transactions:read`. `startDate` and `endDate` are parsed as dates, so clients should send ISO timestamps for exact boundaries.
 
 Optional query params:
 
@@ -482,6 +507,19 @@ On duplicate name, returns `409` with `{ "message": "A recipient with this name 
 Returns one recipient with the same shape as the list item.
 
 Recipient list, detail, and update responses include `note: string | null`. Recipient search and transaction search include case-insensitive matching on recipient notes. MCP `search_recipients` uses the same search and includes `note` in each result.
+
+### `GET /api/recipients/:id/detail`
+
+Requires a browser session or a PAT with `transactions:read`. Returns the existing recipient detail data with payment stats and a rule link:
+
+- `uuid`, `displayName`, `note`, `normalizedName`, `createdAt`, `updatedAt`, `transactionCount`
+- `aliases[]` with `uuid`, `aliasType`, `value`, `normalizedValue`
+- `linkedTransactions[]`, newest first, with `uuid`, `amount`, `currency`, `type`, `source`, `recipientRaw`, `recipientName`, `timestamp`, `category`, `subcategory`, `categoryUuid`, `subcategoryUuid`
+- `stats: { totalAmount, averagePayment, uncategorizedCount, firstPaidAt, lastPaidAt }`, across all linked transactions
+- `existingRuleUuid`, preferring an enabled non-deleted rule, otherwise the most recently updated saved rule; `null` when none exists
+- `dominantCategory: { uuid, name, transactionCount, totalAmount }` or `null`; excludes uncategorized transactions and ranks by count, then total amount, then UUID
+
+Recipients without transactions have zero payment stats, null payment dates, and no dominant category. Missing recipients and recipients owned by another user return `404`. `GET /api/recipients/:id` retains its existing response shape. Use `GET /api/transactions?recipientUuid=...` for a paginated transaction list.
 
 ### `PATCH /api/recipients/:id`
 

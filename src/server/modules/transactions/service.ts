@@ -270,6 +270,10 @@ export async function listTransactions(
   const where: Record<string, unknown> = { userUuid: input.userUuid };
   const andFilters: Array<Record<string, unknown>> = [];
 
+  if (input.recipientUuid) {
+    where.recipient = { uuid: input.recipientUuid };
+  }
+
   if (q) {
     const amount = Number(q.replace(/[^0-9.-]/g, ""));
     andFilters.push({

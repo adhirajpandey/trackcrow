@@ -1,6 +1,7 @@
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
-import { requireSessionUser } from "@/server/auth/session";
 
 import {
   addRecipientAliasSchema,
@@ -13,16 +14,12 @@ import {
   addRecipientAlias,
   createRecipient,
   getRecipient,
+  getRecipientApiDetail,
   listRecipients,
   updateRecipient,
 } from "./service";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-async function requireUserUuid() {
-  const session = await requireSessionUser();
-  return unwrapOrResponse(session);
-}
 
 async function parseJsonBody(request: Request) {
   try {
@@ -46,7 +43,7 @@ async function parseRecipientUuid(context: RouteContext, path: string) {
 
 export async function getRecipients(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -78,7 +75,7 @@ export async function getRecipients(request: Request) {
 
 export async function postRecipient(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -107,7 +104,7 @@ export async function getRecipientById(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -127,12 +124,26 @@ export async function getRecipientById(
   return data instanceof Response ? data : jsonOk(data);
 }
 
+export async function getRecipientDetailById(request: Request, context: RouteContext) {
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
+  if (sessionData instanceof Response) return sessionData;
+
+  const recipientUuid = await parseRecipientUuid(context, new URL(request.url).pathname);
+  if (recipientUuid instanceof Response) return recipientUuid;
+
+  const data = unwrapOrResponse(await getRecipientApiDetail({
+    userUuid: sessionData.userUuid,
+    recipientUuid,
+  }));
+  return data instanceof Response ? data : jsonOk(data);
+}
+
 export async function patchRecipient(
   request: Request,
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -171,7 +182,7 @@ export async function postRecipientAlias(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }

@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { fail, ok, type ServiceResult } from "@/server/shared/result";
 
 import type {
+  RecipientApiDetailDto,
   RecipientDetailDto,
   RecipientDetailTransactionDto,
   RecipientDto,
@@ -600,6 +601,70 @@ export async function getRecipientDetail(
       },
       error
     );
+    return fail("INTERNAL_ERROR");
+  }
+}
+
+export async function getRecipientApiDetail(
+  input: RecipientLookupInput
+): Promise<ServiceResult<RecipientApiDetailDto, "NOT_FOUND" | "INTERNAL_ERROR">> {
+  const result = await getRecipientDetail(input);
+  if (!result.ok) return result;
+
+  try {
+    const recipient = result.data;
+    const existingRule = await prisma.rule.findFirst({
+      where: {
+        userUuid: input.userUuid,
+        recipient: { uuid: input.recipientUuid },
+        deletedAt: null,
+      },
+      orderBy: [{ isEnabled: "desc" }, { updatedAt: "desc" }, { uuid: "asc" }],
+      select: { uuid: true },
+    });
+    const categories = new Map<string, NonNullable<RecipientApiDetailDto["dominantCategory"]>>();
+    let totalAmount = 0;
+    let uncategorizedCount = 0;
+    for (const transaction of recipient.linkedTransactions) {
+      totalAmount += transaction.amount;
+      if (!transaction.categoryUuid) {
+        uncategorizedCount += 1;
+        continue;
+      }
+      const category = categories.get(transaction.categoryUuid) ?? {
+        uuid: transaction.categoryUuid,
+        name: transaction.category!,
+        transactionCount: 0,
+        totalAmount: 0,
+      };
+      category.transactionCount += 1;
+      category.totalAmount += transaction.amount;
+      categories.set(category.uuid, category);
+    }
+    const dominantCategory = [...categories.values()].sort(
+      (left, right) => right.transactionCount - left.transactionCount ||
+        right.totalAmount - left.totalAmount || left.uuid.localeCompare(right.uuid)
+    )[0] ?? null;
+
+    return ok({
+      ...recipient,
+      stats: {
+        totalAmount,
+        averagePayment: recipient.transactionCount > 0 ? totalAmount / recipient.transactionCount : 0,
+        uncategorizedCount,
+        firstPaidAt: recipient.linkedTransactions.at(-1)?.timestamp ?? null,
+        lastPaidAt: recipient.linkedTransactions[0]?.timestamp ?? null,
+      },
+      existingRuleUuid: existingRule?.uuid ?? null,
+      dominantCategory,
+    });
+  } catch (error) {
+    logger.error({
+      event: "recipient.api_detail.db_failed",
+      userId: input.userUuid,
+      recipientUuid: input.recipientUuid,
+      message: "Failed to get recipient API detail",
+    }, error);
     return fail("INTERNAL_ERROR");
   }
 }

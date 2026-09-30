@@ -1,7 +1,8 @@
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import type { CategoryOption } from "@/common/types";
 import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
-import { requireSessionUser } from "@/server/auth/session";
 
 import { toCategoryOption } from "./helpers";
 import { categoryIdParamsSchema, categorySchema, subcategorySchema } from "./schemas";
@@ -17,11 +18,6 @@ import {
 } from "./service";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-async function requireUserUuid() {
-  const session = await requireSessionUser();
-  return unwrapOrResponse(session);
-}
 
 async function parseJsonBody(request: Request) {
   try {
@@ -43,8 +39,8 @@ async function parseUuidParam(context: RouteContext, path: string) {
   return parsed.data.id;
 }
 
-export async function getCategories() {
-  const sessionData = await requireUserUuid();
+export async function getCategories(request: Request) {
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -60,7 +56,7 @@ export async function getCategories() {
 
 export async function postCategory(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -86,7 +82,7 @@ export async function postCategory(request: Request) {
 
 export async function patchCategory(request: Request, context: RouteContext) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -118,7 +114,7 @@ export async function patchCategory(request: Request, context: RouteContext) {
 
 export async function removeCategory(request: Request, context: RouteContext) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -138,7 +134,7 @@ export async function removeCategory(request: Request, context: RouteContext) {
 
 export async function postSubcategory(request: Request) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -164,7 +160,7 @@ export async function postSubcategory(request: Request) {
 
 export async function patchSubcategory(request: Request, context: RouteContext) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -199,7 +195,7 @@ export async function removeSubcategory(
   context: RouteContext
 ) {
   const path = new URL(request.url).pathname;
-  const sessionData = await requireUserUuid();
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }
@@ -217,8 +213,8 @@ export async function removeSubcategory(
   return data instanceof Response ? data : jsonOk(data);
 }
 
-export async function postResetCategories() {
-  const sessionData = await requireUserUuid();
+export async function postResetCategories(request: Request) {
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (sessionData instanceof Response) {
     return sessionData;
   }

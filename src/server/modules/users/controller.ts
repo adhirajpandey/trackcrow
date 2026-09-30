@@ -1,11 +1,11 @@
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import { jsonOk, unwrapOrResponse } from "@/server/api/responses";
-import { requireSessionUser } from "@/server/auth/session";
 
 import { getMe } from "./service";
 
-export async function getCurrentUser() {
-  const session = await requireSessionUser();
-  const sessionData = unwrapOrResponse(session);
+export async function getCurrentUser(request: Request) {
+  const sessionData = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (sessionData instanceof Response) {
     return sessionData;
   }

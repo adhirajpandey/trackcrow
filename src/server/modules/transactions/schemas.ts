@@ -103,6 +103,7 @@ export const transactionIdParamsSchema = z.object({
 });
 
 export const listTransactionsQuerySchema = z.object({
+  recipientUuid: z.string().uuid().optional(),
   page: z.coerce.number().int().positive().optional(),
   size: z.coerce.number().int().positive().optional(),
   q: z.string().trim().optional(),

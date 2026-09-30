@@ -1,16 +1,12 @@
+import { ApiTokenScope } from "@/generated/prisma-rewrite";
+import { requireSessionOrTokenUser } from "@/server/auth/request-user";
 import { logInvalidJson, logValidationFailure } from "@/server/api/logging";
 import { jsonError, jsonOk, unwrapOrResponse } from "@/server/api/responses";
-import { requireSessionUser } from "@/server/auth/session";
 
 import { accountIdParamsSchema, accountSchema } from "./schemas";
 import { createAccount, listAccounts, updateAccount } from "./service";
 
 type RouteContext = { params: Promise<{ accountUuid: string }> };
-
-async function userUuid() {
-  const session = await requireSessionUser();
-  return unwrapOrResponse(session);
-}
 
 async function body(request: Request) {
   try { return await request.json(); } catch {
@@ -19,8 +15,8 @@ async function body(request: Request) {
   }
 }
 
-export async function getAccounts() {
-  const session = await userUuid();
+export async function getAccounts(request: Request) {
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_READ);
   if (session instanceof Response) return session;
   const result = await listAccounts({ userUuid: session.userUuid });
   const data = unwrapOrResponse(result);
@@ -28,7 +24,7 @@ export async function getAccounts() {
 }
 
 export async function postAccount(request: Request) {
-  const session = await userUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (session instanceof Response) return session;
   const json = await body(request);
   if (json instanceof Response) return json;
@@ -43,7 +39,7 @@ export async function postAccount(request: Request) {
 }
 
 export async function patchAccount(request: Request, context: RouteContext) {
-  const session = await userUuid();
+  const session = await requireSessionOrTokenUser(request, ApiTokenScope.TRANSACTIONS_WRITE);
   if (session instanceof Response) return session;
   const params = accountIdParamsSchema.safeParse(await context.params);
   if (!params.success) return jsonError("Invalid request", 400);

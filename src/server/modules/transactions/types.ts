@@ -48,6 +48,7 @@ export type TransactionListDto = {
 
 export type ListTransactionsInput = {
   userUuid: string;
+  recipientUuid?: string;
   page?: number;
   size?: number;
   q?: string;

@@ -60,6 +60,23 @@ export type RecipientDetailDto = {
   linkedTransactions: RecipientDetailTransactionDto[];
 };
 
+export type RecipientApiDetailDto = RecipientDetailDto & {
+  stats: {
+    totalAmount: number;
+    averagePayment: number;
+    uncategorizedCount: number;
+    firstPaidAt: string | null;
+    lastPaidAt: string | null;
+  };
+  existingRuleUuid: string | null;
+  dominantCategory: {
+    uuid: string;
+    name: string;
+    transactionCount: number;
+    totalAmount: number;
+  } | null;
+};
+
 export type ResolveRecipientInput = {
   userUuid: string;
   recipientRaw: string;
