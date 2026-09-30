@@ -29,7 +29,8 @@
       "expo-secure-store",
       "expo-font",
       "./plugins/with-release-signing",
-      "./plugins/with-sms-ingestion"
+      "./plugins/with-sms-ingestion",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
