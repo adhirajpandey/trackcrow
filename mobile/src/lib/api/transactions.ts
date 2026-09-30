@@ -46,6 +46,7 @@ export type TransactionList = Page & {
   lastTxnDate: string | null;
 };
 export type TransactionFilters = {
+  recipientUuid?: string;
   page?: number;
   size?: number;
   q?: string;
@@ -80,6 +81,7 @@ export type CategoryResult = {
   subcategoryUuid: string | null;
   category: string | null;
   subcategory: string | null;
+  classificationSource: ClassificationSource | null;
 };
 export type CategorySuggestion = {
   suggestedCategory: string | null;

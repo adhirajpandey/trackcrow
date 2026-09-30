@@ -16,7 +16,7 @@ This document tracks current implementation status and near-term priorities. For
 
 ## Active Work
 
-- Android: SMS reading feasibility is established. `mobile/` has Google sign-in, a personal access token fallback, and a read-only Overview; other sections remain to be built. See [Android development setup](android.md).
+- Android: SMS reading feasibility is established. `mobile/` has Google sign-in, a personal access token fallback, Overview, Transactions, manual entry and editing, and an uncategorized review queue. Recipient and rule management, Insights, categories/accounts, onboarding, and diagnostics remain to be built. See [Android development setup](android.md).
 - Android sign-in follow-up: have the server issue and verify a nonce for Google ID tokens.
 
 - The authenticated workspace shell and drilldown UX are still being refined.
