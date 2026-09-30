@@ -1,7 +1,7 @@
 {
   "name": "trackcrow-mobile",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "./index.js",
   "dependencies": {
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/kalam": "^0.4.1",
@@ -41,7 +41,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
-    "test": "tsx --test src/lib/*.test.ts"
+    "test": "tsx --test src/lib/*.test.ts",
+    "android:release:device": "cd android && gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a"
   },
   "private": true,
   "packageManager": "pnpm@10.28.2"

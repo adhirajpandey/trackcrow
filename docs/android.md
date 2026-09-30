@@ -1,6 +1,6 @@
 # Develop the Android app
 
-The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. It has five tabs named after the web sections. Overview shows month-to-date spending, review work, top categories, and recent transactions. Settings signs in with Google, or connects with a personal access token as a fallback. Transactions, Recipients, and Rules are placeholders. The app does not read SMS.
+The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. It has five tabs named after the web sections. Overview shows month-to-date spending, review work, top categories, and recent transactions. Settings signs in with Google, or connects with a personal access token as a fallback. Transactions, Recipients, and Rules are placeholders. While signed in with permission, the app captures new Kotak/HDFC bank SMS for server import.
 
 ## Use the installed toolchain
 
@@ -66,7 +66,31 @@ Overview reads `GET /api/dashboard/summary`, `GET /api/dashboard/spending-by-cat
 
 Settings has an editable server URL, prefilled with `https://trackcrow.in`. **Sign in with Google** fetches the server's web client ID from `GET /api/mobile/auth/google`, opens the Credential Manager account picker, and exchanges the Google ID token at `POST /api/mobile/auth/google`. The server returns a token labelled `Android app` with `transactions:read` and `transactions:write`, and it appears in web Settings. The Google ID token is never stored. **Sign out** revokes that token on the server, clears the Google credential state, and removes local credentials. If the server cannot be reached, the app still signs out locally and says the token could not be revoked; revoke it from web Settings.
 
-**Use an access token instead** is a fallback. Paste a personal access token with `transactions:read` (the **Read only** preset in web Settings). Saving validates access with a one-row transactions request before storing anything.
+**Use an access token instead** is a fallback. Use a personal access token with `transactions:read` and `sms:import`. Saving validates dashboard access with a one-row transactions request before storing anything. A token without SMS access makes import show **Sign in again** after the first 403 response.
+
+### Automatic SMS import
+
+Before using this build with real SMS, deploy the server's extended SMS import contract and the `sms:import` scope for newly issued Google app sessions. Existing Google sessions must sign in again to get that scope. The Android change sends the new fields; it does not implement or deploy the server change.
+
+After sign-in and on app start, Android requests `RECEIVE_SMS` once if needed. A denial is remembered. Settings then shows **No SMS permission**, with an explicit **Grant** button or **Open app settings** link. There is no separate SMS opt-in. `READ_SMS` remains blocked, so only new arrivals are captured.
+
+The native receiver accepts Kotak/HDFC sender headers, including operator prefixes, and joins multipart SMS. It assigns a UUID before starting Headless JS. The task reads the saved token and posts this payload with Bearer authentication:
+
+```json
+{
+  "data": {
+    "message": "<incoming SMS text>",
+    "sender": "AD-HDFCBK",
+    "idempotencyKey": "00000000-0000-4000-8000-000000000001",
+    "timestamp": "2026-09-30T12:00:00.000Z"
+  },
+  "metadata": { "storeMessageBody": false }
+}
+```
+
+The updated server parses the SMS and stores no body for this payload. The app persists pending text in its private AsyncStorage queue before sending; backups are disabled. The queue keeps at most 200 messages for seven days and drains on headless runs and app foregrounding. Retries retain the arrival UUID. Successful, ignored, duplicate, and 422 outcomes remove the text; 401/403 clears the rejected session's queue and shows **Sign in again**. Sign-out clears queue and import status. SMS bodies and credentials are never logged.
+
+Keep MacroDroid disabled when testing real imports through the app. Its requests have no shared idempotency key, so running both creates duplicates. Receiver delivery after swiping away, after a reboot and unlock, and on a manual APK install still need physical-device verification. Android **Force stop** is a separate stopped-package condition.
 
 For a local backend, run it on port 3000 on the development computer, then:
 
@@ -125,6 +149,8 @@ A release build and a development build share the package name `app.trackcrow.mo
 
 ## Troubleshoot the existing setup
 
+For a Pixel test APK on Windows, run mobile checks first, finish the code, prebuild only when native configuration changed, and run `corepack pnpm android:release:device` from `mobile/`. It builds a signed `arm64-v8a` APK without installing it. Preserve the generated Android folder and native output between iterations. Use the two-ABI build above when sharing a release with other devices.
+
 | Symptom | Recovery |
 | --- | --- |
 | No device or `offline` | Check the phone's network and Wireless debugging, reconnect with its current connection port, then restore the reverse mapping. |
@@ -140,4 +166,4 @@ Run `corepack pnpm dlx expo-doctor` when diagnosing dependency compatibility. Do
 
 ## Preserve the verified SMS installation path
 
-SMS reading was verified during the completed POC on a Pixel 10a. The current app removes SMS access. When that feature is implemented again, install through the SDK's adb and request runtime consent in the app. The verified installation had `RESTRICTION_INSTALLER_EXEMPT` for `READ_SMS`; granting with `adb install -g` alone was not evidence that an inbox query worked. Check permission flags without printing message contents.
+SMS reading was verified during the completed POC on a Pixel 10a with an adb-installed build. That installation had `RESTRICTION_INSTALLER_EXEMPT` for `READ_SMS`; `adb install -g` alone did not establish inbox access. The import app uses `RECEIVE_SMS` only. Verify runtime consent and actual incoming SMS delivery separately on a manually installed release. Check permission flags without printing message contents.

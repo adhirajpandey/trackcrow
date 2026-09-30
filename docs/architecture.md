@@ -124,4 +124,12 @@ The persistence layer is defined in [prisma/schema.prisma](../prisma/schema.pris
 
 ## Android client
 
-`mobile/` is an independent Expo Router package with its own pnpm lockfile and checks. Root Next.js typechecking and linting exclude it. Its native theme matches the web app. It stores a server URL and a TrackCrow token in SecureStore, obtained through Google sign-in or a pasted personal access token, and calls the read routes with that token. It has no SMS module. See [Android development setup](android.md).
+`mobile/` is an independent Expo Router package with its own pnpm lockfile and checks. Root Next.js typechecking and linting exclude it. Its native theme matches the web app. It stores a server URL and a TrackCrow token in SecureStore, obtained through Google sign-in or a pasted personal access token, and calls the read routes with that token.
+
+The Expo local module in `mobile/modules/trackcrow-sms/` receives new SMS from Kotak/HDFC sender headers and reassembles multipart PDUs. `with-sms-ingestion` registers the protected receiver and internal Headless JS service. `mobile/index.js` registers the task before Expo Router starts. There is no inbox backfill; `READ_SMS` is blocked.
+
+The headless task reads SecureStore credentials and posts to `/api/imports/sms` with `sender`, an arrival UUID as `idempotencyKey`, the original SMS `timestamp`, and `metadata.storeMessageBody: false`. It relies on the extended server contract; parsing and transaction creation stay on the server. The mobile package does not change the server implementation.
+
+`src/lib/sms-import.ts` persists pending SMS in a private AsyncStorage queue before sending. It keeps the newest 200 items, expires them after seven days, and retains the same UUID for retries. Each queue is bound to a hash of the server URL and session token, so a session change cannot submit earlier messages as another user. Neither the token nor the SMS body is logged. Backup is disabled. Network, server, timeout, and rate-limit failures remain queued. Created, ignored, duplicate, and unparseable outcomes remove the queued text. Authentication failures drop the rejected session's pending text and show **Sign in again**; sign-out clears queue and status.
+
+The app drains on each headless run and when it becomes active with SMS permission. Each drain has a time budget below the native task timeout. The first signed-in app start requests permission; a denial is remembered and never prompts automatically again. Settings offers an explicit Grant button or an app-settings link and shows import time and pending count when active. See [Android development setup](android.md).

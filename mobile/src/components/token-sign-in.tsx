@@ -41,8 +41,8 @@ export function TokenSignIn({
   return (
     <View style={styles.section}>
       <Text style={type.muted}>
-        Create a Read only access token in the web app under Settings. It is stored in this phone&apos;s
-        secure storage.
+        Create an access token with transactions:read and sms:import in web Settings. This phone keeps
+        it in secure storage.
       </Text>
       <Text style={type.label}>Access token</Text>
       <TextInput
