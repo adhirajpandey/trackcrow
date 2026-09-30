@@ -14,6 +14,7 @@ export const MOBILE_TOKEN_LABEL = "Android app";
 export const MOBILE_TOKEN_SCOPES = [
   ApiTokenScope.TRANSACTIONS_READ,
   ApiTokenScope.TRANSACTIONS_WRITE,
+  ApiTokenScope.SMS_IMPORT,
 ];
 
 const googleClient = new OAuth2Client();

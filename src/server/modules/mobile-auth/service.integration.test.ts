@@ -91,7 +91,7 @@ describeDatabase("mobile Google sign-in on PostgreSQL", () => {
     const record = await tokenRecord(body.token);
     expect(record.userUuid).toBe(existing.uuid);
     expect(record.label).toBe("Android app");
-    expect(record.scopes).toEqual([ApiTokenScope.TRANSACTIONS_READ, ApiTokenScope.TRANSACTIONS_WRITE]);
+    expect(record.scopes).toEqual([ApiTokenScope.TRANSACTIONS_READ, ApiTokenScope.TRANSACTIONS_WRITE, ApiTokenScope.SMS_IMPORT]);
     expect(await prisma.user.count({ where: { email: existingEmail } })).toBe(1);
   });
 
