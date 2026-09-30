@@ -73,7 +73,7 @@ describe("mobile auth controller", () => {
           uuid: "token-1",
           label: "Android app",
           tokenPrefix: "plain-to",
-          scopes: [ApiTokenScope.TRANSACTIONS_READ, ApiTokenScope.TRANSACTIONS_WRITE],
+          scopes: [ApiTokenScope.TRANSACTIONS_READ, ApiTokenScope.TRANSACTIONS_WRITE, ApiTokenScope.SMS_IMPORT],
           createdAt: new Date(),
           lastUsedAt: null,
           revokedAt: null,
@@ -163,7 +163,7 @@ describe("mobile auth controller", () => {
     expect(createApiTokenMock).toHaveBeenCalledWith({
       userUuid: "user-1",
       label: "Android app",
-      scopes: [ApiTokenScope.TRANSACTIONS_READ, ApiTokenScope.TRANSACTIONS_WRITE],
+      scopes: [ApiTokenScope.TRANSACTIONS_READ, ApiTokenScope.TRANSACTIONS_WRITE, ApiTokenScope.SMS_IMPORT],
     });
   });
 

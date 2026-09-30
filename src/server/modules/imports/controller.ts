@@ -43,11 +43,15 @@ export async function postSmsImport(request: Request) {
     return jsonError("Invalid payload", 400, { issues: parsed.error.issues });
   }
 
+  const { data: sms, metadata } = parsed.data;
   const result = await importSmsTransaction({
     userUuid: authentication.data.userUuid,
-    message: parsed.data.data.message,
-    ...(parsed.data.data.timestamp ? { timestamp: new Date(parsed.data.data.timestamp) } : {}),
-    location: parsed.data.metadata.location,
+    message: sms.message,
+    ...(sms.timestamp ? { timestamp: new Date(sms.timestamp) } : {}),
+    location: metadata.location,
+    ...(sms.sender ? { sender: sms.sender } : {}),
+    ...(sms.idempotencyKey ? { idempotencyKey: sms.idempotencyKey } : {}),
+    ...(metadata.storeMessageBody === false ? { storeMessageBody: false } : {}),
   });
   const data = unwrapOrResponse(result);
   if (data instanceof Response) {
@@ -61,15 +65,15 @@ export async function postSmsImport(request: Request) {
     return data;
   }
 
-  if (data.ignored) {
-    return jsonOk({ message: "Message ignored by rule" }, 201);
+  switch (data.status) {
+    case "DUPLICATE":
+      return jsonOk(
+        { status: data.status, message: "Message already imported", previousStatus: data.previousStatus, uuid: data.uuid },
+        200
+      );
+    case "IGNORED":
+      return jsonOk({ status: data.status, message: "Message ignored by rule" }, 201);
+    case "CREATED":
+      return jsonOk({ status: data.status, message: "Transaction created", uuid: data.uuid }, 201);
   }
-
-  return jsonOk(
-    {
-      message: "Transaction created",
-      uuid: data.uuid,
-    },
-    201
-  );
 }

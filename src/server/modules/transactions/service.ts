@@ -1,4 +1,4 @@
-import { ClassificationSource, TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
+import { type Prisma, ClassificationSource, TransactionSource, TransactionType } from "@/generated/prisma-rewrite";
 import prisma from "@/lib/prisma-rewrite";
 import { logger } from "@/lib/logger";
 import { resolveRecipient } from "@/server/modules/recipients/service";
@@ -131,7 +131,7 @@ async function resolveCategorySelection(input: {
   userUuid: string;
   categoryUuid?: string | null;
   subcategoryUuid?: string | null;
-}): Promise<
+}, db: Prisma.TransactionClient = prisma): Promise<
   | { ok: true; data: ResolvedCategorySelection }
   | {
       ok: false;
@@ -154,7 +154,7 @@ async function resolveCategorySelection(input: {
     return { ok: true, data: { categoryId: null, subcategoryId: null } };
   }
 
-  const category = await prisma.category.findFirst({
+  const category = await db.category.findFirst({
     where: { uuid: input.categoryUuid, userUuid: input.userUuid },
     select: { id: true },
   });
@@ -169,7 +169,7 @@ async function resolveCategorySelection(input: {
     return { ok: true, data: { categoryId: category.id, subcategoryId: null } };
   }
 
-  const subcategory = await prisma.subcategory.findFirst({
+  const subcategory = await db.subcategory.findFirst({
     where: { uuid: input.subcategoryUuid, userUuid: input.userUuid },
     select: { id: true, categoryId: true },
   });
@@ -222,9 +222,9 @@ async function getOwnedTransaction(userUuid: string, transactionUuid: string) {
 async function resolveExistingRecipient(input: {
   userUuid: string;
   recipientUuid: string;
-}) {
+}, db: Prisma.TransactionClient = prisma) {
   try {
-    const recipient = await prisma.recipient.findFirst({
+    const recipient = await db.recipient.findFirst({
       where: { uuid: input.recipientUuid, userUuid: input.userUuid },
       select: { id: true, uuid: true, displayName: true },
     });
@@ -452,14 +452,16 @@ export async function listTransactionsForRange(
   }
 }
 
+/** Creates a classified transaction and its recipient writes in the supplied database transaction. */
 export async function createTransaction(
-  input: TransactionWriteInput
+  input: TransactionWriteInput,
+  db: Prisma.TransactionClient = prisma
 ): Promise<TransactionCreateResult> {
   try {
     const accountResult = await resolveAccountId({
       userUuid: input.userUuid,
       accountUuid: input.accountUuid,
-    });
+    }, db);
     if (!accountResult.ok) return accountResult;
 
     const isManual = Object.prototype.hasOwnProperty.call(input, "categoryUuid");
@@ -468,7 +470,7 @@ export async function createTransaction(
           userUuid: input.userUuid,
           categoryUuid: input.categoryUuid,
           subcategoryUuid: input.subcategoryUuid,
-        })
+        }, db)
       : null;
     if (manualSelection && !manualSelection.ok) {
       return fail("VALIDATION_ERROR", manualSelection.details);
@@ -479,12 +481,12 @@ export async function createTransaction(
         ? await resolveExistingRecipient({
             userUuid: input.userUuid,
             recipientUuid: input.recipientUuid,
-          })
+          }, db)
         : await resolveRecipient({
             userUuid: input.userUuid,
             recipientRaw: input.recipientRaw,
             recipientName: input.recipientName,
-          });
+          }, db);
     if (!recipientResult.ok) {
       return recipientResult;
     }
@@ -504,7 +506,7 @@ export async function createTransaction(
       classification = resolveCreateClassification(
         { recipientUuid: recipientResult.data.recipientUuid },
         { type: "AUTO" },
-        await loadEvaluatableRules(input.userUuid)
+        await loadEvaluatableRules(input.userUuid, db)
       );
     }
 
@@ -542,7 +544,7 @@ export async function createTransaction(
     const recipientName =
       "recipientName" in input ? input.recipientName?.trim() || null : recipientResult.data.displayName;
 
-    const created = await prisma.transaction.create({
+    const created = await db.transaction.create({
       data: {
         userUuid: input.userUuid,
         recipientId: recipientResult.data.recipientId,

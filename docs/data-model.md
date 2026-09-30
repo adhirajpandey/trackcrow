@@ -109,7 +109,10 @@ Cross-domain behavior:
 
 - belongs to one user
 - may optionally link to the created transaction
-- stores parser status, parser metadata, parsed payload, and optional location
+- stores parser status, the matching parser's name, parsed payload, and optional location and sender
+- `body` is null when the client opted out of storing the SMS text
+- `receivedAt` is the SMS occurrence time when the client supplied one, otherwise the server receipt time
+- `idempotencyKey` is optional and unique per user; a retried upload with the same key returns the first outcome
 - `parseStatus` is `PARSED`, `UNPARSEABLE`, `FAILED`, or `IGNORED`
 
 Service behavior:
