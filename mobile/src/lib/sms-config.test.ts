@@ -26,7 +26,7 @@ function fixture(cache: string | null = null) {
 
 test('validates schema, bank metadata, bounded plain headers and duplicate bank IDs', () => {
   assert.equal(validateSmsConfig(config), true);
-  for (const header of ['', 'LONGHEADER', 'A.*', 'AD-KOTAKB', ' KOTAKB', 'क']) {
+  for (const header of ['', 'LONGHEADER', 'A.*', 'AD-KOTAKB', ' KOTAKB', 'KOTAKB\n', 'KOTAKB\r', 'क']) {
     assert.equal(validateSmsConfig({ ...config, banks: [{ ...config.banks[0], senderHeaders: [header] }] }), false);
   }
   for (const value of [null, {}, { ...config, schemaVersion: 2 }, { ...config, configVersion: '' }, { ...config, banks: [] }, { ...config, banks: [config.banks[0], config.banks[0]] }]) {

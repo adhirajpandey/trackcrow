@@ -25,7 +25,8 @@ export function validateSmsConfig(value: unknown): value is SmsConfig {
         !Array.isArray(b.senderHeaders) || b.senderHeaders.length < 1 || b.senderHeaders.length > 50) return false;
     ids.add(b.id);
     headers += b.senderHeaders.length;
-    return headers <= 500 && b.senderHeaders.every((header: unknown) => typeof header === 'string' && /^[a-z0-9]{1,9}$/i.test(header));
+    return headers <= 500 && b.senderHeaders.every((header: unknown) =>
+      typeof header === 'string' && header.length >= 1 && header.length <= 9 && !/[^a-z0-9]/i.test(header));
   });
 }
 
