@@ -142,5 +142,9 @@ export function createDebugLog(storage: () => Promise<Storage>, now = Date.now) 
   };
 }
 export const debugLog = createDebugLog(
-  async () => (await import('@react-native-async-storage/async-storage')).default,
+  async () => {
+    // Defer native storage for unit tests, but keep it in Metro's main bundle.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require('@react-native-async-storage/async-storage') as typeof import('@react-native-async-storage/async-storage')).default;
+  },
 );

@@ -46,7 +46,11 @@ export function shouldSkipOnboarding(
   return setup?.complete === true || (setup === null && signedIn && (permissionGranted || previouslyDecided));
 }
 export const onboarding = createOnboarding(
-  async () => (await import('@react-native-async-storage/async-storage')).default,
+  async () => {
+    // Defer native storage for unit tests, but keep it in Metro's main bundle.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require('@react-native-async-storage/async-storage') as typeof import('@react-native-async-storage/async-storage')).default;
+  },
 );
 export { DEFAULT_API_URL };
 
