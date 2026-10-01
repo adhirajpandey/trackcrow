@@ -23,6 +23,7 @@ import { colors, fonts, radii } from '../../theme';
 
 import { TransactionRow } from '../../components/transaction-row';
 import { queryKeys } from '../../lib/query-keys';
+import { istDateKey } from '../../lib/transaction-dates';
 
 const RECENT_COUNT = 5;
 const CATEGORY_TILES = 4;
@@ -120,7 +121,7 @@ function Overview({ credentials }: { credentials: Credentials }) {
         ) : (
           <>
             <SpendCard month={month} summary={summary.data} previous={previous.data} />
-            <ReviewCard count={summary.data.uncategorizedCount} />
+            <ReviewCard count={summary.data.uncategorizedCount} startDate={month.startDate} endDate={month.endDate} />
           </>
         )}
 
@@ -148,7 +149,7 @@ function Overview({ credentials }: { credentials: Credentials }) {
 
         <SectionHeader
           title="Recent transactions"
-          right={<TextLink label="See all" onPress={() => router.navigate('/transactions')} />}
+          right={<TextLink label="See all" onPress={() => router.navigate('/(tabs)/transactions')} />}
         />
         {recent.isPending ? (
           <Skeleton height={RECENT_COUNT * 76} />
@@ -242,7 +243,7 @@ function Comparison({ current, previous }: { current: number; previous: number |
   );
 }
 
-function ReviewCard({ count }: { count: number }) {
+function ReviewCard({ count, startDate, endDate }: { count: number; startDate: Date; endDate: Date }) {
   if (count === 0) {
     return (
       <Panel tone="mint" style={[styles.cardPadding, styles.row]}>
@@ -266,7 +267,7 @@ function ReviewCard({ count }: { count: number }) {
         label="Review now"
         variant="destructive"
         trailingIcon={ArrowRight}
-        onPress={() => router.navigate('/review')}
+        onPress={() => router.navigate({ pathname: '/review', params: { startDate: istDateKey(startDate), endDate: istDateKey(endDate) } })}
       />
     </Panel>
   );
@@ -324,7 +325,12 @@ function RecentList({ transactions }: { transactions: Transaction[] }) {
   return (
     <Panel raised>
       {transactions.map((transaction, index) => (
-        <TransactionRow key={transaction.uuid} transaction={transaction} divider={index > 0} />
+        <TransactionRow
+          key={transaction.uuid}
+          transaction={transaction}
+          divider={index > 0}
+          onPress={() => router.push({ pathname: '/transactions/[id]', params: { id: transaction.uuid } })}
+        />
       ))}
     </Panel>
   );

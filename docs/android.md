@@ -1,6 +1,6 @@
 # Develop the Android app
 
-The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. Its root Stack contains four tabs: **Overview**, **Txns**, **Insights**, and **More**. Overview shows month-to-date spending, review work, top categories, and recent transactions. More links to Recipients, Rules, Categories, Accounts, Settings, and Diagnostics. Settings signs in with Google, or connects with a personal access token as a fallback. While signed in with permission, the app captures new Kotak/HDFC bank SMS for server import.
+The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. Its root Stack contains four tabs: **Overview**, **Txns**, **Insights**, and **More**. Overview shows month-to-date spending, review work, top categories, and recent transactions. Transactions supports search, filters, classification, manual entry, editing, and deletion. The review queue files uncategorized transactions one at a time. More links to Recipients, Rules, Categories, Accounts, Settings, and Diagnostics. Settings signs in with Google, or connects with a personal access token as a fallback. While signed in with permission, the app captures new Kotak/HDFC bank SMS for server import.
 
 ## Choose the loop
 
@@ -48,7 +48,7 @@ Prebuild is the expensive path. It deletes and recreates `android/`, so the next
 
 ## App shell
 
-Routes outside `(tabs)` open in the root Stack. Transaction detail (`transactions/[id]`), add transaction (`transactions/new`), review, recipient list and detail, rules, categories, accounts, diagnostics, and onboarding reuse `ComingSoon` until their screens are implemented. Settings keeps its existing behavior as a stack route. Android Back returns to the previous screen. The review badge and **Review now** open the review placeholder; **Add expense** opens the add placeholder. The existing `TabButton`, theme, and base UI components are unchanged.
+Routes outside `(tabs)` open in the root Stack. Transaction detail (`transactions/[id]`), add transaction (`transactions/new`), and review are implemented. Recipients, rules, categories, accounts, diagnostics, and onboarding keep their shell placeholders until their respective screens are built. Settings keeps its existing behavior as a stack route. Android Back returns to the previous screen. The review badge opens the all-time review queue; Overview's **Review now** keeps the month-to-date period displayed on its card. **See all** opens Transactions, and recent rows open transaction detail. The existing `TabButton`, theme, and base UI components are unchanged.
 
 Shared components live in `src/components/`: `TextField`, `AmountField`, `Sheet`, `SelectSheet`, `CategorySheet`, `TransactionRow`, `EmptyState`, `ConfirmDialog`, `StickySaveBar`, and `ToastHost`. Sheets have one 75% snap point and disable dynamic sizing. Category selection has search, caller-provided recent categories, and all categories. Transaction rows announce recipient, amount, classification, payment type, account, and date/time together. Toasts support Undo, live-region announcements, Android's recommended timeout, and reduced motion.
 
@@ -59,6 +59,35 @@ The exact native dependency pins are gesture-handler 2.32.0, bottom-sheet 5.2.14
 ### Verify the shell on a development client
 
 Run `corepack pnpm check`, rebuild the development client, and open each tab and stack route. In **More → Diagnostics**, development builds show **App shell preview**. Open the category sheet, check search and the Recent row, and select a category. Use **Show toast**, then **Undo**. This preview uses in-memory sample options and writes no ledger data. It is hidden in release builds. Check Android Back dismisses the sheet and returns from stack routes. Repeat a row check with a large system font size.
+
+## Transactions and review
+
+Transactions uses 30-entry pages from the existing transaction endpoint, a debounced server search, and a draft filter sheet with **Clear** and **Apply**. Filter state lives in route params (`q`, `category`, `subcategory`, `classificationSource`, `recipientUuid`, `sortBy`, `sortOrder`, `startDate`, `endDate`). Multiple category, subcategory, and classification-source values are JSON arrays so names containing commas survive navigation. Category filters use names, including `Uncategorized`; recipient filters use UUIDs. Date params are inclusive `YYYY-MM-DD` dates in IST. With no date params, the list covers all time. Period chips select this month or either of the previous two months; **Custom** accepts a date range or all time.
+
+The filter's source choices are classification provenance: Manual, Suggestion, and Rule. The API does not filter transaction capture source. The summary shows the matching entry count and the amount of loaded entries. Sticky IST day headers also total loaded entries. Date sorting groups contiguous days; amount sorting preserves the server's order and can repeat a day header. Pull to refresh and **Load more** remain available alongside automatic pagination.
+
+Tap a category chip or **Classify now** to open `CategorySheet`. Selecting a category saves immediately and offers Undo. **Ignore** asks for confirmation before creating or replacing a recipient ignore rule. It affects future SMS imports only; the current transaction remains in the ledger and review queue.
+
+Transaction detail includes recipient and rule links, a category grid, subcategory selection, **Suggest**, and classification provenance. Amount, payment type, IST date/time, account, reference, remarks, and location can be edited. Field changes use the sticky save bar; classification saves immediately. An unchanged visible time preserves the stored timestamp's seconds. Location opens a Maps search. Deletion has its own danger zone and confirmation.
+
+After classification, the shared rule prompt offers **Create rule**, or **Replace rule** if the recipient already has one. Its optional **Also file N uncategorized** action snapshots matching transaction IDs, then checks and files each one with a separate category request. It skips entries already categorized and keeps remaining IDs for retry after a partial failure. No bulk endpoint is used.
+
+Add transaction starts with the amount keypad, then recipient search and creation, optional category/subcategory, and payment details. Recent recipients are available in the picker. Saving returns to Transactions with a toast.
+
+Review shows one uncategorized transaction, its remaining count, a suggestion and recent category choices, **More…**, **Skip**, and **Ignore**. Picking a category saves, advances, gives light haptic feedback, and announces the category and remaining count. The toast offers Undo. If Undo fails, the toast shows the server error and the rule prompt stays open. Ledger queries refresh after both successful and failed restoration. Skipping changes only the current visit; it does not mark a transaction reviewed. When no uncategorized entries remain, the queue says **You're all caught up.**
+
+### Verify the transaction flows on a development client
+
+Run `corepack pnpm check` in `mobile/`. This includes the `node:test` helpers for IST ranges, route params, day grouping, and form conversion. Use the existing development client with the local backend and a sign-in that has `transactions:write`.
+
+1. Open Transactions from Overview's **See all** and open a recent row. Verify the badge opens the all-time review queue while **Review now** retains its card's period.
+2. Search, apply multiple categories and classification sources, change periods, and sort by date and amount. Check refresh, sticky day totals, **Load more**, and filtered empty states. Loaded sums should increase as pages load.
+3. Classify a row, dismiss the rule prompt, and use Undo. Classify again and create a rule with **Also file N uncategorized**. Repeat with an existing recipient rule and verify replacement is explicit. Check retry behavior after a failed request.
+4. In Review, choose a suggestion or recent category, use **More…**, skip, and undo. Verify the remaining count and announcements. Confirm an ignore rule leaves existing entries visible.
+5. Add a manual transaction, edit its amount, account, time, reference, remarks, and location, then delete it with confirmation. Compare Overview totals with the web dashboard after each mutation.
+6. Check Android Back, keyboard dismissal, sheet dismissal, and large system fonts. Recipient and rule destinations retain their shell placeholders in this phase.
+
+These screens use the Round 1 native dependencies. This change requires no native rebuild or configuration update.
 
 ## Use the installed toolchain
 
@@ -131,7 +160,7 @@ Overview reads `GET /api/dashboard/summary`, `GET /api/dashboard/spending-by-cat
 
 Settings has an editable server URL, prefilled with `https://trackcrow.in`. **Sign in with Google** fetches the server's web client ID from `GET /api/mobile/auth/google`, opens the Credential Manager account picker, and exchanges the Google ID token at `POST /api/mobile/auth/google`. The server returns a token labelled `Android app` with `transactions:read`, `transactions:write`, and `sms:import`, and it appears in web Settings. The Google ID token is never stored. **Sign out** revokes that token on the server, clears the Google credential state, and removes local credentials. If the server cannot be reached, the app still signs out locally and says the token could not be revoked; revoke it from web Settings.
 
-**Use an access token instead** is a fallback. Use a personal access token with `transactions:read` and `sms:import`. Saving validates dashboard access with a one-row transactions request before storing anything. A token without SMS access makes import show **Sign in again** after the first 403 response.
+**Use an access token instead** is a fallback. Use a personal access token with `transactions:read`, `transactions:write`, and `sms:import` to edit the ledger and import SMS. A token without `transactions:write` can read the ledger but cannot classify, add, edit, delete, or create rules. Saving validates dashboard access with a one-row transactions request before storing anything. A token without SMS access makes import show **Sign in again** after the first 403 response.
 
 ### Automatic SMS import
 
