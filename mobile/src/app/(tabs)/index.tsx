@@ -141,7 +141,11 @@ function Overview({ credentials }: { credentials: Credentials }) {
         ) : (
           <>
             <SpendCard month={month} summary={summary.data} previous={previous.data} />
-            {allTime.data ? (
+            {allTime.isPending || !sms.ready ? (
+              <Skeleton height={140} />
+            ) : allTime.isError ? (
+              <InlineError message={errorMessage(allTime.error)} onRetry={() => void allTime.refetch()} />
+            ) : allTime.data ? (
               <EmptyState
                 title={
                   allTime.data.uncategorizedCount > 0

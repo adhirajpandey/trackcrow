@@ -11,11 +11,13 @@ function message(n = 1): IncomingSms {
 function fixture() {
   let stored: string | null = null;
   let credentials: SmsCredentials | null = { apiUrl: 'https://test.invalid', token: 'private-token', owner: 'session-a' };
+  let enabled = true;
   let now = NOW;
   let post: (payload: SmsImportPayload) => Promise<number> = async () => 201;
   const requests: SmsImportPayload[] = [];
   const importer = createSmsImporter({
     readCredentials: async () => credentials,
+    canImport: async () => enabled,
     readState: async () => stored,
     writeState: async (value) => { stored = value; },
     removeState: async () => { stored = null; },
@@ -31,6 +33,7 @@ function fixture() {
     get stored() { return stored; },
     setStored(value: string | null) { stored = value; },
     setCredentials(value: SmsCredentials | null) { credentials = value; },
+    setEnabled(value: boolean) { enabled = value; },
     setPost(value: typeof post) { post = value; },
     setNow(value: number) { now = value; },
   };
@@ -198,4 +201,52 @@ test('corrupt queue data and invalid task inputs never reach the server', async 
   await f.importer.handleIncoming({ ...message(), receivedAt: NaN });
   assert.equal(f.requests.length, 0);
   assert.equal(f.importer.getSnapshot().pending, 0);
+});
+
+
+test('manual mode preserves pending SMS, ignores arrivals, and resumes the same queue', async () => {
+  const f = fixture();
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message());
+  const pending = f.stored;
+  f.setEnabled(false);
+  await f.importer.refresh();
+  await f.importer.drain();
+  await f.importer.handleIncoming(message(2));
+  assert.equal(f.stored, pending);
+  assert.equal(f.importer.getSnapshot().pending, 1);
+  assert.equal(f.requests.length, 1);
+  f.setEnabled(true);
+  f.setPost(async () => 201);
+  await f.importer.drain();
+  assert.equal(f.importer.getSnapshot().pending, 0);
+  assert.equal(f.requests[1].data.idempotencyKey, message().idempotencyKey);
+});
+
+test('pausing during a drain stops subsequent uploads and preserves the remaining items', async () => {
+  const f = fixture();
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message());
+  await f.importer.handleIncoming(message(2));
+  const requests = f.requests.length;
+  f.setPost(async () => { f.setEnabled(false); return 201; });
+  await f.importer.drain();
+  assert.equal(f.requests.length, requests + 1);
+  assert.equal(f.importer.getSnapshot().pending, 1);
+  assert.equal(JSON.parse(f.stored!).items[0].idempotencyKey, message(2).idempotencyKey);
+});
+
+test('paused imports still erase queued text on sign-out and never reuse another session', async () => {
+  const f = fixture();
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message());
+  f.setEnabled(false);
+  f.setCredentials({ apiUrl: 'https://other.invalid', token: 'other-token', owner: 'other-user' });
+  await f.importer.refresh();
+  assert.equal(f.importer.getSnapshot().pending, 0);
+  assert.equal(f.stored?.includes(message().body), false);
+  f.setCredentials(null);
+  await f.importer.refresh();
+  assert.equal(f.stored, null);
+  assert.equal(f.requests.length, 1);
 });

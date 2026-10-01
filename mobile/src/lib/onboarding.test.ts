@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createSmsPermission, type SmsPermission } from './sms-permission';
-import { canImportSms, createOnboarding, shouldSkipOnboarding } from './onboarding';
+import { canImportSms, canImportStoredSms, createOnboarding, shouldSkipOnboarding } from './onboarding';
 test('completion and manual mode are isolated per normalized server URL', async () => {
   const data = new Map<string, string>();
   const setup = createOnboarding(async () => ({
@@ -59,4 +59,27 @@ test('onboarding checks permission without prompting and explicitly retries a bl
   assert.equal(prompts, 2);
   granted = true;
   assert.equal(await permission.check(), 'granted');
+});
+
+
+test('only absent setup can use the granted-permission upgrade exception', async () => {
+  let raw: string | null = null;
+  const setup = createOnboarding(async () => ({
+    getItem: async () => raw,
+    setItem: async (_key, value) => { raw = value; },
+    removeItem: async () => { raw = null; },
+  }));
+  assert.equal(await setup.read('https://example.com'), null);
+  assert.equal(canImportStoredSms(null, 'granted'), true);
+  assert.equal(canImportStoredSms(null, 'denied'), false);
+  for (const invalid of ['', '{broken', 'null', '{}', '{"complete":true,"mode":"invalid"}']) {
+    raw = invalid;
+    const state = await setup.read('https://example.com');
+    assert.deepEqual(state, { complete: false, mode: 'manual' });
+    assert.equal(shouldSkipOnboarding(state, true, true, true), false);
+    assert.equal(canImportStoredSms(state, 'granted'), false);
+  }
+  assert.equal(canImportStoredSms({ complete: true, mode: 'sms' }, 'granted'), true);
+  assert.equal(canImportStoredSms({ complete: true, mode: 'sms' }, 'denied'), false);
+  assert.equal(canImportStoredSms({ complete: false, mode: 'manual' }, 'granted'), false);
 });

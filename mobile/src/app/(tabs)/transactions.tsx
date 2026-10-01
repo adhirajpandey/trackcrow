@@ -211,23 +211,29 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
           !query.isPending && !query.isError ? (
-            <EmptyState
-              title={
-                summary.data?.transactionCount
-                  ? 'No matching transactions'
-                  : importing
-                    ? 'No bank debits yet'
-                    : 'Track expenses manually'
-              }
-              message={
-                summary.data?.transactionCount
-                  ? 'Try another period or clear your filters.'
-                  : importing
-                    ? 'New supported bank debits will appear automatically. You can add a manual expense while you wait.'
-                    : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'
-              }
-              action={{ label: 'Add transaction', onPress: () => router.push('/transactions/new') }}
-            />
+            !sms.ready || summary.isPending ? (
+              <Skeleton height={140} />
+            ) : summary.isError ? (
+              <InlineError message={errorMessage(summary.error)} onRetry={() => void summary.refetch()} />
+            ) : (
+              <EmptyState
+                title={
+                  summary.data?.transactionCount
+                    ? 'No matching transactions'
+                    : importing
+                      ? 'No bank debits yet'
+                      : 'Track expenses manually'
+                }
+                message={
+                  summary.data?.transactionCount
+                    ? 'Try another period or clear your filters.'
+                    : importing
+                      ? 'New supported bank debits will appear automatically. You can add a manual expense while you wait.'
+                      : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'
+                }
+                action={{ label: 'Add transaction', onPress: () => router.push('/transactions/new') }}
+              />
+            )
           ) : null
         }
         ListFooterComponent={

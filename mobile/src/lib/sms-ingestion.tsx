@@ -27,6 +27,7 @@ const smsPermission = createSmsPermission({
 type SmsIngestionStatus = SmsImportStatus & {
   permission: SmsPermission;
   enabled: boolean;
+  ready: boolean;
   grant: () => Promise<SmsPermission>;
 };
 const SmsIngestionContext = createContext<SmsIngestionStatus | null>(null);
@@ -37,8 +38,9 @@ export function SmsIngestionProvider({ children }: { children: ReactNode }) {
   const sessionToken = signedIn ? state.credentials.token : null;
   const sessionApiUrl = signedIn ? state.credentials.apiUrl : null;
   useSmsConfig(sessionApiUrl, sessionToken);
-  const mode = useSetupMode(sessionApiUrl ?? DEFAULT_API_URL);
+  const { mode, ready: setupReady } = useSetupMode(sessionApiUrl ?? DEFAULT_API_URL);
   const [permission, setPermission] = useState<SmsPermission>('denied');
+  const [permissionReady, setPermissionReady] = useState(Platform.OS !== 'android');
   const status = useSyncExternalStore(
     smsImporter.subscribe,
     smsImporter.getSnapshot,
@@ -53,9 +55,11 @@ export function SmsIngestionProvider({ children }: { children: ReactNode }) {
         const result = await smsPermission.check();
         if (!active) return;
         setPermission(result);
+        setPermissionReady(true);
         await smsImporter.refresh();
         if (active && signedIn && canImportSms(mode, result)) await smsImporter.drain();
       } catch {
+        if (active) setPermissionReady(true);
         // Retry status on the next foreground transition; never log SMS or credentials.
       }
     }
@@ -76,13 +80,20 @@ export function SmsIngestionProvider({ children }: { children: ReactNode }) {
     const result = await smsPermission.check();
     await onboarding.save(sessionApiUrl, { complete: false, mode: result === 'granted' ? 'sms' : 'manual' });
     setPermission(result);
+    setPermissionReady(true);
     if (result === 'granted') await smsImporter.drain();
     return result;
   }, [sessionApiUrl]);
 
   return (
     <SmsIngestionContext.Provider
-      value={{ ...status, permission, enabled: signedIn && canImportSms(mode, permission), grant }}
+      value={{
+        ...status,
+        permission,
+        enabled: signedIn && canImportSms(mode, permission),
+        ready: state.status !== 'loading' && setupReady && permissionReady,
+        grant,
+      }}
     >
       {children}
     </SmsIngestionContext.Provider>

@@ -18,13 +18,15 @@ export function createOnboarding(storage: () => Promise<Storage>) {
   return {
     async read(url: string): Promise<SetupState | null> {
       const raw = await (await storage()).getItem(key(url));
+      if (raw === null) return null;
+      // Only an absent record qualifies for the legacy upgrade exception.
       try {
-        const value = raw ? JSON.parse(raw) : null;
+        const value = JSON.parse(raw);
         return value && typeof value.complete === 'boolean' && ['manual', 'sms'].includes(value.mode)
           ? value
-          : null;
+          : { complete: false, mode: 'manual' };
       } catch {
-        return null;
+        return { complete: false, mode: 'manual' };
       }
     },
     async save(url: string, value: SetupState) {
@@ -55,17 +57,19 @@ export const onboarding = createOnboarding(
 export { DEFAULT_API_URL };
 
 export function useSetupMode(apiUrl: string) {
-  const [mode, setMode] = useState<SetupState['mode'] | null>(null);
+  const [setup, setSetup] = useState<{ apiUrl: string; mode: SetupState['mode'] | null } | null>(null);
   useEffect(() => {
     let active = true;
+    let latestRead = 0;
     const update = () => {
+      const read = ++latestRead;
       void onboarding
         .read(apiUrl)
         .then((value) => {
-          if (active) setMode(value?.mode ?? null);
+          if (active && read === latestRead) setSetup({ apiUrl, mode: value?.mode ?? null });
         })
         .catch(() => {
-          if (active) setMode('manual');
+          if (active && read === latestRead) setSetup({ apiUrl, mode: 'manual' });
         });
     };
     update();
@@ -75,9 +79,14 @@ export function useSetupMode(apiUrl: string) {
       remove();
     };
   }, [apiUrl]);
-  return mode;
+  return { mode: setup?.apiUrl === apiUrl ? setup.mode : null, ready: setup?.apiUrl === apiUrl };
 }
 
 export function canImportSms(mode: SetupState['mode'] | null, permission: string) {
   return mode === 'sms' && permission === 'granted';
+}
+
+/** An absent record with permission is the pre-onboarding upgrade path. */
+export function canImportStoredSms(setup: SetupState | null, permission: string) {
+  return permission === 'granted' && (setup === null || canImportSms(setup.mode, permission));
 }
