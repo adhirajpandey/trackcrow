@@ -6,6 +6,9 @@
 //   node scripts/native-build-plan.js plan <state-file>    prints a JSON plan
 //   node scripts/native-build-plan.js record <state-file>  call after a successful build
 //
+// record fingerprints the tree again after the build, because prebuild creates android/ and
+// Gradle can rewrite files inside native packages.
+//
 // Plan statuses:
 //   current   the installed binary matches; no native build
 //   build     native sources changed; build with Gradle without prebuild
@@ -50,9 +53,12 @@ function classify(changes) {
   return { status: 'build', reason: 'Only autolinked native sources changed.' };
 }
 
+function createAndroidFingerprintAsync() {
+  return createFingerprintAsync(projectRoot, { platforms: ['android'] });
+}
+
 async function plan(stateFile) {
-  const fingerprint = await createFingerprintAsync(projectRoot, { platforms: ['android'] });
-  fs.writeFileSync(`${stateFile}.next`, JSON.stringify({ variant, fingerprint }));
+  const fingerprint = await createAndroidFingerprintAsync();
 
   const state = readState(stateFile);
   let result;
@@ -72,8 +78,10 @@ async function plan(stateFile) {
   if (result.status === 'uncertain') process.exitCode = 3;
 }
 
-function record(stateFile) {
-  fs.renameSync(`${stateFile}.next`, stateFile);
+async function record(stateFile) {
+  const fingerprint = await createAndroidFingerprintAsync();
+  fs.writeFileSync(stateFile, JSON.stringify({ variant, fingerprint }));
+  console.log(JSON.stringify({ variant, hash: fingerprint.hash, status: 'recorded' }, null, 2));
 }
 
 const [command, stateFile] = process.argv.slice(2);
@@ -81,8 +89,7 @@ if (!stateFile || (command !== 'plan' && command !== 'record')) {
   console.error('Usage: native-build-plan.js plan|record <state-file>');
   process.exit(2);
 }
-if (command === 'record') record(path.resolve(stateFile));
-else plan(path.resolve(stateFile)).catch((error) => {
+(command === 'record' ? record : plan)(path.resolve(stateFile)).catch((error) => {
   console.error(error);
   process.exit(1);
 });
