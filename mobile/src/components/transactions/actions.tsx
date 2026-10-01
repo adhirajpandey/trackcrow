@@ -5,7 +5,8 @@ import { CategorySheet } from '../category-sheet';
 import { ConfirmDialog } from '../confirm-dialog';
 import { useToast } from '../toast-host';
 import type { Category } from '../../lib/api/categories';
-import { getJson, type Credentials } from '../../lib/api/client';
+import type { Credentials } from '../../lib/api/client';
+import { fetchRecipientDetail } from '../../lib/api/recipients';
 import { createRule, updateRule } from '../../lib/api/rules';
 import {
   categorizeTransaction,
@@ -131,12 +132,7 @@ export function IgnoreRecipient({
   const [conflict, setConflict] = useState<string | null>(null);
   const context = useQuery({
     queryKey: ['recipient', c.apiUrl, txn.recipientUuid, 'automation'],
-    queryFn: ({ signal }) =>
-      getJson<{ existingRuleUuid: string | null }>(
-        c,
-        `/api/recipients/${encodeURIComponent(txn.recipientUuid)}/detail`,
-        signal,
-      ),
+    queryFn: ({ signal }) => fetchRecipientDetail(c, txn.recipientUuid, signal),
   });
   const existing = conflict ?? context.data?.existingRuleUuid;
   const mutation = useMutation({
