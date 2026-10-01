@@ -1,3 +1,4 @@
+import { debugLog, debugPath } from '../debug-log';
 export const DEFAULT_API_URL = 'https://trackcrow.in';
 
 /** How the stored token was obtained. Google sessions show the account and revoke on sign-out. */
@@ -46,7 +47,9 @@ export async function send(url: string, init: RequestInit, signal?: AbortSignal)
   if (signal?.aborted) controller.abort();
   const timeout = setTimeout(abort, 20000);
   try {
-    return await fetch(url, { ...init, signal: controller.signal, credentials: 'omit' });
+    const response = await fetch(url, { ...init, signal: controller.signal, credentials: 'omit' });
+    if (!response.ok) debugLog.write('api.error', { status: response.status, path: debugPath(new URL(url).pathname) }, 'error');
+    return response;
   } catch (error) {
     if (signal?.aborted) throw error;
     throw new ApiError('Could not reach TrackCrow. Check your connection and server URL.', null);

@@ -48,7 +48,7 @@ Prebuild is the expensive path. It deletes and recreates `android/`, so the next
 
 ## App shell
 
-Routes outside `(tabs)` open in the root Stack. Overview, Transactions, transaction detail, manual entry, the review queue, Recipients, Rules, Insights, Categories, Accounts, and Settings are implemented. Onboarding keeps its shell placeholder; Diagnostics includes the development shell preview. Android Back returns to the previous screen.
+Routes outside `(tabs)` open in the root Stack. Overview, Transactions, transaction detail, manual entry, the review queue, Recipients, Rules, Insights, Categories, Accounts, and Settings are implemented. Onboarding covers first-run setup; Diagnostics previews and sends user-requested reports. Android Back returns to the previous screen.
 
 Insights offers this month, last month, last 3/6/12 months, this year, and a custom IST range. It shows total spending and transaction count, a previous-period comparison, bank coverage from cached SMS configuration, category shares, a day/week/month trend, and the five largest transactions. This month compares the same days last month, clamped to that month's end; other ranges compare the immediately preceding range with the same number of days. Category bars open filtered Transactions; Uncategorized opens the review queue. Trend bars open Transactions for their period, clipped to the selected range. Largest rows open that recipient's Transactions within the selected range, and **See all** opens the full range sorted by amount. Charts include text values, and each data section has loading, error, retry, and empty states. Pull to refresh reloads the sections.
 
@@ -60,9 +60,21 @@ The exact native dependency pins are gesture-handler 2.32.0, bottom-sheet 5.2.14
 
 `src/lib/api/` separates the HTTP client, auth, dashboard, transactions, recipients, rules, categories, and accounts. Its typed functions target the existing routes documented in [the API reference](api.md); unused functions prepare later screens and do not add server endpoints. The index export keeps auth and SMS imports compatible. Errors preserve `message`, `code`, `issues`, and conflict `details`; 403 wording applies to the requested action. A 401 from an authenticated ledger request clears the rejected session and pending SMS through the existing sign-out flow, cancels cached queries, and opens Settings with **Sign in again**. A late response for a different session cannot sign out the current session. Query keys in `src/lib/query-keys.ts` share list and summary prefixes for mutation invalidation and contain no tokens.
 
-### Verify the shell on a development client
+## Onboarding and Diagnostics
 
-Run `corepack pnpm check`, rebuild the development client, and open each tab and stack route. In **More → Diagnostics**, development builds show **App shell preview**. Open the category sheet, check search and the Recent row, and select a category. Use **Show toast**, then **Undo**. This preview uses in-memory sample options and writes no ledger data. It is hidden in release builds. Check Android Back dismisses the sheet and returns from stack routes. Repeat a row check with a large system font size.
+First run opens setup: welcome, Google sign-in, supported bank selection, an SMS explainer, permission, optional account naming, and Overview. Bank names come from the cached SMS config, with Kotak and HDFC as the fallback. The unsupported-bank path uses manual tracking and never requests SMS permission. Its optional **Request my bank** sends the bank name to `POST /api/mobile/diagnostics` with kind `bank_request`.
+
+Setup completion and manual/SMS mode are saved per server URL. Existing signed-in users with an SMS permission decision or granted permission skip setup on upgrade. **Settings → Run setup again** resets completion. The server URL and token fallback stay in **Settings → Advanced**.
+
+The SMS explainer says that Android's permission is broad, TrackCrow acts only on supported bank senders, and matching text goes to the server for parsing without being stored there. Only new arrivals are captured; there is no past-SMS import. Manual expenses work when permission is denied.
+
+If a sideloaded APK is denied immediately without a system dialog, Android may have blocked restricted settings. Open **App info → ⋮ → Allow restricted settings**, return to setup, and retry. If permission was permanently denied, enable SMS under **App info → Permissions**. A rapid denial is a hint, not proof of a restriction.
+
+**More → Diagnostics** shows the app version and versionCode, Android version and model, SMS permission, config version and last fetch, pending queue count, last import, and sign-in state. **Preview report** freezes the exact JSON for **Send report**. Editing the optional note clears the preview. Previewing uploads nothing. Sending needs sign-in and stores the report on the server; the optional note is included as shown. Avoid personal and financial details in notes.
+
+The debug log persists the last 500 structured events. Attribute keys and string values come from fixed lists; SMS text, tokens, emails, recipient names, UPI IDs, references, and amounts are dropped when written. Storage failures do not interrupt SMS import. Reports are capped at 256 KiB, with a shared limit of 10 reports or bank requests per user per 24-hour window. The app displays the server's retry time on a rate-limit response.
+
+Verify setup once the feature is complete: fresh supported-bank setup with permission allowed and denied, unsupported-bank setup with a bank request, upgrade skipping setup, account naming, manual expenses, and Diagnostics preview/send. Confirm report storage only against a local database. Check Overview and Transactions for manual mode, waiting for new SMS, uncategorized work, and all caught up.
 
 ## Transactions and review
 
@@ -166,7 +178,7 @@ adb -s <device> reverse tcp:8082 tcp:8082
 adb -s <device> shell am start -a android.intent.action.VIEW -d "exp+trackcrow-mobile://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8082" app.trackcrow.mobile.dev
 ```
 
-Expect the TrackCrow header and the **Connect TrackCrow** card on Overview. Reapply the reverse mapping after each reconnect.
+Expect setup on a fresh installation, or Overview when setup is complete. Reapply the reverse mapping after each reconnect.
 
 ## Connect to a backend
 
@@ -178,11 +190,11 @@ Settings has an editable server URL, prefilled with `https://trackcrow.in`. **Si
 
 ### Automatic SMS import
 
-Before using this build with real SMS, deploy the server's extended SMS import contract and the `sms:import` scope for newly issued Google app sessions. Existing Google sessions must sign in again to get that scope. The Android change sends the new fields; it does not implement or deploy the server change.
+The server supports the SMS import contract and issues Google app sessions with `sms:import`. Older sessions without that scope must sign in again.
 
-After sign-in and on app start, Android requests `RECEIVE_SMS` once if needed. A denial is remembered. Settings then shows **No SMS permission**, with an explicit **Grant** button or **Open app settings** link. There is no separate SMS opt-in. `READ_SMS` remains blocked, so only new arrivals are captured.
+Setup requests `RECEIVE_SMS` only after the SMS explainer and an explicit choice. A denial is remembered. Settings shows a compact import status and links to Diagnostics; run setup again to enable SMS import. Manual mode blocks foreground and headless imports even if permission is already granted. `READ_SMS` remains blocked, so only new arrivals are captured.
 
-SMS parsing remains on the server. `src/common/sms-templates.ts` defines the banks, sender headers, and named parsing templates. To add or change a bank, edit that file and bump `SMS_CONFIG_VERSION`; deploy the server change. The app fetches `GET /api/mobile/config` on launch and after sign-in. Foreground fetches are throttled to once every four hours, including failed attempts, and use `If-None-Match` when a valid cached config has an ETag. Bank names are available in the same config for future onboarding and coverage text.
+SMS parsing remains on the server. `src/common/sms-templates.ts` defines the banks, sender headers, and named parsing templates. To add or change a bank, edit that file and bump `SMS_CONFIG_VERSION`; deploy the server change. The app fetches `GET /api/mobile/config` on launch and after sign-in. Foreground fetches are throttled to once every four hours, including failed attempts, and use `If-None-Match` when a valid cached config has an ETag. Bank names in the cached config drive onboarding and coverage text.
 
 `src/lib/sms-config.ts` validates schema version 1, bank metadata, and 1-9 character ASCII alphanumeric headers before calling `TrackCrowSms.setSenderConfig(json)`. Kotlin validates again and saves accepted JSON in private SharedPreferences. The receiver reads those preferences without JavaScript; a malformed fetch or native rejection preserves the working config. On restart the app restores its validated per-server cache before fetching. With no valid cache, the native matcher uses bundled `KOTAKB` and `HDFCBK` headers. It accepts optional two-letter operator prefixes and one-letter suffixes, such as `AD-HDFCBK-S`. It builds its own escaped matcher; the server sends no regex. This native change requires a new APK.
 

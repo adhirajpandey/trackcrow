@@ -7,9 +7,10 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '../components/screen-header';
-import { SmsImportStatus } from '../components/sms-import-status';
+import { useSmsIngestion } from '../lib/sms-ingestion';
+import { onboarding } from '../lib/onboarding';
 import { TokenSignIn } from '../components/token-sign-in';
-import { Button, Panel, type } from '../components/ui';
+import { Button, Panel, TextLink, type } from '../components/ui';
 import { DEFAULT_API_URL } from '../lib/api';
 import { useCredentials } from '../lib/credentials';
 import { colors, fonts, radii } from '../theme';
@@ -19,6 +20,7 @@ const appVersion = `Version ${Constants.expoConfig?.version ?? 'unknown'} (${Con
 export default function SettingsScreen() {
   const { state, signInWithGoogle, disconnect } = useCredentials();
   const queryClient = useQueryClient();
+  const sms = useSmsIngestion();
   const saved = state.status === 'ready' ? state.credentials : null;
   const [apiUrl, setApiUrl] = useState(saved?.apiUrl ?? DEFAULT_API_URL);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +122,30 @@ export default function SettingsScreen() {
             />
           </Panel>
         )}
-        {saved ? <SmsImportStatus /> : null}
+        {saved ? (
+          <Panel style={styles.panel}>
+            <Text style={type.body}>
+              SMS import:{' '}
+              {sms.authError
+                ? 'Sign in again'
+                : sms.enabled
+                  ? `Active · ${sms.pending} pending`
+                  : 'Off · manual tracking'}
+            </Text>
+            <TextLink label="Open diagnostics" onPress={() => router.push('/diagnostics')} />
+          </Panel>
+        ) : null}
+        <Button
+          label="Run setup again"
+          variant="secondary"
+          disabled={busy}
+          onPress={() => {
+            void onboarding
+              .clear(saved?.apiUrl ?? DEFAULT_API_URL)
+              .then(() => router.push('/onboarding'))
+              .catch(() => setNotice('Could not reset setup. Try again.'));
+          }}
+        />
         <Panel style={styles.panel}>
           <Button
             label={advanced ? 'Advanced · Hide' : 'Advanced · Show'}

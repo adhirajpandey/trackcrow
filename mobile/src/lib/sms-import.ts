@@ -1,3 +1,4 @@
+import { debugLog } from './debug-log';
 // Queue and HTTP outcomes are kept free of native imports for node:test.
 export const SMS_QUEUE_LIMIT = 200;
 export const SMS_QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -122,16 +123,22 @@ export function createSmsImporter(deps: SmsImportDeps) {
           metadata: { storeMessageBody: false },
         });
       } catch {
+        debugLog.write('sms.drain.retry', { reason: 'network', pending: state.items.length }, 'warn');
         break;
       }
       if (run !== generation || (await deps.readCredentials())?.owner !== credentials.owner) return;
-      if (response >= 500 || response === 408 || response === 429) break;
+      if (response >= 500 || response === 408 || response === 429) {
+        debugLog.write('sms.drain.retry', { status: response, pending: state.items.length }, 'warn');
+        break;
+      }
       if (response === 401 || response === 403) {
         // This queue belongs to the rejected session. Do not retain or keep sending its SMS.
         state.items = [];
         state.authError = response;
+        debugLog.write('sms.drain.auth_error', { status: response }, 'error');
       } else {
         state.items.shift();
+        debugLog.write('sms.drain.ok', { status: response, pending: state.items.length });
         // Created, ignored and duplicate succeed. 422 is terminal but not an import.
         if (response === 200 || response === 201) state.lastImportAt = deps.now();
       }

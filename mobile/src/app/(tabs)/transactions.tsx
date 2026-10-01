@@ -1,5 +1,5 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -25,6 +25,8 @@ import { queryKeys } from '../../lib/query-keys';
 import { groupTransactionDays } from '../../lib/transaction-days';
 import { dayLabel, monthPeriod } from '../../lib/transaction-dates';
 import { decodeFilters, encodeFilters, hasExtraFilters } from '../../lib/transaction-filters';
+import { useSmsIngestion } from '../../lib/sms-ingestion';
+import { fetchSummary } from '../../lib/api/dashboard';
 import { colors } from '../../theme';
 export default function TransactionsScreen() {
   return (
@@ -32,6 +34,12 @@ export default function TransactionsScreen() {
   );
 }
 function Transactions({ credentials: c }: { credentials: Credentials }) {
+  const sms = useSmsIngestion();
+  const importing = sms.enabled && !sms.authError;
+  const summary = useQuery({
+    queryKey: queryKeys.summary(c.apiUrl),
+    queryFn: ({ signal }) => fetchSummary(c, undefined, signal),
+  });
   const params = useLocalSearchParams();
   const decoded = decodeFilters(params);
   const serialized = JSON.stringify(decoded);
@@ -136,6 +144,27 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           <Skeleton height={140} />
         </View>
       ) : null}
+      {summary.data && summary.data.transactionCount > 0 ? (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+          <EmptyState
+            title={
+              summary.data.uncategorizedCount > 0
+                ? `${summary.data.uncategorizedCount} to review`
+                : 'You’re all caught up'
+            }
+            message={
+              summary.data.uncategorizedCount > 0
+                ? 'These transactions still need a category.'
+                : 'Every transaction has a category.'
+            }
+            action={
+              summary.data.uncategorizedCount > 0
+                ? { label: 'Open review queue', onPress: () => router.push('/review') }
+                : undefined
+            }
+          />
+        </View>
+      ) : null}
       <FlashList
         ref={list}
         data={items}
@@ -183,8 +212,21 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
         ListEmptyComponent={
           !query.isPending && !query.isError ? (
             <EmptyState
-              title="No transactions"
-              message="Try another period or clear your filters. You can also add a transaction."
+              title={
+                summary.data?.transactionCount
+                  ? 'No matching transactions'
+                  : importing
+                    ? 'No bank debits yet'
+                    : 'Track expenses manually'
+              }
+              message={
+                summary.data?.transactionCount
+                  ? 'Try another period or clear your filters.'
+                  : importing
+                    ? 'New supported bank debits will appear automatically. You can add a manual expense while you wait.'
+                    : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'
+              }
+              action={{ label: 'Add transaction', onPress: () => router.push('/transactions/new') }}
             />
           ) : null
         }
