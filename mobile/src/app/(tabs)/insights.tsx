@@ -88,12 +88,8 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
   const filters = { ...days, size: 5, sortBy: 'amount' as const, sortOrder: 'desc' as const };
   const largest = useQuery({
     queryKey: queryKeys.transactions(c.apiUrl, filters),
-    queryFn: ({ signal }) =>
-      fetchTransactions(
-        c,
-        { ...filters, startDate: range.startDate.toISOString(), endDate: range.endDate.toISOString() },
-        signal,
-      ),
+    // Transactions accepts IST date keys; dashboard endpoints accept ISO timestamps.
+    queryFn: ({ signal }) => fetchTransactions(c, filters, signal),
   });
   const banks = useQuery({
     queryKey: ['sms-coverage', c.apiUrl],
