@@ -2,6 +2,48 @@
 
 The `mobile/` package follows the web app's Warm Ledger design (`DESIGN.md`), fonts, and colors. Its root Stack contains four tabs: **Overview**, **Txns**, **Insights**, and **More**. Overview shows month-to-date spending, review work, top categories, and recent transactions. More links to Recipients, Rules, Categories, Accounts, Settings, and Diagnostics. Settings signs in with Google, or connects with a personal access token as a fallback. While signed in with permission, the app captures new Kotak/HDFC bank SMS for server import.
 
+## Choose the loop
+
+Run Gradle only when the native runtime changed. Most work is JavaScript or TypeScript, and it needs only Metro and the installed development client.
+
+| Work | Command | Native build |
+| --- | --- | --- |
+| Screens, hooks, API calls, styles | Metro with Fast Refresh in **TrackCrow Dev** | Never |
+| Native dependency, Kotlin, config plugin, or app config | Rebuild **TrackCrow Dev** after the native build plan says so | Only when the plan is not `current` |
+| Feature acceptance on the phone | Mobile checks, then focused device checks | No |
+| Standalone test APK or release | Release build of **TrackCrow** | Yes |
+
+`APP_VARIANT=development` selects **TrackCrow Dev** (`app.trackcrow.mobile.dev`, scheme `trackcrow-dev`). Without it, the config is the production app, **TrackCrow** (`app.trackcrow.mobile`). The two apps install side by side, so a development build never replaces the release app or its sign-in. Never change the package name temporarily to get a separate install.
+
+Build each variant in its own long-lived checkout. Each keeps its generated `android/` folder, native C++ output (`.cxx`), and `node_modules`. Do not switch one checkout between variants: the package name is part of the generated project. Task worktrees are for editing and running Metro, not for native builds. A cold native build takes over ten minutes; a warm one takes under a minute.
+
+Treat `gradlew clean`, deleting `android/`, `.cxx` or `node_modules`, and `expo start --clear` as recovery steps, not routine.
+
+### Decide whether a native build is needed
+
+From `mobile/` in the build checkout, with the same `APP_VARIANT` that prebuild and Gradle will use:
+
+```sh
+node scripts/native-build-plan.js plan ../.trackcrow-native-fingerprint
+```
+
+It compares the Expo native fingerprint (`fingerprint.config.js`) with the one recorded after that checkout's last successful build, and prints one status:
+
+| Status | Meaning |
+| --- | --- |
+| `current` | The installed binary matches. Use Metro. |
+| `build` | Only autolinked native sources changed, such as a Kotlin module or a native dependency. Build with Gradle without prebuild. |
+| `prebuild` | The generated project is out of date: no project exists, no build is recorded, or the Expo config, a config plugin, or React Native changed. The plan names the reason. Run prebuild, then build. |
+| `uncertain` | A change the script cannot classify, or a checkout last built as the other variant. It exits with status 3. Decide explicitly instead of running prebuild by default. |
+
+After a successful build, record it:
+
+```sh
+node scripts/native-build-plan.js record ../.trackcrow-native-fingerprint
+```
+
+The development variant ignores `version` and `versionCode`, so a release version bump does not rebuild the development client.
+
 ## App shell
 
 Routes outside `(tabs)` open in the root Stack. Transaction detail (`transactions/[id]`), add transaction (`transactions/new`), review, recipient list and detail, rules, categories, accounts, diagnostics, and onboarding reuse `ComingSoon` until their screens are implemented. Settings keeps its existing behavior as a stack route. Android Back returns to the previous screen. The review badge and **Review now** open the review placeholder; **Add expense** opens the add placeholder. The existing `TabButton`, theme, and base UI components are unchanged.
@@ -45,15 +87,21 @@ The connection port differs from the pairing port and can change. Use `adb -s <d
 
 ## Build the development client
 
-From `mobile/`:
+Build **TrackCrow Dev** in its own long-lived checkout, and only when the native build plan is not `current`. From `mobile/`, with `APP_VARIANT=development` set for every command:
 
 ```sh
-corepack pnpm check
+export APP_VARIANT=development
+node scripts/native-build-plan.js plan ../.trackcrow-native-fingerprint
+# Only when the plan says prebuild:
 corepack pnpm exec expo prebuild --platform android --no-install
-corepack pnpm exec expo run:android --no-bundler
+cd android
+./gradlew :app:assembleDebug -PreactNativeArchitectures=arm64-v8a
+adb -s <device> install -r app/build/outputs/apk/debug/app-debug.apk
+cd ..
+node scripts/native-build-plan.js record ../.trackcrow-native-fingerprint
 ```
 
-Select the authorized phone if prompted. On the configured Windows machine, use its build helper to select `ANDROID_SERIAL`. The first build downloads native tools. Rebuild after changes to native modules, dependencies, or `app.json`. Keep generated `android/` files out of Git. Use the development client for this workflow.
+In PowerShell, set `$env:APP_VARIANT = 'development'` instead. `arm64-v8a` covers current phones; add other ABIs only for a device that needs them. The first build downloads native tools and compiles all native code. On the configured Windows machine, its development build helper runs these steps. Keep generated `android/` files out of Git.
 
 ## Start Metro and open the app
 
@@ -62,14 +110,15 @@ From `mobile/`, in PowerShell:
 ```powershell
 Remove-Item Env:CI -ErrorAction SilentlyContinue
 $env:NODE_OPTIONS = '--dns-result-order=ipv4first'
+$env:APP_VARIANT = 'development'
 corepack pnpm exec expo start --dev-client --localhost --port 8082
 ```
 
-In a second shell:
+Metro can serve any checkout, including a task worktree, while the installed development client stays the same. In a second shell:
 
 ```sh
 adb -s <device> reverse tcp:8082 tcp:8082
-adb -s <device> shell am start -a android.intent.action.VIEW -d "exp+trackcrow-mobile://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8082" app.trackcrow.mobile
+adb -s <device> shell am start -a android.intent.action.VIEW -d "exp+trackcrow-mobile://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8082" app.trackcrow.mobile.dev
 ```
 
 Expect the TrackCrow header and the **Connect TrackCrow** card on Overview. Reapply the reverse mapping after each reconnect.
@@ -104,6 +153,9 @@ The native receiver accepts Kotak/HDFC sender headers, including operator prefix
 
 The updated server parses the SMS and stores no body for this payload. The app persists pending text in its private AsyncStorage queue before sending; backups are disabled. The queue keeps at most 200 messages for seven days and drains on headless runs and app foregrounding. Retries retain the arrival UUID. Successful, ignored, duplicate, and 422 outcomes remove the text; 401/403 clears the rejected session's queue and shows **Sign in again**. Sign-out clears queue and import status. SMS bodies and credentials are never logged.
 
+> [!WARNING]
+> **TrackCrow Dev captures SMS too.** If TrackCrow and TrackCrow Dev both have `RECEIVE_SMS` and are signed in to the same account and server, Android delivers each bank SMS to both receivers. Each app assigns its own idempotency key, so the server imports the transaction twice. Unless you are testing SMS import, deny SMS permission in TrackCrow Dev or point it at a local backend.
+
 Keep MacroDroid disabled when testing real imports through the app. Its requests have no shared idempotency key, so running both creates duplicates. Receiver delivery after swiping away, after a reboot and unlock, and on a manual APK install still need physical-device verification. Android **Force stop** is a separate stopped-package condition.
 
 For a local backend, run it on port 3000 on the development computer, then:
@@ -114,14 +166,14 @@ adb -s <device> reverse tcp:3000 tcp:3000
 
 In the app's Settings, change the server URL to `http://127.0.0.1:3000` before signing in.
 
-For JavaScript changes, keep Metro running and edit this checkout. Verify Fast Refresh by changing a visible label, then reverting it, without reloading or restarting Metro.
+For JavaScript changes, keep Metro running and edit the checkout it serves. Verify Fast Refresh by changing a visible label, then reverting it, without reloading or restarting Metro. A JavaScript or TypeScript change never needs Gradle.
 
 ### Configure Google sign-in
 
 Google issues the ID token for the server's **web** OAuth client, which is the `GOOGLE_CLIENT_ID` the server already uses for web sign-in. Android also needs its own OAuth client in the **same** Google Cloud project, or Credential Manager fails with a developer error:
 
 1. Print the signing certificate of the build you install. From `mobile/android` after prebuild, run `./gradlew signingReport` and copy the SHA-1 for the `debug` variant.
-2. In Google Cloud Console → **APIs & Services** → **Credentials**, create an OAuth client of type **Android** with package name `app.trackcrow.mobile` and that SHA-1.
+2. In Google Cloud Console → **APIs & Services** → **Credentials**, create an OAuth client of type **Android** with the build's package name and that SHA-1: `app.trackcrow.mobile.dev` for TrackCrow Dev, `app.trackcrow.mobile` for TrackCrow.
 3. Rebuild is not needed. The client takes effect after Google propagates it, which can take a few minutes.
 
 The native module comes from `react-native-nitro-google-signin` through autolinking. Its Expo config plugin is not used, because it only configures iOS and Firebase files. The app passes the web client ID at runtime.
@@ -159,11 +211,11 @@ cd android
 
 The APK is written to `android/app/build/outputs/apk/release/app-release.apk`. On the configured Windows machine, the release build helper runs these steps and copies the APK to a file named after the version.
 
-A release build and a development build share the package name `app.trackcrow.mobile` but are signed with different keys. Uninstall one before installing the other. Uninstalling removes the app's saved sign-in.
+Build releases in the production build checkout, never in the development one. TrackCrow Dev has its own package name, so it stays installed beside the release app. A debug build of the production config would share `app.trackcrow.mobile` with a different signing key and require uninstalling the release app, which removes its saved sign-in. Do not build one.
 
 ## Troubleshoot the existing setup
 
-For a Pixel test APK on Windows, run mobile checks first, finish the code, prebuild only when native configuration changed, and run `corepack pnpm android:release:device` from `mobile/`. It builds a signed `arm64-v8a` APK without installing it. Preserve the generated Android folder and native output between iterations. Use the two-ABI build above when sharing a release with other devices.
+For a Pixel test APK, run mobile checks first and finish the code. In the production build checkout, run the native build plan without `APP_VARIANT`, prebuild only when it says `prebuild`, and run `corepack pnpm android:release:device` from `mobile/`. It builds a signed `arm64-v8a` APK without installing it. Record the plan after the build succeeds. Preserve the generated Android folder and native output between iterations. Use the two-ABI build above when sharing a release with other devices.
 
 | Symptom | Recovery |
 | --- | --- |
@@ -172,7 +224,7 @@ For a Pixel test APK on Windows, run mobile checks first, finish the code, prebu
 | Several development servers appear | Open the explicit port-8082 URL above. |
 | `unexpected end of stream` at `127.0.0.1:8082` | Confirm Metro listens on IPv4 `127.0.0.1`. Restart with `NODE_OPTIONS=--dns-result-order=ipv4first`. |
 | Source edits do not appear | Confirm Metro serves this checkout and `CI` is unset. Check a visible label. Use `--clear` only if the cache is stale. |
-| Google sign-in fails with a developer error | Check that an Android OAuth client with package `app.trackcrow.mobile` and this build's SHA-1 exists in the same project as the server's web client. |
+| Google sign-in fails with a developer error | Check that an Android OAuth client with this build's package name and SHA-1 exists in the same project as the server's web client. |
 | Release build fails with `Filename longer than 260 characters` | On Windows, enable long paths (`LongPathsEnabled` in the registry) and build with an SDK CMake whose ninja is 1.12 or newer, for example CMake 3.31, by setting `cmake.dir` in `android/local.properties`. The SDK's default CMake 3.22 ships an older ninja. |
 | Native build fails | Inspect the first compiler error in the build log. Keep the existing short checkout path and hoisted dependencies. |
 
