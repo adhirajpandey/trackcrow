@@ -5,6 +5,7 @@ import { useCredentials } from './credentials';
 import { smsImporter } from './sms-import-native';
 import { createSmsPermission, type SmsPermission } from './sms-permission';
 import type { SmsImportStatus } from './sms-import';
+import { useSmsConfig } from './sms-config';
 
 const PERMISSION_KEY = 'trackcrow.smsPermissionDecision';
 const smsPermission = createSmsPermission({
@@ -22,6 +23,7 @@ export function SmsIngestionProvider({ children }: { children: ReactNode }) {
   const signedIn = state.status === 'ready';
   const sessionToken = signedIn ? state.credentials.token : null;
   const sessionApiUrl = signedIn ? state.credentials.apiUrl : null;
+  useSmsConfig(sessionApiUrl, sessionToken);
   const [permission, setPermission] = useState<SmsPermission>('denied');
   const status = useSyncExternalStore(smsImporter.subscribe, smsImporter.getSnapshot, smsImporter.getSnapshot);
 
