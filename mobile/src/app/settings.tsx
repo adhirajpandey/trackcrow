@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { LogIn, LogOut, UserRound } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, LogIn, LogOut, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ export default function SettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
 
   function connected() {
     queryClient.clear();
@@ -86,9 +87,6 @@ export default function SettingsScreen() {
               <Text style={type.body} numberOfLines={1}>
                 {saved.method === 'google' ? saved.email : 'An access token'}
               </Text>
-              <Text style={type.muted} numberOfLines={1}>
-                {saved.apiUrl}
-              </Text>
             </View>
             {busy ? <ActivityIndicator color={colors.foreground} accessibilityLabel="Signing out" /> : null}
             <Button
@@ -109,19 +107,6 @@ export default function SettingsScreen() {
               Use the Google account you sign in with on the web. This phone keeps a revocable TrackCrow token
               in secure storage.
             </Text>
-            <Text style={type.label}>Server URL</Text>
-            <TextInput
-              accessibilityLabel="Server URL"
-              style={styles.input}
-              value={apiUrl}
-              onChangeText={setApiUrl}
-              placeholder={DEFAULT_API_URL}
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              editable={!busy}
-            />
             {error ? (
               <Text accessibilityRole="alert" style={type.error}>
                 {error}
@@ -133,10 +118,37 @@ export default function SettingsScreen() {
               onPress={() => void googleSignIn()}
               disabled={busy || !apiUrl.trim()}
             />
-            <TokenSignIn apiUrl={apiUrl} inputStyle={styles.input} onConnected={connected} />
           </Panel>
         )}
         {saved ? <SmsImportStatus /> : null}
+        <Panel style={styles.panel}>
+          <Button
+            label={advanced ? 'Advanced · Hide' : 'Advanced · Show'}
+            trailingIcon={advanced ? ChevronUp : ChevronDown}
+            variant="secondary"
+            disabled={busy}
+            onPress={() => setAdvanced((open) => !open)}
+          />
+          {advanced ? (
+            <View style={{ gap: 10 }}>
+              <Text style={type.muted}>Use a different server or connect with an access token.</Text>
+              <Text style={type.label}>Server URL</Text>
+              <TextInput
+                accessibilityLabel="Server URL"
+                style={styles.input}
+                value={apiUrl}
+                onChangeText={setApiUrl}
+                placeholder={DEFAULT_API_URL}
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                editable={!busy}
+              />
+              <TokenSignIn apiUrl={apiUrl} inputStyle={styles.input} onConnected={connected} />
+            </View>
+          ) : null}
+        </Panel>
         <Text style={[type.muted, styles.version]}>{appVersion}</Text>
       </ScrollView>
     </SafeAreaView>
