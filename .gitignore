@@ -42,3 +42,6 @@ __pycache__/
 
 # browser verification artifacts
 .playwright-mcp/
+
+# native build state in persistent build directories
+/.trackcrow-native-fingerprint*
