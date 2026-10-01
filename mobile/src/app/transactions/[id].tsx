@@ -17,7 +17,8 @@ import {
   useInvalidateLedger,
   useTransactionOptions,
 } from '../../components/transactions/shared';
-import { getJson, type Credentials } from '../../lib/api/client';
+import type { Credentials } from '../../lib/api/client';
+import { fetchRecipientDetail } from '../../lib/api/recipients';
 import {
   deleteTransaction,
   fetchCategorySuggestion,
@@ -75,12 +76,7 @@ function TransactionEditor({
   const category = options.categories.data?.find((item) => item.uuid === txn.categoryUuid);
   const context = useQuery({
     queryKey: ['recipient', c.apiUrl, txn.recipientUuid, 'automation'],
-    queryFn: ({ signal }) =>
-      getJson<{ existingRuleUuid: string | null }>(
-        c,
-        `/api/recipients/${encodeURIComponent(txn.recipientUuid)}/detail`,
-        signal,
-      ),
+    queryFn: ({ signal }) => fetchRecipientDetail(c, txn.recipientUuid, signal),
   });
   const suggestion = useQuery({
     queryKey: [...queryKeys.transaction(c.apiUrl, txn.uuid), 'suggestion'],

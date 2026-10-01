@@ -6,11 +6,11 @@ import { Sheet } from '../sheet';
 import { Button, InlineError, Panel, type } from '../ui';
 import { useToast } from '../toast-host';
 import { ApiError, getJson, type Credentials } from '../../lib/api/client';
+import { fetchRecipientDetail } from '../../lib/api/recipients';
 import { createRule, updateRule } from '../../lib/api/rules';
 import { categorizeTransaction, fetchTransactions, type Transaction } from '../../lib/api/transactions';
 import { errorMessage, useInvalidateLedger } from './shared';
 import { colors } from '../../theme';
-type RecipientContext = { existingRuleUuid: string | null; stats: { uncategorizedCount: number } };
 export type RulePromptSelection = {
   transaction: Transaction;
   categoryUuid: string;
@@ -37,8 +37,7 @@ export function RulePrompt({
   const invalidate = useInvalidateLedger(c);
   const context = useQuery({
     queryKey: ['recipient', c.apiUrl, txn.recipientUuid, 'automation'],
-    queryFn: ({ signal }) =>
-      getJson<RecipientContext>(c, `/api/recipients/${encodeURIComponent(txn.recipientUuid)}/detail`, signal),
+    queryFn: ({ signal }) => fetchRecipientDetail(c, txn.recipientUuid, signal),
   });
   const existing = conflictingRule ?? context.data?.existingRuleUuid;
   const count = context.data?.stats.uncategorizedCount ?? 0;

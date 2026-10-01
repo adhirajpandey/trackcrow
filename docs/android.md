@@ -48,7 +48,7 @@ Prebuild is the expensive path. It deletes and recreates `android/`, so the next
 
 ## App shell
 
-Routes outside `(tabs)` open in the root Stack. Transaction detail (`transactions/[id]`), add transaction (`transactions/new`), and review are implemented. Recipients, rules, categories, accounts, diagnostics, and onboarding keep their shell placeholders until their respective screens are built. Settings keeps its existing behavior as a stack route. Android Back returns to the previous screen. The review badge opens the all-time review queue; Overview's **Review now** keeps the month-to-date period displayed on its card. **See all** opens Transactions, and recent rows open transaction detail. The existing `TabButton`, theme, and base UI components are unchanged.
+Routes outside `(tabs)` open in the root Stack. Transaction detail (`transactions/[id]`), add transaction (`transactions/new`), review, recipient list and detail, and rules are implemented. Categories, accounts, and onboarding keep their shell placeholders; Diagnostics includes the development shell preview. Settings keeps its existing behavior as a stack route. Android Back returns to the previous screen. The review badge opens the all-time review queue; Overview's **Review now** keeps the month-to-date period displayed on its card. **See all** opens Transactions, and recent rows open transaction detail. The existing `TabButton`, theme, and base UI components are unchanged.
 
 Shared components live in `src/components/`: `TextField`, `AmountField`, `Sheet`, `SelectSheet`, `CategorySheet`, `TransactionRow`, `EmptyState`, `ConfirmDialog`, `StickySaveBar`, and `ToastHost`. Sheets have one 75% snap point and disable dynamic sizing. Category selection has search, caller-provided recent categories, and all categories. Transaction rows announce recipient, amount, classification, payment type, account, and date/time together. Toasts support Undo, live-region announcements, Android's recommended timeout, and reduced motion.
 
@@ -85,9 +85,19 @@ Run `corepack pnpm check` in `mobile/`. This includes the `node:test` helpers fo
 3. Classify a row, dismiss the rule prompt, and use Undo. Classify again and create a rule with **Also file N uncategorized**. Repeat with an existing recipient rule and verify replacement is explicit. Check retry behavior after a failed request.
 4. In Review, choose a suggestion or recent category, use **More…**, skip, and undo. Verify the remaining count and announcements. Confirm an ignore rule leaves existing entries visible.
 5. Add a manual transaction, edit its amount, account, time, reference, remarks, and location, then delete it with confirmation. Compare Overview totals with the web dashboard after each mutation.
-6. Check Android Back, keyboard dismissal, sheet dismissal, and large system fonts. Recipient and rule destinations retain their shell placeholders in this phase.
+6. Check Android Back, keyboard dismissal, sheet dismissal, and large system fonts. Recipient and rule destinations open their implemented screens.
 
 These screens use the Round 1 native dependencies. This change requires no native rebuild or configuration update.
+
+## Recipients and rules
+
+Recipients supports search by name, alias, or note; name, count, and total sorting; and inclusive minimum/maximum count and total filters. The list loads more pages while scrolling. Recipient detail shows payment stats, name and note editing (500 characters maximum), copyable aliases, and paginated transactions with the shared ledger actions. Adding an alias owned by another recipient asks before moving matching transactions or merging the source recipient.
+
+**Apply category** uses the dominant category to file uncategorized transactions. It gathers all matching transaction IDs before changing categories, checks each entry again, and sends one category PATCH per transaction. Progress and partial failures are visible; retry gathers the remaining uncategorized entries. Classification and recipient changes invalidate the shared ledger queries so Transactions and Overview refresh.
+
+Rules supports search, All/Enabled/Disabled/Needs repair filters, enabled toggles, and create/edit sheets. The form reuses the recipient picker, CategorySheet, and subcategory selector. Ignore applies only to future SMS imports. Conflicting enabled rules require confirmation before disabling the existing rule and saving the replacement; if saving fails after disabling, the form reports that partial result. Delete asks for confirmation and leaves existing transactions unchanged.
+
+A `ruleUuid` route parameter opens the saved rule for editing. A `recipientUuid` parameter opens a new rule with that recipient selected. Recipient detail links to **Create rule** or **Open rule**; transaction detail's rule links open the same editor.
 
 ## Use the installed toolchain
 

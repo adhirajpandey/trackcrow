@@ -42,3 +42,45 @@ export const updateRecipient = (c: Credentials, id: string, input: { displayName
   patchJson<Recipient>(c, `/api/recipients/${encodeURIComponent(id)}`, input);
 export const addRecipientAlias = (c: Credentials, id: string, input: AliasInput) =>
   postJson<AliasResult>(c, `/api/recipients/${encodeURIComponent(id)}/aliases`, input);
+
+export type RecipientDetail = Omit<Recipient, 'totalAmount'> & {
+  createdAt: string;
+  updatedAt: string;
+  linkedTransactions: {
+    uuid: string;
+    amount: number;
+    currency: string;
+    type: string;
+    source: string;
+    recipientRaw: string;
+    recipientName: string | null;
+    timestamp: string;
+    category: string | null;
+    subcategory: string | null;
+    categoryUuid: string | null;
+    subcategoryUuid: string | null;
+  }[];
+  stats: {
+    totalAmount: number;
+    averagePayment: number;
+    uncategorizedCount: number;
+    firstPaidAt: string | null;
+    lastPaidAt: string | null;
+  };
+  existingRuleUuid: string | null;
+  dominantCategory: {
+    uuid: string;
+    name: string;
+    transactionCount: number;
+    totalAmount: number;
+  } | null;
+};
+export type AliasTransferImpact = {
+  sourceRecipient: { uuid: string; displayName: string };
+  targetRecipient: { uuid: string; displayName: string };
+  alias: Alias;
+  transactionCount: number;
+  totalAmount: number;
+};
+export const fetchRecipientDetail = (c: Credentials, id: string, signal?: AbortSignal) =>
+  getJson<RecipientDetail>(c, `/api/recipients/${encodeURIComponent(id)}/detail`, signal);
