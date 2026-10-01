@@ -42,7 +42,9 @@ After a successful build, record it:
 node scripts/native-build-plan.js record ../.trackcrow-native-fingerprint
 ```
 
-The development variant ignores `version` and `versionCode`, so a release version bump does not rebuild the development client.
+Recording fingerprints the checkout again after the build, because prebuild creates `android/` and Gradle can rewrite files inside native packages. The development variant ignores `version` and `versionCode`, so a release version bump does not rebuild the development client.
+
+Prebuild is the expensive path. It deletes and recreates `android/`, so the next build reconfigures and recompiles the C++ of every native library. A Kotlin-only change rebuilt in seconds; the same checkout after prebuild took about four minutes.
 
 ## App shell
 
