@@ -2,14 +2,14 @@
   "expo": {
     "name": "TrackCrow",
     "slug": "trackcrow-mobile",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/brand.png",
     "userInterfaceStyle": "light",
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "app.trackcrow.mobile",
-      "versionCode": 3,
+      "versionCode": 4,
       "blockedPermissions": [
         "android.permission.READ_SMS",
         "android.permission.RECORD_AUDIO"
