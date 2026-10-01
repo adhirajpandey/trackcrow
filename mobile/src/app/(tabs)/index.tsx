@@ -1,12 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ArrowRight, CircleCheck, Inbox, KeyRound, Receipt } from 'lucide-react-native';
+import { ArrowRight, KeyRound, Receipt } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmptyState } from '../../components/empty-state';
+import { useSmsIngestion } from '../../lib/sms-ingestion';
 import { ScreenHeader } from '../../components/screen-header';
-import { Button, InlineError, Panel, SectionHeader, Skeleton, TextLink, type Tone, type } from '../../components/ui';
+import {
+  Button,
+  InlineError,
+  Panel,
+  SectionHeader,
+  Skeleton,
+  TextLink,
+  type Tone,
+  type,
+} from '../../components/ui';
 import {
   ApiError,
   fetchCategorySpending,
@@ -23,7 +34,6 @@ import { colors, fonts, radii } from '../../theme';
 
 import { TransactionRow } from '../../components/transaction-row';
 import { queryKeys } from '../../lib/query-keys';
-import { istDateKey } from '../../lib/transaction-dates';
 
 const RECENT_COUNT = 5;
 const CATEGORY_TILES = 4;
@@ -52,6 +62,8 @@ export default function OverviewScreen() {
 }
 
 function Overview({ credentials }: { credentials: Credentials }) {
+  const sms = useSmsIngestion();
+  const importing = sms.enabled && !sms.authError;
   // Recomputed on each refresh so the month rolls over while the app stays open.
   const [now, setNow] = useState(() => new Date());
   const month = useMemo(() => getMonthToDate(now), [now]);
@@ -68,7 +80,11 @@ function Overview({ credentials }: { credentials: Credentials }) {
       endDate: month.previousEndDate,
     }),
     queryFn: ({ signal }) =>
-      fetchSummary(credentials, { startDate: month.previousStartDate, endDate: month.previousEndDate }, signal),
+      fetchSummary(
+        credentials,
+        { startDate: month.previousStartDate, endDate: month.previousEndDate },
+        signal,
+      ),
   });
   const allTime = useQuery({
     queryKey: queryKeys.summary(credentials.apiUrl),
@@ -108,7 +124,11 @@ function Overview({ credentials }: { credentials: Credentials }) {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} colors={[colors.foreground]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+            colors={[colors.foreground]}
+          />
         }
       >
         <Text style={type.note}>spent so far this month</Text>
@@ -121,7 +141,37 @@ function Overview({ credentials }: { credentials: Credentials }) {
         ) : (
           <>
             <SpendCard month={month} summary={summary.data} previous={previous.data} />
-            <ReviewCard count={summary.data.uncategorizedCount} startDate={month.startDate} endDate={month.endDate} />
+            {allTime.isPending || !sms.ready ? (
+              <Skeleton height={140} />
+            ) : allTime.isError ? (
+              <InlineError message={errorMessage(allTime.error)} onRetry={() => void allTime.refetch()} />
+            ) : allTime.data ? (
+              <EmptyState
+                title={
+                  allTime.data.uncategorizedCount > 0
+                    ? `${allTime.data.uncategorizedCount} to review`
+                    : allTime.data.transactionCount > 0
+                      ? 'You’re all caught up'
+                      : importing
+                        ? 'Waiting for your first bank debit'
+                        : 'Auto-import is off'
+                }
+                message={
+                  allTime.data.uncategorizedCount > 0
+                    ? 'Give uncategorized expenses a category.'
+                    : allTime.data.transactionCount > 0
+                      ? 'Every transaction has a category. Add your next expense whenever you need.'
+                      : importing
+                        ? 'New supported bank debits will appear here automatically. Past SMS are not imported.'
+                        : 'Add expenses manually, or turn on SMS import by running setup again in Settings.'
+                }
+                action={
+                  allTime.data.uncategorizedCount > 0
+                    ? { label: 'Review now', onPress: () => router.push('/review') }
+                    : { label: 'Add expense', onPress: () => router.push('/transactions/new') }
+                }
+              />
+            ) : null}
           </>
         )}
 
@@ -221,7 +271,9 @@ function SpendCard({
       <View style={styles.rowBetween}>
         <Text style={type.label}>{month.label}</Text>
         <Text style={[type.label, styles.daysLeft]}>
-          {month.daysLeft === 0 ? 'Last day' : `${month.daysLeft} ${month.daysLeft === 1 ? 'day' : 'days'} left`}
+          {month.daysLeft === 0
+            ? 'Last day'
+            : `${month.daysLeft} ${month.daysLeft === 1 ? 'day' : 'days'} left`}
         </Text>
       </View>
     </Panel>
@@ -240,36 +292,6 @@ function Comparison({ current, previous }: { current: number; previous: number |
       </Text>{' '}
       than this time last month
     </Text>
-  );
-}
-
-function ReviewCard({ count, startDate, endDate }: { count: number; startDate: Date; endDate: Date }) {
-  if (count === 0) {
-    return (
-      <Panel tone="mint" style={[styles.cardPadding, styles.row]}>
-        <CircleCheck size={22} color={colors.primaryInk} />
-        <Text style={[type.body, styles.flex]}>All sorted this month. Every transaction has a category.</Text>
-      </Panel>
-    );
-  }
-  return (
-    <Panel tone="review" raised style={styles.cardPadding}>
-      <View style={styles.row}>
-        <Inbox size={22} color={colors.foreground} />
-        <View style={styles.flex}>
-          <Text style={type.heading}>
-            {count} {count === 1 ? 'transaction needs' : 'transactions need'} a look
-          </Text>
-          <Text style={[type.body, styles.reviewHelper]}>Uncategorized this month</Text>
-        </View>
-      </View>
-      <Button
-        label="Review now"
-        variant="destructive"
-        trailingIcon={ArrowRight}
-        onPress={() => router.navigate({ pathname: '/review', params: { startDate: istDateKey(startDate), endDate: istDateKey(endDate) } })}
-      />
-    </Panel>
   );
 }
 

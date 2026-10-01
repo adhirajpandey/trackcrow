@@ -1,3 +1,4 @@
+import { debugLog } from './debug-log';
 // Queue and HTTP outcomes are kept free of native imports for node:test.
 export const SMS_QUEUE_LIMIT = 200;
 export const SMS_QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -15,6 +16,7 @@ export type SmsImportPayload = {
 };
 export type SmsImportDeps = {
   readCredentials: () => Promise<SmsCredentials | null>;
+  canImport: (credentials: SmsCredentials) => Promise<boolean>;
   readState: () => Promise<string | null>;
   writeState: (state: string) => Promise<void>;
   removeState: () => Promise<void>;
@@ -98,7 +100,9 @@ export function createSmsImporter(deps: SmsImportDeps) {
       return;
     }
     const state = readQueue(await deps.readState(), credentials.owner, deps.now());
-    if (incoming && !state.authError && !state.items.some((item) => item.idempotencyKey === incoming.idempotencyKey)) {
+    const enabled = await deps.canImport(credentials);
+    if (run !== generation) return;
+    if (enabled && incoming && !state.authError && !state.items.some((item) => item.idempotencyKey === incoming.idempotencyKey)) {
       state.items.push({
         sender: incoming.sender, body: incoming.body, receivedAt: incoming.receivedAt,
         idempotencyKey: incoming.idempotencyKey, enqueuedAt: deps.now(),
@@ -107,10 +111,10 @@ export function createSmsImporter(deps: SmsImportDeps) {
     }
     // Persist before sending. A killed process retries the UUID after an uncertain HTTP result.
     await save(state, run);
-    if (!upload || state.authError) return;
+    if (!upload || !enabled || state.authError) return;
     while (state.items.length && deps.now() < deadline && run === generation) {
       const current = await deps.readCredentials();
-      if (current?.owner !== credentials.owner) return;
+      if (current?.owner !== credentials.owner || !(await deps.canImport(current)) || run !== generation) return;
       const item = state.items[0];
       let response: number;
       try {
@@ -122,16 +126,22 @@ export function createSmsImporter(deps: SmsImportDeps) {
           metadata: { storeMessageBody: false },
         });
       } catch {
+        debugLog.write('sms.drain.retry', { reason: 'network', pending: state.items.length }, 'warn');
         break;
       }
       if (run !== generation || (await deps.readCredentials())?.owner !== credentials.owner) return;
-      if (response >= 500 || response === 408 || response === 429) break;
+      if (response >= 500 || response === 408 || response === 429) {
+        debugLog.write('sms.drain.retry', { status: response, pending: state.items.length }, 'warn');
+        break;
+      }
       if (response === 401 || response === 403) {
         // This queue belongs to the rejected session. Do not retain or keep sending its SMS.
         state.items = [];
         state.authError = response;
+        debugLog.write('sms.drain.auth_error', { status: response }, 'error');
       } else {
         state.items.shift();
+        debugLog.write('sms.drain.ok', { status: response, pending: state.items.length });
         // Created, ignored and duplicate succeed. 422 is terminal but not an import.
         if (response === 200 || response === 201) state.lastImportAt = deps.now();
       }

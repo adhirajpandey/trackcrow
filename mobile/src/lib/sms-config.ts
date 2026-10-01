@@ -1,3 +1,4 @@
+import { debugLog } from './debug-log';
 import { useEffect } from 'react';
 import { DEFAULT_API_URL, normalizeApiUrl } from './api/client';
 
@@ -62,17 +63,18 @@ export function createSmsConfigSync(deps: ConfigDependencies) {
     lastFetch = deps.now();
     try {
       const response = await deps.fetchConfig(config ? etag : null);
-      if (response.status === 304) return;
+      if (response.status === 304) { debugLog.write('sms.config.fetch.304'); return; }
       if (!response.ok) return;
       // The server sends a small header list, never parsing expressions.
       const text = await response.text();
       if (new TextEncoder().encode(text).byteLength > 65536) return;
       const next: unknown = JSON.parse(text);
-      if (!validateSmsConfig(next) || !deps.setNative(JSON.stringify(next))) return;
+      if (!validateSmsConfig(next) || !deps.setNative(JSON.stringify(next))) { debugLog.write('sms.config.fetch.invalid', undefined, 'warn'); return; }
+      debugLog.write('sms.config.fetch.200');
       config = next;
       etag = response.headers.get('etag');
       await deps.writeCache(JSON.stringify({ config, etag, lastFetch }));
-    } catch { /* A fetch or storage failure must leave the native config intact. */ }
+    } catch { debugLog.write('sms.config.fetch.invalid', undefined, 'warn'); /* Preserve native config. */ }
   }
 
   return {

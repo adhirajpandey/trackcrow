@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PermissionsAndroid } from 'react-native';
+import { onboarding, canImportStoredSms } from './onboarding';
 import { requireNativeModule } from 'expo';
 import { readStoredCredentials } from './credential-store';
 import { createSmsImporter, type IncomingSms } from './sms-import';
@@ -11,6 +13,11 @@ export const smsImporter = createSmsImporter({
     const credentials = await readStoredCredentials();
     if (!credentials) return null;
     return { ...credentials, owner: native.sessionFingerprint(credentials.apiUrl, credentials.token) };
+  },
+  canImport: async (credentials) => {
+    const setup = await onboarding.read(credentials.apiUrl);
+    const granted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECEIVE_SMS);
+    return canImportStoredSms(setup, granted ? 'granted' : 'denied');
   },
   readState: () => AsyncStorage.getItem(QUEUE_KEY),
   writeState: (state) => AsyncStorage.setItem(QUEUE_KEY, state),
