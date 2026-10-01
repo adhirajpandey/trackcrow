@@ -20,6 +20,7 @@ import { fetchRecipientDetail, updateRecipient, type RecipientDetail } from '../
 import { fetchTransactions, type Transaction } from '../../lib/api/transactions';
 import { formatCurrency, formatTransactionTime } from '../../lib/format';
 import { queryKeys } from '../../lib/query-keys';
+import { recipientForm, reconcileRecipientForm } from '../../lib/recipient-draft';
 
 export default function RecipientDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -38,9 +39,9 @@ function Detail({ credentials: c, id }: { credentials: Credentials; id: string }
   return <RecipientEditor credentials={c} recipient={query.data} />;
 }
 function RecipientEditor({ credentials: c, recipient }: { credentials: Credentials; recipient: RecipientDetail }) {
-  const [name, setName] = useState(recipient.displayName);
-  const [note, setNote] = useState(recipient.note ?? '');
-  const [saved, setSaved] = useState({ name: recipient.displayName, note: recipient.note ?? '' });
+  const [form, setForm] = useState(() => recipientForm(recipient));
+  const { name, note } = form.draft;
+  const saved = form.saved;
   const [aliasOpen, setAliasOpen] = useState(false);
   const [ignore, setIgnore] = useState<Transaction | null>(null);
   const toast = useToast();
@@ -60,11 +61,15 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
   const save = useMutation({
     mutationFn: () => updateRecipient(c, recipient.uuid, { displayName: name.trim(), note: note.trim() || null }),
     onSuccess: async result => {
-      setName(result.displayName); setNote(result.note ?? '');
-      setSaved({ name: result.displayName, note: result.note ?? '' });
+      const saved = { name: result.displayName, note: result.note ?? '' };
+      setForm(previous => ({ ...previous, draft: { ...saved }, saved }));
       await invalidate(); toast({ message: 'Recipient saved.' });
     },
   });
+  // Defer reconciliation during saving so an older in-flight refetch cannot reset the saved result.
+  if (!save.isPending && form.updatedAt !== recipient.updatedAt) {
+    setForm(reconcileRecipientForm(form, recipient));
+  }
   const dirty = name !== saved.name || note !== saved.note;
   const busy = save.isPending || classification.busy || classification.promptOpen || Boolean(ignore);
   return <LedgerPage title="Recipient" footer={dirty ? <StickySaveBar saving={save.isPending}
@@ -90,9 +95,9 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
         </View>
         {recipient.stats.firstPaidAt ? <Text style={type.muted}>First paid {formatTransactionTime(recipient.stats.firstPaidAt)}</Text> : null}
         {recipient.stats.lastPaidAt ? <Text style={type.muted}>Last paid {formatTransactionTime(recipient.stats.lastPaidAt)}</Text> : null}
-        <TextField label="Name" value={name} maxLength={200} editable={!save.isPending} onChangeText={setName} />
+        <TextField label="Name" value={name} maxLength={200} editable={!save.isPending} onChangeText={name => setForm(previous => ({ ...previous, draft: { ...previous.draft, name } }))} />
         <TextField label="Note" value={note} maxLength={500} multiline editable={!save.isPending}
-          hint={`${note.length}/500 characters`} onChangeText={setNote} />
+          hint={`${note.length}/500 characters`} onChangeText={note => setForm(previous => ({ ...previous, draft: { ...previous.draft, note } }))} />
         {save.isError ? <Text accessibilityRole="alert" style={type.error}>{errorMessage(save.error)}</Text> : null}
         <Text style={type.heading}>Aliases</Text>
         {recipient.aliases.length ? recipient.aliases.map(alias => <Panel key={alias.uuid} style={{ padding: 12, gap: 8 }}>
