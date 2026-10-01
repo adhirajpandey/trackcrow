@@ -85,3 +85,29 @@ test('rehydration redacts old attributes and excludes invalid stored events', as
     undefined,
   );
 });
+
+
+test('a failed initial read preserves saved history and retries before persisting', async () => {
+  const history = JSON.stringify([{ ts: 1, level: 'info', event: 'sms.drain.ok' }]);
+  let saved = history;
+  let failing = true;
+  let writes = 0;
+  const log = createDebugLog(async () => ({
+    getItem: async () => {
+      if (failing) throw new Error('temporary read failure');
+      return saved;
+    },
+    setItem: async (_key, value) => { writes++; saved = value; },
+  }), () => 2);
+  log.write('sms.drain.retry');
+  assert.equal((await log.read()).length, 1);
+  assert.equal(saved, history);
+  assert.equal(writes, 0);
+  failing = false;
+  log.write('permission.changed', { permission: 'denied' });
+  assert.deepEqual((await log.read()).map((entry) => entry.event), [
+    'sms.drain.ok', 'sms.drain.retry', 'permission.changed',
+  ]);
+  assert.equal(JSON.parse(saved).length, 3);
+  assert.equal(writes, 1);
+});

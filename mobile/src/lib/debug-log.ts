@@ -80,9 +80,10 @@ export function createDebugLog(storage: () => Promise<Storage>, now = Date.now) 
   let initialized = false;
   async function initialize(store: Storage) {
     if (initialized) return;
+    // A failed read must be retried before any write can replace saved history.
+    const raw = await store.getItem(KEY);
     initialized = true;
     try {
-      const raw = await store.getItem(KEY);
       const saved: unknown = raw ? JSON.parse(raw) : [];
       if (Array.isArray(saved))
         entries = [
@@ -111,8 +112,9 @@ export function createDebugLog(storage: () => Promise<Storage>, now = Date.now) 
           .then(async () => {
             let store: Storage | undefined;
             try {
-              store = await storage();
-              await initialize(store);
+              const candidate = await storage();
+              await initialize(candidate);
+              store = candidate;
             } catch {
               /* Keep the in-memory log. */
             }
