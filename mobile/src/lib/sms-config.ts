@@ -123,3 +123,16 @@ export function useSmsConfig(apiUrl: string | null, sessionToken: string | null)
     return () => { active = false; remove?.(); };
   }, [apiUrl, sessionToken]);
 }
+
+/** Reads coverage names without refreshing or changing native sender configuration. */
+export async function readCachedSmsConfig(apiUrl: string): Promise<string> {
+  try {
+    const { default: storage } = await import('@react-native-async-storage/async-storage');
+    const stored = await storage.getItem(`trackcrow.smsConfig.v1:${normalizeApiUrl(apiUrl)}`);
+    const cached: unknown = stored ? JSON.parse(stored) : null;
+    if (cached && typeof cached === 'object' && 'config' in cached && validateSmsConfig(cached.config)) {
+      return [...new Set(cached.config.banks.map((bank) => bank.name))].join(', ');
+    }
+  } catch { /* Missing or unreadable cache uses the bundled bank names. */ }
+  return 'Kotak, HDFC';
+}
