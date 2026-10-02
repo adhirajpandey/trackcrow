@@ -1,0 +1,15 @@
+# Captures the TrackCrow Dev screenshot set. Run through `corepack pnpm screenshots:android`,
+# which prepares the backend, fixture, Metro, and device, and passes API_URL and SCREENSHOT_TOKEN.
+appId: app.trackcrow.mobile.dev
+name: TrackCrow Android screenshots
+---
+- setOrientation: PORTRAIT
+- runFlow: flows/connect.yaml
+- runFlow: flows/overview.yaml
+- runFlow: flows/transactions.yaml
+- runFlow: flows/review.yaml
+- runFlow: flows/recipients-rules.yaml
+- runFlow: flows/insights.yaml
+- runFlow: flows/more.yaml
+# Last: leaves setup complete and the app on Overview.
+- runFlow: flows/onboarding.yaml

@@ -1,0 +1,46 @@
+appId: app.trackcrow.mobile.dev
+---
+- tapOn:
+    id: tab-more
+- tapOn: Recipients
+- extendedWaitUntil:
+    visible: \d+ recipients
+    timeout: 15000
+- assertVisible: Bluebird Books
+- waitForAnimationToEnd
+- takeScreenshot: 08-recipients
+
+- scrollUntilVisible:
+    element: Juniper Grocers
+- tapOn: Juniper Grocers
+- extendedWaitUntil:
+    visible: Total paid
+    timeout: 15000
+- assertVisible: Weekly groceries and household refills.
+- waitForAnimationToEnd
+- takeScreenshot: 09-recipient-detail
+- tapOn: Back
+- tapOn: Back
+
+- tapOn: Rules
+- extendedWaitUntil:
+    visible: \d+ rules
+    timeout: 15000
+- assertVisible: Juniper groceries
+- waitForAnimationToEnd
+- takeScreenshot: 10-rules
+
+- scrollUntilVisible:
+    element: Juniper groceries
+- tapOn: Juniper groceries
+- extendedWaitUntil:
+    visible: Edit rule
+    timeout: 5000
+- assertVisible: Rule name
+- waitForAnimationToEnd
+- takeScreenshot: 11-rule-editor
+- tapOn: Close
+- extendedWaitUntil:
+    notVisible: Edit rule
+    timeout: 5000
+- tapOn: Back

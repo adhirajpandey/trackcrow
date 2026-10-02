@@ -1,0 +1,45 @@
+appId: app.trackcrow.mobile.dev
+---
+- tapOn:
+    id: tab-more
+- extendedWaitUntil:
+    visible: Connected with an access token
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 13-more
+
+- tapOn: Categories
+- extendedWaitUntil:
+    visible: Add category
+    timeout: 10000
+- extendedWaitUntil:
+    visible: Rename category
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 14-categories
+- tapOn: Back
+
+- tapOn: Accounts
+- extendedWaitUntil:
+    visible: Everyday Savings
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 15-accounts
+- tapOn: Back
+
+- tapOn: Settings
+- extendedWaitUntil:
+    visible: An access token
+    timeout: 10000
+- assertVisible: SMS import:.*
+- waitForAnimationToEnd
+- takeScreenshot: 16-settings
+- back
+
+- tapOn: Diagnostics
+- extendedWaitUntil:
+    visible: This phone
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 17-diagnostics
+- back

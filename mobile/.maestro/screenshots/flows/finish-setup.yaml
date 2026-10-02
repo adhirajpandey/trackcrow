@@ -1,0 +1,11 @@
+# From setup's account-naming step: skip naming and open Overview.
+appId: app.trackcrow.mobile.dev
+---
+- extendedWaitUntil:
+    visible: Name your accounts
+    timeout: 10000
+- tapOn: Skip
+- tapOn: Open Overview
+- extendedWaitUntil:
+    visible: Spent in .*
+    timeout: 15000

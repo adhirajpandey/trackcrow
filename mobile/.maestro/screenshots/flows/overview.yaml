@@ -1,0 +1,13 @@
+appId: app.trackcrow.mobile.dev
+---
+- tapOn:
+    id: tab-overview
+- extendedWaitUntil:
+    visible: Spent in .*
+    timeout: 15000
+- extendedWaitUntil:
+    visible: \d+ to review
+    timeout: 15000
+- assertVisible: Where it went
+- waitForAnimationToEnd
+- takeScreenshot: 01-overview

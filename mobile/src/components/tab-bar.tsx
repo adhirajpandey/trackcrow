@@ -12,6 +12,8 @@ export function TabButton({ icon: Icon, label, a11yLabel, isFocused, ...props }:
       {...props}
       accessibilityRole="tab"
       accessibilityLabel={a11yLabel}
+      // Screen headers repeat the tab names, so UI automation selects tabs by ID.
+      testID={`tab-${a11yLabel.toLowerCase()}`}
       accessibilityState={{ selected: isFocused }}
       style={styles.button}
     >

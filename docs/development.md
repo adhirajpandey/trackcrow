@@ -39,7 +39,7 @@ The app runs at `http://localhost:3000` by default. Sign in with the Google acco
 
 ## Local Database
 
-`docker-compose.yml` runs Postgres 17 as the `db` service on `127.0.0.1:5434`. `pnpm db:reset` rebuilds the local database from the migrations and loads `prisma/seed.sql`, with the newest seeded activity moved to today. Run it again at any time to return to a clean state. `scripts/local-db.mjs` uses hardcoded local URLs and never reads `DATABASE_URL`.
+`docker-compose.yml` runs Postgres 17 as the `db` service on `127.0.0.1:5434`. `pnpm db:reset` rebuilds the local database from the migrations and loads `prisma/seed.sql`, with the newest seeded activity moved to today. Run it again at any time to return to a clean state. `pnpm db:screenshot-reset` replaces only the synthetic account used for Android screenshots (see [the Android guide](android.md#capture-screenshots)). `scripts/local-db.mjs` uses hardcoded local URLs and never reads `DATABASE_URL`.
 
 `prisma/seed.sql` is a one-time sample of production taken in September 2026. It holds about 200 transactions from the previous six months across every category, source, type, classification, and account, plus the recipients, identifiers, rules, and SMS imports they reference. Rules named `seed: ...` (needs repair, disabled, deleted) and one `FAILED` import are added edge cases. A second placeholder user holds copies of 20 rows for checking that users can't see each other's data. The seed is not refreshed from production. Edit it by hand when a migration changes seeded tables.
 
