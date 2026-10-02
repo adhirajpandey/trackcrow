@@ -198,6 +198,10 @@ SMS parsing remains on the server. `src/common/sms-templates.ts` defines the ban
 
 `src/lib/sms-config.ts` validates schema version 1, bank metadata, and 1-9 character ASCII alphanumeric headers before calling `TrackCrowSms.setSenderConfig(json)`. Kotlin validates again and saves accepted JSON in private SharedPreferences. The receiver reads those preferences without JavaScript; a malformed fetch or native rejection preserves the working config. On restart the app restores its validated per-server cache before fetching. With no valid cache, the native matcher uses bundled `KOTAKB` and `HDFCBK` headers. It accepts optional two-letter operator prefixes and one-letter suffixes, such as `AD-HDFCBK-S`. It builds its own escaped matcher; the server sends no regex. This native change requires a new APK.
 
+Before queueing a new arrival, the JavaScript importer checks sign-in, SMS permission, and setup mode, then applies a fixed local discard list. It drops any body containing one of these case-insensitive substrings: `otp`, `one time password`, `one-time password`, `verification code`, `security code`, `authentication code`, `do not share otp`, `do not share this code`, `never share otp`, `valid for`, `expires in`, `use this otp`, or `enter otp`. A transaction alert with one of these phrases in its footer is also discarded. All other messages from supported senders reach backend parsing; no transaction keywords are required on mobile.
+
+The list is bundled in the app and is not server-configured. Matches are never added to the upload queue and emit only a fixed `sms.filter.discarded` diagnostic event. Existing queued messages are unchanged, and a discarded arrival can still trigger a drain of those pending messages. This JavaScript change uses the existing development client; distributing it requires a new release APK.
+
 The native receiver accepts the configured bank sender headers and joins multipart SMS. It assigns a UUID before starting Headless JS. The task reads the saved token and posts this payload with Bearer authentication:
 
 ```json
