@@ -301,6 +301,14 @@ The APK is written to `android/app/build/outputs/apk/release/app-release.apk`. O
 
 Build releases in the production build checkout, never in the development one. TrackCrow Dev has its own package name, so it stays installed beside the release app. A debug build of the production config would share `app.trackcrow.mobile` with a different signing key and require uninstalling the release app, which removes its saved sign-in. Do not build one.
 
+### Release 0.2.0 (4), 2026-10-02
+
+Version 0.2.0 (versionCode 4) is the first Android release prepared for sharing with friends. It includes the app screens, onboarding, and Diagnostics through [PR #92](https://github.com/adhirajpandey/trackcrow/pull/92). The version bump is [PR #93](https://github.com/adhirajpandey/trackcrow/pull/93); the APK was built from commit `c0e19e2f16dd9219d3003cdd3273b3aa554e8560`.
+
+The release build took 15 minutes 43 seconds end to end. APK verification confirmed package `app.trackcrow.mobile`, version `0.2.0 (4)`, and signing certificate SHA-1 `1B:30:9F:FB:F3:E4:02:D8:5B:2A:57:7B:48:F8:06:37:71:53:A1:14`. `RECEIVE_SMS` is present; `READ_SMS` and `RECORD_AUDIO` are absent. Native libraries include only `arm64-v8a` and `armeabi-v7a`. The APK is 64,262,229 bytes (61.29 MiB).
+
+Supported banks are Kotak and HDFC. The owner confirmed that the release works on the phone after the installation and production-verification checklist was provided.
+
 ## Troubleshoot the existing setup
 
 For a Pixel test APK, run mobile checks first and finish the code. In the production build checkout, run the native build plan without `APP_VARIANT`, prebuild only when it says `prebuild`, and run `corepack pnpm android:release:device` from `mobile/`. It builds a signed `arm64-v8a` APK without installing it. Record the plan after the build succeeds. Preserve the generated Android folder and native output between iterations. Use the two-ABI build above when sharing a release with other devices.
