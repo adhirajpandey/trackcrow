@@ -1,0 +1,52 @@
+# Signs TrackCrow Dev in to the local screenshot account with its access token, replacing any saved
+# session, then finishes first-run setup in manual mode if the app asks for it. Captures nothing.
+appId: app.trackcrow.mobile.dev
+---
+# The wrapper has already opened the project on Metro; the first bundle can take a while.
+# Overview, setup, or the sign-in prompt, depending on the app's saved state.
+- extendedWaitUntil:
+    visible: Spent in .*|Welcome to TrackCrow|Connect TrackCrow|connect this phone
+    timeout: 180000
+- openLink: trackcrow-dev://settings
+- extendedWaitUntil:
+    visible: connect this phone
+    timeout: 15000
+- scrollUntilVisible:
+    element: Advanced · Show
+- tapOn: Advanced · Show
+- scrollUntilVisible:
+    element:
+      id: server-url-input
+# Tap past the end of the current URL so the erase removes all of it.
+- tapOn:
+    id: server-url-input
+    point: 97%,50%
+- eraseText: 100
+- inputText: ${API_URL}
+- hideKeyboard
+- scrollUntilVisible:
+    element: Use an access token instead
+- tapOn: Use an access token instead
+- scrollUntilVisible:
+    element:
+      id: access-token-input
+- tapOn:
+    id: access-token-input
+- inputText: ${SCREENSHOT_TOKEN}
+# hideKeyboard fails on the secure token field. Settings scrolls back to the top, and a tap
+# outside the inputs dismisses the keyboard.
+- tapOn: connect this phone
+- scrollUntilVisible:
+    element: Connect with token
+- tapOn: Connect with token
+- extendedWaitUntil:
+    visible: Spent in .*|Welcome to TrackCrow
+    timeout: 30000
+- runFlow:
+    when:
+      visible: Welcome to TrackCrow
+    commands:
+      - tapOn: Get started
+      - tapOn: My bank isn't supported
+      - tapOn: Continue in manual mode
+      - runFlow: finish-setup.yaml

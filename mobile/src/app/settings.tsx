@@ -160,6 +160,7 @@ export default function SettingsScreen() {
               <Text style={type.label}>Server URL</Text>
               <TextInput
                 accessibilityLabel="Server URL"
+                testID="server-url-input"
                 style={styles.input}
                 value={apiUrl}
                 onChangeText={setApiUrl}

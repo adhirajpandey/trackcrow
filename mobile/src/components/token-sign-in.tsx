@@ -47,6 +47,7 @@ export function TokenSignIn({
       <Text style={type.label}>Access token</Text>
       <TextInput
         accessibilityLabel="Access token"
+        testID="access-token-input"
         style={inputStyle}
         value={token}
         onChangeText={setToken}

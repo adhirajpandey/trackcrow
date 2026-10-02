@@ -1,0 +1,31 @@
+# Runs setup again from Settings and finishes it in manual mode without requesting SMS permission.
+appId: app.trackcrow.mobile.dev
+---
+- tapOn:
+    id: tab-more
+- tapOn: Settings
+- scrollUntilVisible:
+    element: Run setup again
+- tapOn: Run setup again
+- extendedWaitUntil:
+    visible: Welcome to TrackCrow
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 18-onboarding-welcome
+
+- tapOn: Get started
+- extendedWaitUntil:
+    visible: Which bank sends your transaction SMS.*
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 19-onboarding-bank
+
+- tapOn: Kotak
+- extendedWaitUntil:
+    visible: New bank SMS, tracked automatically
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 20-onboarding-sms
+
+- tapOn: Use manual tracking instead
+- runFlow: finish-setup.yaml

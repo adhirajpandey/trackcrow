@@ -1,0 +1,59 @@
+appId: app.trackcrow.mobile.dev
+---
+- tapOn:
+    id: tab-transactions
+# The count reads "…" until the first page loads.
+- extendedWaitUntil:
+    visible: Showing \d+ of \d+ entries.*
+    timeout: 15000
+- assertVisible: Copper Kettle Cafe
+- waitForAnimationToEnd
+- takeScreenshot: 02-transactions
+
+- tapOn: Filter
+- extendedWaitUntil:
+    visible: Filter transactions
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: 03-transaction-filters
+- tapOn: Close
+- extendedWaitUntil:
+    notVisible: Filter transactions
+    timeout: 5000
+
+# The newest entry is filed by the Morning coffee rule.
+- tapOn: Copper Kettle Cafe
+- extendedWaitUntil:
+    visible: Filed by rule.*
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 04-transaction-detail
+
+- scrollUntilVisible:
+    element: More categories…
+- tapOn: More categories…
+- extendedWaitUntil:
+    visible: All categories
+    timeout: 5000
+- waitForAnimationToEnd
+- takeScreenshot: 05-category-picker
+- tapOn: Close
+- extendedWaitUntil:
+    notVisible: All categories
+    timeout: 5000
+- tapOn: Back
+
+- extendedWaitUntil:
+    visible: Showing \d+ of \d+ entries.*
+    timeout: 10000
+- tapOn: Add transaction
+- extendedWaitUntil:
+    visible: Choose or create recipient
+    timeout: 10000
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: 06-add-transaction
+- tapOn: Back
+- extendedWaitUntil:
+    visible: Showing \d+ of \d+ entries.*
+    timeout: 10000

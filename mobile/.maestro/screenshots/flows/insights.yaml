@@ -1,0 +1,13 @@
+appId: app.trackcrow.mobile.dev
+---
+- tapOn:
+    id: tab-insights
+- extendedWaitUntil:
+    visible: \d+ transactions
+    timeout: 15000
+# Category bars render after their own request; their labels include the share of spending.
+- extendedWaitUntil:
+    visible: .* of spending, .*
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 12-insights

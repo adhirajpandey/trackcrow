@@ -241,6 +241,33 @@ The native module comes from `react-native-nitro-google-signin` through autolink
 
 Debug builds are signed with the public Android debug keystore. Register its SHA-1 only in a local or development Google Cloud project, never in the production project. For release builds, register the release key's SHA-1 in the production project. Print it with `keytool -list -v -keystore <release.keystore> -alias <alias>`.
 
+## Capture screenshots
+
+`corepack pnpm screenshots:android` (from `mobile/`, Windows) drives the installed **TrackCrow Dev** through the main screens with [Maestro](https://docs.maestro.dev) and writes `01-overview.png` to `20-onboarding-sms.png` into `mobile/artifacts/screenshots/android/`. It runs the current checkout's JavaScript through Metro. It never runs prebuild, Gradle, or an install.
+
+It needs the Maestro CLI 2.11 or newer installed natively on Windows (not WSL) with its `bin` folder on PATH, `JAVA_HOME` pointing to JDK 17 or newer, the SDK's adb, Docker, and both packages' dependencies installed. Prepare the phone: unlock it, use portrait orientation and default font and display size, and hide sensitive notifications. Pass `-Device <serial>` when more than one device is connected; the same serial goes to adb and Maestro, over USB or wireless debugging.
+
+The command:
+
+1. Checks the tools, the device, and that TrackCrow Dev is installed, and revokes its SMS permission.
+2. Reuses the backend on port 3000 or starts this checkout's, starting the database container if needed.
+3. Runs `pnpm db:screenshot-reset`. This replaces only the synthetic screenshot account from `prisma/screenshot-fixture.sql` and leaves other local data alone. Its access token is saved in the gitignored `.screenshot-token`.
+4. Reuses Metro on port 8082 if it serves this checkout, or starts it with `APP_VARIANT=development`, then builds the bundle once so the app doesn't time out on a cold build.
+5. Maps ports 3000 and 8082 with `adb reverse`, then restarts TrackCrow Dev on the explicit Metro URL.
+6. Runs `mobile/.maestro/screenshots/capture.yaml`. It connects Settings to `http://127.0.0.1:3000` with the screenshot token, captures each screen without saving changes, and finally runs setup again in manual mode.
+
+Afterwards TrackCrow Dev stays signed in to the local screenshot account with setup complete. Its previous session is replaced without being revoked; sign in again from Settings to use your own account. Metro and the backend keep running for the next capture, with logs in `mobile/artifacts/logs/`.
+
+Flows select elements by visible text. Tabs and the Settings server URL and token fields have a `testID`, because their labels repeat elsewhere on screen. Each capture first waits for its screen's data, then for animations to end.
+
+| Symptom | Recovery |
+| --- | --- |
+| `TrackCrow Dev ... is not installed` | Build and install it with the development client workflow above. The screenshot command never builds. |
+| `Metro on port 8082 serves ...` | Metro is running for another checkout. Stop it, or run the command from that checkout. |
+| `rejected the screenshot token` | The backend on port 3000 uses a different database. Point its `DATABASE_URL` at the local container. |
+| Maestro fails on a step | The failing step's screenshot and view hierarchy are in `mobile/artifacts/maestro-run/`. Delete that folder afterwards; its logs can contain the local token. |
+| A first-launch developer menu covers the app | Dismiss it once on the phone; the dev client remembers it. |
+
 ## Build a release APK
 
 A release APK carries its own JavaScript, so it runs without Metro. It is signed with the TrackCrow release key. Android installs an update only when it is signed with the same key as the installed app, so every release must use that key.

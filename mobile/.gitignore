@@ -18,6 +18,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Screenshots, Maestro output, and helper logs
+/artifacts/
+
 # Metro
 .metro-health-check*
 
