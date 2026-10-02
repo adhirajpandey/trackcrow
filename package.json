@@ -14,7 +14,8 @@
     "test:unit": "jest src/common src/server --runInBand",
     "test:db": "node scripts/local-db.mjs test",
     "db:reset": "node scripts/local-db.mjs reset",
-    "db:migrate": "node scripts/local-db.mjs migrate"
+    "db:migrate": "node scripts/local-db.mjs migrate",
+    "db:screenshot-reset": "node scripts/local-db.mjs screenshot-reset"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

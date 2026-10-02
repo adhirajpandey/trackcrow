@@ -24,6 +24,7 @@
 - `pnpm test:unit`: run focused unit tests under `src/common` and `src/server`.
 - `pnpm test:db`: run the PostgreSQL OAuth and mobile auth integration suites against a disposable database in the local container (needs Docker).
 - `pnpm db:reset`: recreate the local database from migrations and `prisma/seed.sql` (needs Docker).
+- `pnpm db:screenshot-reset`: replace only the synthetic Android screenshot account from `prisma/screenshot-fixture.sql` and save its local token in `.screenshot-token`.
 - `pnpm db:migrate --name <change>`: create and apply a migration against the local database (needs Docker). Use it instead of calling `prisma migrate dev` directly.
 - `pnpm exec prisma generate`: regenerate the Prisma client.
 
@@ -31,7 +32,7 @@
 - Develop and test against the local Docker Compose database on `127.0.0.1:5434`. `db:reset`, `db:migrate`, and `test:db` use hardcoded local URLs and ignore `DATABASE_URL`.
 - Never connect to the production database. A checkout's `.env` holds local values only; never put production credentials in it.
 - Never run `prisma migrate dev` or `prisma migrate reset` against production: they can drop data. The owner applies production migrations with `prisma migrate deploy` as described in `docs/development.md`.
-- A schema change needs a migration, and `pnpm db:reset` must still load `prisma/seed.sql`. Update the seed in the same change when a migration alters seeded tables.
+- A schema change needs a migration, and `pnpm db:reset` must still load `prisma/seed.sql`. Update the seed and `prisma/screenshot-fixture.sql` in the same change when a migration alters their tables.
 
 ## Coding Style & Naming Conventions
 - Language: TypeScript with `strict` mode enabled (`tsconfig.json`).
