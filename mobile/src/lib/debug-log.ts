@@ -5,6 +5,7 @@ export type DebugEntry = {
   attrs?: Record<string, boolean | number | string>;
 };
 const events = new Set([
+  'sms.filter.discarded',
   'sms.drain.ok',
   'sms.drain.retry',
   'sms.drain.auth_error',

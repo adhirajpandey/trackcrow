@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { debugLog } from './debug-log';
 import { createSmsImporter, SMS_QUEUE_LIMIT, SMS_QUEUE_TTL_MS, type IncomingSms, type SmsCredentials, type SmsImportPayload } from './sms-import';
 
 const NOW = Date.UTC(2026, 8, 30, 12);
@@ -15,11 +16,12 @@ function fixture() {
   let now = NOW;
   let post: (payload: SmsImportPayload) => Promise<number> = async () => 201;
   const requests: SmsImportPayload[] = [];
+  const writes: string[] = [];
   const importer = createSmsImporter({
     readCredentials: async () => credentials,
     canImport: async () => enabled,
     readState: async () => stored,
-    writeState: async (value) => { stored = value; },
+    writeState: async (value) => { writes.push(value); stored = value; },
     removeState: async () => { stored = null; },
     now: () => now,
     post: async (_, payload) => {
@@ -29,7 +31,7 @@ function fixture() {
     },
   });
   return {
-    importer, requests,
+    importer, requests, writes,
     get stored() { return stored; },
     setStored(value: string | null) { stored = value; },
     setCredentials(value: SmsCredentials | null) { credentials = value; },
@@ -249,4 +251,64 @@ test('paused imports still erase queued text on sign-out and never reuse another
   await f.importer.refresh();
   assert.equal(f.stored, null);
   assert.equal(f.requests.length, 1);
+});
+
+
+test('discards new OTP arrivals before any queue persistence or upload', async (t) => {
+  const logged = t.mock.method(debugLog, 'write', () => {});
+  const f = fixture();
+  const sms = { ...message(), body: 'Your OTP is 123456. Do not share this code.' };
+  await f.importer.handleIncoming(sms);
+  assert.equal(f.requests.length, 0);
+  assert.ok(f.writes.every((value) => !value.includes(sms.body) && !value.includes(sms.idempotencyKey)));
+  assert.equal(f.importer.getSnapshot().pending, 0);
+  assert.equal(f.importer.getSnapshot().lastImportAt, null);
+  assert.deepEqual(logged.mock.calls.map((call) => call.arguments), [['sms.filter.discarded']]);
+});
+
+test('checks eligibility before recording a local discard', async (t) => {
+  const logged = t.mock.method(debugLog, 'write', () => {});
+  for (const mode of ['signed-out', 'manual'] as const) {
+    const f = fixture();
+    if (mode === 'signed-out') f.setCredentials(null);
+    else f.setEnabled(false);
+    await f.importer.handleIncoming({ ...message(), body: 'Your OTP is 123456' });
+    assert.equal(f.requests.length, 0);
+    assert.equal(f.importer.getSnapshot().pending, 0);
+  }
+  assert.equal(logged.mock.calls.length, 0);
+});
+
+test('a discarded arrival still drains valid pending messages', async () => {
+  const f = fixture();
+  f.setPost(async () => { throw new Error('offline'); });
+  await f.importer.handleIncoming(message());
+  f.setPost(async () => 201);
+  const otp = { ...message(2), body: 'Verification code: 123456' };
+  await f.importer.handleIncoming(otp);
+  assert.deepEqual(f.requests.map((request) => request.data.idempotencyKey), [message().idempotencyKey, message().idempotencyKey]);
+  assert.ok(f.writes.every((value) => !value.includes(otp.body) && !value.includes(otp.idempotencyKey)));
+  assert.equal(f.importer.getSnapshot().pending, 0);
+});
+
+test('nonmatching notices are queued and uploaded without transaction keywords', async () => {
+  const f = fixture();
+  const sms = { ...message(), body: 'Your monthly statement is ready.' };
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(sms);
+  assert.equal(f.requests[0].data.message, sms.body);
+  assert.equal(f.importer.getSnapshot().pending, 1);
+  f.setPost(async () => 201);
+  await f.importer.drain();
+  assert.deepEqual(f.requests[1], f.requests[0]);
+  assert.equal(f.importer.getSnapshot().pending, 0);
+});
+
+test('existing queued messages are not filtered by the new-arrival policy', async () => {
+  const f = fixture();
+  const sms = { ...message(), body: 'Existing OTP message: 123456' };
+  f.setStored(JSON.stringify({ owner: 'session-a', items: [{ ...sms, enqueuedAt: NOW }], lastImportAt: null, authError: null }));
+  await f.importer.drain();
+  assert.equal(f.requests[0].data.message, sms.body);
+  assert.equal(f.importer.getSnapshot().pending, 0);
 });

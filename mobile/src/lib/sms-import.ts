@@ -1,4 +1,5 @@
 import { debugLog } from './debug-log';
+import { shouldDiscardSms } from './sms-filter';
 // Queue and HTTP outcomes are kept free of native imports for node:test.
 export const SMS_QUEUE_LIMIT = 200;
 export const SMS_QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -103,11 +104,15 @@ export function createSmsImporter(deps: SmsImportDeps) {
     const enabled = await deps.canImport(credentials);
     if (run !== generation) return;
     if (enabled && incoming && !state.authError && !state.items.some((item) => item.idempotencyKey === incoming.idempotencyKey)) {
-      state.items.push({
-        sender: incoming.sender, body: incoming.body, receivedAt: incoming.receivedAt,
-        idempotencyKey: incoming.idempotencyKey, enqueuedAt: deps.now(),
-      });
-      state.items = state.items.slice(-SMS_QUEUE_LIMIT);
+      if (shouldDiscardSms(incoming.body)) {
+        debugLog.write('sms.filter.discarded');
+      } else {
+        state.items.push({
+          sender: incoming.sender, body: incoming.body, receivedAt: incoming.receivedAt,
+          idempotencyKey: incoming.idempotencyKey, enqueuedAt: deps.now(),
+        });
+        state.items = state.items.slice(-SMS_QUEUE_LIMIT);
+      }
     }
     // Persist before sending. A killed process retries the UUID after an uncertain HTTP result.
     await save(state, run);

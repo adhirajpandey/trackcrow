@@ -111,3 +111,15 @@ test('a failed initial read preserves saved history and retries before persistin
   assert.equal(JSON.parse(saved).length, 3);
   assert.equal(writes, 1);
 });
+
+
+test('persists the fixed local SMS discard event without message attributes', async () => {
+  let saved = '';
+  const log = createDebugLog(async () => ({
+    getItem: async () => null,
+    setItem: async (_key, value) => { saved = value; },
+  }), () => 123);
+  log.write('sms.filter.discarded');
+  assert.deepEqual(await log.read(), [{ ts: 123, level: 'info', event: 'sms.filter.discarded', attrs: undefined }]);
+  assert.deepEqual(JSON.parse(saved), [{ ts: 123, level: 'info', event: 'sms.filter.discarded' }]);
+});
