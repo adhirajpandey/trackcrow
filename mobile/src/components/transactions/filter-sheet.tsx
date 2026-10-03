@@ -1,5 +1,5 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Check, ChevronDown, ChevronUp, X } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, X } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Category } from '../../lib/api/categories';
@@ -7,7 +7,7 @@ import type { ClassificationSource, TransactionFilters } from '../../lib/api/tra
 import { colors, fonts, minTarget, radii } from '../../theme';
 import { SearchField } from '../search-field';
 import { Sheet } from '../sheet';
-import { Button, type } from '../ui';
+import { Button, Checkbox, Radio, type } from '../ui';
 
 /** Category rows shown before "See all" expands the list. */
 const COLLAPSED_CATEGORIES = 5;
@@ -124,7 +124,7 @@ export function FilterSheet({
                 hitSlop={6}
                 style={styles.selectedChip}
               >
-                <Box checked />
+                <Checkbox checked />
                 <Text style={styles.selectedChipText}>{name}</Text>
                 <X size={14} color={colors.foreground} strokeWidth={2.5} />
               </Pressable>
@@ -156,7 +156,7 @@ export function FilterSheet({
                   checked && styles.optionChecked,
                 ]}
               >
-                <Box checked={checked} />
+                <Checkbox checked={checked} />
                 <Text style={styles.optionText}>{name}</Text>
               </Pressable>
             );
@@ -176,7 +176,7 @@ export function FilterSheet({
                 onPress={() => toggleSource(source)}
                 style={[styles.option, styles.cell, checked && styles.optionChecked]}
               >
-                <Box checked={checked} />
+                <Checkbox checked={checked} />
                 <Text style={[styles.optionText, styles.cellText]} numberOfLines={1} adjustsFontSizeToFit>
                   {label}
                 </Text>
@@ -197,7 +197,7 @@ export function FilterSheet({
                 onPress={() => setDraft((old) => ({ ...old, sortBy, sortOrder }))}
                 style={[styles.option, styles.half, checked && styles.optionChecked]}
               >
-                <View style={styles.radio}>{checked ? <View style={styles.radioDot} /> : null}</View>
+                <Radio checked={checked} />
                 <Text style={styles.optionText}>{label}</Text>
               </Pressable>
             );
@@ -214,14 +214,6 @@ export function FilterSheet({
   );
 }
 
-/** A square checkbox; checked boxes are filled green with an ink check. */
-function Box({ checked }: { checked: boolean }) {
-  return (
-    <View style={[styles.box, checked && styles.boxChecked]}>
-      {checked ? <Check size={13} color={colors.foreground} strokeWidth={3} /> : null}
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
@@ -273,26 +265,4 @@ const styles = StyleSheet.create({
   cell: { flex: 1, paddingHorizontal: 8, gap: 6 },
   cellText: { fontSize: 14 },
   half: { flexBasis: '47%', flexGrow: 1 },
-  box: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 4,
-    backgroundColor: colors.card,
-  },
-  boxChecked: { backgroundColor: colors.primary },
-  radio: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    backgroundColor: colors.card,
-  },
-  radioDot: { width: 10, height: 10, borderRadius: radii.pill, backgroundColor: colors.foreground },
 });

@@ -11,6 +11,83 @@ import { TextField } from '../text-field';
 import { CategorySheet } from '../category-sheet';
 import { SelectSheet } from '../select-sheet';
 import { Button, Chip, Panel, type } from '../ui';
+export const paymentTypes: TransactionType[] = ['UPI', 'CARD', 'CASH', 'NETBANKING', 'OTHER'];
+
+export type TransactionPicker = 'category' | 'subcategory' | 'type' | 'account';
+
+export function amountError(amount: string) {
+  return amount && (!Number.isFinite(Number(amount)) || Number(amount) <= 0) ? 'Enter an amount above zero.' : undefined;
+}
+
+export function openIstPicker(mode: 'date' | 'time', time: string, onPick: (time: string) => void) {
+  DateTimePickerAndroid.open({
+    value: new Date(parseIstDateTime(time) ?? Date.now()),
+    mode,
+    is24Hour: true,
+    timeZoneName: 'Asia/Kolkata',
+    onValueChange: (_event, date) => {
+      if (date) onPick(istDateTime(date.toISOString()));
+    },
+  });
+}
+
+export function TransactionPickers({
+  picker,
+  draft,
+  onChange,
+  onClose,
+  categories,
+  accounts,
+}: {
+  picker: TransactionPicker | null;
+  draft: TransactionDraft;
+  onChange: (draft: TransactionDraft) => void;
+  onClose: () => void;
+  categories: Category[];
+  accounts: Account[];
+}) {
+  const category = categories.find((item) => item.uuid === draft.categoryUuid);
+  return (
+    <>
+      <CategorySheet
+        open={picker === 'category'}
+        categories={categories}
+        selected={draft.categoryUuid}
+        selectedSubcategory={draft.subcategoryUuid}
+        onClose={onClose}
+        onSelect={(categoryUuid, subcategoryUuid) => onChange({ ...draft, categoryUuid, subcategoryUuid })}
+      />
+      <SelectSheet
+        open={picker === 'subcategory'}
+        title="Subcategory"
+        selected={draft.subcategoryUuid ?? ''}
+        options={[
+          { value: '', label: 'None' },
+          ...(category?.subcategories ?? []).map((sub) => ({ value: sub.uuid, label: sub.name })),
+        ]}
+        onClose={onClose}
+        onSelect={(value) => onChange({ ...draft, subcategoryUuid: value || null })}
+      />
+      <SelectSheet
+        open={picker === 'account'}
+        title="Account"
+        selected={draft.accountUuid ?? ''}
+        options={[{ value: '', label: 'None' }, ...accounts.map((item) => ({ value: item.uuid, label: item.name }))]}
+        onClose={onClose}
+        onSelect={(value) => onChange({ ...draft, accountUuid: value || null })}
+      />
+      <SelectSheet
+        open={picker === 'type'}
+        title="Payment type"
+        selected={draft.type}
+        options={paymentTypes.map((value) => ({ value, label: value }))}
+        onClose={onClose}
+        onSelect={(value) => onChange({ ...draft, type: value as TransactionType })}
+      />
+    </>
+  );
+}
+
 export function AmountEntry({
   draft,
   onChange,
@@ -28,11 +105,7 @@ export function AmountEntry({
       onChangeText={(amount) => onChange({ ...draft, amount })}
       autoFocus={autoFocus}
       editable={!disabled}
-      error={
-        draft.amount && (!Number.isFinite(Number(draft.amount)) || Number(draft.amount) <= 0)
-          ? 'Enter an amount above zero.'
-          : undefined
-      }
+      error={amountError(draft.amount)}
     />
   );
 }
@@ -51,20 +124,9 @@ export function TransactionFields({
   classification?: boolean;
   disabled?: boolean;
 }) {
-  const [picker, setPicker] = useState<'category' | 'subcategory' | 'type' | 'account' | null>(null);
+  const [picker, setPicker] = useState<TransactionPicker | null>(null);
   const category = categories.find((item) => item.uuid === draft.categoryUuid);
   const account = accounts.find((item) => item.uuid === draft.accountUuid);
-  function chooseDate(mode: 'date' | 'time') {
-    DateTimePickerAndroid.open({
-      value: new Date(parseIstDateTime(draft.time) ?? Date.now()),
-      mode,
-      is24Hour: true,
-      timeZoneName: 'Asia/Kolkata',
-      onValueChange: (_event, date) => {
-        if (date) onChange({ ...draft, time: istDateTime(date.toISOString()) });
-      },
-    });
-  }
   return (
     <>
       {classification ? (
@@ -126,13 +188,13 @@ export function TransactionFields({
             label="Choose date"
             variant="secondary"
             disabled={disabled}
-            onPress={() => chooseDate('date')}
+            onPress={() => openIstPicker('date', draft.time, (time) => onChange({ ...draft, time }))}
           />
           <Button
             label="Choose time"
             variant="secondary"
             disabled={disabled}
-            onPress={() => chooseDate('time')}
+            onPress={() => openIstPicker('time', draft.time, (time) => onChange({ ...draft, time }))}
           />
         </View>
         <TextField
@@ -155,46 +217,13 @@ export function TransactionFields({
           onChangeText={(locationRaw) => onChange({ ...draft, locationRaw })}
         />
       </Panel>
-      <CategorySheet
-        open={picker === 'category'}
+      <TransactionPickers
+        picker={picker}
+        draft={draft}
+        onChange={onChange}
+        onClose={() => setPicker(null)}
         categories={categories}
-        selected={draft.categoryUuid}
-        selectedSubcategory={draft.subcategoryUuid}
-        onClose={() => setPicker(null)}
-        onSelect={(categoryUuid, subcategoryUuid) => onChange({ ...draft, categoryUuid, subcategoryUuid })}
-      />
-      <SelectSheet
-        open={picker === 'subcategory'}
-        title="Subcategory"
-        selected={draft.subcategoryUuid ?? ''}
-        options={[
-          { value: '', label: 'None' },
-          ...(category?.subcategories ?? []).map((sub) => ({ value: sub.uuid, label: sub.name })),
-        ]}
-        onClose={() => setPicker(null)}
-        onSelect={(value) => onChange({ ...draft, subcategoryUuid: value || null })}
-      />
-      <SelectSheet
-        open={picker === 'account'}
-        title="Account"
-        selected={draft.accountUuid ?? ''}
-        options={[
-          { value: '', label: 'None' },
-          ...accounts.map((item) => ({ value: item.uuid, label: item.name })),
-        ]}
-        onClose={() => setPicker(null)}
-        onSelect={(value) => onChange({ ...draft, accountUuid: value || null })}
-      />
-      <SelectSheet
-        open={picker === 'type'}
-        title="Payment type"
-        selected={draft.type}
-        options={(['UPI', 'CARD', 'CASH', 'NETBANKING', 'OTHER'] as const).map((value) => ({
-          value,
-          label: value,
-        }))}
-        onClose={() => setPicker(null)}
-        onSelect={(value) => onChange({ ...draft, type: value as TransactionType })}
+        accounts={accounts}
       />
     </>
   );

@@ -1,13 +1,13 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { ChevronRight } from 'lucide-react-native';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import type { Category } from '../lib/api/categories';
 import { colors, fonts, minTarget, radii } from '../theme';
 import { EmptyState } from './empty-state';
 import { SearchField } from './search-field';
 import { Sheet } from './sheet';
-import { Button, type } from './ui';
+import { Button, Radio, type } from './ui';
 
 type Selection = { categoryUuid: string; subcategoryUuid: string | null };
 
@@ -138,7 +138,7 @@ export function CategorySheet({
                 style={[styles.row, checked && styles.selected]}
               >
                 <Text style={styles.rowText}>{item.name}</Text>
-                <View style={styles.radio}>{checked ? <View style={styles.radioDot} /> : null}</View>
+                <Radio checked={checked} />
               </Pressable>
             );
           })
@@ -186,15 +186,4 @@ const styles = StyleSheet.create({
   },
   selected: { backgroundColor: colors.paperMint },
   rowText: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.foreground },
-  radio: {
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    backgroundColor: colors.card,
-  },
-  radioDot: { width: 10, height: 10, borderRadius: radii.pill, backgroundColor: colors.foreground },
 });
