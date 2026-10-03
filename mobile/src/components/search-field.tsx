@@ -1,3 +1,4 @@
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { CircleX, Search } from 'lucide-react-native';
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { colors, fonts, minTarget, radii } from '../theme';
@@ -7,16 +8,20 @@ export function SearchField({
   label,
   value,
   onChangeText,
+  inSheet = false,
   ...props
 }: Omit<TextInputProps, 'value' | 'onChangeText'> & {
   label: string;
+  /** Inside a bottom sheet, use its input so the sheet moves with the keyboard. */
+  inSheet?: boolean;
   value: string;
   onChangeText: (value: string) => void;
 }) {
+  const Input = inSheet ? BottomSheetTextInput : TextInput;
   return (
     <View style={styles.field}>
       <Search size={18} color={colors.secondaryForeground} strokeWidth={2.25} />
-      <TextInput
+      <Input
         accessibilityLabel={label}
         placeholderTextColor={colors.mutedForeground}
         value={value}
