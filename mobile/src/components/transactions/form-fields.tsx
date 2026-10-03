@@ -159,8 +159,9 @@ export function TransactionFields({
         open={picker === 'category'}
         categories={categories}
         selected={draft.categoryUuid}
+        selectedSubcategory={draft.subcategoryUuid}
         onClose={() => setPicker(null)}
-        onSelect={(categoryUuid) => onChange({ ...draft, categoryUuid, subcategoryUuid: null })}
+        onSelect={(categoryUuid, subcategoryUuid) => onChange({ ...draft, categoryUuid, subcategoryUuid })}
       />
       <SelectSheet
         open={picker === 'subcategory'}

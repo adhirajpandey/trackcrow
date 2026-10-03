@@ -6,10 +6,11 @@ import {
   type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { BackHandler, StyleSheet, Text, View } from 'react-native';
+import { ChevronLeft } from 'lucide-react-native';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radii } from '../theme';
+import { colors, fonts, radii } from '../theme';
 import { TextLink, type } from './ui';
 export type SheetProps = {
   open: boolean;
@@ -18,8 +19,9 @@ export type SheetProps = {
   children: ReactNode;
   /** Actions pinned to the bottom edge while the content scrolls. */
   footer?: ReactNode;
+  onBack?: () => void;
 };
-export function Sheet({ open, title, onClose, children, footer }: SheetProps) {
+export function Sheet({ open, title, onClose, children, footer, onBack }: SheetProps) {
   const modal = useRef<BottomSheetModal>(null);
   const presented = useRef(false);
   const insets = useSafeAreaInsets();
@@ -36,11 +38,12 @@ export function Sheet({ open, title, onClose, children, footer }: SheetProps) {
   useEffect(() => {
     if (!open) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      modal.current?.dismiss();
+      if (onBack) onBack();
+      else modal.current?.dismiss();
       return true;
     });
     return () => subscription.remove();
-  }, [open]);
+  }, [open, onBack]);
   const backdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} pressBehavior="close" />
@@ -79,6 +82,12 @@ export function Sheet({ open, title, onClose, children, footer }: SheetProps) {
         style={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}
         accessibilityViewIsModal
       >
+        {onBack ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={12} onPress={onBack} style={styles.back}>
+            <ChevronLeft size={16} color={colors.primaryInk} strokeWidth={2.5} />
+            <Text style={styles.backText}>Back</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.header}>
           <Text accessibilityRole="header" style={[type.heading, styles.title]}>
             {title}
@@ -95,5 +104,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 16, gap: 12 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { flex: 1 },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', marginBottom: -6 },
+  backText: { fontFamily: fonts.bold, fontSize: 14, color: colors.primaryInk, textDecorationLine: 'underline' },
   footer: { paddingHorizontal: 16, paddingTop: 12, gap: 10, backgroundColor: colors.card },
 });

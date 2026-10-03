@@ -118,7 +118,8 @@ export function RuleEditor({ credentials: c, selection, onClose }: {
     {picker === 'recipient' ? <RecipientPicker credentials={c} onClose={() => setPicker(null)}
       onSelect={recipient => change({ recipient })} /> : null}
     <CategorySheet open={picker === 'category'} categories={categories.data ?? []} selected={draft.categoryUuid}
-      onClose={() => setPicker(null)} onSelect={categoryUuid => change({ categoryUuid, subcategoryUuid: null })} />
+      selectedSubcategory={draft.subcategoryUuid} onClose={() => setPicker(null)}
+      onSelect={(categoryUuid, subcategoryUuid) => change({ categoryUuid, subcategoryUuid })} />
     <SelectSheet open={picker === 'subcategory'} title="Subcategory" selected={draft.subcategoryUuid ?? ''}
       options={[{ value: '', label: 'None' }, ...(category?.subcategories ?? []).map(item => ({ value: item.uuid, label: item.name }))]}
       onClose={() => setPicker(null)} onSelect={value => change({ subcategoryUuid: value || null })} />
