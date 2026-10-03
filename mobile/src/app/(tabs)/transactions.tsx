@@ -1,15 +1,14 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { FileText, Funnel, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
-import { EmptyState } from '../../components/empty-state';
-import { TextField } from '../../components/text-field';
-import { Button, InlineError, Panel, Skeleton, type } from '../../components/ui';
-import { IgnoreRecipient, useClassification } from '../../components/transactions/actions';
+import { SearchField } from '../../components/search-field';
+import { Button, DashedPanel, InlineError, Panel, Skeleton, type } from '../../components/ui';
+import { useClassification } from '../../components/transactions/actions';
 import { FilterSheet } from '../../components/transactions/filter-sheet';
 import { LedgerRow } from '../../components/transactions/ledger-row';
 import { PeriodRangeSheet } from '../../components/transactions/period-range-sheet';
@@ -27,7 +26,7 @@ import { dayLabel, monthPeriod } from '../../lib/transaction-dates';
 import { decodeFilters, encodeFilters, hasExtraFilters } from '../../lib/transaction-filters';
 import { useSmsIngestion } from '../../lib/sms-ingestion';
 import { fetchSummary } from '../../lib/api/dashboard';
-import { colors } from '../../theme';
+import { colors, minTarget, radii, shadows } from '../../theme';
 export default function TransactionsScreen() {
   return (
     <TransactionSession>{(credentials) => <Transactions credentials={credentials} />}</TransactionSession>
@@ -51,7 +50,6 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
   const search = searchDraft.value;
   const [filterOpen, setFilterOpen] = useState(false),
     [customOpen, setCustomOpen] = useState(false);
-  const [ignore, setIgnore] = useState<Transaction | null>(null);
   const [now, setNow] = useState(() => new Date());
   const list = useRef<FlashListRef<ReturnType<typeof groupTransactionDays>[number]>>(null);
   const options = useTransactionOptions(c);
@@ -87,6 +85,10 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
   );
   const total = transactions.reduce((sum, txn) => sum + txn.amount, 0);
   const periods = [0, -1, -2].map((offset) => monthPeriod(offset, now));
+  const activePeriod = periods.find(
+    (period) => filters.startDate === period.startDate && filters.endDate === period.endDate,
+  );
+  const filtered = hasExtraFilters(filters);
   function apply(next: TransactionFilters) {
     router.setParams(encodeFilters(next));
     setFilterOpen(false);
@@ -96,9 +98,9 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section="Transactions" />
       <View style={{ padding: 16, gap: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <TextField
+            <SearchField
               label="Search transactions"
               placeholder="Recipient, reference, remarks"
               value={search}
@@ -108,61 +110,51 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
               autoCapitalize="none"
             />
           </View>
-          <Button
-            label={hasExtraFilters(filters) ? 'Filter ●' : 'Filter'}
-            variant="secondary"
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={filtered ? 'Filter, filters applied' : 'Filter'}
             onPress={() => setFilterOpen(true)}
-          />
+            style={({ pressed }) => [styles.filter, pressed ? styles.filterPressed : styles.filterShadow]}
+          >
+            <Funnel size={22} color={colors.foreground} strokeWidth={2.25} />
+            {/* A dot, not only color, shows that filters beyond the period are applied. */}
+            {filtered ? <View style={styles.filterDot} /> : null}
+          </Pressable>
         </View>
-        <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
           {periods.map((period) => (
             <Button
               key={period.startDate}
-              label={`${filters.startDate === period.startDate && filters.endDate === period.endDate ? '✓ ' : ''}${period.label}`}
-              variant="secondary"
+              label={period.label}
+              selected={period === activePeriod}
+              variant={period === activePeriod ? 'primary' : 'secondary'}
               onPress={() => apply({ ...filters, startDate: period.startDate, endDate: period.endDate })}
             />
           ))}
-          <Button label="Custom" variant="secondary" onPress={() => setCustomOpen(true)} />
+          <Button
+            label="Custom"
+            selected={Boolean(filters.startDate) && !activePeriod}
+            variant={filters.startDate && !activePeriod ? 'primary' : 'secondary'}
+            onPress={() => setCustomOpen(true)}
+          />
         </ScrollView>
-        {filters.startDate ? (
-          <Text style={type.muted}>
-            {filters.startDate} to {filters.endDate} · IST
-          </Text>
-        ) : (
-          <Text style={type.muted}>All time</Text>
-        )}
         <Panel tone="muted" style={{ padding: 10 }}>
           <Text style={type.body}>
             Showing {transactions.length} of {query.data?.pages[0]?.total ?? '…'} entries ·{' '}
             {formatCurrency(total)} loaded
           </Text>
         </Panel>
+        {summary.data && summary.data.uncategorizedCount > 0 && !routeQuery ? (
+          <Panel raised style={{ padding: 16, gap: 8, backgroundColor: colors.uncategorized }}>
+            <Text style={type.heading}>{summary.data.uncategorizedCount} to review</Text>
+            <Text style={type.muted}>These transactions still need a category.</Text>
+            <Button label="Open review queue" variant="secondary" onPress={() => router.push('/review')} />
+          </Panel>
+        ) : null}
       </View>
       {query.isPending ? (
         <View style={{ padding: 16 }}>
           <Skeleton height={140} />
-        </View>
-      ) : null}
-      {summary.data && summary.data.transactionCount > 0 ? (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-          <EmptyState
-            title={
-              summary.data.uncategorizedCount > 0
-                ? `${summary.data.uncategorizedCount} to review`
-                : 'You’re all caught up'
-            }
-            message={
-              summary.data.uncategorizedCount > 0
-                ? 'These transactions still need a category.'
-                : 'Every transaction has a category.'
-            }
-            action={
-              summary.data.uncategorizedCount > 0
-                ? { label: 'Open review queue', onPress: () => router.push('/review') }
-                : undefined
-            }
-          />
         </View>
       ) : null}
       <FlashList
@@ -193,9 +185,10 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           ) : (
             <LedgerRow
               transaction={item.transaction}
+              showActions={false}
               disabled={classification.busy || classification.promptOpen}
               onClassify={classification.openCategory}
-              onIgnore={setIgnore}
+              onIgnore={() => undefined}
             />
           )
         }
@@ -216,23 +209,29 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
             ) : summary.isError ? (
               <InlineError message={errorMessage(summary.error)} onRetry={() => void summary.refetch()} />
             ) : (
-              <EmptyState
-                title={
-                  summary.data?.transactionCount
+              <DashedPanel style={{ marginHorizontal: 16 }}>
+                <FileText size={56} color={colors.foreground} strokeWidth={1.5} />
+                <Text style={[type.heading, styles.center]}>
+                  {summary.data?.transactionCount
                     ? 'No matching transactions'
                     : importing
-                      ? 'No bank debits yet'
-                      : 'Track expenses manually'
-                }
-                message={
-                  summary.data?.transactionCount
+                      ? 'No transactions yet'
+                      : 'Track expenses manually'}
+                </Text>
+                <Text style={[type.muted, styles.center]}>
+                  {summary.data?.transactionCount
                     ? 'Try another period or clear your filters.'
                     : importing
-                      ? 'New supported bank debits will appear automatically. You can add a manual expense while you wait.'
-                      : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'
-                }
-                action={{ label: 'Add transaction', onPress: () => router.push('/transactions/new') }}
-              />
+                      ? 'Your transactions from bank SMS will appear here automatically. You can also add an expense manually.'
+                      : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'}
+                </Text>
+                <Button
+                  label="Add transaction"
+                  icon={Plus}
+                  style={styles.stretch}
+                  onPress={() => router.push('/transactions/new')}
+                />
+              </DashedPanel>
             )
           ) : null
         }
@@ -261,9 +260,12 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           </View>
         }
       />
-      <View style={{ position: 'absolute', bottom: 16, right: 16 }}>
-        <Button label="Add transaction" icon={Plus} onPress={() => router.push('/transactions/new')} />
-      </View>
+      {/* The empty state carries its own Add button. */}
+      {items.length > 0 || query.isPending || query.isError ? (
+        <View style={{ position: 'absolute', bottom: 16, right: 16 }}>
+          <Button label="Add transaction" icon={Plus} onPress={() => router.push('/transactions/new')} />
+        </View>
+      ) : null}
       {filterOpen ? (
         <FilterSheet
           filters={filters}
@@ -280,10 +282,34 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           onClose={() => setCustomOpen(false)}
         />
       ) : null}
-      {ignore ? (
-        <IgnoreRecipient credentials={c} transaction={ignore} onClose={() => setIgnore(null)} />
-      ) : null}
       {classification.sheets}
     </SafeAreaView>
   );
 }
+const styles = StyleSheet.create({
+  filter: {
+    width: minTarget + 8,
+    height: minTarget + 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.card,
+  },
+  filterShadow: { boxShadow: shadows.control },
+  filterPressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 9,
+    height: 9,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.destructive,
+  },
+  center: { textAlign: 'center' },
+  stretch: { alignSelf: 'stretch', marginTop: 4 },
+});

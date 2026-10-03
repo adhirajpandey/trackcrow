@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../app-header';
-import { Button, TextLink, type } from '../ui';
+import { BackLink, Button, TextLink, type } from '../ui';
 import { fetchCategories } from '../../lib/api/categories';
 import { fetchAccounts } from '../../lib/api/accounts';
 import type { Credentials } from '../../lib/api/client';
@@ -29,22 +29,31 @@ export function TransactionSession({ children }: { children: (credentials: Crede
 }
 export function TransactionPage({
   title,
+  heading,
   children,
   footer,
 }: {
   title: string;
+  heading?: string;
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/transactions'));
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section={title} />
-      <View style={{ paddingHorizontal: 16 }}>
-        <TextLink
-          label="Back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/transactions'))}
-        />
-      </View>
+      {heading ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
+          <BackLink onPress={back} />
+          <Text accessibilityRole="header" style={type.heading}>
+            {heading}
+          </Text>
+        </View>
+      ) : (
+        <View style={{ paddingHorizontal: 16 }}>
+          <TextLink label="Back" onPress={back} />
+        </View>
+      )}
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={contentStyle}>
         {children}
       </ScrollView>

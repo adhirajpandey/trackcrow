@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ArrowRight, KeyRound, Receipt } from 'lucide-react-native';
+import { ArrowRight, ChartColumn, FileText, KeyRound, Receipt } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '../../components/empty-state';
 import { useSmsIngestion } from '../../lib/sms-ingestion';
+import { useToast } from '../../components/toast-host';
+import { onboarding } from '../../lib/onboarding';
 import { ScreenHeader } from '../../components/screen-header';
 import {
   Button,
+  DashedPanel,
   InlineError,
   Panel,
   SectionHeader,
@@ -37,7 +40,15 @@ import { queryKeys } from '../../lib/query-keys';
 
 const RECENT_COUNT = 5;
 const CATEGORY_TILES = 4;
-const categoryTones: Tone[] = ['mint', 'lilac', 'blush', 'paper'];
+const categoryTones: Tone[] = ['mint', 'blush', 'lilac', 'paper'];
+// Each tile's share bar takes the strong color of its pastel tone.
+const toneBars: Partial<Record<Tone, string>> = {
+  mint: colors.primary,
+  blush: colors.destructive,
+  lilac: colors.info,
+  paper: colors.secondaryForeground,
+};
+const FEW_DAYS_LEFT = 3;
 
 function errorMessage(error: unknown) {
   return error instanceof ApiError ? error.message : 'Something went wrong while loading this section.';
@@ -131,8 +142,10 @@ function Overview({ credentials }: { credentials: Credentials }) {
           />
         }
       >
-        <Text style={type.note}>spent so far this month</Text>
-        <Button label="Add expense" variant="secondary" onPress={() => router.push('/transactions/new')} />
+        <Text style={type.note}>
+          {summary.data?.transactionCount === 0 ? 'no expenses yet this month' : 'spent so far this month'}
+        </Text>
+        <Button label="Add expense" onPress={() => router.push('/transactions/new')} />
 
         {summary.isPending ? (
           <Skeleton height={206} />
@@ -140,38 +153,25 @@ function Overview({ credentials }: { credentials: Credentials }) {
           <InlineError message={errorMessage(summary.error)} onRetry={() => void summary.refetch()} />
         ) : (
           <>
-            <SpendCard month={month} summary={summary.data} previous={previous.data} />
+            {summary.data.transactionCount === 0 ? (
+              <FreshMonth apiUrl={credentials.apiUrl} importing={importing} />
+            ) : (
+              <SpendCard month={month} summary={summary.data} previous={previous.data} />
+            )}
             {allTime.isPending || !sms.ready ? (
               <Skeleton height={140} />
             ) : allTime.isError ? (
               <InlineError message={errorMessage(allTime.error)} onRetry={() => void allTime.refetch()} />
-            ) : allTime.data ? (
+            ) : allTime.data && allTime.data.uncategorizedCount > 0 ? (
+              <ReviewCard count={allTime.data.uncategorizedCount} />
+            ) : allTime.data && summary.data.transactionCount > 0 ? (
               <EmptyState
-                title={
-                  allTime.data.uncategorizedCount > 0
-                    ? `${allTime.data.uncategorizedCount} to review`
-                    : allTime.data.transactionCount > 0
-                      ? 'You’re all caught up'
-                      : importing
-                        ? 'Waiting for your first bank debit'
-                        : 'Auto-import is off'
-                }
-                message={
-                  allTime.data.uncategorizedCount > 0
-                    ? 'Give uncategorized expenses a category.'
-                    : allTime.data.transactionCount > 0
-                      ? 'Every transaction has a category. Add your next expense whenever you need.'
-                      : importing
-                        ? 'New supported bank debits will appear here automatically. Past SMS are not imported.'
-                        : 'Add expenses manually, or turn on SMS import by running setup again in Settings.'
-                }
-                action={
-                  allTime.data.uncategorizedCount > 0
-                    ? { label: 'Review now', onPress: () => router.push('/review') }
-                    : { label: 'Add expense', onPress: () => router.push('/transactions/new') }
-                }
+                title="You’re all caught up"
+                message="Every transaction has a category. Add your next expense whenever you need."
+                action={{ label: 'Add expense', onPress: () => router.push('/transactions/new') }}
               />
             ) : null}
+            {summary.data.transactionCount === 0 ? <View style={styles.rule} /> : null}
           </>
         )}
 
@@ -179,9 +179,7 @@ function Overview({ credentials }: { credentials: Credentials }) {
           title="Where it went"
           right={
             categories.data && categories.data.length > CATEGORY_TILES ? (
-              <Text style={type.label}>
-                Top {CATEGORY_TILES} of {categories.data.length}
-              </Text>
+              <TextLink label="See all" onPress={() => router.navigate('/(tabs)/insights')} />
             ) : null
           }
         />
@@ -270,7 +268,7 @@ function SpendCard({
       </View>
       <View style={styles.rowBetween}>
         <Text style={type.label}>{month.label}</Text>
-        <Text style={[type.label, styles.daysLeft]}>
+        <Text style={[type.label, styles.daysLeft, month.daysLeft <= FEW_DAYS_LEFT && styles.daysLeftFew]}>
           {month.daysLeft === 0
             ? 'Last day'
             : `${month.daysLeft} ${month.daysLeft === 1 ? 'day' : 'days'} left`}
@@ -298,9 +296,12 @@ function Comparison({ current, previous }: { current: number; previous: number |
 function CategoryGrid({ categories }: { categories: CategorySpend[] }) {
   if (categories.length === 0) {
     return (
-      <Panel style={[styles.cardPadding, styles.row]}>
-        <Receipt size={20} color={colors.secondaryForeground} />
-        <Text style={[type.muted, styles.flex]}>No spending yet this month.</Text>
+      <Panel tone="muted" style={[styles.cardPadding, styles.centered]}>
+        <ChartColumn size={32} color={colors.secondaryForeground} />
+        <Text style={[type.body, styles.emptyTitle]}>No spending data yet</Text>
+        <Text style={[type.muted, styles.centerText]}>
+          Your category breakdown will appear here once you add some expenses.
+        </Text>
       </Panel>
     );
   }
@@ -328,10 +329,63 @@ function CategoryGrid({ categories }: { categories: CategorySpend[] }) {
               {formatPercent(item.totalSpend, total)} · {item.transactionCount}{' '}
               {item.transactionCount === 1 ? 'txn' : 'txns'}
             </Text>
+            {/* The percentage above carries the value; the bar repeats it visually. */}
+            <View style={styles.shareTrack} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <View
+                style={[
+                  styles.shareFill,
+                  {
+                    width: `${total > 0 ? (item.totalSpend / total) * 100 : 0}%`,
+                    backgroundColor: uncategorized ? colors.accent : (toneBars[tone] ?? colors.primary),
+                  },
+                ]}
+              />
+            </View>
           </Panel>
         );
       })}
     </View>
+  );
+}
+
+function ReviewCard({ count }: { count: number }) {
+  return (
+    <Panel raised style={[styles.cardPadding, { backgroundColor: colors.uncategorized }]}>
+      <Text style={type.heading}>{count} to review</Text>
+      <Text style={type.muted}>Give uncategorized expenses a category.</Text>
+      <Button label="Review now" variant="secondary" onPress={() => router.push('/review')} />
+    </Panel>
+  );
+}
+
+function FreshMonth({ apiUrl, importing }: { apiUrl: string; importing: boolean }) {
+  const toast = useToast();
+  return (
+    <DashedPanel>
+      <FileText size={48} color={colors.foreground} strokeWidth={1.75} />
+      <Text style={[type.heading, styles.centerText]}>It’s a fresh month!</Text>
+      <Text style={[type.muted, styles.centerText]}>
+        {importing
+          ? 'New supported bank debits will appear here automatically. Add an expense anytime.'
+          : 'Add your first expense or connect bank SMS to start tracking automatically.'}
+      </Text>
+      <View style={styles.freshActions}>
+        <Button label="Add expense" onPress={() => router.push('/transactions/new')} />
+        {importing ? null : (
+          <Button
+            label="Run setup again"
+            variant="secondary"
+            onPress={() => {
+              // The same reset as Settings → Run setup again.
+              void onboarding
+                .clear(apiUrl)
+                .then(() => router.push('/onboarding'))
+                .catch(() => toast({ message: 'Could not reset setup. Try again.' }));
+            }}
+          />
+        )}
+      </View>
+    </DashedPanel>
   );
 }
 
@@ -381,6 +435,22 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: '100%', backgroundColor: colors.primary },
   daysLeft: { color: colors.primaryInk },
+  daysLeftFew: { color: colors.destructiveInk },
+  centered: { alignItems: 'center' },
+  centerText: { textAlign: 'center' },
+  emptyTitle: { fontFamily: fonts.bold },
+  rule: { height: 1, backgroundColor: colors.border, opacity: 0.25, marginVertical: 4 },
+  freshActions: { alignSelf: 'stretch', gap: 12, marginTop: 4 },
+  shareTrack: {
+    height: 8,
+    marginTop: 4,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+  },
+  shareFill: { height: '100%' },
   reviewHelper: { color: colors.secondaryForeground },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   tile: { flexBasis: '46%', flexGrow: 1, padding: 14, gap: 6, minHeight: 112 },
