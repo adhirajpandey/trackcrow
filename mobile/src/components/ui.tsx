@@ -77,11 +77,14 @@ export function Button({
   icon: Icon,
   trailingIcon: TrailingIcon,
   disabled = false,
+  selected,
   style,
 }: {
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
+  /** For toggles such as period chips, so the selection is announced as well as shown. */
+  selected?: boolean;
   icon?: LucideIcon;
   trailingIcon?: LucideIcon;
   disabled?: boolean;
@@ -91,7 +94,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -108,6 +111,11 @@ export function Button({
       {TrailingIcon ? <TrailingIcon size={18} color={palette.text} strokeWidth={2.25} /> : null}
     </Pressable>
   );
+}
+
+/** A dashed outline for empty states that invite the first action. */
+export function DashedPanel({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.dashed, style]}>{children}</View>;
 }
 
 export function SectionHeader({ title, right }: { title: string; right?: ReactNode }) {
@@ -179,6 +187,15 @@ const styles = StyleSheet.create({
   buttonPressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
   buttonText: { fontFamily: fonts.bold, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' },
   disabled: { opacity: 0.5 },
+  dashed: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 20,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.input,
+    borderRadius: radii.lg,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',

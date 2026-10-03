@@ -12,6 +12,7 @@ import { onboarding } from '../../lib/onboarding';
 import { ScreenHeader } from '../../components/screen-header';
 import {
   Button,
+  DashedPanel,
   InlineError,
   Panel,
   SectionHeader,
@@ -360,7 +361,7 @@ function ReviewCard({ count }: { count: number }) {
 function FreshMonth({ apiUrl, importing }: { apiUrl: string; importing: boolean }) {
   const toast = useToast();
   return (
-    <View style={styles.fresh}>
+    <DashedPanel>
       <FileText size={48} color={colors.foreground} strokeWidth={1.75} />
       <Text style={[type.heading, styles.centerText]}>It’s a fresh month!</Text>
       <Text style={[type.muted, styles.centerText]}>
@@ -384,7 +385,7 @@ function FreshMonth({ apiUrl, importing }: { apiUrl: string; importing: boolean 
           />
         )}
       </View>
-    </View>
+    </DashedPanel>
   );
 }
 
@@ -439,15 +440,6 @@ const styles = StyleSheet.create({
   centerText: { textAlign: 'center' },
   emptyTitle: { fontFamily: fonts.bold },
   rule: { height: 1, backgroundColor: colors.border, opacity: 0.25, marginVertical: 4 },
-  fresh: {
-    alignItems: 'center',
-    gap: 10,
-    padding: 20,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.input,
-    borderRadius: radii.lg,
-  },
   freshActions: { alignSelf: 'stretch', gap: 12, marginTop: 4 },
   shareTrack: {
     height: 8,
