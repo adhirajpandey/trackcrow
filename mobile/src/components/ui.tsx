@@ -127,6 +127,32 @@ export function BackLink({ onPress }: { onPress: () => void }) {
   );
 }
 
+export function HeaderIconButton({
+  icon: Icon,
+  label,
+  onPress,
+  disabled = false,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      hitSlop={8}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.headerIcon, pressed && styles.buttonPressed, disabled && styles.disabled]}
+    >
+      <Icon size={20} color={colors.foreground} />
+    </Pressable>
+  );
+}
+
 export function Checkbox({ checked }: { checked: boolean }) {
   return (
     <View style={[styles.mark, styles.checkbox, checked && styles.checkboxChecked]}>
@@ -219,6 +245,16 @@ const styles = StyleSheet.create({
   },
   back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   backText: { fontFamily: fonts.bold, fontSize: 14, color: colors.primaryInk, textDecorationLine: 'underline' },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.card,
+  },
   mark: {
     width: 20,
     height: 20,

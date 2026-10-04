@@ -11,16 +11,17 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { ConfirmDialog } from '../../components/confirm-dialog';
 import { FormField, SelectRow } from '../../components/form-controls';
 import { SelectSheet } from '../../components/select-sheet';
 import { StickySaveBar } from '../../components/sticky-save-bar';
 import { useToast } from '../../components/toast-host';
-import { Button, Chip, InlineError, Panel, Skeleton, type } from '../../components/ui';
+import { Button, HeaderIconButton, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { useClassification } from '../../components/transactions/actions';
 import { TransactionFormFields } from '../../components/transactions/form-fields';
 import { RecipientPicker, type SelectedRecipient } from '../../components/transactions/recipient-picker';
+import { SummaryPanel } from '../../components/transactions/summary-panel';
 import { RulePrompt, type RulePromptSelection } from '../../components/transactions/rule-prompt';
 import {
   TransactionPage,
@@ -39,8 +40,6 @@ import {
   type TransactionDetail,
 } from '../../lib/api/transactions';
 import { formatCurrency, formatTransactionTime } from '../../lib/format';
-import { dayLabel, istDateKey, istDateTime } from '../../lib/transaction-dates';
-import { colors, radii } from '../../theme';
 import { draftInput, transactionDraft } from '../../lib/transaction-draft';
 import { queryKeys } from '../../lib/query-keys';
 export default function TransactionDetailScreen() {
@@ -215,10 +214,9 @@ function TransactionEditor({
       heading="Transaction Details"
       headingAction={
         <View style={styles.headingActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={editing ? 'Cancel editing' : 'Edit transaction'}
-            hitSlop={8}
+          <HeaderIconButton
+            icon={editing ? X : Pencil}
+            label={editing ? 'Cancel editing' : 'Edit transaction'}
             disabled={busy}
             onPress={() => {
               if (editing) {
@@ -227,24 +225,13 @@ function TransactionEditor({
               }
               setEditing(!editing);
             }}
-            style={styles.more}
-          >
-            {editing ? (
-              <X size={20} color={colors.foreground} />
-            ) : (
-              <Pencil size={18} color={colors.foreground} />
-            )}
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="More actions"
-            hitSlop={8}
+          />
+          <HeaderIconButton
+            icon={EllipsisVertical}
+            label="More actions"
             disabled={busy}
             onPress={() => setActionsOpen(true)}
-            style={styles.more}
-          >
-            <EllipsisVertical size={20} color={colors.foreground} />
-          </Pressable>
+          />
         </View>
       }
       footer={
@@ -253,22 +240,7 @@ function TransactionEditor({
         ) : null
       }
     >
-      <Panel tone="mint" style={{ padding: 16, gap: 8 }}>
-        <Text style={[type.number, { fontSize: 40 }]}>{formatCurrency(txn.amount)}</Text>
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel={`${txn.recipientDisplayName}, open recipient`}
-          hitSlop={8}
-          onPress={() => router.push({ pathname: '/recipients/[id]', params: { id: txn.recipientUuid } })}
-        >
-          <Text style={type.heading}>{txn.recipientDisplayName}</Text>
-        </Pressable>
-        <Text style={type.body}>
-          {txn.type} · {stamp(txn.timestamp)} · {txn.accountName ?? 'No account'}
-        </Text>
-        <Chip label={`Source: ${txn.source}`} />
-        <Text style={type.muted}>Recipient identifier: {txn.recipientRaw}</Text>
-      </Panel>
+      <SummaryPanel transaction={txn} />
       <TransactionFormFields
         variant="detail"
         draft={draft}
@@ -405,20 +377,6 @@ function TransactionEditor({
   );
 }
 
-function stamp(timestamp: string) {
-  return `${dayLabel(istDateKey(timestamp))}, ${istDateTime(timestamp).slice(11)}`;
-}
-
 const styles = StyleSheet.create({
   headingActions: { flexDirection: 'row', gap: 8 },
-  more: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.card,
-  },
 });

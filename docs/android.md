@@ -90,7 +90,7 @@ After classification, the shared rule prompt offers **Create rule**, or **Replac
 
 Add transaction is a single form under a **‹ Back** heading: amount in rupees, IST date and time (the date picker continues to the time picker), recipient search and creation, optional category and subcategory (subcategory disabled until a category is set; × on the category clears both), payment method, and optional account, remarks, reference, and location. Recent recipients are available in the picker. **Save transaction** is pinned at the bottom and returns to Transactions with a toast.
 
-Review shows one uncategorized transaction, its remaining count, a suggestion and recent category choices, **More…**, **Skip**, and **Ignore**. Picking a category saves, advances, gives light haptic feedback, and announces the category and remaining count. The toast offers Undo. If Undo fails, the toast shows the server error and the rule prompt stays open. Ledger queries refresh after both successful and failed restoration. Skipping changes only the current visit; it does not mark a transaction reviewed. When no uncategorized entries remain, the queue says **You're all caught up.**
+Review lists the uncategorized transactions, newest first, with the count that needs attention; each row opens Review Transaction. Review Transaction shows the position in the queue, the transaction summary, the suggested category with **Apply suggestion**, and the category, subcategory, payment method, account, and remarks fields. Changes are staged until **Save & next**, which saves them, offers the rule prompt when a category is set, and opens the next transaction. Applying an unchanged suggestion records it as a suggestion. **Skip** opens the next transaction without saving and does not mark it reviewed. The ⋮ menu opens the transaction details or creates an ignore rule for future SMS. After the last transaction, the app returns to the list. When no uncategorized entries remain, the list says **You're all caught up.**
 
 ### Verify the transaction flows on a development client
 
@@ -99,7 +99,7 @@ Run `corepack pnpm check` in `mobile/`. This includes the `node:test` helpers fo
 1. Open Transactions from Overview's **See all** and open a recent row. Verify the header badge opens the all-time review queue.
 2. Search, apply multiple categories and classification sources, change periods, and sort by date and amount. Check refresh, sticky day totals, **Load more**, and filtered empty states. Loaded sums should increase as pages load.
 3. Classify a row, dismiss the rule prompt, and use Undo. Classify again and create a rule with **Also file N uncategorized**. Repeat with an existing recipient rule and verify replacement is explicit. Check retry behavior after a failed request.
-4. In Review, choose a suggestion or recent category, use **More…**, skip, and undo. Verify the remaining count and announcements. Confirm an ignore rule leaves existing entries visible.
+4. In Review, open a transaction, apply the suggestion or choose a category, save and skip, and check the queue position. Confirm an ignore rule from the ⋮ menu leaves existing entries visible.
 5. Add a manual transaction, edit its amount, account, time, reference, remarks, and location, then delete it with confirmation. Compare Overview totals with the web dashboard after each mutation.
 6. Check Android Back, keyboard dismissal, sheet dismissal, and large system fonts. Recipient and rule destinations open their implemented screens.
 

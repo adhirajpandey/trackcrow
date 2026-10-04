@@ -33,6 +33,7 @@ export function RulePrompt({
   const [remainingIds, setRemainingIds] = useState<string[] | null>(null);
   const [progress, setProgress] = useState('');
   const [filedTotal, setFiledTotal] = useState(0);
+  const [open, setOpen] = useState(true);
   const toast = useToast();
   const invalidate = useInvalidateLedger(c);
   const context = useQuery({
@@ -107,7 +108,7 @@ export function RulePrompt({
       toast({
         message: filed ? `Rule saved. Filed ${filed} transactions.` : 'Rule saved for future imports.',
       });
-      onClose();
+      setOpen(false);
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === 'RULE_RECIPIENT_CONFLICT') {
@@ -120,7 +121,7 @@ export function RulePrompt({
   return (
     <>
       <Sheet
-        open
+        open={open}
         title="Automate classification"
         onClose={() => {
           if (!save.isPending) onClose();
@@ -179,7 +180,7 @@ export function RulePrompt({
             disabled={save.isPending || !context.data}
             onPress={() => save.mutate()}
           />
-          <Button label="Not now" variant="secondary" disabled={save.isPending} onPress={onClose} />
+          <Button label="Not now" variant="secondary" disabled={save.isPending} onPress={() => setOpen(false)} />
         </BottomSheetScrollView>
       </Sheet>
       <Modal visible={save.isPending} transparent onRequestClose={() => undefined}>
