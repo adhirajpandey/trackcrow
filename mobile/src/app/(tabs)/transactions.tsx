@@ -144,13 +144,6 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
             {formatCurrency(total)} loaded
           </Text>
         </Panel>
-        {summary.data && summary.data.uncategorizedCount > 0 && !routeQuery ? (
-          <Panel raised style={{ padding: 16, gap: 8, backgroundColor: colors.uncategorized }}>
-            <Text style={type.heading}>{summary.data.uncategorizedCount} to review</Text>
-            <Text style={type.muted}>These transactions still need a category.</Text>
-            <Button label="Open review queue" variant="secondary" onPress={() => router.push('/review')} />
-          </Panel>
-        ) : null}
       </View>
       {query.isPending ? (
         <View style={{ padding: 16 }}>

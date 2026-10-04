@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EmptyState } from '../../components/empty-state';
 import { useSmsIngestion } from '../../lib/sms-ingestion';
 import { useToast } from '../../components/toast-host';
 import { onboarding } from '../../lib/onboarding';
@@ -158,19 +157,6 @@ function Overview({ credentials }: { credentials: Credentials }) {
             ) : (
               <SpendCard month={month} summary={summary.data} previous={previous.data} />
             )}
-            {allTime.isPending || !sms.ready ? (
-              <Skeleton height={140} />
-            ) : allTime.isError ? (
-              <InlineError message={errorMessage(allTime.error)} onRetry={() => void allTime.refetch()} />
-            ) : allTime.data && allTime.data.uncategorizedCount > 0 ? (
-              <ReviewCard count={allTime.data.uncategorizedCount} />
-            ) : allTime.data && summary.data.transactionCount > 0 ? (
-              <EmptyState
-                title="You’re all caught up"
-                message="Every transaction has a category. Add your next expense whenever you need."
-                action={{ label: 'Add expense', onPress: () => router.push('/transactions/new') }}
-              />
-            ) : null}
             {summary.data.transactionCount === 0 ? <View style={styles.rule} /> : null}
           </>
         )}
@@ -345,16 +331,6 @@ function CategoryGrid({ categories }: { categories: CategorySpend[] }) {
         );
       })}
     </View>
-  );
-}
-
-function ReviewCard({ count }: { count: number }) {
-  return (
-    <Panel raised style={[styles.cardPadding, { backgroundColor: colors.uncategorized }]}>
-      <Text style={type.heading}>{count} to review</Text>
-      <Text style={type.muted}>Give uncategorized expenses a category.</Text>
-      <Button label="Review now" variant="secondary" onPress={() => router.push('/review')} />
-    </Panel>
   );
 }
 
