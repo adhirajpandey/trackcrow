@@ -96,6 +96,7 @@ export type TransactionWriteInput = ManualTransactionWriteInput | ImportedTransa
 
 export type TransactionUpdateInput = TransactionWriteBaseInput & {
   transactionUuid: string;
+  recipientUuid?: string;
   classificationIntent?: "SUGGESTION";
 };
 

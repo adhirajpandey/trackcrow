@@ -8,6 +8,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
       findFirst: jest.fn(),
     },
     account: { findFirst: jest.fn() },
+    recipient: { findFirst: jest.fn() },
     rule: { findMany: jest.fn() },
     transaction: {
       count: jest.fn(),
@@ -461,6 +462,92 @@ describe("transaction service", () => {
         where: { uuid: "txn-other-user", userUuid: "user-1" },
       })
     );
+  });
+
+  it("moves a manual transaction to another recipient and renames its recipient text", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({
+      id: 7,
+      categoryId: null,
+      subcategoryId: null,
+      recipientId: 30,
+      source: TransactionSource.MANUAL,
+    });
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce({ id: 44, uuid: "rcp-44", displayName: "Bluebird Books" });
+    mockPrisma.transaction.update.mockResolvedValueOnce({});
+
+    await expect(
+      updateTransaction({
+        userUuid: "user-1",
+        transactionUuid: "txn-7",
+        recipientUuid: "rcp-44",
+        amount: 25,
+        type: TransactionType.UPI,
+        timestamp: new Date(),
+        source: TransactionSource.MANUAL,
+      })
+    ).resolves.toEqual({ ok: true, data: { uuid: "txn-7" } });
+    expect(mockPrisma.recipient.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { uuid: "rcp-44", userUuid: "user-1" } })
+    );
+    expect(mockPrisma.transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          recipientId: 44,
+          recipientRaw: "Bluebird Books",
+          recipientName: "Bluebird Books",
+        }),
+      })
+    );
+  });
+
+  it("keeps the original SMS recipient text when moving an imported transaction", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({
+      id: 8,
+      categoryId: null,
+      subcategoryId: null,
+      recipientId: 30,
+      source: TransactionSource.SMS,
+    });
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce({ id: 44, uuid: "rcp-44", displayName: "Bluebird Books" });
+    mockPrisma.transaction.update.mockResolvedValueOnce({});
+
+    await updateTransaction({
+      userUuid: "user-1",
+      transactionUuid: "txn-8",
+      recipientUuid: "rcp-44",
+      amount: 25,
+      type: TransactionType.UPI,
+      timestamp: new Date(),
+      source: TransactionSource.MANUAL,
+    });
+    const data = mockPrisma.transaction.update.mock.calls[0][0].data;
+    expect(data.recipientId).toBe(44);
+    expect(data).not.toHaveProperty("recipientRaw");
+    expect(data).not.toHaveProperty("recipientName");
+  });
+
+  it("rejects an unknown or foreign recipient before updating", async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValueOnce({
+      id: 9,
+      categoryId: null,
+      subcategoryId: null,
+      recipientId: 30,
+      source: TransactionSource.MANUAL,
+    });
+    mockPrisma.recipient.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      updateTransaction({
+        userUuid: "user-1",
+        transactionUuid: "txn-9",
+        recipientUuid: "rcp-foreign",
+        amount: 25,
+        type: TransactionType.UPI,
+        timestamp: new Date(),
+        source: TransactionSource.MANUAL,
+      })
+    ).resolves.toMatchObject({ ok: false, error: "VALIDATION_ERROR" });
+    expect(mockPrisma.transaction.update).not.toHaveBeenCalled();
   });
 
   it("updates only the transaction category and clears subcategory on change", async () => {

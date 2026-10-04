@@ -87,7 +87,10 @@ function requireSuggestionPair(
 
 export const updateTransactionSchema = createTransactionSchema
   .omit({ recipientUuid: true })
-  .extend({ classificationIntent: z.literal("SUGGESTION").optional() })
+  .extend({
+    recipientUuid: z.string().uuid().optional(),
+    classificationIntent: z.literal("SUGGESTION").optional(),
+  })
   .superRefine(requireSuggestionPair);
 
 export const updateTransactionCategorySchema = z
