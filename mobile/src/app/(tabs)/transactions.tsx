@@ -1,11 +1,13 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { FileText, Funnel, Plus } from 'lucide-react-native';
+import { Calendar, FileText, Funnel, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
+import { SelectRow } from '../../components/form-controls';
+import { SelectSheet } from '../../components/select-sheet';
 import { SearchField } from '../../components/search-field';
 import { Button, DashedPanel, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { useClassification } from '../../components/transactions/actions';
@@ -49,7 +51,8 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
   if (searchDraft.routeQuery !== routeQuery) setSearchDraft({ routeQuery, value: routeQuery });
   const search = searchDraft.value;
   const [filterOpen, setFilterOpen] = useState(false),
-    [customOpen, setCustomOpen] = useState(false);
+    [customOpen, setCustomOpen] = useState(false),
+    [periodOpen, setPeriodOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const list = useRef<FlashListRef<ReturnType<typeof groupTransactionDays>[number]>>(null);
   const options = useTransactionOptions(c);
@@ -89,6 +92,9 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
     (period) => filters.startDate === period.startDate && filters.endDate === period.endDate,
   );
   const filtered = hasExtraFilters(filters);
+  const periodLabel =
+    activePeriod?.label ??
+    (filters.startDate && filters.endDate ? `${dayLabel(filters.startDate)} – ${dayLabel(filters.endDate)}` : 'All time');
   function apply(next: TransactionFilters) {
     router.setParams(encodeFilters(next));
     setFilterOpen(false);
@@ -121,23 +127,15 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
             {filtered ? <View style={styles.filterDot} /> : null}
           </Pressable>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
-          {periods.map((period) => (
-            <Button
-              key={period.startDate}
-              label={period.label}
-              selected={period === activePeriod}
-              variant={period === activePeriod ? 'primary' : 'secondary'}
-              onPress={() => apply({ ...filters, startDate: period.startDate, endDate: period.endDate })}
-            />
-          ))}
-          <Button
-            label="Custom"
-            selected={Boolean(filters.startDate) && !activePeriod}
-            variant={filters.startDate && !activePeriod ? 'primary' : 'secondary'}
-            onPress={() => setCustomOpen(true)}
-          />
-        </ScrollView>
+        <SelectRow
+          label="Period"
+          icon={Calendar}
+          chevron="down"
+          value={periodLabel}
+          placeholder="All time"
+          chosen={Boolean(filters.startDate)}
+          onPress={() => setPeriodOpen(true)}
+        />
         <Panel tone="muted" style={{ padding: 10 }}>
           <Text style={type.body}>
             Showing {transactions.length} of {query.data?.pages[0]?.total ?? '…'} entries ·{' '}
@@ -267,6 +265,23 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           onClose={() => setFilterOpen(false)}
         />
       ) : null}
+      <SelectSheet
+        open={periodOpen}
+        title="Period"
+        searchable={false}
+        options={[
+          { value: 'all', label: 'All time' },
+          ...periods.map((period) => ({ value: period.startDate, label: period.label })),
+          { value: 'custom', label: 'Custom range…' },
+        ]}
+        selected={activePeriod?.startDate ?? (filters.startDate ? 'custom' : 'all')}
+        onClose={() => setPeriodOpen(false)}
+        onSelect={(value) => {
+          const period = periods.find((item) => item.startDate === value);
+          if (value === 'custom') setCustomOpen(true);
+          else apply({ ...filters, startDate: period?.startDate ?? '', endDate: period?.endDate ?? '' });
+        }}
+      />
       {customOpen ? (
         <PeriodRangeSheet
           startDate={filters.startDate ?? periods[0].startDate}

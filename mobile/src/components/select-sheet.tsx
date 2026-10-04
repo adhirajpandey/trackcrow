@@ -14,8 +14,18 @@ export type SelectSheetProps = {
   onSelect: (value: string) => void;
   onClose: () => void;
   beforeOptions?: ReactNode;
+  searchable?: boolean;
 };
-export function SelectSheet({ open, title, options, selected, onSelect, onClose, beforeOptions }: SelectSheetProps) {
+export function SelectSheet({
+  open,
+  title,
+  options,
+  selected,
+  onSelect,
+  onClose,
+  beforeOptions,
+  searchable = true,
+}: SelectSheetProps) {
   const [search, setSearch] = useState('');
   const visible = options.filter((option) =>
     `${option.label} ${option.description ?? ''}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
@@ -30,14 +40,16 @@ export function SelectSheet({ open, title, options, selected, onSelect, onClose,
   }
   return (
     <Sheet open={open} title={title} onClose={close}>
-      <BottomSheetTextInput
-        accessibilityLabel={`Search ${title}`}
-        placeholder="Search"
-        placeholderTextColor={colors.mutedForeground}
-        value={search}
-        onChangeText={setSearch}
-        style={styles.search}
-      />
+      {searchable ? (
+        <BottomSheetTextInput
+          accessibilityLabel={`Search ${title}`}
+          placeholder="Search"
+          placeholderTextColor={colors.mutedForeground}
+          value={search}
+          onChangeText={setSearch}
+          style={styles.search}
+        />
+      ) : null}
       <BottomSheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.options}>
         {!search.trim() ? beforeOptions : null}
         {visible.length ? (
