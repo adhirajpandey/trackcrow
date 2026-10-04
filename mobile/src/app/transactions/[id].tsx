@@ -1,15 +1,26 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
+import {
+  EllipsisVertical,
+  Pencil,
+  X,
+  Eye,
+  ListChecks,
+  MapPin,
+  Sparkles,
+  Trash2,
+} from 'lucide-react-native';
 import { useState } from 'react';
-import { ChevronRight, Sparkles } from 'lucide-react-native';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ConfirmDialog } from '../../components/confirm-dialog';
+import { FormField, SelectRow } from '../../components/form-controls';
 import { SelectSheet } from '../../components/select-sheet';
 import { StickySaveBar } from '../../components/sticky-save-bar';
 import { useToast } from '../../components/toast-host';
-import { Button, Chip, InlineError, Panel, Skeleton, TextLink, type } from '../../components/ui';
+import { Button, Chip, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { useClassification } from '../../components/transactions/actions';
-import { AmountEntry, TransactionFields } from '../../components/transactions/form-fields';
+import { TransactionFormFields } from '../../components/transactions/form-fields';
+import { RecipientPicker, type SelectedRecipient } from '../../components/transactions/recipient-picker';
 import { RulePrompt, type RulePromptSelection } from '../../components/transactions/rule-prompt';
 import {
   TransactionPage,
@@ -28,7 +39,8 @@ import {
   type TransactionDetail,
 } from '../../lib/api/transactions';
 import { formatCurrency, formatTransactionTime } from '../../lib/format';
-import { colors, fonts, radii } from '../../theme';
+import { dayLabel, istDateKey, istDateTime } from '../../lib/transaction-dates';
+import { colors, radii } from '../../theme';
 import { draftInput, transactionDraft } from '../../lib/transaction-draft';
 import { queryKeys } from '../../lib/query-keys';
 export default function TransactionDetailScreen() {
@@ -47,13 +59,13 @@ function Detail({ credentials: c, id }: { credentials: Credentials; id: string }
   });
   if (query.isPending)
     return (
-      <TransactionPage title="Transaction">
+      <TransactionPage title="Transactions" heading="Transaction Details">
         <Skeleton height={180} />
       </TransactionPage>
     );
   if (query.isError)
     return (
-      <TransactionPage title="Transaction">
+      <TransactionPage title="Transactions" heading="Transaction Details">
         <InlineError message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
       </TransactionPage>
     );
@@ -69,7 +81,13 @@ function TransactionEditor({
   const [draft, setDraft] = useState(() => transactionDraft(txn));
   const [savedDraft, setSavedDraft] = useState(draft);
   const [deleting, setDeleting] = useState(false),
-    [subcategoryOpen, setSubcategoryOpen] = useState(false);
+    [subcategoryOpen, setSubcategoryOpen] = useState(false),
+    [actionsOpen, setActionsOpen] = useState(false),
+    [confirmSuggestion, setConfirmSuggestion] = useState(false),
+    [editing, setEditing] = useState(false),
+    [recipientOpen, setRecipientOpen] = useState(false);
+  const original: SelectedRecipient = { uuid: txn.recipientUuid, displayName: txn.recipientDisplayName };
+  const [recipient, setRecipient] = useState(original);
   const [rulePrompt, setRulePrompt] = useState<RulePromptSelection | null>(null);
   const options = useTransactionOptions(c),
     invalidate = useInvalidateLedger(c),
@@ -86,16 +104,19 @@ function TransactionEditor({
     queryFn: ({ signal }) => fetchCategorySuggestion(c, txn.uuid, signal),
   });
   const input = draftInput(draft, txn);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
+  const recipientChanged = recipient.uuid !== txn.recipientUuid;
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft) || recipientChanged;
   const save = useMutation({
     mutationFn: () =>
       updateTransaction(c, txn.uuid, {
         ...input!,
+        ...(recipientChanged ? { recipientUuid: recipient.uuid } : {}),
         categoryUuid: txn.categoryUuid,
         subcategoryUuid: txn.subcategoryUuid,
       }),
     onSuccess: async () => {
       setSavedDraft(draft);
+      setEditing(false);
       await invalidate();
       toast({ message: 'Transaction saved.' });
     },
@@ -114,31 +135,121 @@ function TransactionEditor({
     classification.busy ||
     classification.promptOpen ||
     Boolean(rulePrompt);
-  // A fetched suggestion that differs from the current classification waits to be accepted.
-  const pending =
-    suggestion.data?.suggestedCategoryUuid &&
-    (suggestion.data.suggestedCategoryUuid !== txn.categoryUuid ||
-      (suggestion.data.suggestedSubcategoryUuid ?? null) !== (txn.subcategoryUuid ?? null))
-      ? suggestion.data
-      : null;
+  const suggested = suggestion.data?.suggestedCategoryUuid ? suggestion.data : null;
+  const ruleUuid =
+    txn.classificationSource === 'RULE' && txn.classificationRule && !txn.classificationRule.isDeleted
+      ? txn.classificationRule.uuid
+      : (context.data?.existingRuleUuid ?? null);
+  const filedBy = txn.classificationSource
+    ? `Filed by ${txn.classificationSource.toLowerCase()}${txn.classificationChangedAt ? ` · ${formatTransactionTime(txn.classificationChangedAt)}` : ''}`
+    : undefined;
+  const actions = [
+    {
+      value: 'suggest',
+      label: suggestion.isFetching ? 'Finding suggestion…' : 'Suggest a category',
+      description: 'Get a category suggestion for this transaction',
+      icon: Sparkles,
+    },
+    ...(txn.categoryUuid
+      ? [{ value: 'clear', label: 'Clear classification', description: filedBy, icon: Trash2 }]
+      : []),
+    ...(ruleUuid
+      ? [{ value: 'view-rule', label: 'View rule', description: 'Open the rule for this recipient', icon: Eye }]
+      : []),
+    ...(context.data
+      ? [
+          {
+            value: 'rule',
+            label: context.data.existingRuleUuid ? 'Replace rule' : 'Create rule',
+            description: 'Automatically classify similar transactions',
+            icon: ListChecks,
+          },
+        ]
+      : []),
+    ...(txn.locationRaw
+      ? [{ value: 'maps', label: 'Open location in Maps', description: txn.locationRaw, icon: MapPin }]
+      : []),
+  ];
+  async function suggest() {
+    const result = await suggestion.refetch();
+    if (result.isError) toast({ message: errorMessage(result.error) });
+    else if (result.data?.suggestedCategoryUuid) setConfirmSuggestion(true);
+    else toast({ message: 'No suggestion yet. Choose a category.' });
+  }
   async function applySuggestion() {
-    if (!suggestion.data?.suggestedCategoryUuid) return;
+    setConfirmSuggestion(false);
+    if (!suggested) return;
     try {
       await classification.classify(txn, {
-        categoryUuid: suggestion.data.suggestedCategoryUuid,
-        subcategoryUuid: suggestion.data.suggestedSubcategoryUuid,
+        categoryUuid: suggested.suggestedCategoryUuid,
+        subcategoryUuid: suggested.suggestedSubcategoryUuid,
         classificationIntent: 'SUGGESTION',
       });
     } catch {
       void suggestion.refetch();
     }
   }
+  function runAction(action: string) {
+    if (action === 'suggest') void suggest();
+    if (action === 'clear')
+      void classification.classify(txn, { categoryUuid: null, subcategoryUuid: null }).catch(() => undefined);
+    if (action === 'view-rule' && ruleUuid) router.push({ pathname: '/rules', params: { ruleUuid } });
+    if (action === 'rule') {
+      if (txn.categoryUuid && txn.category)
+        setRulePrompt({
+          transaction: txn,
+          categoryUuid: txn.categoryUuid,
+          category: txn.category,
+          subcategoryUuid: txn.subcategoryUuid,
+        });
+      else classification.openCategory(txn);
+    }
+    if (action === 'maps')
+      void Linking.openURL(
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(txn.locationRaw!)}`,
+      ).catch(() => toast({ message: 'Could not open Maps.' }));
+  }
   return (
     <TransactionPage
-      title="Transaction"
+      title="Transactions"
+      heading="Transaction Details"
+      headingAction={
+        <View style={styles.headingActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={editing ? 'Cancel editing' : 'Edit transaction'}
+            hitSlop={8}
+            disabled={busy}
+            onPress={() => {
+              if (editing) {
+                setDraft(savedDraft);
+                setRecipient(original);
+              }
+              setEditing(!editing);
+            }}
+            style={styles.more}
+          >
+            {editing ? (
+              <X size={20} color={colors.foreground} />
+            ) : (
+              <Pencil size={18} color={colors.foreground} />
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="More actions"
+            hitSlop={8}
+            disabled={busy}
+            onPress={() => setActionsOpen(true)}
+            style={styles.more}
+          >
+            <EllipsisVertical size={20} color={colors.foreground} />
+          </Pressable>
+        </View>
+      }
       footer={
-        dirty ? (
-          <StickySaveBar saving={save.isPending} disabled={!input || busy} onSave={() => save.mutate()} />
+        editing ? (
+          <StickySaveBar saving={save.isPending} disabled={!dirty || !input || busy} onSave={() => save.mutate()} />
         ) : null
       }
     >
@@ -153,165 +264,65 @@ function TransactionEditor({
           <Text style={type.heading}>{txn.recipientDisplayName}</Text>
         </Pressable>
         <Text style={type.body}>
-          {txn.type} · {formatTransactionTime(txn.timestamp)} · {txn.accountName ?? 'No account'}
+          {txn.type} · {stamp(txn.timestamp)} · {txn.accountName ?? 'No account'}
         </Text>
         <Chip label={`Source: ${txn.source}`} />
         <Text style={type.muted}>Recipient identifier: {txn.recipientRaw}</Text>
       </Panel>
-      <Panel style={{ padding: 16, gap: 12 }}>
-        <Text style={type.heading}>Classification</Text>
-        {pending ? (
-          <Status
-            tone="review"
-            icon
-            label={`${suggestion.data!.suggestedCategory}${suggestion.data!.suggestedSubCategory ? ` / ${suggestion.data!.suggestedSubCategory}` : ''} · Suggested`}
-          />
-        ) : (
-          <Status tone={txn.categoryUuid ? 'mint' : 'review'} label={txn.category ?? 'Uncategorized'} />
-        )}
-        <Text style={type.muted}>
-          {pending
-            ? 'Suggested by TrackCrow'
-            : txn.classificationSource
-              ? `Filed by ${txn.classificationSource.toLowerCase()}${txn.classificationChangedAt ? ` · ${formatTransactionTime(txn.classificationChangedAt)}` : ''}`
-              : 'Needs a category'}
-        </Text>
-        <View style={styles.grid}>
-          {options.categories.data?.slice(0, 4).map((item) => (
-            <Button
-              key={item.uuid}
-              label={`${txn.categoryUuid === item.uuid ? '✓ ' : ''}${item.name}`}
-              selected={txn.categoryUuid === item.uuid}
-              disabled={busy}
-              variant={txn.categoryUuid === item.uuid ? 'primary' : 'secondary'}
-              style={styles.cell}
-              onPress={() => {
-                void classification
-                  .classify(txn, { categoryUuid: item.uuid, subcategoryUuid: null })
-                  .catch(() => undefined);
-              }}
-            />
-          ))}
-        </View>
-        <Button
-          label="More categories…"
-          variant="secondary"
-          disabled={busy}
-          onPress={() => classification.openCategory(txn)}
-        />
-        {/* Stays in place but disabled until a category is chosen; a chosen subcategory shows in mint. */}
-        <Button
-          label={txn.subcategory ?? 'Choose subcategory'}
-          variant="secondary"
-          trailingIcon={txn.subcategory ? undefined : ChevronRight}
-          disabled={busy || !txn.categoryUuid}
-          style={txn.subcategory ? styles.subcategory : !txn.categoryUuid ? styles.muted : undefined}
-          onPress={() => setSubcategoryOpen(true)}
-        />
-        <Button
-          label="Clear classification"
-          variant="secondary"
-          disabled={busy || !txn.categoryUuid}
-          style={styles.muted}
-          onPress={() => {
-            void classification
-              .classify(txn, { categoryUuid: null, subcategoryUuid: null })
-              .catch(() => undefined);
-          }}
-        />
-        {pending ? (
-          <Button
-            label="Accept suggestion"
-            disabled={busy || suggestion.isFetching}
-            onPress={() => void applySuggestion()}
-          />
-        ) : (
-          <Button
-            label={suggestion.isFetching ? 'Finding suggestion…' : 'Suggest'}
-            disabled={busy || suggestion.isFetching}
-            onPress={() => void suggestion.refetch()}
-          />
-        )}
-        {suggestion.isSuccess && !suggestion.data?.suggestedCategoryUuid ? (
-          <Text style={type.muted}>No suggestion yet. Choose a category.</Text>
-        ) : null}
-        {suggestion.isError ? (
-          <InlineError message={errorMessage(suggestion.error)} onRetry={() => void suggestion.refetch()} />
-        ) : null}
-        {options.categories.isError ? (
-          <InlineError
-            message={errorMessage(options.categories.error)}
-            onRetry={() => void options.categories.refetch()}
-          />
-        ) : null}
-      </Panel>
-      <Panel tone="lilac" style={{ padding: 12, gap: 8 }}>
-        <Text style={type.label}>Automation</Text>
-        {txn.classificationSource === 'RULE' && txn.classificationRule ? (
-          <>
-            <Text style={type.body}>
-              Categorized by rule {txn.classificationRule.name}
-              {txn.classificationRule.isDeleted ? ' (deleted)' : ''}
-            </Text>
-            {!txn.classificationRule.isDeleted ? (
-              <TextLink
-                label="View rule"
-                onPress={() =>
-                  router.push({ pathname: '/rules', params: { ruleUuid: txn.classificationRule!.uuid } })
-                }
-              />
-            ) : null}
-          </>
-        ) : context.isPending ? (
-          <Text style={type.muted}>Checking recipient rule…</Text>
-        ) : context.isError ? (
-          <InlineError message={errorMessage(context.error)} onRetry={() => void context.refetch()} />
-        ) : context.data?.existingRuleUuid ? (
-          <>
-            <Text style={type.body}>This recipient has a rule. Your manual classification is kept.</Text>
-            <TextLink
-              label="View rule"
-              onPress={() =>
-                router.push({ pathname: '/rules', params: { ruleUuid: context.data!.existingRuleUuid! } })
-              }
-            />
-          </>
-        ) : (
-          <Text style={type.body}>No rule for {txn.recipientDisplayName}.</Text>
-        )}
-        <Button
-          label={context.data?.existingRuleUuid ? 'Replace rule' : 'Create rule'}
-          variant="secondary"
-          disabled={busy || !context.data}
-          onPress={() =>
-            txn.categoryUuid && txn.category
-              ? setRulePrompt({
-                  transaction: txn,
-                  categoryUuid: txn.categoryUuid,
-                  category: txn.category,
-                  subcategoryUuid: txn.subcategoryUuid,
-                })
-              : classification.openCategory(txn)
-          }
-        />
-      </Panel>
-      <AmountEntry draft={draft} onChange={setDraft} disabled={busy} />
-      <TransactionFields
+      <TransactionFormFields
+        variant="detail"
         draft={draft}
         onChange={setDraft}
         categories={options.categories.data ?? []}
         accounts={options.accounts.data ?? []}
-        classification={false}
+        dateLabel="Date and Time (IST)"
         disabled={busy}
+        readOnly={!editing}
+        recipient={
+          <SelectRow
+            label="Recipient"
+            value={recipient.displayName}
+            placeholder="Recipient"
+            chosen={editing && recipientChanged}
+            disabled={busy}
+            onPress={() =>
+              editing
+                ? setRecipientOpen(true)
+                : router.push({ pathname: '/recipients/[id]', params: { id: txn.recipientUuid } })
+            }
+          />
+        }
+        categoryRows={
+          <>
+            <FormField label="Category" optional>
+              <SelectRow
+                label="Category"
+                value={txn.category ?? undefined}
+                placeholder="Select category"
+                chosen={Boolean(txn.categoryUuid)}
+                disabled={busy}
+                readOnly={!editing}
+                onPress={() => classification.openCategory(txn)}
+              />
+            </FormField>
+            <FormField label="Subcategory" optional>
+              <SelectRow
+                label="Subcategory"
+                value={txn.subcategory ?? undefined}
+                placeholder="Select subcategory"
+                chosen={Boolean(txn.subcategoryUuid)}
+                disabled={busy || !txn.categoryUuid}
+                readOnly={!editing}
+                onPress={() => setSubcategoryOpen(true)}
+              />
+            </FormField>
+          </>
+        }
       />
-      {txn.locationRaw ? (
-        <TextLink
-          label="Open location in Maps"
-          onPress={() => {
-            void Linking.openURL(
-              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(txn.locationRaw!)}`,
-            ).catch(() => toast({ message: 'Could not open Maps.' }));
-          }}
+      {options.categories.isError ? (
+        <InlineError
+          message={errorMessage(options.categories.error)}
+          onRetry={() => void options.categories.refetch()}
         />
       ) : null}
       {options.accounts.isError ? (
@@ -351,6 +362,23 @@ function TransactionEditor({
         onClose={() => setDeleting(false)}
         onConfirm={() => remove.mutate()}
       />
+      <ConfirmDialog
+        open={confirmSuggestion && Boolean(suggested)}
+        title="Use the suggested category?"
+        message={`${suggested?.suggestedCategory ?? ''}${suggested?.suggestedSubCategory ? ` / ${suggested.suggestedSubCategory}` : ''}`}
+        confirmLabel="Accept suggestion"
+        onClose={() => setConfirmSuggestion(false)}
+        onConfirm={() => void applySuggestion()}
+      />
+      <SelectSheet
+        open={actionsOpen}
+        title="Transaction actions"
+        searchable={false}
+        chevrons
+        options={actions}
+        onClose={() => setActionsOpen(false)}
+        onSelect={runAction}
+      />
       <SelectSheet
         open={subcategoryOpen}
         title="Subcategory"
@@ -366,6 +394,9 @@ function TransactionEditor({
             .catch(() => undefined);
         }}
       />
+      {recipientOpen ? (
+        <RecipientPicker credentials={c} onSelect={setRecipient} onClose={() => setRecipientOpen(false)} />
+      ) : null}
       {rulePrompt ? (
         <RulePrompt credentials={c} selection={rulePrompt} onClose={() => setRulePrompt(null)} />
       ) : null}
@@ -374,39 +405,20 @@ function TransactionEditor({
   );
 }
 
-/** The full-width classification status; suggestions carry a sparkle as well as the label. */
-function Status({ label, tone, icon = false }: { label: string; tone: 'mint' | 'review'; icon?: boolean }) {
-  return (
-    <View style={[styles.status, { backgroundColor: tone === 'mint' ? colors.paperMint : colors.uncategorized }]}>
-      {icon ? <Sparkles size={16} color={colors.foreground} strokeWidth={2.25} /> : null}
-      <Text style={styles.statusText} numberOfLines={2}>
-        {label}
-      </Text>
-    </View>
-  );
+function stamp(timestamp: string) {
+  return `${dayLabel(istDateKey(timestamp))}, ${istDateTime(timestamp).slice(11)}`;
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  cell: { flexBasis: '45%', flexGrow: 1 },
-  subcategory: { backgroundColor: colors.paperMint },
-  muted: { backgroundColor: colors.muted },
-  status: {
-    flexDirection: 'row',
+  headingActions: { flexDirection: 'row', gap: 8 },
+  more: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 2,
+    justifyContent: 'center',
+    borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radii.md,
-  },
-  statusText: {
-    flexShrink: 1,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.foreground,
+    backgroundColor: colors.card,
   },
 });

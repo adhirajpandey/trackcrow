@@ -1,11 +1,12 @@
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { ChevronRight, type LucideIcon } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, minTarget, radii } from '../theme';
 import { EmptyState } from './empty-state';
 import { Sheet } from './sheet';
 import { type } from './ui';
-export type SelectOption = { value: string; label: string; description?: string };
+export type SelectOption = { value: string; label: string; description?: string; icon?: LucideIcon };
 export type SelectSheetProps = {
   open: boolean;
   title: string;
@@ -15,6 +16,7 @@ export type SelectSheetProps = {
   onClose: () => void;
   beforeOptions?: ReactNode;
   searchable?: boolean;
+  chevrons?: boolean;
 };
 export function SelectSheet({
   open,
@@ -25,6 +27,7 @@ export function SelectSheet({
   onClose,
   beforeOptions,
   searchable = true,
+  chevrons = false,
 }: SelectSheetProps) {
   const [search, setSearch] = useState('');
   const visible = options.filter((option) =>
@@ -61,11 +64,13 @@ export function SelectSheet({
               onPress={() => select(option.value)}
               style={[styles.option, selected === option.value && styles.selected]}
             >
+              {option.icon ? <option.icon size={20} color={colors.foreground} /> : null}
               <View style={styles.label}>
-                <Text style={type.body}>{option.label}</Text>
+                <Text style={chevrons ? styles.actionLabel : type.body}>{option.label}</Text>
                 {option.description ? <Text style={type.muted}>{option.description}</Text> : null}
               </View>
               {selected === option.value ? <Text style={type.body}>✓</Text> : null}
+              {chevrons ? <ChevronRight size={18} color={colors.foreground} /> : null}
             </Pressable>
           ))
         ) : (
@@ -100,4 +105,5 @@ const styles = StyleSheet.create({
   },
   selected: { backgroundColor: colors.paperMint },
   label: { flex: 1 },
+  actionLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
 });

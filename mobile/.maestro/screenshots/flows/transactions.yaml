@@ -24,14 +24,15 @@ appId: app.trackcrow.mobile.dev
 # The newest entry is filed by the Morning coffee rule.
 - tapOn: Copper Kettle Cafe
 - extendedWaitUntil:
-    visible: Filed by rule.*
+    visible: Category, .*
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: 04-transaction-detail
 
+- tapOn: Edit transaction
 - scrollUntilVisible:
-    element: More categories…
-- tapOn: More categories…
+    element: Category, .*
+- tapOn: Category, .*
 - extendedWaitUntil:
     visible: All categories
     timeout: 5000
@@ -48,7 +49,7 @@ appId: app.trackcrow.mobile.dev
     timeout: 10000
 - tapOn: Add transaction
 - extendedWaitUntil:
-    visible: Choose or create recipient
+    visible: Search or enter manually
     timeout: 10000
 - hideKeyboard
 - waitForAnimationToEnd

@@ -30,11 +30,13 @@ export function TransactionSession({ children }: { children: (credentials: Crede
 export function TransactionPage({
   title,
   heading,
+  headingAction,
   children,
   footer,
 }: {
   title: string;
   heading?: string;
+  headingAction?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -45,9 +47,12 @@ export function TransactionPage({
       {heading ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
           <BackLink onPress={back} />
-          <Text accessibilityRole="header" style={type.heading}>
-            {heading}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <Text accessibilityRole="header" style={type.heading}>
+              {heading}
+            </Text>
+            {headingAction}
+          </View>
         </View>
       ) : (
         <View style={{ paddingHorizontal: 16 }}>

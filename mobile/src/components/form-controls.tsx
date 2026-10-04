@@ -34,10 +34,20 @@ export function FormField({
   );
 }
 
-export function FormInput({ prefix, multiline, style, ...props }: TextInputProps & { prefix?: string }) {
+export function FormInput({
+  prefix,
+  segmented = false,
+  multiline,
+  style,
+  ...props
+}: TextInputProps & { prefix?: string; segmented?: boolean }) {
   return (
     <View style={[styles.box, multiline && styles.multiline]}>
-      {prefix ? <Text style={styles.prefix}>{prefix}</Text> : null}
+      {prefix ? (
+        <View style={segmented ? styles.segment : undefined}>
+          <Text style={styles.prefix}>{prefix}</Text>
+        </View>
+      ) : null}
       <TextInput
         placeholderTextColor={colors.mutedForeground}
         multiline={multiline}
@@ -53,9 +63,11 @@ export function SelectRow({
   value,
   placeholder,
   icon: Icon,
+  segmented = false,
   chevron = 'right',
   chosen = false,
   disabled = false,
+  readOnly = false,
   onPress,
   onClear,
 }: {
@@ -63,9 +75,11 @@ export function SelectRow({
   value?: string;
   placeholder: string;
   icon?: LucideIcon;
+  segmented?: boolean;
   chevron?: 'right' | 'down' | 'none';
   chosen?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   onPress: () => void;
   onClear?: () => void;
 }) {
@@ -76,17 +90,21 @@ export function SelectRow({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}, ${value ?? 'not set'}`}
-        accessibilityState={{ disabled }}
-        disabled={disabled}
+        accessibilityState={{ disabled: disabled || readOnly }}
+        disabled={disabled || readOnly}
         onPress={onPress}
         style={styles.press}
       >
-        {Icon ? <Icon size={18} color={tint} /> : null}
+        {Icon ? (
+          <View style={segmented ? styles.segment : undefined}>
+            <Icon size={18} color={tint} />
+          </View>
+        ) : null}
         <Text style={[value ? styles.value : styles.placeholder, disabled && styles.disabledText]} numberOfLines={1}>
           {value ?? placeholder}
         </Text>
       </Pressable>
-      {onClear && value ? (
+      {onClear && value && !readOnly ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Clear ${label.toLocaleLowerCase()}`}
@@ -97,7 +115,7 @@ export function SelectRow({
           <X size={18} color={colors.foreground} />
         </Pressable>
       ) : null}
-      {chevron !== 'none' ? (
+      {chevron !== 'none' && !readOnly ? (
         <Pressable
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -130,6 +148,14 @@ const styles = StyleSheet.create({
   },
   multiline: { minHeight: 88, alignItems: 'flex-start' },
   prefix: { fontFamily: fonts.semibold, fontSize: 17, color: colors.foreground },
+  segment: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingRight: 12,
+    marginVertical: -1,
+    borderRightWidth: 1.5,
+    borderRightColor: colors.border,
+  },
   text: { flex: 1, paddingVertical: 10, fontFamily: fonts.regular, fontSize: 16, color: colors.foreground },
   multilineText: { textAlignVertical: 'top' },
   press: { flex: 1, minHeight: minTarget, flexDirection: 'row', alignItems: 'center', gap: 10 },
