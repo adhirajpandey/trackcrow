@@ -1,6 +1,6 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useMutation } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { openRule } from '../rules/open-rule';
 import { useState } from 'react';
 import { Modal, Text, View } from 'react-native';
 import { ApiError, type Credentials } from '../../lib/api/client';
@@ -60,7 +60,7 @@ export function AliasSheet({ credentials: c, recipientUuid, onClose }: {
         {ruleConflict ? <>
           <Text style={type.body}>Both recipients have enabled rules. Resolve the rule conflict before merging, then retry adding the alias.</Text>
           <Button label="Open target rule" variant="secondary" onPress={() => {
-            onClose(); router.push({ pathname: '/rules', params: { ruleUuid: ruleConflict } });
+            onClose(); openRule(ruleConflict);
           }} />
         </> : null}
         <Button label={save.isPending ? 'Adding…' : 'Add alias'} disabled={!value.trim() || save.isPending}

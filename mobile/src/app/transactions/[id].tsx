@@ -20,6 +20,7 @@ import { useToast } from '../../components/toast-host';
 import { Button, HeaderIconButton, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { useClassification } from '../../components/transactions/actions';
 import { TransactionFormFields } from '../../components/transactions/form-fields';
+import { openRule } from '../../components/rules/open-rule';
 import { SummaryPanel } from '../../components/transactions/summary-panel';
 import { RulePrompt, type RulePromptSelection } from '../../components/transactions/rule-prompt';
 import {
@@ -186,7 +187,7 @@ function TransactionEditor({
     if (action === 'suggest') void suggest();
     if (action === 'clear')
       void classification.classify(txn, { categoryUuid: null, subcategoryUuid: null }).catch(() => undefined);
-    if (action === 'view-rule' && ruleUuid) router.push({ pathname: '/rules', params: { ruleUuid } });
+    if (action === 'view-rule' && ruleUuid) openRule(ruleUuid);
     if (action === 'rule') {
       if (txn.categoryUuid && txn.category)
         setRulePrompt({

@@ -8,6 +8,7 @@ import { FormField, SelectRow } from '../../components/form-controls';
 import { AliasSheet } from '../../components/recipients/alias-sheet';
 import { ApplyRecipientCategory } from '../../components/recipients/apply-category';
 import { useInvalidateRecipientsAndRules } from '../../components/recipients/shared';
+import { openRule } from '../../components/rules/open-rule';
 import { RecipientTransactionRow } from '../../components/recipients/transaction-row';
 import { SelectSheet } from '../../components/select-sheet';
 import { StickySaveBar } from '../../components/sticky-save-bar';
@@ -249,12 +250,7 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
           if (action === 'transactions') viewAll();
           if (action === 'ignore') setIgnoring(true);
           if (action === 'rule')
-            router.push({
-              pathname: '/rules',
-              params: recipient.existingRuleUuid
-                ? { ruleUuid: recipient.existingRuleUuid }
-                : { recipientUuid: recipient.uuid },
-            });
+            openRule(recipient.existingRuleUuid ?? 'new', recipient.existingRuleUuid ? {} : { recipientUuid: recipient.uuid });
         }}
       />
       <TextEditSheet

@@ -1,9 +1,10 @@
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { RecipientFilters } from '../../lib/api/recipients';
 import { emptyRecipientBounds, parseRecipientBounds, type RecipientBounds } from '../../lib/recipient-filters';
-import { colors, fonts, minTarget, radii } from '../../theme';
+import { colors, fonts, radii } from '../../theme';
+import { ChoiceChip } from '../choice-chip';
 import { Sheet } from '../sheet';
 import { Button, type } from '../ui';
 
@@ -119,7 +120,7 @@ export function RecipientFilterSheet({
         <Text style={type.label}>Sort by</Text>
         <View style={styles.row}>
           {sorts.map(([sortBy, label]) => (
-            <Choice
+            <ChoiceChip
               key={sortBy}
               label={label}
               selected={draft.sortBy === sortBy}
@@ -130,7 +131,7 @@ export function RecipientFilterSheet({
         <Text style={type.label}>Sort order</Text>
         <View style={styles.row}>
           {orders.map(([sortOrder, label]) => (
-            <Choice
+            <ChoiceChip
               key={sortOrder}
               label={label}
               selected={draft.sortOrder === sortOrder}
@@ -171,21 +172,6 @@ function BoundField({
   );
 }
 
-function Choice({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      onPress={onPress}
-      style={[styles.choice, selected && styles.choiceSelected]}
-    >
-      <Text style={styles.choiceText} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   // Room for the pinned Clear all and Apply filters buttons.
@@ -205,17 +191,4 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   prefix: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
   input: { flex: 1, paddingHorizontal: 0, paddingVertical: 4, fontFamily: fonts.regular, fontSize: 15, color: colors.foreground },
-  choice: {
-    flex: 1,
-    minHeight: minTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.card,
-  },
-  choiceSelected: { borderWidth: 2, backgroundColor: colors.paperMint },
-  choiceText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.foreground },
 });
