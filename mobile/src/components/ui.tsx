@@ -78,6 +78,7 @@ export function Button({
   trailingIcon: TrailingIcon,
   disabled = false,
   selected,
+  compact = false,
   style,
 }: {
   label: string;
@@ -88,6 +89,7 @@ export function Button({
   icon?: LucideIcon;
   trailingIcon?: LucideIcon;
   disabled?: boolean;
+  compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const palette = buttonColors[variant];
@@ -99,6 +101,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        compact && styles.compactButton,
         { backgroundColor: palette.background, borderColor: palette.border },
         !pressed && !disabled && styles.buttonShadow,
         pressed && styles.buttonPressed,
@@ -230,6 +233,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: 18,
   },
+  compactButton: { minHeight: 40, paddingHorizontal: 12, gap: 6 },
   buttonShadow: { boxShadow: shadows.control },
   buttonPressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
   buttonText: { fontFamily: fonts.bold, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' },

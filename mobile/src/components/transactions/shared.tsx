@@ -31,14 +31,12 @@ export function TransactionPage({
   title,
   heading,
   headingAction,
-  showBack = true,
   children,
   footer,
 }: {
   title: string;
   heading?: string;
   headingAction?: ReactNode;
-  showBack?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -48,7 +46,7 @@ export function TransactionPage({
       <AppHeader section={title} />
       {heading ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
-          {showBack ? <BackLink onPress={back} /> : null}
+          <BackLink onPress={back} />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <Text accessibilityRole="header" style={type.heading}>
               {heading}

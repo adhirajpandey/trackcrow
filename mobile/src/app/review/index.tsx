@@ -32,7 +32,7 @@ function ReviewList({
   const { query, rows, total } = useReviewQueue(c, startDate, endDate);
   const dates = startDate && endDate ? { startDate, endDate } : {};
   return (
-    <TransactionPage title="Transactions" heading="Review" showBack={false}>
+    <TransactionPage title="Transactions" heading="Review">
       <Text style={type.muted}>
         {query.isPending
           ? 'Loading…'

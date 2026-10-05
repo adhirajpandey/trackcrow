@@ -1,13 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowRight, EllipsisVertical, EyeOff, FileText } from 'lucide-react-native';
+import { ArrowRight, Check, ChevronRight, EllipsisVertical, EyeOff, FileText, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { FormField, FormInput, SelectRow } from '../../components/form-controls';
 import { SelectSheet } from '../../components/select-sheet';
 import { StickySaveBar } from '../../components/sticky-save-bar';
 import { useToast } from '../../components/toast-host';
-import { HeaderIconButton, InlineError, Panel, Skeleton, type } from '../../components/ui';
+import { Button, Chip, HeaderIconButton, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { IgnoreRecipient } from '../../components/transactions/actions';
 import { TransactionPickers, type TransactionPicker } from '../../components/transactions/form-fields';
 import { useReviewQueue } from '../../components/transactions/review-queue';
@@ -30,7 +30,7 @@ import {
 import { queryKeys } from '../../lib/query-keys';
 import { draftInput, transactionDraft } from '../../lib/transaction-draft';
 import { decodeFilters } from '../../lib/transaction-filters';
-import { colors, fonts, minTarget, radii } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 type Dates = { startDate?: string; endDate?: string };
 
@@ -163,32 +163,27 @@ function ReviewForm({
     >
       <SummaryPanel transaction={txn} />
       {suggested ? (
-        <Panel tone="mint" style={styles.suggestion}>
-          <View>
-            <Text style={type.heading}>Suggested category</Text>
-            <Text style={type.muted}>Based on similar transactions</Text>
+        <Panel style={styles.suggestion}>
+          <Sparkles size={20} color={colors.primaryInk} />
+          <View style={styles.suggestionText}>
+            <Text style={type.label}>Suggested</Text>
+            <View style={styles.suggestionValue}>
+              <Chip label={suggested.suggestedCategory ?? ''} tone="mint" />
+              {suggested.suggestedSubCategory ? (
+                <>
+                  <ChevronRight size={14} color={colors.mutedForeground} />
+                  <Text style={styles.subcategory} numberOfLines={1}>
+                    {suggested.suggestedSubCategory}
+                  </Text>
+                </>
+              ) : null}
+            </View>
           </View>
-          <SelectRow
-            label="Suggested category"
-            value={suggested.suggestedCategory ?? undefined}
-            placeholder="Category"
-            chosen={fromSuggestion}
-            disabled={busy}
-            onPress={() => setPicker('category')}
-          />
-          {suggested.suggestedSubCategory ? (
-            <SelectRow
-              label="Suggested subcategory"
-              value={suggested.suggestedSubCategory}
-              placeholder="Subcategory"
-              chosen={fromSuggestion}
-              disabled={busy}
-              onPress={() => setPicker('category')}
-            />
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: busy || fromSuggestion }}
+          <Button
+            compact
+            label={fromSuggestion ? 'Applied' : 'Apply'}
+            icon={fromSuggestion ? Check : undefined}
+            variant={fromSuggestion ? 'secondary' : 'primary'}
             disabled={busy || fromSuggestion}
             onPress={() =>
               setDraft({
@@ -197,10 +192,7 @@ function ReviewForm({
                 subcategoryUuid: suggested.suggestedSubcategoryUuid,
               })
             }
-            style={styles.apply}
-          >
-            <Text style={styles.applyText}>{fromSuggestion ? 'Suggestion applied' : 'Apply suggestion'}</Text>
-          </Pressable>
+          />
         </Panel>
       ) : null}
       <FormField label="Category">
@@ -319,15 +311,8 @@ function definedDates({ startDate, endDate }: Dates) {
 }
 const styles = StyleSheet.create({
   headingActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  suggestion: { padding: 14, gap: 10 },
-  apply: {
-    minHeight: minTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.primary,
-  },
-  applyText: { fontFamily: fonts.bold, fontSize: 15, color: colors.primaryForeground },
+  suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  suggestionText: { flex: 1, gap: 2 },
+  suggestionValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  subcategory: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.foreground },
 });
