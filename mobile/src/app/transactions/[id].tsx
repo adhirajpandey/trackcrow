@@ -20,7 +20,6 @@ import { useToast } from '../../components/toast-host';
 import { Button, HeaderIconButton, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { useClassification } from '../../components/transactions/actions';
 import { TransactionFormFields } from '../../components/transactions/form-fields';
-import { RecipientPicker, type SelectedRecipient } from '../../components/transactions/recipient-picker';
 import { SummaryPanel } from '../../components/transactions/summary-panel';
 import { RulePrompt, type RulePromptSelection } from '../../components/transactions/rule-prompt';
 import {
@@ -83,10 +82,7 @@ function TransactionEditor({
     [subcategoryOpen, setSubcategoryOpen] = useState(false),
     [actionsOpen, setActionsOpen] = useState(false),
     [confirmSuggestion, setConfirmSuggestion] = useState(false),
-    [editing, setEditing] = useState(false),
-    [recipientOpen, setRecipientOpen] = useState(false);
-  const original: SelectedRecipient = { uuid: txn.recipientUuid, displayName: txn.recipientDisplayName };
-  const [recipient, setRecipient] = useState(original);
+    [editing, setEditing] = useState(false);
   const [rulePrompt, setRulePrompt] = useState<RulePromptSelection | null>(null);
   const options = useTransactionOptions(c),
     invalidate = useInvalidateLedger(c),
@@ -103,13 +99,11 @@ function TransactionEditor({
     queryFn: ({ signal }) => fetchCategorySuggestion(c, txn.uuid, signal),
   });
   const input = draftInput(draft, txn);
-  const recipientChanged = recipient.uuid !== txn.recipientUuid;
-  const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft) || recipientChanged;
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
   const save = useMutation({
     mutationFn: () =>
       updateTransaction(c, txn.uuid, {
         ...input!,
-        ...(recipientChanged ? { recipientUuid: recipient.uuid } : {}),
         categoryUuid: txn.categoryUuid,
         subcategoryUuid: txn.subcategoryUuid,
       }),
@@ -219,10 +213,7 @@ function TransactionEditor({
             label={editing ? 'Cancel editing' : 'Edit transaction'}
             disabled={busy}
             onPress={() => {
-              if (editing) {
-                setDraft(savedDraft);
-                setRecipient(original);
-              }
+              if (editing) setDraft(savedDraft);
               setEditing(!editing);
             }}
           />
@@ -253,15 +244,10 @@ function TransactionEditor({
         recipient={
           <SelectRow
             label="Recipient"
-            value={recipient.displayName}
+            value={txn.recipientDisplayName}
             placeholder="Recipient"
-            chosen={editing && recipientChanged}
             disabled={busy}
-            onPress={() =>
-              editing
-                ? setRecipientOpen(true)
-                : router.push({ pathname: '/recipients/[id]', params: { id: txn.recipientUuid } })
-            }
+            onPress={() => router.push({ pathname: '/recipients/[id]', params: { id: txn.recipientUuid } })}
           />
         }
         categoryRows={
@@ -366,9 +352,6 @@ function TransactionEditor({
             .catch(() => undefined);
         }}
       />
-      {recipientOpen ? (
-        <RecipientPicker credentials={c} onSelect={setRecipient} onClose={() => setRecipientOpen(false)} />
-      ) : null}
       {rulePrompt ? (
         <RulePrompt credentials={c} selection={rulePrompt} onClose={() => setRulePrompt(null)} />
       ) : null}

@@ -98,7 +98,7 @@ export const createTransaction = (c: Credentials, input: TransactionInput) =>
 export const updateTransaction = (
   c: Credentials,
   id: string,
-  input: Omit<TransactionInput, 'recipientUuid'> & { recipientUuid?: string; classificationIntent?: 'SUGGESTION' },
+  input: Omit<TransactionInput, 'recipientUuid'> & { classificationIntent?: 'SUGGESTION' },
 ) => patchJson<UuidResult>(c, `/api/transactions/${encodeURIComponent(id)}`, input);
 export const categorizeTransaction = (c: Credentials, id: string, input: CategoryInput) =>
   patchJson<CategoryResult>(c, `/api/transactions/${encodeURIComponent(id)}/category`, input);
