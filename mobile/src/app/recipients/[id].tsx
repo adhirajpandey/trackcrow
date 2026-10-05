@@ -1,16 +1,17 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Copy, EllipsisVertical, EyeOff, List, Plus } from 'lucide-react-native';
+import { Copy, EllipsisVertical, Eye, EyeOff, List, ListChecks, Pencil, Plus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Clipboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '../../components/empty-state';
-import { FormField, FormInput } from '../../components/form-controls';
+import { FormField, SelectRow } from '../../components/form-controls';
 import { AliasSheet } from '../../components/recipients/alias-sheet';
 import { ApplyRecipientCategory } from '../../components/recipients/apply-category';
 import { useInvalidateRecipientsAndRules } from '../../components/recipients/shared';
 import { RecipientTransactionRow } from '../../components/recipients/transaction-row';
 import { SelectSheet } from '../../components/select-sheet';
 import { StickySaveBar } from '../../components/sticky-save-bar';
+import { TextEditSheet } from '../../components/text-edit-sheet';
 import { useToast } from '../../components/toast-host';
 import { IgnoreRecipient } from '../../components/transactions/actions';
 import { TransactionPage, TransactionSession, errorMessage } from '../../components/transactions/shared';
@@ -62,6 +63,8 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
   const [aliasOpen, setAliasOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [ignoring, setIgnoring] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [textField, setTextField] = useState<'name' | 'note' | null>(null);
   const toast = useToast();
   const invalidate = useInvalidateRecipientsAndRules(c.apiUrl);
   const txns = useQuery({
@@ -78,6 +81,7 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
     onSuccess: async (result) => {
       const next = { name: result.displayName, note: result.note ?? '' };
       setForm((previous) => ({ ...previous, draft: { ...next }, saved: next }));
+      setEditing(false);
       await invalidate();
       toast({ message: 'Recipient saved.' });
     },
@@ -97,18 +101,29 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
       title="Recipients"
       heading={recipient.displayName}
       headingAction={
-        <HeaderIconButton
-          icon={EllipsisVertical}
-          label="More actions"
-          disabled={busy}
-          onPress={() => setActionsOpen(true)}
-        />
+        <View style={styles.headingActions}>
+          <HeaderIconButton
+            icon={editing ? X : Pencil}
+            label={editing ? 'Cancel editing' : 'Edit recipient'}
+            disabled={busy}
+            onPress={() => {
+              if (editing) setForm((previous) => ({ ...previous, draft: { ...previous.saved } }));
+              setEditing(!editing);
+            }}
+          />
+          <HeaderIconButton
+            icon={EllipsisVertical}
+            label="More actions"
+            disabled={busy}
+            onPress={() => setActionsOpen(true)}
+          />
+        </View>
       }
       footer={
-        dirty ? (
+        editing ? (
           <StickySaveBar
             saving={save.isPending}
-            disabled={!name.trim() || name.trim().length > 200 || note.length > 500 || busy}
+            disabled={!dirty || !name.trim() || name.trim().length > 200 || note.length > 500 || busy}
             onSave={() => save.mutate()}
           />
         ) : null
@@ -126,35 +141,31 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
         <Text style={type.muted}>First paid: {paidAt(recipient.stats.firstPaidAt)}</Text>
       </Panel>
       <FormField label="Name">
-        <FormInput
-          accessibilityLabel="Name"
+        <SelectRow
+          label="Name"
           value={name}
-          maxLength={200}
-          editable={!save.isPending}
-          onChangeText={(value) => setDraft({ name: value })}
+          placeholder="Name"
+          disabled={busy}
+          readOnly={!editing}
+          onPress={() => setTextField('name')}
         />
       </FormField>
-      <View>
-        <FormField label="Note">
-          <FormInput
-            accessibilityLabel="Note"
-            placeholder="Add a note…"
-            value={note}
-            maxLength={500}
-            multiline
-            editable={!save.isPending}
-            onChangeText={(value) => setDraft({ note: value })}
-          />
-        </FormField>
-        <Text style={[type.muted, styles.counter]}>{note.length}/500 characters</Text>
-      </View>
+      <FormField label="Note" optional>
+        <SelectRow
+          label="Note"
+          value={note || undefined}
+          placeholder={editing ? 'Add a note…' : '—'}
+          disabled={busy}
+          readOnly={!editing}
+          onPress={() => setTextField('note')}
+        />
+      </FormField>
       {save.isError ? (
         <Text accessibilityRole="alert" style={type.error}>
           {errorMessage(save.error)}
         </Text>
       ) : null}
-      <Text style={styles.section}>Aliases</Text>
-      <Panel style={styles.aliases}>
+      <FormField label="Aliases">
         {recipient.aliases.length ? (
           recipient.aliases.map((alias) => (
             <View key={alias.uuid} style={styles.alias}>
@@ -184,22 +195,16 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
         ) : (
           <Text style={type.muted}>No aliases yet.</Text>
         )}
-        <Button label="Add alias" icon={Plus} compact disabled={busy} onPress={() => setAliasOpen(true)} />
-      </Panel>
-      <Text style={styles.section}>Automation</Text>
-      <Button
-        label={recipient.existingRuleUuid ? 'Open rule' : 'Create rule'}
-        variant="secondary"
-        disabled={busy}
-        onPress={() =>
-          router.push({
-            pathname: '/rules',
-            params: recipient.existingRuleUuid
-              ? { ruleUuid: recipient.existingRuleUuid }
-              : { recipientUuid: recipient.uuid },
-          })
-        }
-      />
+        {editing ? (
+          <Button
+            label="Add alias"
+            icon={Plus}
+            variant="secondary"
+            disabled={busy}
+            onPress={() => setAliasOpen(true)}
+          />
+        ) : null}
+      </FormField>
       <ApplyRecipientCategory credentials={c} recipient={recipient} />
       <View style={styles.divider} />
       <View style={styles.sectionRow}>
@@ -224,6 +229,14 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
             description: 'Open Transactions filtered to this recipient',
             icon: List,
           },
+          recipient.existingRuleUuid
+            ? { value: 'rule', label: 'View rule', description: 'Open the rule for this recipient', icon: Eye }
+            : {
+                value: 'rule',
+                label: 'Create rule',
+                description: 'Automatically classify transactions from this recipient',
+                icon: ListChecks,
+              },
           {
             value: 'ignore',
             label: 'Ignore future SMS',
@@ -235,7 +248,24 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
         onSelect={(action) => {
           if (action === 'transactions') viewAll();
           if (action === 'ignore') setIgnoring(true);
+          if (action === 'rule')
+            router.push({
+              pathname: '/rules',
+              params: recipient.existingRuleUuid
+                ? { ruleUuid: recipient.existingRuleUuid }
+                : { recipientUuid: recipient.uuid },
+            });
         }}
+      />
+      <TextEditSheet
+        open={Boolean(textField)}
+        title={textField === 'note' ? 'Note' : 'Name'}
+        value={textField === 'note' ? note : name}
+        placeholder={textField === 'note' ? 'Add a note…' : 'Name'}
+        multiline={textField === 'note'}
+        maxLength={textField === 'note' ? 500 : 200}
+        onDone={(value) => setDraft(textField === 'note' ? { note: value } : { name: value })}
+        onClose={() => setTextField(null)}
       />
       {aliasOpen ? (
         <AliasSheet credentials={c} recipientUuid={recipient.uuid} onClose={() => setAliasOpen(false)} />
@@ -252,12 +282,11 @@ function RecipientEditor({ credentials: c, recipient }: { credentials: Credentia
 }
 
 const styles = StyleSheet.create({
+  headingActions: { flexDirection: 'row', gap: 8 },
   stats: { padding: 16, gap: 8 },
   total: { fontSize: 40 },
-  counter: { alignSelf: 'flex-end', marginTop: 4 },
   section: { fontFamily: fonts.bold, fontSize: 17, color: colors.foreground },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  aliases: { padding: 12, gap: 10 },
   alias: {
     flexDirection: 'row',
     alignItems: 'center',

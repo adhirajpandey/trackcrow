@@ -9,6 +9,7 @@ export function TextEditSheet({
   value,
   placeholder,
   multiline = false,
+  maxLength,
   onDone,
   onClose,
 }: {
@@ -17,6 +18,7 @@ export function TextEditSheet({
   value: string;
   placeholder?: string;
   multiline?: boolean;
+  maxLength?: number;
   onDone: (value: string) => void;
   onClose: () => void;
 }) {
@@ -49,6 +51,7 @@ export function TextEditSheet({
         accessibilityLabel={title}
         placeholder={placeholder}
         multiline={multiline}
+        maxLength={maxLength}
         autoFocus
         value={text}
         onChangeText={setText}
