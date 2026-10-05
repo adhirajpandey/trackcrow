@@ -1,11 +1,12 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Calendar, FileText, Funnel, Plus } from 'lucide-react-native';
+import { Calendar, FileText, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
+import { FilterButton } from '../../components/filter-button';
 import { SelectRow } from '../../components/form-controls';
 import { SelectSheet } from '../../components/select-sheet';
 import { SearchField } from '../../components/search-field';
@@ -28,7 +29,7 @@ import { dayLabel, monthPeriod } from '../../lib/transaction-dates';
 import { decodeFilters, encodeFilters, hasExtraFilters } from '../../lib/transaction-filters';
 import { useSmsIngestion } from '../../lib/sms-ingestion';
 import { fetchSummary } from '../../lib/api/dashboard';
-import { colors, minTarget, radii, shadows } from '../../theme';
+import { colors } from '../../theme';
 export default function TransactionsScreen() {
   return (
     <TransactionSession>{(credentials) => <Transactions credentials={credentials} />}</TransactionSession>
@@ -116,16 +117,7 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
               autoCapitalize="none"
             />
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={filtered ? 'Filter, filters applied' : 'Filter'}
-            onPress={() => setFilterOpen(true)}
-            style={({ pressed }) => [styles.filter, pressed ? styles.filterPressed : styles.filterShadow]}
-          >
-            <Funnel size={22} color={colors.foreground} strokeWidth={2.25} />
-            {/* A dot, not only color, shows that filters beyond the period are applied. */}
-            {filtered ? <View style={styles.filterDot} /> : null}
-          </Pressable>
+          <FilterButton active={filtered} onPress={() => setFilterOpen(true)} />
         </View>
         <SelectRow
           label="Period"
@@ -295,29 +287,6 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
   );
 }
 const styles = StyleSheet.create({
-  filter: {
-    width: minTarget + 8,
-    height: minTarget + 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.card,
-  },
-  filterShadow: { boxShadow: shadows.control },
-  filterPressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
-  filterDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 9,
-    height: 9,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.destructive,
-  },
   center: { textAlign: 'center' },
   stretch: { alignSelf: 'stretch', marginTop: 4 },
 });
