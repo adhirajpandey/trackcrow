@@ -45,15 +45,7 @@ export function TransactionPage({
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section={title} />
       {heading ? (
-        <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
-          <BackLink onPress={back} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <Text accessibilityRole="header" style={type.heading}>
-              {heading}
-            </Text>
-            {headingAction}
-          </View>
-        </View>
+        <PageHeading heading={heading} action={headingAction} onBack={back} />
       ) : (
         <View style={{ paddingHorizontal: 16 }}>
           <TextLink label="Back" onPress={back} />
@@ -64,6 +56,27 @@ export function TransactionPage({
       </ScrollView>
       {footer}
     </SafeAreaView>
+  );
+}
+export function PageHeading({
+  heading,
+  action,
+  onBack,
+}: {
+  heading: string;
+  action?: ReactNode;
+  onBack: () => void;
+}) {
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
+      <BackLink onPress={onBack} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <Text accessibilityRole="header" style={[type.heading, { flexShrink: 1 }]}>
+          {heading}
+        </Text>
+        {action}
+      </View>
+    </View>
   );
 }
 export function useTransactionOptions(c: Credentials) {

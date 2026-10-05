@@ -125,7 +125,7 @@ export function IgnoreRecipient({
   onClose,
 }: {
   credentials: Credentials;
-  transaction: Transaction;
+  transaction: Pick<Transaction, 'recipientUuid' | 'recipientDisplayName'>;
   onClose: () => void;
 }) {
   const toast = useToast();
