@@ -603,17 +603,11 @@ export async function updateTransaction(
   try {
     const existing = await prisma.transaction.findFirst({
       where: { uuid: input.transactionUuid, userUuid: input.userUuid },
-      select: { id: true, categoryId: true, subcategoryId: true, recipientId: true, source: true },
+      select: { id: true, categoryId: true, subcategoryId: true },
     });
     if (!existing) {
       return fail("NOT_FOUND");
     }
-
-    const recipientResult = input.recipientUuid
-      ? await resolveExistingRecipient({ userUuid: input.userUuid, recipientUuid: input.recipientUuid })
-      : null;
-    if (recipientResult && !recipientResult.ok) return recipientResult;
-    const recipientChanged = Boolean(recipientResult && recipientResult.data.recipientId !== existing.recipientId);
 
     const accountResult = Object.prototype.hasOwnProperty.call(input, "accountUuid")
       ? await resolveAccountId({ userUuid: input.userUuid, accountUuid: input.accountUuid })
@@ -656,14 +650,6 @@ export async function updateTransaction(
               classificationChangedAt: new Date(),
             }
           : {}),
-        ...(recipientResult && recipientChanged
-          ? {
-              recipientId: recipientResult.data.recipientId,
-              ...(existing.source === TransactionSource.MANUAL
-                ? { recipientRaw: recipientResult.data.displayName, recipientName: recipientResult.data.displayName }
-                : {}),
-            }
-          : {}),
         amount: input.amount,
         type: input.type,
         reference: input.reference?.trim() || null,
@@ -679,7 +665,6 @@ export async function updateTransaction(
       userId: input.userUuid,
       transactionId: existing.id,
       source: input.source,
-      recipientChanged,
     });
 
     return ok({ uuid: input.transactionUuid });

@@ -275,7 +275,7 @@ Returns one transaction DTO with the same fields as the list item plus `recipien
 
 ### `PATCH /api/transactions/:id`
 
-Same shape as create, except `recipientUuid` is optional. Sending it moves the transaction to that recipient, which must belong to the authenticated user or the request returns `400`; a manual transaction's stored recipient text follows the new recipient, while an SMS import keeps the text from the message. Changing the recipient does not reclassify the transaction. Omitting `accountUuid` preserves the current account; sending `null` clears it. The optional `classificationIntent: "SUGGESTION"` marks the category change as an accepted suggestion and requires both `categoryUuid` and `subcategoryUuid` to be present. Returns `{ "uuid": "..." }`.
+Same shape as create, except `recipientUuid` is not accepted. Omitting `accountUuid` preserves the current account; sending `null` clears it. The optional `classificationIntent: "SUGGESTION"` marks the category change as an accepted suggestion and requires both `categoryUuid` and `subcategoryUuid` to be present. Returns `{ "uuid": "..." }`.
 
 When the submitted category pair no longer matches the current suggestion, returns `409` with:
 
