@@ -31,7 +31,7 @@ appId: app.trackcrow.mobile.dev
 - extendedWaitUntil:
     visible: An access token
     timeout: 10000
-- assertVisible: SMS import:.*
+- assertVisible: SMS import
 - waitForAnimationToEnd
 - takeScreenshot: 16-settings
 - back

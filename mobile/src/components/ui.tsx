@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, type LucideIcon } from 'lucide-react-native';
+import { Check, ChevronLeft, Info, type LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -168,6 +168,16 @@ export function Radio({ checked }: { checked: boolean }) {
   return <View style={[styles.mark, styles.radio]}>{checked ? <View style={styles.radioDot} /> : null}</View>;
 }
 
+/** A quiet lilac note with an info icon, for reassurance and fine print. */
+export function InfoNote({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.info}>
+      <Info size={18} color={colors.secondaryForeground} />
+      <Text style={[type.muted, styles.infoText]}>{children}</Text>
+    </View>
+  );
+}
+
 export function SectionHeader({ title, right }: { title: string; right?: ReactNode }) {
   return (
     <View style={styles.sectionHeader}>
@@ -238,6 +248,16 @@ const styles = StyleSheet.create({
   buttonPressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
   buttonText: { fontFamily: fonts.bold, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' },
   disabled: { opacity: 0.5 },
+  info: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.paperLilac,
+  },
+  infoText: { flex: 1 },
   dashed: {
     alignItems: 'center',
     gap: 10,

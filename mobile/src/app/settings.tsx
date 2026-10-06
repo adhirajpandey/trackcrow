@@ -1,16 +1,26 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { ChevronDown, ChevronUp, LogIn, LogOut, UserRound } from 'lucide-react-native';
+import {
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  KeyRound,
+  LogIn,
+  LogOut,
+  MessageSquareText,
+  SlidersHorizontal,
+  UserRound,
+} from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { ScreenHeader } from '../components/screen-header';
+import { MenuRow } from '../components/menu-row';
+import { TransactionPage } from '../components/transactions/shared';
 import { useSmsIngestion } from '../lib/sms-ingestion';
 import { onboarding } from '../lib/onboarding';
 import { TokenSignIn } from '../components/token-sign-in';
-import { Button, Panel, TextLink, type } from '../components/ui';
+import { Button, Panel, type } from '../components/ui';
 import { DEFAULT_API_URL } from '../lib/api';
 import { useCredentials } from '../lib/credentials';
 import { colors, fonts, radii } from '../theme';
@@ -67,10 +77,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
-      <ScreenHeader section="Settings" />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={type.note}>connect this phone</Text>
+    <TransactionPage title="Settings" heading="Settings" fallback="/(tabs)/more">
         {notice ? (
           <Panel tone="blush" style={styles.notice}>
             <Text accessibilityRole="alert" style={type.error}>
@@ -85,10 +92,17 @@ export default function SettingsScreen() {
               <Text style={type.heading}>Account</Text>
             </View>
             <View style={styles.connected}>
-              <Text style={type.label}>{saved.method === 'google' ? 'Signed in as' : 'Connected with'}</Text>
-              <Text style={type.body} numberOfLines={1}>
-                {saved.method === 'google' ? saved.email : 'An access token'}
-              </Text>
+              <View style={styles.connectedBadge}>
+                <KeyRound size={18} color={colors.foreground} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.connectedLabel}>
+                  {saved.method === 'google' ? 'Signed in as' : 'Connected with'}
+                </Text>
+                <Text style={type.body} numberOfLines={1}>
+                  {saved.method === 'google' ? saved.email : 'An access token'}
+                </Text>
+              </View>
             </View>
             {busy ? <ActivityIndicator color={colors.foreground} accessibilityLabel="Signing out" /> : null}
             <Button
@@ -123,17 +137,28 @@ export default function SettingsScreen() {
           </Panel>
         )}
         {saved ? (
-          <Panel style={styles.panel}>
-            <Text style={type.body}>
-              SMS import:{' '}
-              {sms.authError
-                ? 'Sign in again'
-                : sms.enabled
-                  ? `Active · ${sms.pending} pending`
-                  : 'Off · manual tracking'}
-            </Text>
-            <TextLink label="Open diagnostics" onPress={() => router.push('/diagnostics')} />
-          </Panel>
+          <>
+            <MenuRow
+              icon={MessageSquareText}
+              label="SMS import"
+              description={
+                sms.authError
+                  ? 'Sign in again'
+                  : sms.enabled
+                    ? `Active · ${sms.pending} pending`
+                    : 'Off · manual tracking'
+              }
+              badge={colors.muted}
+            />
+            <MenuRow
+              icon={Activity}
+              label="Open diagnostics"
+              description="Check app and import status"
+              tone={colors.paperMint}
+              labelColor={colors.primaryInk}
+              onPress={() => router.push('/diagnostics')}
+            />
+          </>
         ) : null}
         <Button
           label="Run setup again"
@@ -146,13 +171,16 @@ export default function SettingsScreen() {
               .catch(() => setNotice('Could not reset setup. Try again.'));
           }}
         />
-        <Panel style={styles.panel}>
-          <Button
-            label={advanced ? 'Advanced · Hide' : 'Advanced · Show'}
-            trailingIcon={advanced ? ChevronUp : ChevronDown}
-            variant="secondary"
-            disabled={busy}
-            onPress={() => setAdvanced((open) => !open)}
+        <View style={styles.advanced}>
+          <MenuRow
+            icon={SlidersHorizontal}
+            label="Advanced"
+            description="Server URL and access token"
+            badge={colors.muted}
+            trailing={advanced ? ChevronUp : ChevronDown}
+            onPress={() => {
+              if (!busy) setAdvanced((open) => !open);
+            }}
           />
           {advanced ? (
             <View style={{ gap: 10 }}>
@@ -174,22 +202,34 @@ export default function SettingsScreen() {
               <TokenSignIn apiUrl={apiUrl} inputStyle={styles.input} onConnected={connected} />
             </View>
           ) : null}
-        </Panel>
+        </View>
         <Text style={[type.muted, styles.version]}>{appVersion}</Text>
-      </ScrollView>
-    </SafeAreaView>
+    </TransactionPage>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 16, gap: 12 },
   panel: { padding: 16, gap: 10 },
   notice: { padding: 14 },
   version: { textAlign: 'center', paddingTop: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  flex: { flex: 1 },
+  advanced: { gap: 10 },
+  connectedBadge: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+  },
+  connectedLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.primaryInk },
   connected: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     padding: 10,
     borderRadius: radii.md,
     borderWidth: 1.5,

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,14 +33,17 @@ export function TransactionPage({
   headingAction,
   children,
   footer,
+  fallback = '/(tabs)/transactions',
 }: {
   title: string;
   heading?: string;
   headingAction?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  /** Where Back goes when the screen was opened without history, such as from a link. */
+  fallback?: Href;
 }) {
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/transactions'));
+  const back = () => (router.canGoBack() ? router.back() : router.replace(fallback));
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section={title} />
@@ -65,11 +68,11 @@ export function PageHeading({
 }: {
   heading: string;
   action?: ReactNode;
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   return (
     <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
-      <BackLink onPress={onBack} />
+      {onBack ? <BackLink onPress={onBack} /> : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Text accessibilityRole="header" style={[type.heading, { flexShrink: 1 }]}>
           {heading}

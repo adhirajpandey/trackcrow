@@ -5,15 +5,15 @@ appId: app.trackcrow.mobile.dev
 # The wrapper has already opened the project on Metro; the first bundle can take a while.
 # Overview, setup, or the sign-in prompt, depending on the app's saved state.
 - extendedWaitUntil:
-    visible: Spent in .*|Welcome to TrackCrow|Connect TrackCrow|connect this phone
+    visible: Spent in .*|Welcome to TrackCrow|Connect TrackCrow|Sign in with Google
     timeout: 180000
 - openLink: trackcrow-dev://settings
 - extendedWaitUntil:
-    visible: connect this phone
+    visible: Advanced
     timeout: 15000
 - scrollUntilVisible:
-    element: Advanced · Show
-- tapOn: Advanced · Show
+    element: Advanced
+- tapOn: Advanced
 - scrollUntilVisible:
     element:
       id: server-url-input
@@ -33,9 +33,9 @@ appId: app.trackcrow.mobile.dev
 - tapOn:
     id: access-token-input
 - inputText: ${SCREENSHOT_TOKEN}
-# hideKeyboard fails on the secure token field. Settings scrolls back to the top, and a tap
-# outside the inputs dismisses the keyboard.
-- tapOn: connect this phone
+# hideKeyboard fails on the secure token field. A tap on the Server URL label, outside the
+# inputs, dismisses the keyboard.
+- tapOn: Server URL
 - scrollUntilVisible:
     element: Connect with token
 - tapOn: Connect with token

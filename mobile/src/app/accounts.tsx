@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Plus } from 'lucide-react-native';
+import { StyleSheet, Text } from 'react-native';
 import { NameSheet } from '../components/categories/name-sheet';
 import { EmptyState } from '../components/empty-state';
 import { useToast } from '../components/toast-host';
@@ -14,6 +15,7 @@ import { Button, InlineError, Panel, Skeleton, type } from '../components/ui';
 import { fetchAccounts, createAccount, updateAccount, type Account } from '../lib/api/accounts';
 import type { Credentials } from '../lib/api/client';
 import { queryKeys } from '../lib/query-keys';
+import { colors, fonts } from '../theme';
 
 export default function AccountsScreen() {
   return <TransactionSession>{(credentials) => <Accounts credentials={credentials} />}</TransactionSession>;
@@ -41,9 +43,9 @@ function Accounts({ credentials: c }: { credentials: Credentials }) {
     }
   }
   return (
-    <TransactionPage title="Accounts">
-      <Text style={type.muted}>Add or rename your accounts. Account deletion is not available.</Text>
-      <Button label="Add account" disabled={busy} onPress={() => setEditor('new')} />
+    <TransactionPage title="Accounts" heading="Accounts">
+      <Text style={type.muted}>Add or rename the accounts you pay from. Accounts can’t be deleted.</Text>
+      <Button label="Add account" icon={Plus} disabled={busy} onPress={() => setEditor('new')} />
       {accounts.isPending ? (
         <Skeleton height={160} />
       ) : accounts.isError ? (
@@ -52,9 +54,17 @@ function Accounts({ credentials: c }: { credentials: Credentials }) {
         <EmptyState title="No accounts" message="Add an account to identify where you paid from." />
       ) : (
         accounts.data.map((account) => (
-          <Panel key={account.uuid} style={{ padding: 14, gap: 10 }}>
-            <Text style={type.heading}>{account.name}</Text>
-            <Button label="Rename" variant="secondary" disabled={busy} onPress={() => setEditor(account)} />
+          <Panel key={account.uuid} style={styles.account}>
+            <Text style={styles.name} numberOfLines={1}>
+              {account.name}
+            </Text>
+            <Button
+              label="Rename"
+              variant="secondary"
+              compact
+              disabled={busy}
+              onPress={() => setEditor(account)}
+            />
           </Panel>
         ))
       )}
@@ -71,3 +81,8 @@ function Accounts({ credentials: c }: { credentials: Credentials }) {
     </TransactionPage>
   );
 }
+
+const styles = StyleSheet.create({
+  account: { paddingHorizontal: 14, paddingVertical: 14, gap: 12 },
+  name: { fontFamily: fonts.bold, fontSize: 17, color: colors.foreground },
+});

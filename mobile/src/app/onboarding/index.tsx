@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
-import { Linking, ScrollView, Text, View } from 'react-native';
+import { MessageSquareMore, Smartphone } from 'lucide-react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScreenHeader } from '../../components/screen-header';
-import { Button, Panel, type } from '../../components/ui';
+import { AppHeader } from '../../components/app-header';
+import { MenuRow } from '../../components/menu-row';
+import { PageHeading } from '../../components/transactions/shared';
+import { Button, InfoNote, Panel, type } from '../../components/ui';
 import { TextField } from '../../components/text-field';
 import { useToast } from '../../components/toast-host';
 import { useCredentials } from '../../lib/credentials';
@@ -16,7 +19,7 @@ import { readCachedSmsConfig } from '../../lib/sms-config';
 import { useSmsIngestion } from '../../lib/sms-ingestion';
 import { debugLog } from '../../lib/debug-log';
 import Constants from 'expo-constants';
-import { colors } from '../../theme';
+import { colors, fonts, radii } from '../../theme';
 
 type Step = 'welcome' | 'signin' | 'bank' | 'unsupported' | 'sms' | 'permission' | 'accounts' | 'done';
 export default function OnboardingScreen() {
@@ -27,6 +30,7 @@ export default function OnboardingScreen() {
   const toast = useToast();
   const cache = useQueryClient();
   const [step, setStep] = useState<Step>('welcome');
+  const [history, setHistory] = useState<Step[]>([]);
   const [banks, setBanks] = useState(['Kotak', 'HDFC']);
   const [bankRequest, setBankRequest] = useState('');
   const [mode, setMode] = useState<'manual' | 'sms'>('manual');
@@ -55,8 +59,15 @@ export default function OnboardingScreen() {
   );
   function next(value: Step) {
     setError(null);
+    setHistory((previous) => [...previous, step]);
     setStep(value);
   }
+  function back() {
+    setError(null);
+    setStep(history.at(-1) ?? 'welcome');
+    setHistory((previous) => previous.slice(0, -1));
+  }
+  const onBack = history.length ? back : router.canGoBack() ? () => router.back() : undefined;
   async function work(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
@@ -97,11 +108,20 @@ export default function OnboardingScreen() {
     done: 'You’re ready',
   };
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenHeader section="Setup" />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }} keyboardShouldPersistTaps="handled">
-        <Panel raised style={{ padding: 16, gap: 14 }}>
-          <Text style={type.heading}>{titles[step]}</Text>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader section="Setup" />
+      <PageHeading heading="Setup" onBack={busy ? undefined : onBack} />
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {step === 'sms' ? (
+          <Panel tone="mint" style={styles.illustration}>
+            <Smartphone size={88} color={colors.foreground} strokeWidth={1.5} />
+            <View style={styles.bubble}>
+              <MessageSquareMore size={26} color={colors.foreground} />
+            </View>
+          </Panel>
+        ) : null}
+        <Panel raised={step !== 'sms'} tone={step === 'welcome' ? 'mint' : 'paper'} style={step === 'sms' ? styles.plain : styles.panel}>
+          <Text style={step === 'sms' || step === 'bank' ? styles.title : type.heading}>{titles[step]}</Text>
           {step === 'welcome' ? (
             <>
               <Text style={type.body}>
@@ -154,19 +174,11 @@ export default function OnboardingScreen() {
                 Only new messages from supported bank senders are imported. Past SMS are never read.
               </Text>
               {banks.map((bank) => (
-                <Button
-                  key={bank}
-                  label={bank}
-                  disabled={busy}
-                  variant="secondary"
-                  onPress={() => next('sms')}
-                />
+                <MenuRow key={bank} label={bank} onPress={busy ? undefined : () => next('sms')} />
               ))}
-              <Button
+              <MenuRow
                 label="My bank isn't supported"
-                variant="secondary"
-                disabled={busy}
-                onPress={() =>
+                onPress={busy ? undefined : () =>
                   void work(async () => {
                     await onboarding.save(apiUrl, { complete: false, mode: 'manual' });
                     setMode('manual');
@@ -218,16 +230,12 @@ export default function OnboardingScreen() {
           {step === 'sms' ? (
             <>
               <Text style={type.body}>
-                Android’s SMS permission is broad, but TrackCrow only acts on messages from supported bank
-                senders.
+                TrackCrow only reads new SMS from supported banks. OTPs are dropped on this phone.
               </Text>
               <Text style={type.body}>
-                Those messages are sent to the TrackCrow server to be read. The text isn’t stored there.
-                Pending messages stay in this app’s private queue until they are sent.
+                The server pulls out the amount, recipient, and reference, then discards the text.
               </Text>
-              <Text style={type.muted}>
-                Only new arrivals are captured. You can use manual tracking at any time.
-              </Text>
+              <InfoNote>Past SMS are never read. Unsent messages are deleted after 7 days or on sign-out.</InfoNote>
               <Button label="Allow SMS access" disabled={busy} onPress={() => void work(allow)} />
               <Button
                 label="Use manual tracking instead"
@@ -336,7 +344,63 @@ export default function OnboardingScreen() {
             </Text>
           ) : null}
         </Panel>
+        {step === 'welcome' ? (
+          <Panel tone="lilac" style={styles.panel}>
+            <Text style={styles.nextTitle}>What happens next?</Text>
+            {[
+              ['Pick your bank', 'Choose which bank sends your transaction SMS.'],
+              ['Allow SMS access', 'TrackCrow only acts on messages from supported bank senders.'],
+              ['Start tracking', 'New messages are imported automatically.'],
+            ].map(([title, body], index) => (
+              <View key={title} style={styles.step}>
+                <View style={styles.number}>
+                  <Text style={styles.numberText}>{index + 1}</Text>
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.stepTitle}>{title}</Text>
+                  <Text style={type.muted}>{body}</Text>
+                </View>
+              </View>
+            ))}
+          </Panel>
+        ) : null}
+        {step === 'bank' ? (
+          <InfoNote>You can still use manual tracking to add transactions from any bank at any time.</InfoNote>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { padding: 16, gap: 16 },
+  panel: { padding: 16, gap: 14 },
+  plain: { padding: 0, gap: 14, borderWidth: 0, backgroundColor: 'transparent' },
+  title: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 30, color: colors.foreground },
+  illustration: { height: 170, alignItems: 'center', justifyContent: 'center' },
+  bubble: {
+    position: 'absolute',
+    top: 34,
+    left: '55%',
+    padding: 8,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+  },
+  nextTitle: { fontFamily: fonts.bold, fontSize: 17, color: colors.foreground },
+  step: { flexDirection: 'row', gap: 12 },
+  number: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+  },
+  numberText: { fontFamily: fonts.bold, fontSize: 14, color: colors.foreground },
+  stepTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
+  flex: { flex: 1, gap: 2 },
+});

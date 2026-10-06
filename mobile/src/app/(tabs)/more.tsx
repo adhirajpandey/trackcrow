@@ -1,7 +1,6 @@
 import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
 import {
-  ChevronRight,
   UsersRound,
   WandSparkles,
   Tags,
@@ -10,12 +9,13 @@ import {
   Activity,
   type LucideIcon,
 } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
+import { MenuRow } from '../../components/menu-row';
 import { type } from '../../components/ui';
 import { useCredentials } from '../../lib/credentials';
-import { colors, fonts, radii } from '../../theme';
+import { colors, radii } from '../../theme';
 
 type Page = { label: string; description: string; href: Href; icon: LucideIcon };
 
@@ -59,23 +59,15 @@ export default function MoreScreen() {
         {sections.map((section) => (
           <View key={section.title} style={[styles.section, { backgroundColor: section.tint }]}>
             <Text style={type.label}>{section.title}</Text>
-            {section.pages.map(({ label, description, href, icon: Icon }) => (
-              <Pressable
+            {section.pages.map(({ label, description, href, icon }) => (
+              <MenuRow
                 key={label}
-                accessibilityRole="button"
-                accessibilityLabel={`${label}. ${description}`}
+                icon={icon}
+                label={label}
+                description={description}
+                badge={section.badge}
                 onPress={() => router.push(href)}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              >
-                <View style={[styles.badge, { backgroundColor: section.badge }]}>
-                  <Icon size={20} color={colors.foreground} />
-                </View>
-                <View style={styles.text}>
-                  <Text style={styles.label}>{label}</Text>
-                  <Text style={type.muted}>{description}</Text>
-                </View>
-                <ChevronRight size={20} color={colors.foreground} />
-              </Pressable>
+              />
             ))}
           </View>
         ))}
@@ -100,30 +92,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.lg,
   },
-  row: {
-    minHeight: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.card,
-  },
-  pressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
-  badge: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-  },
-  text: { flex: 1, gap: 2 },
-  label: { fontFamily: fonts.bold, fontSize: 16, color: colors.foreground },
   footer: { marginTop: 'auto', paddingVertical: 16, gap: 6 },
   center: { textAlign: 'center' },
 });
