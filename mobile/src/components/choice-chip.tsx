@@ -19,7 +19,7 @@ export function ChoiceChip({
       onPress={onPress}
       style={[styles.choice, selected && styles.selected]}
     >
-      <Text style={styles.text} numberOfLines={1}>
+      <Text style={styles.text} numberOfLines={1} adjustsFontSizeToFit>
         {label}
       </Text>
     </Pressable>
