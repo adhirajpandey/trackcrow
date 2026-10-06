@@ -244,6 +244,7 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
                   <LedgerRow
                     transaction={txn}
                     disabled
+                    showActions={false}
                     onClassify={() => undefined}
                     onIgnore={() => undefined}
                   />

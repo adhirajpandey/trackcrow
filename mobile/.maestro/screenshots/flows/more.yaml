@@ -13,7 +13,7 @@ appId: app.trackcrow.mobile.dev
     visible: Add category
     timeout: 10000
 - extendedWaitUntil:
-    visible: Rename category
+    visible: Add subcategory
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: 14-categories
