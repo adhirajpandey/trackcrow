@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
-import { MessageSquareMore, Smartphone } from 'lucide-react-native';
+import {
+  Check,
+  KeyRound,
+  Landmark,
+  MessageSquareMore,
+  PartyPopper,
+  PenLine,
+  Send,
+  ShieldAlert,
+  Smartphone,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
 import { MenuRow } from '../../components/menu-row';
 import { PageHeading } from '../../components/transactions/shared';
 import { Button, InfoNote, Panel, type } from '../../components/ui';
-import { TextField } from '../../components/text-field';
+import { FormField, FormInput } from '../../components/form-controls';
 import { useToast } from '../../components/toast-host';
 import { useCredentials } from '../../lib/credentials';
 import { DEFAULT_API_URL } from '../../lib/api/client';
@@ -21,6 +32,7 @@ import { debugLog } from '../../lib/debug-log';
 import Constants from 'expo-constants';
 import { colors, fonts, radii } from '../../theme';
 
+type Illustration = { icon: LucideIcon; badge: LucideIcon; tone: 'mint' | 'review'; badgeColor: string };
 type Step = 'welcome' | 'signin' | 'bank' | 'unsupported' | 'sms' | 'permission' | 'accounts' | 'done';
 export default function OnboardingScreen() {
   const { state, signInWithGoogle } = useCredentials();
@@ -107,21 +119,37 @@ export default function OnboardingScreen() {
     accounts: 'Name your accounts',
     done: 'You’re ready',
   };
+  const granted = sms.permission === 'granted';
+  const illustrations: Partial<Record<Step, Illustration>> = {
+    signin: { icon: Smartphone, badge: KeyRound, tone: 'mint', badgeColor: colors.primary },
+    unsupported: { icon: Landmark, badge: PenLine, tone: 'review', badgeColor: colors.accent },
+    sms: { icon: Smartphone, badge: MessageSquareMore, tone: 'mint', badgeColor: colors.primary },
+    permission: granted
+      ? { icon: Smartphone, badge: Check, tone: 'mint', badgeColor: colors.primary }
+      : { icon: Smartphone, badge: ShieldAlert, tone: 'review', badgeColor: colors.accent },
+    done: { icon: Landmark, badge: PartyPopper, tone: 'mint', badgeColor: colors.primary },
+  };
+  const art = illustrations[step];
+  const plain = Boolean(art) || step === 'accounts';
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section="Setup" />
       <PageHeading heading="Setup" onBack={busy ? undefined : onBack} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {step === 'sms' ? (
-          <Panel tone="mint" style={styles.illustration}>
-            <Smartphone size={88} color={colors.foreground} strokeWidth={1.5} />
-            <View style={styles.bubble}>
-              <MessageSquareMore size={26} color={colors.foreground} />
+        {art ? (
+          <Panel tone="mint" style={[styles.illustration, art.tone === 'review' && { backgroundColor: colors.uncategorized }]}>
+            <art.icon size={88} color={colors.foreground} strokeWidth={1.5} />
+            <View style={[styles.bubble, { backgroundColor: art.badgeColor }]}>
+              <art.badge size={26} color={colors.foreground} />
             </View>
           </Panel>
         ) : null}
-        <Panel raised={step !== 'sms'} tone={step === 'welcome' ? 'mint' : 'paper'} style={step === 'sms' ? styles.plain : styles.panel}>
-          <Text style={step === 'sms' || step === 'bank' ? styles.title : type.heading}>{titles[step]}</Text>
+        <Panel
+          raised={!plain}
+          tone={step === 'welcome' ? 'mint' : 'paper'}
+          style={plain ? styles.plain : styles.panel}
+        >
+          <Text style={plain || step === 'bank' ? styles.title : type.heading}>{titles[step]}</Text>
           {step === 'welcome' ? (
             <>
               <Text style={type.body}>
@@ -160,10 +188,10 @@ export default function OnboardingScreen() {
                 }
               />
               <Button
-                label="Open Settings"
+                label="Use an access token instead"
                 variant="secondary"
                 disabled={busy}
-                onPress={() => router.push('/settings')}
+                onPress={() => router.push({ pathname: '/settings', params: { advanced: '1' } })}
               />
               {credentials ? <Button label="Continue" disabled={busy} onPress={() => next('bank')} /> : null}
             </>
@@ -191,18 +219,22 @@ export default function OnboardingScreen() {
           {step === 'unsupported' ? (
             <>
               <Text style={type.body}>
-                Your bank’s SMS cannot be imported yet. You can add expenses and categorize them manually.
-                This path does not request SMS permission.
+                Your bank’s SMS can’t be imported yet, but you can add and categorize expenses yourself.
               </Text>
-              <TextField
-                label="Request my bank (optional)"
-                value={bankRequest}
-                maxLength={100}
-                onChangeText={setBankRequest}
-                editable={!busy}
-              />
+              <FormField label="Request your bank (optional)">
+                <FormInput
+                  accessibilityLabel="Request your bank"
+                  placeholder="e.g. Axis Bank"
+                  value={bankRequest}
+                  maxLength={100}
+                  onChangeText={setBankRequest}
+                  editable={!busy}
+                />
+              </FormField>
               <Button
-                label="Request my bank"
+                label="Send request"
+                icon={Send}
+                compact
                 disabled={busy || !bankRequest.trim() || !credentials}
                 variant="secondary"
                 onPress={() =>
@@ -224,6 +256,7 @@ export default function OnboardingScreen() {
                   })
                 }
               />
+              <InfoNote>This path never asks for SMS permission.</InfoNote>
               <Button label="Continue in manual mode" disabled={busy} onPress={() => void work(manual)} />
             </>
           ) : null}
@@ -266,11 +299,11 @@ export default function OnboardingScreen() {
                 <>
                   <Text style={type.body}>SMS permission was not granted. Manual expenses still work.</Text>
                   {blocked || sms.permission === 'never_ask_again' ? (
-                    <Text style={type.body}>
+                    <InfoNote>
                       If no Android dialog appeared, this sideloaded app may be blocked by restricted
                       settings. Open App info → ⋮ → Allow restricted settings, then come back and retry. If
                       you previously denied access, enable SMS in App info → Permissions.
-                    </Text>
+                    </InfoNote>
                   ) : null}
                   <Button
                     label="Open app settings"
@@ -292,49 +325,62 @@ export default function OnboardingScreen() {
           {step === 'accounts' ? (
             <>
               <Text style={type.muted}>
-                Optional: give imported accounts names you recognize. You can also do this later in More →
-                Accounts.
+                Optional: give your accounts names you recognize. You can change them later in More → Accounts.
               </Text>
               {accounts.isPending ? <Text style={type.muted}>Loading accounts…</Text> : null}
               {accounts.isError ? (
                 <Text style={type.error}>Could not load accounts. You can skip this step.</Text>
               ) : null}
               {accounts.data?.map((account) => (
-                <View key={account.uuid} style={{ gap: 8 }}>
-                  <TextField
-                    label={`Account: ${account.name}`}
+                <FormField key={account.uuid} label={account.name}>
+                  <FormInput
+                    accessibilityLabel={`Name for ${account.name}`}
                     value={names[account.uuid] ?? account.name}
                     onChangeText={(name) => setNames((current) => ({ ...current, [account.uuid]: name }))}
                     editable={!busy}
                     maxLength={100}
                   />
-                </View>
+                </FormField>
               ))}
-              {accounts.data?.length ? (
+              <View style={styles.actions}>
                 <Button
-                  label="Save names"
+                  label="Skip"
                   disabled={busy}
-                  onPress={() =>
-                    void work(async () => {
-                      for (const account of accounts.data ?? [])
-                        if (names[account.uuid] !== undefined && names[account.uuid].trim() !== account.name)
-                          await updateAccount(credentials!, account.uuid, names[account.uuid]);
-                      await cache.invalidateQueries();
-                      next('done');
-                    })
-                  }
+                  variant="secondary"
+                  style={styles.grow}
+                  onPress={() => next('done')}
                 />
-              ) : null}
-              <Button label="Skip" disabled={busy} variant="secondary" onPress={() => next('done')} />
+                {accounts.data?.length ? (
+                  <Button
+                    label="Save names"
+                    disabled={busy}
+                    style={styles.grow2}
+                    onPress={() =>
+                      void work(async () => {
+                        for (const account of accounts.data ?? [])
+                          if (names[account.uuid] !== undefined && names[account.uuid].trim() !== account.name)
+                            await updateAccount(credentials!, account.uuid, names[account.uuid]);
+                        await cache.invalidateQueries();
+                        next('done');
+                      })
+                    }
+                  />
+                ) : null}
+              </View>
             </>
           ) : null}
           {step === 'done' ? (
             <>
               <Text style={type.body}>
                 {mode === 'sms'
-                  ? 'New supported bank SMS will join your ledger. Review uncategorized transactions from Overview.'
-                  : 'Add expenses manually from Overview or Transactions. Run setup again in Settings whenever you want SMS import.'}
+                  ? 'New supported bank SMS will join your ledger automatically.'
+                  : 'Add expenses from Overview or Transactions whenever you spend.'}
               </Text>
+              <InfoNote>
+                {mode === 'sms'
+                  ? 'Review uncategorized transactions from the badge at the top of Overview.'
+                  : 'Run setup again in Settings whenever you want SMS import.'}
+              </InfoNote>
               <Button label="Open Overview" disabled={busy} onPress={() => void work(finish)} />
             </>
           ) : null}
@@ -403,4 +449,7 @@ const styles = StyleSheet.create({
   numberText: { fontFamily: fonts.bold, fontSize: 14, color: colors.foreground },
   stepTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
   flex: { flex: 1, gap: 2 },
+  actions: { flexDirection: 'row', gap: 10 },
+  grow: { flex: 1 },
+  grow2: { flex: 2 },
 });

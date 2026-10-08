@@ -1,3 +1,4 @@
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { ChevronDown, ChevronRight, X, type LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
@@ -37,10 +38,17 @@ export function FormField({
 export function FormInput({
   prefix,
   segmented = false,
+  inSheet = false,
   multiline,
   style,
   ...props
-}: TextInputProps & { prefix?: string; segmented?: boolean }) {
+}: TextInputProps & {
+  prefix?: string;
+  segmented?: boolean;
+  /** Inside a bottom sheet, use its input so the sheet moves with the keyboard. */
+  inSheet?: boolean;
+}) {
+  const Input = inSheet ? BottomSheetTextInput : TextInput;
   return (
     <View style={[styles.box, multiline && styles.multiline]}>
       {prefix ? (
@@ -48,7 +56,7 @@ export function FormInput({
           <Text style={styles.prefix}>{prefix}</Text>
         </View>
       ) : null}
-      <TextInput
+      <Input
         placeholderTextColor={colors.mutedForeground}
         multiline={multiline}
         {...props}

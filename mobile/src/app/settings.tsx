@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   Activity,
   ChevronDown,
@@ -36,7 +36,8 @@ export default function SettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [advanced, setAdvanced] = useState(false);
+  const params = useLocalSearchParams<{ advanced?: string }>();
+  const [advanced, setAdvanced] = useState(params.advanced === '1');
 
   function connected() {
     queryClient.clear();

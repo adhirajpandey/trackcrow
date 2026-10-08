@@ -1,11 +1,14 @@
-import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ChevronRight, Plus } from 'lucide-react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { createRecipient, fetchRecipients } from '../../lib/api/recipients';
 import { fetchRecentTransactions } from '../../lib/api/transactions';
 import type { Credentials } from '../../lib/api/client';
 import { queryKeys } from '../../lib/query-keys';
+import { MenuRow } from '../menu-row';
+import { SearchField } from '../search-field';
 import { Sheet } from '../sheet';
 import { Button, InlineError, type } from '../ui';
 import { colors, fonts, radii } from '../../theme';
@@ -58,41 +61,51 @@ export function RecipientPicker({
     onSelect(recipient);
     onClose();
   }
+  const results = query.data?.pages.flatMap((page) => page.recipients) ?? [];
   return (
     <Sheet open title="Recipient" onClose={onClose}>
-      <BottomSheetTextInput
-        accessibilityLabel="Search or create recipient"
+      <SearchField
+        inSheet
+        label="Search or create recipient"
         placeholder="Search or create recipient"
-        placeholderTextColor={colors.mutedForeground}
         value={search}
         onChangeText={setSearch}
-        style={{
-          minHeight: 48,
-          borderWidth: 2,
-          borderColor: colors.border,
-          borderRadius: radii.md,
-          padding: 12,
-          fontFamily: fonts.regular,
-          color: colors.foreground,
-        }}
+        autoCapitalize="none"
       />
-      <BottomSheetScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
-      >
+      <BottomSheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
+        {search.trim() ? (
+          <MenuRow
+            icon={Plus}
+            label={create.isPending ? 'Creating…' : `Create “${search.trim()}”`}
+            description="Add as a new recipient"
+            tone={colors.paperMint}
+            onPress={create.isPending ? undefined : () => create.mutate()}
+          />
+        ) : null}
+        {create.isError ? (
+          <Text accessibilityRole="alert" style={type.error}>
+            {errorMessage(create.error)}
+          </Text>
+        ) : null}
         {!search && recentRecipients.length ? (
           <>
-            <Text style={type.label}>Recent recipients</Text>
-            <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
+            <Text style={type.label}>Recent</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
               {recentRecipients.map((item) => (
-                <Button
+                <Pressable
                   key={item.uuid}
-                  label={item.displayName}
-                  variant="secondary"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Recent recipient ${item.displayName}`}
                   onPress={() => select(item)}
-                />
+                  style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+                >
+                  <Text style={styles.chipText} numberOfLines={1}>
+                    {item.displayName}
+                  </Text>
+                </Pressable>
               ))}
             </ScrollView>
+            <Text style={type.label}>All recipients</Text>
           </>
         ) : null}
         {query.isPending ? <Text style={type.muted}>Loading recipients…</Text> : null}
@@ -102,38 +115,68 @@ export function RecipientPicker({
             onRetry={() => void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch())}
           />
         ) : null}
-        {query.data?.pages
-          .flatMap((page) => page.recipients)
-          .map((recipient) => (
-            <Button
-              key={recipient.uuid}
-              label={recipient.displayName}
-              variant="secondary"
-              disabled={create.isPending}
-              onPress={() => select(recipient)}
-            />
-          ))}
+        {query.isSuccess && !results.length && !search.trim() ? (
+          <Text style={type.muted}>No recipients yet. Type a name to create one.</Text>
+        ) : null}
+        {results.map((recipient) => (
+          <Pressable
+            key={recipient.uuid}
+            accessibilityRole="button"
+            accessibilityLabel={`${recipient.displayName}, ${recipient.transactionCount} transactions`}
+            disabled={create.isPending}
+            onPress={() => select(recipient)}
+            style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+          >
+            <View style={styles.flex}>
+              <Text style={styles.name} numberOfLines={1}>
+                {recipient.displayName}
+              </Text>
+              <Text style={type.muted}>
+                {recipient.transactionCount} {recipient.transactionCount === 1 ? 'transaction' : 'transactions'}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={colors.foreground} />
+          </Pressable>
+        ))}
         {query.hasNextPage ? (
           <Button
-            label={query.isFetchingNextPage ? 'Loading…' : 'Load more recipients'}
+            label={query.isFetchingNextPage ? 'Loading…' : 'Load more'}
             variant="secondary"
+            compact
             disabled={query.isFetching}
             onPress={() => void query.fetchNextPage()}
           />
-        ) : null}
-        {search.trim() ? (
-          <Button
-            label={create.isPending ? 'Creating…' : `Create “${search.trim()}”`}
-            disabled={create.isPending}
-            onPress={() => create.mutate()}
-          />
-        ) : null}
-        {create.isError ? (
-          <Text accessibilityRole="alert" style={type.error}>
-            {errorMessage(create.error)}
-          </Text>
         ) : null}
       </BottomSheetScrollView>
     </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  list: { gap: 8, paddingBottom: 24 },
+  chips: { gap: 8, paddingBottom: 4 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paperMint,
+  },
+  chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.foreground, maxWidth: 180 },
+  row: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.card,
+  },
+  pressed: { opacity: 0.7 },
+  flex: { flex: 1 },
+  name: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
+});

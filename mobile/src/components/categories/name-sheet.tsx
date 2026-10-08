@@ -1,7 +1,7 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useState } from 'react';
 import { Sheet } from '../sheet';
-import { TextField } from '../text-field';
+import { SheetTextField } from '../recipients/sheet-text-field';
 import { Button } from '../ui';
 import { errorMessage } from '../transactions/shared';
 import { ApiError } from '../../lib/api/client';
@@ -42,7 +42,7 @@ export function NameSheet({
   return (
     <Sheet open title={title} onClose={onClose}>
       <BottomSheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 16 }}>
-        <TextField
+        <SheetTextField
           label="Name"
           value={name}
           onChangeText={(value) => {
