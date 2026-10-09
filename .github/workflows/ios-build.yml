@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/ios-build.yml
+      - mobile/**
 
 permissions:
   contents: read
