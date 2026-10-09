@@ -35,11 +35,14 @@ object PaymentLocation {
         LocationManager.GPS_PROVIDER,
       ).firstOrNull { it in providers } ?: return finish(null)
       val signal = CancellationSignal()
-      Handler(Looper.getMainLooper()).postDelayed({
+      val handler = Handler(Looper.getMainLooper())
+      val timeout = Runnable {
         signal.cancel()
         finish(null)
-      }, timeoutMs)
+      }
+      handler.postDelayed(timeout, timeoutMs)
       manager.getCurrentLocation(provider, signal, context.mainExecutor) { location ->
+        handler.removeCallbacks(timeout)
         finish(location?.let(::format))
       }
     } catch (_: SecurityException) {
