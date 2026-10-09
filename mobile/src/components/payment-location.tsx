@@ -21,17 +21,23 @@ export function usePaymentLocationSetup(onSettled?: () => void) {
   const location = usePaymentLocation();
   const [explaining, setExplaining] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function askBackground() {
     setBusy(true);
+    setError(null);
     try {
       // When Android will no longer prompt, its settings screen is the only way to grant it.
       if (!(await location.requestBackground())) await Linking.openSettings();
+    } catch {
+      // Keep the dialog open so the failure is visible; dismissing it still settles.
+      setError('Could not open Android settings. Allow location “All the time” in App info → Permissions.');
+      return;
     } finally {
       setBusy(false);
-      setExplaining(false);
-      onSettled?.();
     }
+    setExplaining(false);
+    onSettled?.();
   }
 
   return {
@@ -42,16 +48,23 @@ export function usePaymentLocationSetup(onSettled?: () => void) {
       if (state === 'needs_background') setExplaining(true);
       else onSettled?.();
     },
-    explainBackground: () => setExplaining(true),
+    explainBackground: () => {
+      setError(null);
+      setExplaining(true);
+    },
     dialog: (
       <ConfirmDialog
         open={explaining}
         title="Allow location all the time"
-        message="Bank SMS usually arrive while TrackCrow is closed. Android only shares location with a closed app when you choose “Allow all the time” on the next screen."
+        message={
+          error ??
+          'Bank SMS usually arrive while TrackCrow is closed. Android only shares location with a closed app when you choose “Allow all the time” on the next screen.'
+        }
         confirmLabel="Continue"
         busy={busy}
         onConfirm={() => void askBackground()}
         onClose={() => {
+          setError(null);
           setExplaining(false);
           onSettled?.();
         }}
@@ -65,6 +78,8 @@ export function PaymentLocationPanel() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const warn = location.state === 'needs_background' || location.state === 'blocked';
+  const openSettings = () =>
+    void Linking.openSettings().catch(() => setError('Could not open Android settings. Open App info → Permissions.'));
 
   async function toggle(value: boolean) {
     setError(null);
@@ -102,10 +117,10 @@ export function PaymentLocationPanel() {
         <Button label="Allow all the time" variant="secondary" disabled={busy} onPress={explainBackground} />
       ) : null}
       {location.state === 'blocked' ? (
-        <Button label="Open Android settings" variant="secondary" onPress={() => void Linking.openSettings()} />
+        <Button label="Open Android settings" variant="secondary" onPress={openSettings} />
       ) : null}
       {location.state === 'off' ? (
-        <TextLink label="Revoke location permission in Android settings" onPress={() => void Linking.openSettings()} />
+        <TextLink label="Revoke location permission in Android settings" onPress={openSettings} />
       ) : null}
       {error ? (
         <Text accessibilityRole="alert" style={type.error}>
