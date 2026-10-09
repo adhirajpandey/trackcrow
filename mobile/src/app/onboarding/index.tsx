@@ -5,6 +5,7 @@ import {
   Check,
   KeyRound,
   Landmark,
+  MapPin,
   MessageSquareMore,
   PartyPopper,
   PenLine,
@@ -17,6 +18,7 @@ import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
 import { MenuRow } from '../../components/menu-row';
+import { PAYMENT_LOCATION_SUMMARY, usePaymentLocationSetup } from '../../components/payment-location';
 import { PageHeading } from '../../components/transactions/shared';
 import { Button, InfoNote, Panel, type } from '../../components/ui';
 import { FormField, FormInput } from '../../components/form-controls';
@@ -33,7 +35,7 @@ import Constants from 'expo-constants';
 import { colors, fonts, radii } from '../../theme';
 
 type Illustration = { icon: LucideIcon; badge: LucideIcon; tone: 'mint' | 'review'; badgeColor: string };
-type Step = 'welcome' | 'signin' | 'bank' | 'unsupported' | 'sms' | 'permission' | 'accounts' | 'done';
+type Step = 'welcome' | 'signin' | 'bank' | 'unsupported' | 'sms' | 'permission' | 'location' | 'accounts' | 'done';
 export default function OnboardingScreen() {
   const { state, signInWithGoogle } = useCredentials();
   const credentials = state.status === 'ready' ? state.credentials : null;
@@ -50,6 +52,7 @@ export default function OnboardingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [names, setNames] = useState<Record<string, string>>({});
+  const locationSetup = usePaymentLocationSetup(() => next('accounts'));
   const accounts = useQuery({
     queryKey: ['onboarding-accounts', apiUrl],
     queryFn: ({ signal }) => fetchAccounts(credentials!, signal),
@@ -116,6 +119,7 @@ export default function OnboardingScreen() {
     unsupported: 'Manual tracking works for every bank',
     sms: 'New bank SMS, tracked automatically',
     permission: sms.permission === 'granted' ? 'SMS access is ready' : 'You can keep tracking manually',
+    location: 'Remember where you paid?',
     accounts: 'Name your accounts',
     done: 'You’re ready',
   };
@@ -127,6 +131,7 @@ export default function OnboardingScreen() {
     permission: granted
       ? { icon: Smartphone, badge: Check, tone: 'mint', badgeColor: colors.primary }
       : { icon: Smartphone, badge: ShieldAlert, tone: 'review', badgeColor: colors.accent },
+    location: { icon: Smartphone, badge: MapPin, tone: 'mint', badgeColor: colors.primary },
     done: { icon: Landmark, badge: PartyPopper, tone: 'mint', badgeColor: colors.primary },
   };
   const art = illustrations[step];
@@ -290,7 +295,7 @@ export default function OnboardingScreen() {
                       void work(async () => {
                         setMode('sms');
                         await onboarding.save(apiUrl, { complete: false, mode: 'sms' });
-                        next('accounts');
+                        next('location');
                       })
                     }
                   />
@@ -320,6 +325,29 @@ export default function OnboardingScreen() {
                 variant="secondary"
                 onPress={() => void work(manual)}
               />
+            </>
+          ) : null}
+          {step === 'location' ? (
+            <>
+              <Text style={type.body}>
+                Optional: attach your location to SMS imports. {PAYMENT_LOCATION_SUMMARY}
+              </Text>
+              <InfoNote>
+                Bank SMS often arrive while TrackCrow is closed, so Android will ask you to allow location all
+                the time. You can change this later in Settings → Payment location.
+              </InfoNote>
+              <Button
+                label="Turn on"
+                disabled={busy || locationSetup.busy}
+                onPress={() => void work(locationSetup.turnOn)}
+              />
+              <Button
+                label="Not now"
+                variant="secondary"
+                disabled={busy || locationSetup.busy}
+                onPress={() => next('accounts')}
+              />
+              {locationSetup.dialog}
             </>
           ) : null}
           {step === 'accounts' ? (

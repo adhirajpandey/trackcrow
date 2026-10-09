@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import { useCredentials } from './credentials';
-import { smsImporter } from './sms-import-native';
+import { paymentLocation, smsImporter } from './sms-import-native';
 import { createSmsPermission, type SmsPermission } from './sms-permission';
 import type { SmsImportStatus } from './sms-import';
 import { useSmsConfig } from './sms-config';
@@ -104,4 +104,24 @@ export function useSmsIngestion() {
   const status = useContext(SmsIngestionContext);
   if (!status) throw new Error('useSmsIngestion must be used inside SmsIngestionProvider');
   return status;
+}
+
+/** Payment location preference and Android access, rechecked whenever the app returns to the foreground. */
+export function usePaymentLocation() {
+  const snapshot = useSyncExternalStore(
+    paymentLocation.subscribe,
+    paymentLocation.getSnapshot,
+    paymentLocation.getSnapshot,
+  );
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const refresh = () => void paymentLocation.refresh().catch(() => undefined);
+    refresh();
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') refresh();
+    });
+    return () => subscription.remove();
+  }, []);
+  const { enable, requestBackground, disable } = paymentLocation;
+  return { ...snapshot, enable, requestBackground, disable };
 }
