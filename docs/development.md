@@ -232,3 +232,15 @@ Apply `20260915_track_accounts` during a coordinated write pause after taking a 
 ## Android development app
 
 Run mobile commands from `mobile/`. Root checks cover only the web and backend package. Follow [Android development setup](android.md) for the existing toolchain, builds, Metro, and wireless debugging.
+
+## iOS test build
+
+The **iOS build** workflow (`.github/workflows/ios-build.yml`) builds an unsigned Release `.ipa` on a GitHub macOS runner, so no local Xcode is needed. Run it from **Actions → iOS build → Run workflow**, then download the `TrackCrow-unsigned-ipa` artifact.
+
+To install it on an iPhone with a free Apple ID:
+
+1. Open [Sideloadly](https://sideloadly.io), connect the iPhone, drop in the `.ipa`, and sign in with the Apple ID.
+2. On the iPhone, trust the Apple ID in **Settings → General → VPN & Device Management** and turn on **Settings → Privacy & Security → Developer Mode**.
+3. Repeat step 1 every 7 days, when the free signature expires.
+
+The Release build bundles the JavaScript, so Metro is not needed. Set the server URL in **Settings → Advanced** to a server the phone can reach. iOS has no SMS import, and Google sign-in needs an iOS OAuth client that is not configured yet, so connect with an access token.

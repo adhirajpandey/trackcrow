@@ -20,9 +20,14 @@
         "android.permission.WAKE_LOCK"
       ]
     },
+    "ios": {
+      "bundleIdentifier": "app.trackcrow.mobile",
+      "supportsTablet": false
+    },
     "scheme": "trackcrow",
     "platforms": [
-      "android"
+      "android",
+      "ios"
     ],
     "plugins": [
       "expo-router",
