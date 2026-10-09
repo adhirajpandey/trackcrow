@@ -9,7 +9,7 @@
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "app.trackcrow.mobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "blockedPermissions": [
         "android.permission.READ_SMS",
         "android.permission.RECORD_AUDIO"
