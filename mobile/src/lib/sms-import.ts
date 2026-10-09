@@ -4,16 +4,18 @@ import { shouldDiscardSms } from './sms-filter';
 export const SMS_QUEUE_LIMIT = 200;
 export const SMS_QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DRAIN_BUDGET_MS = 40_000;
+const LOCATION = /^-?\d{1,2}(\.\d{1,8})?,-?\d{1,3}(\.\d{1,8})?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type IncomingSms = { sender: string; body: string; receivedAt: number; idempotencyKey: string };
-export type SmsQueueItem = IncomingSms & { enqueuedAt: number };
+// Location is captured at arrival, so retries send where the payment happened, not where it uploaded.
+export type SmsQueueItem = IncomingSms & { enqueuedAt: number; location: string | null };
 export type SmsCredentials = { apiUrl: string; token: string; owner: string };
 export type SmsImportStatus = { pending: number; lastImportAt: number | null; authError: 401 | 403 | null };
 type QueueState = Omit<SmsImportStatus, 'pending'> & { owner: string; items: SmsQueueItem[] };
 export type SmsImportPayload = {
   data: { message: string; sender: string; idempotencyKey: string; timestamp: string };
-  metadata: { storeMessageBody: false };
+  metadata: { storeMessageBody: false; location: string | null };
 };
 export type SmsImportDeps = {
   readCredentials: () => Promise<SmsCredentials | null>;
@@ -22,6 +24,9 @@ export type SmsImportDeps = {
   writeState: (state: string) => Promise<void>;
   removeState: () => Promise<void>;
   post: (credentials: SmsCredentials, payload: SmsImportPayload) => Promise<number>;
+  locationEnabled: () => Promise<boolean>;
+  /** Returns "lat,long" or null within a short bound; never throws. */
+  locate: () => Promise<string | null>;
   now: () => number;
 };
 
@@ -43,7 +48,11 @@ function readQueue(raw: string | null, owner: string, now: number): QueueState {
     const stored = JSON.parse(raw) as QueueState;
     if (stored.owner !== owner || !Array.isArray(stored.items)) return empty;
     const keys = new Set<string>();
-    const items = stored.items.filter((item) => {
+    const items = stored.items.map((item) => ({
+      ...item,
+      // Items queued before location support load without one.
+      location: typeof item?.location === 'string' && LOCATION.test(item.location) ? item.location : null,
+    })).filter((item) => {
       if (!isIncomingSms(item) || !Number.isSafeInteger(item.enqueuedAt)
         || item.enqueuedAt > now || now - item.enqueuedAt >= SMS_QUEUE_TTL_MS
         || keys.has(item.idempotencyKey)) return false;
@@ -91,6 +100,29 @@ export function createSmsImporter(deps: SmsImportDeps) {
     if (run === generation) publish(state);
   }
 
+  async function capture(): Promise<string | null> {
+    try {
+      if (!(await deps.locationEnabled())) return null;
+      const location = await deps.locate();
+      const valid = typeof location === 'string' && LOCATION.test(location);
+      debugLog.write('location.capture', { result: valid ? 'ok' : 'none' });
+      return valid ? location : null;
+    } catch {
+      debugLog.write('location.capture', { result: 'none' });
+      return null;
+    }
+  }
+
+  async function clearLocations() {
+    const run = generation;
+    const credentials = await deps.readCredentials();
+    if (run !== generation || !credentials) return;
+    const state = readQueue(await deps.readState(), credentials.owner, deps.now());
+    if (!state.items.some((item) => item.location)) return;
+    state.items = state.items.map((item) => ({ ...item, location: null }));
+    await save(state, run);
+  }
+
   async function run(incoming: IncomingSms | undefined, upload: boolean, deadline: number) {
     const run = generation;
     const credentials = await deps.readCredentials();
@@ -107,9 +139,11 @@ export function createSmsImporter(deps: SmsImportDeps) {
       if (shouldDiscardSms(incoming.body)) {
         debugLog.write('sms.filter.discarded');
       } else {
+        const location = await capture();
+        if (run !== generation) return;
         state.items.push({
           sender: incoming.sender, body: incoming.body, receivedAt: incoming.receivedAt,
-          idempotencyKey: incoming.idempotencyKey, enqueuedAt: deps.now(),
+          idempotencyKey: incoming.idempotencyKey, enqueuedAt: deps.now(), location,
         });
         state.items = state.items.slice(-SMS_QUEUE_LIMIT);
       }
@@ -121,6 +155,9 @@ export function createSmsImporter(deps: SmsImportDeps) {
       const current = await deps.readCredentials();
       if (current?.owner !== credentials.owner || !(await deps.canImport(current)) || run !== generation) return;
       const item = state.items[0];
+      // Turning the setting off must stop locations captured earlier from being sent.
+      const location = item.location && (await deps.locationEnabled()) ? item.location : null;
+      if (run !== generation) return;
       let response: number;
       try {
         response = await deps.post(current, {
@@ -128,7 +165,7 @@ export function createSmsImporter(deps: SmsImportDeps) {
             message: item.body, sender: item.sender, idempotencyKey: item.idempotencyKey,
             timestamp: new Date(item.receivedAt).toISOString(),
           },
-          metadata: { storeMessageBody: false },
+          metadata: { storeMessageBody: false, location },
         });
       } catch {
         debugLog.write('sms.drain.retry', { reason: 'network', pending: state.items.length }, 'warn');
@@ -159,6 +196,8 @@ export function createSmsImporter(deps: SmsImportDeps) {
     handleIncoming: (incoming: unknown) => schedule(incoming),
     drain: () => schedule(),
     refresh: () => schedule(undefined, false),
+    /** Removes locations from SMS still waiting to upload. */
+    clearLocations: () => serial(clearLocations),
     clear: () => {
       generation += 1;
       publish();

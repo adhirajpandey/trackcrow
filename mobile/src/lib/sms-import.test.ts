@@ -13,6 +13,9 @@ function fixture() {
   let stored: string | null = null;
   let credentials: SmsCredentials | null = { apiUrl: 'https://test.invalid', token: 'private-token', owner: 'session-a' };
   let enabled = true;
+  let locationEnabled = false;
+  let locate: () => Promise<string | null> = async () => '12.971599,77.594566';
+  let locates = 0;
   let now = NOW;
   let post: (payload: SmsImportPayload) => Promise<number> = async () => 201;
   const requests: SmsImportPayload[] = [];
@@ -24,6 +27,8 @@ function fixture() {
     writeState: async (value) => { writes.push(value); stored = value; },
     removeState: async () => { stored = null; },
     now: () => now,
+    locationEnabled: async () => locationEnabled,
+    locate: () => { locates += 1; return locate(); },
     post: async (_, payload) => {
       assert.ok(stored?.includes(payload.data.idempotencyKey), 'must persist the key before sending');
       requests.push(payload);
@@ -38,6 +43,9 @@ function fixture() {
     setEnabled(value: boolean) { enabled = value; },
     setPost(value: typeof post) { post = value; },
     setNow(value: number) { now = value; },
+    setLocationEnabled(value: boolean) { locationEnabled = value; },
+    setLocate(value: typeof locate) { locate = value; },
+    get locates() { return locates; },
   };
 }
 
@@ -47,7 +55,7 @@ test('posts the new API contract with SMS time and body storage disabled', async
   assert.deepEqual(f.requests, [{ data: {
     message: message().body, sender: 'AD-HDFCBK', idempotencyKey: message().idempotencyKey,
     timestamp: new Date(message().receivedAt).toISOString(),
-  }, metadata: { storeMessageBody: false } }]);
+  }, metadata: { storeMessageBody: false, location: null } }]);
   assert.equal(f.importer.getSnapshot().pending, 0);
   assert.equal(f.importer.getSnapshot().lastImportAt, NOW);
   assert.equal(f.stored?.includes('private-token'), false);
@@ -311,4 +319,76 @@ test('existing queued messages are not filtered by the new-arrival policy', asyn
   await f.importer.drain();
   assert.equal(f.requests[0].data.message, sms.body);
   assert.equal(f.importer.getSnapshot().pending, 0);
+});
+
+test('does not look up a location while the setting is off', async () => {
+  const f = fixture();
+  await f.importer.handleIncoming(message());
+  assert.equal(f.locates, 0);
+  assert.equal(f.requests[0].metadata.location, null);
+});
+
+test('stores the arrival location on the queued item and sends it on a later retry', async (t) => {
+  const writes = t.mock.method(debugLog, 'write');
+  const f = fixture();
+  f.setLocationEnabled(true);
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message());
+  assert.equal(JSON.parse(f.stored!).items[0].location, '12.971599,77.594566');
+  f.setLocate(async () => '0.000000,0.000000');
+  f.setPost(async () => 201);
+  await f.importer.drain();
+  assert.equal(f.locates, 1);
+  assert.equal(f.requests[1].metadata.location, '12.971599,77.594566');
+  // Logs record the outcome, never coordinates.
+  const logged = JSON.stringify(writes.mock.calls.map((call) => call.arguments));
+  assert.ok(logged.includes('location.capture'));
+  assert.equal(logged.includes('12.97'), false);
+});
+
+test('a missing, invalid, or failed location lookup still imports with a null location', async () => {
+  for (const lookup of [async () => null, async () => 'somewhere', async () => { throw new Error('no fix'); }]) {
+    const f = fixture();
+    f.setLocationEnabled(true);
+    f.setLocate(lookup);
+    await f.importer.handleIncoming(message());
+    assert.equal(f.importer.getSnapshot().pending, 0);
+    assert.equal(f.requests[0].metadata.location, null);
+  }
+});
+
+test('turning the setting off clears queued locations and stops sending them', async () => {
+  const f = fixture();
+  f.setLocationEnabled(true);
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message(1));
+  await f.importer.handleIncoming(message(2));
+  f.setLocationEnabled(false);
+  await f.importer.clearLocations();
+  assert.deepEqual(JSON.parse(f.stored!).items.map((item: { location: string | null }) => item.location), [null, null]);
+  f.setPost(async () => 201);
+  await f.importer.drain();
+  assert.ok(f.requests.slice(-2).every((request) => request.metadata.location === null));
+});
+
+test('a captured location is withheld if the setting is off at send time', async () => {
+  const f = fixture();
+  f.setLocationEnabled(true);
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message());
+  f.setLocationEnabled(false);
+  f.setPost(async () => 201);
+  await f.importer.drain();
+  assert.equal(f.requests[1].metadata.location, null);
+});
+
+test('items queued before location support still upload without a location', async () => {
+  const f = fixture();
+  f.setStored(JSON.stringify({
+    owner: 'session-a', lastImportAt: null, authError: null,
+    items: [{ ...message(), enqueuedAt: NOW - 1000 }],
+  }));
+  await f.importer.drain();
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.requests[0].metadata.location, null);
 });

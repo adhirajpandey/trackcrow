@@ -14,6 +14,8 @@ const events = new Set([
   'sms.config.fetch.invalid',
   'api.error',
   'permission.changed',
+  'location.changed',
+  'location.capture',
   'onboarding.step',
 ]);
 const paths = [
@@ -42,7 +44,10 @@ const paths = [
 const strings: Record<string, readonly string[]> = {
   path: paths,
   permission: ['granted', 'denied', 'never_ask_again'],
-  step: ['welcome', 'signin', 'bank', 'unsupported', 'sms', 'permission', 'accounts', 'done'],
+  step: ['welcome', 'signin', 'bank', 'unsupported', 'sms', 'permission', 'location', 'accounts', 'done'],
+  // Payment location state and capture outcome only; coordinates are never logged.
+  location: ['off', 'on', 'needs_background', 'blocked'],
+  result: ['ok', 'none'],
   reason: ['network', 'invalid', 'storage'],
 };
 export function debugPath(path: string): string | undefined {
