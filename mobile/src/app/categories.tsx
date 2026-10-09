@@ -1,9 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { EllipsisVertical, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { NameSheet } from '../components/categories/name-sheet';
 import { ConfirmDialog } from '../components/confirm-dialog';
 import { EmptyState } from '../components/empty-state';
+import { SelectSheet } from '../components/select-sheet';
 import { useToast } from '../components/toast-host';
 import {
   TransactionPage,
@@ -11,11 +13,11 @@ import {
   errorMessage,
   useInvalidateLedger,
 } from '../components/transactions/shared';
-import { Button, InlineError, Panel, Skeleton, type } from '../components/ui';
+import { Button, HeaderIconButton, InlineError, Panel, Skeleton, type } from '../components/ui';
 import * as api from '../lib/api/categories';
 import type { Credentials } from '../lib/api/client';
 import { queryKeys } from '../lib/query-keys';
-import { colors } from '../theme';
+import { colors, fonts, radii } from '../theme';
 
 type Editor = { kind: 'category' | 'subcategory'; uuid?: string; name?: string; categoryUuid?: string };
 type Removal = { kind: 'category' | 'subcategory' | 'reset'; uuid?: string; name?: string };
@@ -32,6 +34,7 @@ function Categories({ credentials: c }: { credentials: Credentials }) {
   });
   const [editor, setEditor] = useState<Editor | null>(null);
   const [removal, setRemoval] = useState<Removal | null>(null);
+  const [menu, setMenu] = useState<Editor & { kind: 'category' | 'subcategory' } | null>(null);
   const [busy, setBusy] = useState(false);
   async function invalidate() {
     await Promise.all([
@@ -88,9 +91,9 @@ function Categories({ credentials: c }: { credentials: Credentials }) {
         ? 'This also deletes its subcategories. Affected transactions lose their category and subcategory. Affected rules move to "needs repair".'
         : 'Affected transactions lose this subcategory and keep their category. Affected rules move to "needs repair".';
   return (
-    <TransactionPage title="Categories">
-      <Text style={type.note}>make room for your spending</Text>
-      <Button label="Add category" disabled={busy} onPress={() => setEditor({ kind: 'category' })} />
+    <TransactionPage title="Categories" heading="Categories">
+      <Text style={type.muted}>Group your spending. Subcategories add detail within a category.</Text>
+      <Button label="Add category" icon={Plus} disabled={busy} onPress={() => setEditor({ kind: 'category' })} />
       {categories.isPending ? (
         <>
           <Skeleton height={160} />
@@ -102,63 +105,52 @@ function Categories({ credentials: c }: { credentials: Credentials }) {
         <EmptyState title="No categories" message="Add your own categories or restore the defaults below." />
       ) : (
         categories.data.map((category) => (
-          <Panel key={category.uuid} style={{ padding: 14, gap: 12 }}>
-            <Text style={type.heading}>{category.name}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <Button
-                label="Rename category"
-                variant="secondary"
+          <Panel key={category.uuid} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.name}>{category.name}</Text>
+                <Text style={type.muted}>
+                  {category.subcategories.length
+                    ? `${category.subcategories.length} ${category.subcategories.length === 1 ? 'subcategory' : 'subcategories'}`
+                    : 'No subcategories yet'}
+                </Text>
+              </View>
+              <HeaderIconButton
+                icon={EllipsisVertical}
+                label={`Actions for ${category.name}`}
                 disabled={busy}
-                onPress={() => setEditor({ kind: 'category', uuid: category.uuid, name: category.name })}
-              />
-              <Button
-                label="Delete category"
-                variant="destructive"
-                disabled={busy}
-                onPress={() => setRemoval({ kind: 'category', uuid: category.uuid, name: category.name })}
+                onPress={() => setMenu({ kind: 'category', uuid: category.uuid, name: category.name })}
               />
             </View>
             {category.subcategories.map((sub) => (
-              <View
-                key={sub.uuid}
-                style={{ borderTopWidth: 1, borderColor: colors.secondary, paddingTop: 12, gap: 8 }}
-              >
-                <Text style={type.body}>{sub.name}</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  <Button
-                    label="Rename subcategory"
-                    variant="secondary"
-                    disabled={busy}
-                    onPress={() =>
-                      setEditor({
-                        kind: 'subcategory',
-                        uuid: sub.uuid,
-                        name: sub.name,
-                        categoryUuid: category.uuid,
-                      })
-                    }
-                  />
-                  <Button
-                    label="Delete subcategory"
-                    variant="destructive"
-                    disabled={busy}
-                    onPress={() => setRemoval({ kind: 'subcategory', uuid: sub.uuid, name: sub.name })}
-                  />
-                </View>
+              <View key={sub.uuid} style={styles.sub}>
+                <Text style={[type.body, styles.flex]}>{sub.name}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Actions for ${sub.name}`}
+                  hitSlop={10}
+                  disabled={busy}
+                  onPress={() =>
+                    setMenu({ kind: 'subcategory', uuid: sub.uuid, name: sub.name, categoryUuid: category.uuid })
+                  }
+                >
+                  <EllipsisVertical size={18} color={colors.foreground} />
+                </Pressable>
               </View>
             ))}
-            {!category.subcategories.length ? <Text style={type.muted}>No subcategories yet.</Text> : null}
             <Button
               label="Add subcategory"
+              icon={Plus}
               variant="secondary"
+              compact
               disabled={busy}
               onPress={() => setEditor({ kind: 'subcategory', categoryUuid: category.uuid })}
             />
           </Panel>
         ))
       )}
-      <Panel tone="blush" style={{ padding: 14, gap: 10 }}>
-        <Text style={type.heading}>Reset categories</Text>
+      <Panel tone="blush" style={styles.danger}>
+        <Text style={type.heading}>Danger zone</Text>
         <Text style={type.muted}>Replace your categories with the default list.</Text>
         <Button
           label="Reset defaults"
@@ -167,6 +159,30 @@ function Categories({ credentials: c }: { credentials: Credentials }) {
           onPress={() => setRemoval({ kind: 'reset' })}
         />
       </Panel>
+      <SelectSheet
+        open={Boolean(menu)}
+        title={menu?.name ?? ''}
+        searchable={false}
+        chevrons
+        options={[
+          { value: 'rename', label: `Rename ${menu?.kind ?? ''}`, description: 'Change its name everywhere', icon: Pencil },
+          {
+            value: 'delete',
+            label: `Delete ${menu?.kind ?? ''}`,
+            description:
+              menu?.kind === 'category'
+                ? 'Also deletes its subcategories'
+                : 'Transactions keep their category',
+            icon: Trash2,
+          },
+        ]}
+        onClose={() => setMenu(null)}
+        onSelect={(action) => {
+          if (!menu) return;
+          if (action === 'rename') setEditor(menu);
+          else setRemoval({ kind: menu.kind, uuid: menu.uuid, name: menu.name });
+        }}
+      />
       {editor ? (
         <NameSheet
           key={`${editor.kind}:${editor.uuid ?? editor.categoryUuid ?? 'new'}`}
@@ -190,3 +206,22 @@ function Categories({ credentials: c }: { credentials: Credentials }) {
     </TransactionPage>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { padding: 14, gap: 10 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 2 },
+  name: { fontFamily: fonts.bold, fontSize: 17, color: colors.foreground },
+  flex: { flex: 1 },
+  sub: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.card,
+  },
+  danger: { padding: 14, gap: 10 },
+});

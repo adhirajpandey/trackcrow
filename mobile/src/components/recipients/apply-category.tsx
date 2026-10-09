@@ -6,8 +6,9 @@ import { categorizeTransaction, fetchTransaction, fetchTransactions } from '../.
 import type { RecipientDetail } from '../../lib/api/recipients';
 import { errorMessage } from '../transactions/shared';
 import { useToast } from '../toast-host';
-import { Button, Panel, type } from '../ui';
-import { colors } from '../../theme';
+import { WandSparkles } from 'lucide-react-native';
+import { Button, Chip, Panel, type } from '../ui';
+import { colors, fonts, radii } from '../../theme';
 import { canApplyRecipientCategory } from '../../lib/recipient-category';
 import { useInvalidateRecipientsAndRules } from './shared';
 
@@ -56,10 +57,25 @@ export function ApplyRecipientCategory({ credentials: c, recipient }: {
     onSettled: () => invalidate(),
   });
   if (!category || (!recipient.stats.uncategorizedCount && !apply.isError)) return null;
-  return <Panel tone="review" style={{ padding: 16, gap: 12 }}>
-    <Text style={type.body}>Most often filed as {category.name}. Apply this category to existing uncategorized entries.</Text>
-    <Button label={apply.isPending ? 'Applying…' : `Apply ${category.name} to ${recipient.stats.uncategorizedCount} uncategorized`}
-      disabled={apply.isPending || !recipient.stats.uncategorizedCount} onPress={() => apply.mutate()} />
+  const count = recipient.stats.uncategorizedCount;
+  return <Panel style={{ padding: 14, gap: 10, backgroundColor: colors.uncategorized }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5,
+        borderColor: colors.border, borderRadius: radii.pill, backgroundColor: colors.accent }}>
+        <WandSparkles size={20} color={colors.foreground} />
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={{ fontFamily: fonts.bold, fontSize: 15, color: colors.foreground }}>
+          {count} uncategorized {count === 1 ? 'transaction' : 'transactions'}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <Text style={type.muted}>Usually filed as</Text>
+          <Chip label={category.name} tone="mint" />
+        </View>
+      </View>
+      <Button label={apply.isPending ? 'Applying…' : 'Apply'} compact
+        disabled={apply.isPending || !count} onPress={() => apply.mutate()} />
+    </View>
     {apply.isError ? <Text accessibilityRole="alert" style={type.error}>{errorMessage(apply.error)}</Text> : null}
     <Modal visible={apply.isPending} transparent onRequestClose={() => undefined}>
       <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: `${colors.foreground}80` }}>

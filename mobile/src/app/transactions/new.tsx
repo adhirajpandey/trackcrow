@@ -1,11 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { Search } from 'lucide-react-native';
 import { useState } from 'react';
 import { Text } from 'react-native';
+import { SelectRow } from '../../components/form-controls';
 import { StickySaveBar } from '../../components/sticky-save-bar';
 import { useToast } from '../../components/toast-host';
-import { Button, InlineError, Panel, type } from '../../components/ui';
-import { AmountEntry, TransactionFields } from '../../components/transactions/form-fields';
+import { InlineError, type } from '../../components/ui';
+import { TransactionFormFields } from '../../components/transactions/form-fields';
 import { RecipientPicker, type SelectedRecipient } from '../../components/transactions/recipient-picker';
 import {
   TransactionPage,
@@ -15,17 +17,19 @@ import {
   useTransactionOptions,
 } from '../../components/transactions/shared';
 import { createTransaction } from '../../lib/api/transactions';
-import { draftInput, transactionDraft } from '../../lib/transaction-draft';
 import type { Credentials } from '../../lib/api/client';
+import { draftInput, transactionDraft } from '../../lib/transaction-draft';
+
 export default function NewTransactionScreen() {
   return (
     <TransactionSession>{(credentials) => <NewTransaction credentials={credentials} />}</TransactionSession>
   );
 }
+
 function NewTransaction({ credentials: c }: { credentials: Credentials }) {
   const [draft, setDraft] = useState(() => transactionDraft());
   const [recipient, setRecipient] = useState<SelectedRecipient | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [recipientOpen, setRecipientOpen] = useState(false);
   const options = useTransactionOptions(c),
     toast = useToast(),
     invalidate = useInvalidateLedger(c);
@@ -38,36 +42,40 @@ function NewTransaction({ credentials: c }: { credentials: Credentials }) {
       router.dismissTo('/(tabs)/transactions');
     },
   });
+  const disabled = save.isPending;
   return (
     <TransactionPage
-      title="Add transaction"
+      title="Transactions"
+      heading="Add Transaction"
       footer={
         <StickySaveBar
-          label="Add transaction"
+          label="Save transaction"
           saving={save.isPending}
           disabled={!input || !recipient}
           onSave={() => save.mutate()}
         />
       }
     >
-      <Panel tone="mint" style={{ padding: 16 }}>
-        <AmountEntry draft={draft} onChange={setDraft} autoFocus disabled={save.isPending} />
-      </Panel>
-      <Panel style={{ padding: 12, gap: 8 }}>
-        <Text style={type.label}>Recipient</Text>
-        <Button
-          label={recipient?.displayName ?? 'Choose or create recipient'}
-          variant="secondary"
-          disabled={save.isPending}
-          onPress={() => setPickerOpen(true)}
-        />
-      </Panel>
-      <TransactionFields
+      <TransactionFormFields
         draft={draft}
         onChange={setDraft}
         categories={options.categories.data ?? []}
         accounts={options.accounts.data ?? []}
-        disabled={save.isPending}
+        required
+        autoFocusAmount
+        disabled={disabled}
+        recipient={
+          <SelectRow
+            label="Recipient"
+            icon={Search}
+            chevron="none"
+            value={recipient?.displayName}
+            placeholder="Search or enter manually"
+            disabled={disabled}
+            onPress={() => setRecipientOpen(true)}
+            onClear={() => setRecipient(null)}
+          />
+        }
       />
       {options.categories.isError ? (
         <InlineError
@@ -86,8 +94,8 @@ function NewTransaction({ credentials: c }: { credentials: Credentials }) {
           {errorMessage(save.error)}
         </Text>
       ) : null}
-      {pickerOpen ? (
-        <RecipientPicker credentials={c} onSelect={setRecipient} onClose={() => setPickerOpen(false)} />
+      {recipientOpen ? (
+        <RecipientPicker credentials={c} onSelect={setRecipient} onClose={() => setRecipientOpen(false)} />
       ) : null}
     </TransactionPage>
   );

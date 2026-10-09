@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import { Check, ChevronLeft, Info, type LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -77,25 +77,31 @@ export function Button({
   icon: Icon,
   trailingIcon: TrailingIcon,
   disabled = false,
+  selected,
+  compact = false,
   style,
 }: {
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
+  /** For toggles such as period chips, so the selection is announced as well as shown. */
+  selected?: boolean;
   icon?: LucideIcon;
   trailingIcon?: LucideIcon;
   disabled?: boolean;
+  compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const palette = buttonColors[variant];
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        compact && styles.compactButton,
         { backgroundColor: palette.background, borderColor: palette.border },
         !pressed && !disabled && styles.buttonShadow,
         pressed && styles.buttonPressed,
@@ -107,6 +113,68 @@ export function Button({
       <Text style={[styles.buttonText, { color: palette.text }]}>{label}</Text>
       {TrailingIcon ? <TrailingIcon size={18} color={palette.text} strokeWidth={2.25} /> : null}
     </Pressable>
+  );
+}
+
+/** A dashed outline for empty states that invite the first action. */
+export function DashedPanel({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.dashed, style]}>{children}</View>;
+}
+
+export function BackLink({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="link" accessibilityLabel="Back" hitSlop={12} onPress={onPress} style={styles.back}>
+      <ChevronLeft size={16} color={colors.primaryInk} strokeWidth={2.5} />
+      <Text style={styles.backText}>Back</Text>
+    </Pressable>
+  );
+}
+
+export function HeaderIconButton({
+  icon: Icon,
+  label,
+  onPress,
+  disabled = false,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      hitSlop={8}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.headerIcon, pressed && styles.buttonPressed, disabled && styles.disabled]}
+    >
+      <Icon size={20} color={colors.foreground} />
+    </Pressable>
+  );
+}
+
+export function Checkbox({ checked }: { checked: boolean }) {
+  return (
+    <View style={[styles.mark, styles.checkbox, checked && styles.checkboxChecked]}>
+      {checked ? <Check size={13} color={colors.foreground} strokeWidth={3} /> : null}
+    </View>
+  );
+}
+
+export function Radio({ checked }: { checked: boolean }) {
+  return <View style={[styles.mark, styles.radio]}>{checked ? <View style={styles.radioDot} /> : null}</View>;
+}
+
+/** A quiet lilac note with an info icon, for reassurance and fine print. */
+export function InfoNote({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.info}>
+      <Info size={18} color={colors.secondaryForeground} />
+      <Text style={[type.muted, styles.infoText]}>{children}</Text>
+    </View>
   );
 }
 
@@ -175,10 +243,55 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: 18,
   },
+  compactButton: { minHeight: 40, paddingHorizontal: 12, gap: 6 },
   buttonShadow: { boxShadow: shadows.control },
   buttonPressed: { transform: [{ translateX: 1 }, { translateY: 1 }] },
   buttonText: { fontFamily: fonts.bold, fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' },
   disabled: { opacity: 0.5 },
+  info: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.paperLilac,
+  },
+  infoText: { flex: 1 },
+  dashed: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 20,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.input,
+    borderRadius: radii.lg,
+  },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
+  backText: { fontFamily: fonts.bold, fontSize: 14, color: colors.primaryInk, textDecorationLine: 'underline' },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.card,
+  },
+  mark: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  checkbox: { borderRadius: 4 },
+  checkboxChecked: { backgroundColor: colors.primary },
+  radio: { borderRadius: radii.pill },
+  radioDot: { width: 10, height: 10, borderRadius: radii.pill, backgroundColor: colors.foreground },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',

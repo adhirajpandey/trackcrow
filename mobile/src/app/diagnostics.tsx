@@ -2,11 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Linking, Platform, ScrollView, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScreenHeader } from '../components/screen-header';
-import { TextField } from '../components/text-field';
-import { Button, Panel, type } from '../components/ui';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { FormField, FormInput } from '../components/form-controls';
+import { TransactionPage } from '../components/transactions/shared';
+import { Button, InfoNote, Panel, type } from '../components/ui';
 import { useToast } from '../components/toast-host';
 import { useCredentials } from '../lib/credentials';
 import { DEFAULT_API_URL, normalizeApiUrl } from '../lib/api/client';
@@ -14,7 +13,7 @@ import { sendDiagnosticReport, type DiagnosticReport } from '../lib/api/diagnost
 import { debugLog } from '../lib/debug-log';
 import { useSmsIngestion } from '../lib/sms-ingestion';
 import { validateSmsConfig } from '../lib/sms-config';
-import { colors } from '../theme';
+import { colors, fonts } from '../theme';
 
 export default function DiagnosticsScreen() {
   const { state } = useCredentials();
@@ -94,38 +93,39 @@ export default function DiagnosticsScreen() {
       setBusy(false);
     }
   }
+  const details: [string, string, boolean?][] = [
+    ['App version', `${appVersion} (${versionCode})`],
+    ['Device', `Android ${device.androidVersion} · ${device.model}`],
+    ['SMS permission', sms.permission, sms.permission !== 'granted'],
+    ['SMS import', sms.enabled ? 'On' : 'Off · manual tracking'],
+    ['SMS config', String(config.version)],
+    ['Last config fetch', config.lastFetch ? new Date(config.lastFetch).toLocaleString() : 'Not recorded'],
+    ['Pending queue', String(sms.pending)],
+    ['Last import', sms.lastImportAt ? new Date(sms.lastImportAt).toLocaleString() : 'No imports yet'],
+    ['Account', credentials ? 'Signed in' : 'Signed out'],
+  ];
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenHeader section="Diagnostics" />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} keyboardShouldPersistTaps="handled">
-        <Panel style={{ padding: 16, gap: 8 }}>
-          <Text style={type.heading}>This phone</Text>
-          <Text style={type.body}>
-            App {appVersion} ({versionCode})
-          </Text>
-          <Text style={type.body}>
-            Android {device.androidVersion} · {device.model}
-          </Text>
-          <Text style={type.body}>SMS permission: {sms.permission}</Text>
-          <Text style={type.body}>SMS import: {sms.enabled ? 'On' : 'Off · manual tracking'}</Text>
-          <Text style={type.body}>SMS config: {config.version}</Text>
-          <Text style={type.body}>
-            Last config fetch:{' '}
-            {config.lastFetch ? new Date(config.lastFetch).toLocaleString() : 'Not recorded'}
-          </Text>
-          <Text style={type.body}>Pending queue: {sms.pending}</Text>
-          <Text style={type.body}>
-            Last import: {sms.lastImportAt ? new Date(sms.lastImportAt).toLocaleString() : 'No imports yet'}
-          </Text>
-          <Text style={type.body}>Account: {credentials ? 'Signed in' : 'Signed out'}</Text>
-          <Button label="Open app settings" variant="secondary" onPress={() => void Linking.openSettings()} />
-        </Panel>
-        <Text style={type.muted}>
-          Only Send report uploads this preview. Logs contain fixed diagnostic values. Your optional note is
-          included exactly as shown; avoid personal or financial details.
-        </Text>
-        <TextField
-          label="Optional note"
+    <TransactionPage title="Diagnostics" heading="Diagnostics" fallback="/(tabs)/more">
+      <Panel style={styles.phone}>
+        <Text style={type.heading}>This phone</Text>
+        <View style={styles.details}>
+          {details.map(([label, value, warn]) => (
+            <View key={label} style={styles.detail}>
+              <Text style={[type.muted, styles.detailLabel]}>{label}</Text>
+              <Text style={[styles.detailValue, warn && styles.warn]}>{value}</Text>
+            </View>
+          ))}
+        </View>
+        <Button label="Open app settings" variant="secondary" onPress={() => void Linking.openSettings()} />
+      </Panel>
+      <InfoNote>
+        Only Send report uploads this preview. Logs contain fixed diagnostic values. Your optional note is
+        included exactly as shown; avoid personal or financial details.
+      </InfoNote>
+      <FormField label="Optional note">
+        <FormInput
+          accessibilityLabel="Optional note"
+          placeholder="Add a note (optional)"
           value={note}
           multiline
           maxLength={4000}
@@ -135,26 +135,36 @@ export default function DiagnosticsScreen() {
             setPreview(null);
           }}
         />
-        <Button label="Preview report" disabled={busy} onPress={() => void buildPreview()} />
-        {preview ? (
-          <Panel style={{ padding: 12 }}>
-            <Text selectable style={type.body}>
-              {JSON.stringify(preview, null, 2)}
-            </Text>
-          </Panel>
-        ) : null}
-        {error ? (
-          <Text accessibilityRole="alert" style={type.error}>
-            {error}
+      </FormField>
+      <Button label="Preview report" disabled={busy} onPress={() => void buildPreview()} />
+      {preview ? (
+        <Panel style={styles.preview}>
+          <Text selectable style={type.body}>
+            {JSON.stringify(preview, null, 2)}
           </Text>
-        ) : null}
-        {!credentials ? <Text style={type.muted}>Sign in in Settings to send a report.</Text> : null}
-        <Button
-          label={busy ? 'Sending…' : 'Send report'}
-          disabled={busy || !credentials || !preview}
-          onPress={() => void sendReport()}
-        />
-      </ScrollView>
-    </SafeAreaView>
+        </Panel>
+      ) : null}
+      {error ? (
+        <Text accessibilityRole="alert" style={type.error}>
+          {error}
+        </Text>
+      ) : null}
+      {!credentials ? <Text style={type.muted}>Sign in in Settings to send a report.</Text> : null}
+      <Button
+        label={busy ? 'Sending…' : 'Send report'}
+        disabled={busy || !credentials || !preview}
+        onPress={() => void sendReport()}
+      />
+    </TransactionPage>
   );
 }
+
+const styles = StyleSheet.create({
+  phone: { padding: 16, gap: 12 },
+  details: { gap: 8 },
+  detail: { flexDirection: 'row', gap: 12 },
+  detailLabel: { width: 128 },
+  detailValue: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
+  warn: { color: colors.destructiveInk },
+  preview: { padding: 12 },
+});

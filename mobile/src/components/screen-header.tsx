@@ -16,7 +16,8 @@ export function ScreenHeader({ section, reviewCount }: { section: string; review
           <Text style={styles.section}>{section}</Text>
         </View>
       </View>
-      {reviewCount ? (
+      {/* Once the count loads it stays visible, including 0 TO REVIEW. */}
+      {reviewCount !== undefined ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${reviewCount} transactions to review`}

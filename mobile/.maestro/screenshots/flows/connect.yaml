@@ -5,12 +5,12 @@ appId: app.trackcrow.mobile.dev
 # The wrapper has already opened the project on Metro; the first bundle can take a while.
 # Overview, setup, or the sign-in prompt, depending on the app's saved state.
 - extendedWaitUntil:
-    visible: Spent in .*|Welcome to TrackCrow|Connect TrackCrow|connect this phone
+    visible: Spent in .*|Welcome to TrackCrow|Connect TrackCrow|Sign in with Google
     timeout: 180000
 - openLink: trackcrow-dev://settings
 # The dev client can open its tools menu over the app; close it.
 - extendedWaitUntil:
-    visible: connect this phone|Runtime version.*
+    visible: Advanced|Runtime version.*
     timeout: 15000
 - runFlow:
     when:
@@ -18,11 +18,11 @@ appId: app.trackcrow.mobile.dev
     commands:
       - tapOn: Close
 - extendedWaitUntil:
-    visible: connect this phone
+    visible: Advanced
     timeout: 15000
 - scrollUntilVisible:
-    element: Advanced · Show
-- tapOn: Advanced · Show
+    element: Advanced
+- tapOn: Advanced
 - scrollUntilVisible:
     element:
       id: server-url-input

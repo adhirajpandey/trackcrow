@@ -1,15 +1,17 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Calendar, FileText, Plus } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
-import { EmptyState } from '../../components/empty-state';
-import { TextField } from '../../components/text-field';
-import { Button, InlineError, Panel, Skeleton, type } from '../../components/ui';
-import { IgnoreRecipient, useClassification } from '../../components/transactions/actions';
+import { FilterButton } from '../../components/filter-button';
+import { SelectRow } from '../../components/form-controls';
+import { SelectSheet } from '../../components/select-sheet';
+import { SearchField } from '../../components/search-field';
+import { Button, DashedPanel, InlineError, Panel, Skeleton, type } from '../../components/ui';
+import { useClassification } from '../../components/transactions/actions';
 import { FilterSheet } from '../../components/transactions/filter-sheet';
 import { LedgerRow } from '../../components/transactions/ledger-row';
 import { PeriodRangeSheet } from '../../components/transactions/period-range-sheet';
@@ -50,8 +52,8 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
   if (searchDraft.routeQuery !== routeQuery) setSearchDraft({ routeQuery, value: routeQuery });
   const search = searchDraft.value;
   const [filterOpen, setFilterOpen] = useState(false),
-    [customOpen, setCustomOpen] = useState(false);
-  const [ignore, setIgnore] = useState<Transaction | null>(null);
+    [customOpen, setCustomOpen] = useState(false),
+    [periodOpen, setPeriodOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const list = useRef<FlashListRef<ReturnType<typeof groupTransactionDays>[number]>>(null);
   const options = useTransactionOptions(c);
@@ -87,6 +89,13 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
   );
   const total = transactions.reduce((sum, txn) => sum + txn.amount, 0);
   const periods = [0, -1, -2].map((offset) => monthPeriod(offset, now));
+  const activePeriod = periods.find(
+    (period) => filters.startDate === period.startDate && filters.endDate === period.endDate,
+  );
+  const filtered = hasExtraFilters(filters);
+  const periodLabel =
+    activePeriod?.label ??
+    (filters.startDate && filters.endDate ? `${dayLabel(filters.startDate)} – ${dayLabel(filters.endDate)}` : 'All time');
   function apply(next: TransactionFilters) {
     router.setParams(encodeFilters(next));
     setFilterOpen(false);
@@ -96,9 +105,9 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section="Transactions" />
       <View style={{ padding: 16, gap: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <TextField
+            <SearchField
               label="Search transactions"
               placeholder="Recipient, reference, remarks"
               value={search}
@@ -108,30 +117,17 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
               autoCapitalize="none"
             />
           </View>
-          <Button
-            label={hasExtraFilters(filters) ? 'Filter ●' : 'Filter'}
-            variant="secondary"
-            onPress={() => setFilterOpen(true)}
-          />
+          <FilterButton active={filtered} onPress={() => setFilterOpen(true)} />
         </View>
-        <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
-          {periods.map((period) => (
-            <Button
-              key={period.startDate}
-              label={`${filters.startDate === period.startDate && filters.endDate === period.endDate ? '✓ ' : ''}${period.label}`}
-              variant="secondary"
-              onPress={() => apply({ ...filters, startDate: period.startDate, endDate: period.endDate })}
-            />
-          ))}
-          <Button label="Custom" variant="secondary" onPress={() => setCustomOpen(true)} />
-        </ScrollView>
-        {filters.startDate ? (
-          <Text style={type.muted}>
-            {filters.startDate} to {filters.endDate} · IST
-          </Text>
-        ) : (
-          <Text style={type.muted}>All time</Text>
-        )}
+        <SelectRow
+          label="Period"
+          icon={Calendar}
+          chevron="down"
+          value={periodLabel}
+          placeholder="All time"
+          chosen={Boolean(filters.startDate)}
+          onPress={() => setPeriodOpen(true)}
+        />
         <Panel tone="muted" style={{ padding: 10 }}>
           <Text style={type.body}>
             Showing {transactions.length} of {query.data?.pages[0]?.total ?? '…'} entries ·{' '}
@@ -142,27 +138,6 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
       {query.isPending ? (
         <View style={{ padding: 16 }}>
           <Skeleton height={140} />
-        </View>
-      ) : null}
-      {summary.data && summary.data.transactionCount > 0 ? (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-          <EmptyState
-            title={
-              summary.data.uncategorizedCount > 0
-                ? `${summary.data.uncategorizedCount} to review`
-                : 'You’re all caught up'
-            }
-            message={
-              summary.data.uncategorizedCount > 0
-                ? 'These transactions still need a category.'
-                : 'Every transaction has a category.'
-            }
-            action={
-              summary.data.uncategorizedCount > 0
-                ? { label: 'Open review queue', onPress: () => router.push('/review') }
-                : undefined
-            }
-          />
         </View>
       ) : null}
       <FlashList
@@ -193,9 +168,10 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           ) : (
             <LedgerRow
               transaction={item.transaction}
+              showActions={false}
               disabled={classification.busy || classification.promptOpen}
               onClassify={classification.openCategory}
-              onIgnore={setIgnore}
+              onIgnore={() => undefined}
             />
           )
         }
@@ -216,23 +192,29 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
             ) : summary.isError ? (
               <InlineError message={errorMessage(summary.error)} onRetry={() => void summary.refetch()} />
             ) : (
-              <EmptyState
-                title={
-                  summary.data?.transactionCount
+              <DashedPanel style={{ marginHorizontal: 16 }}>
+                <FileText size={56} color={colors.foreground} strokeWidth={1.5} />
+                <Text style={[type.heading, styles.center]}>
+                  {summary.data?.transactionCount
                     ? 'No matching transactions'
                     : importing
-                      ? 'No bank debits yet'
-                      : 'Track expenses manually'
-                }
-                message={
-                  summary.data?.transactionCount
+                      ? 'No transactions yet'
+                      : 'Track expenses manually'}
+                </Text>
+                <Text style={[type.muted, styles.center]}>
+                  {summary.data?.transactionCount
                     ? 'Try another period or clear your filters.'
                     : importing
-                      ? 'New supported bank debits will appear automatically. You can add a manual expense while you wait.'
-                      : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'
-                }
-                action={{ label: 'Add transaction', onPress: () => router.push('/transactions/new') }}
-              />
+                      ? 'Your transactions from bank SMS will appear here automatically. You can also add an expense manually.'
+                      : 'Auto-import is off. Add expenses manually, or turn it on by running setup again in Settings.'}
+                </Text>
+                <Button
+                  label="Add transaction"
+                  icon={Plus}
+                  style={styles.stretch}
+                  onPress={() => router.push('/transactions/new')}
+                />
+              </DashedPanel>
             )
           ) : null
         }
@@ -261,9 +243,12 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           </View>
         }
       />
-      <View style={{ position: 'absolute', bottom: 16, right: 16 }}>
-        <Button label="Add transaction" icon={Plus} onPress={() => router.push('/transactions/new')} />
-      </View>
+      {/* The empty state carries its own Add button. */}
+      {items.length > 0 || query.isPending || query.isError ? (
+        <View style={{ position: 'absolute', bottom: 16, right: 16 }}>
+          <Button label="Add transaction" icon={Plus} onPress={() => router.push('/transactions/new')} />
+        </View>
+      ) : null}
       {filterOpen ? (
         <FilterSheet
           filters={filters}
@@ -272,6 +257,23 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           onClose={() => setFilterOpen(false)}
         />
       ) : null}
+      <SelectSheet
+        open={periodOpen}
+        title="Period"
+        searchable={false}
+        options={[
+          { value: 'all', label: 'All time' },
+          ...periods.map((period) => ({ value: period.startDate, label: period.label })),
+          { value: 'custom', label: 'Custom range…' },
+        ]}
+        selected={activePeriod?.startDate ?? (filters.startDate ? 'custom' : 'all')}
+        onClose={() => setPeriodOpen(false)}
+        onSelect={(value) => {
+          const period = periods.find((item) => item.startDate === value);
+          if (value === 'custom') setCustomOpen(true);
+          else apply({ ...filters, startDate: period?.startDate ?? '', endDate: period?.endDate ?? '' });
+        }}
+      />
       {customOpen ? (
         <PeriodRangeSheet
           startDate={filters.startDate ?? periods[0].startDate}
@@ -280,10 +282,11 @@ function Transactions({ credentials: c }: { credentials: Credentials }) {
           onClose={() => setCustomOpen(false)}
         />
       ) : null}
-      {ignore ? (
-        <IgnoreRecipient credentials={c} transaction={ignore} onClose={() => setIgnore(null)} />
-      ) : null}
       {classification.sheets}
     </SafeAreaView>
   );
 }
+const styles = StyleSheet.create({
+  center: { textAlign: 'center' },
+  stretch: { alignSelf: 'stretch', marginTop: 4 },
+});

@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../app-header';
-import { Button, TextLink, type } from '../ui';
+import { BackLink, Button, TextLink, type } from '../ui';
 import { fetchCategories } from '../../lib/api/categories';
 import { fetchAccounts } from '../../lib/api/accounts';
 import type { Credentials } from '../../lib/api/client';
@@ -29,27 +29,57 @@ export function TransactionSession({ children }: { children: (credentials: Crede
 }
 export function TransactionPage({
   title,
+  heading,
+  headingAction,
   children,
   footer,
+  fallback = '/(tabs)/transactions',
 }: {
   title: string;
+  heading?: string;
+  headingAction?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  /** Where Back goes when the screen was opened without history, such as from a link. */
+  fallback?: Href;
 }) {
+  const back = () => (router.canGoBack() ? router.back() : router.replace(fallback));
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section={title} />
-      <View style={{ paddingHorizontal: 16 }}>
-        <TextLink
-          label="Back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/transactions'))}
-        />
-      </View>
+      {heading ? (
+        <PageHeading heading={heading} action={headingAction} onBack={back} />
+      ) : (
+        <View style={{ paddingHorizontal: 16 }}>
+          <TextLink label="Back" onPress={back} />
+        </View>
+      )}
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={contentStyle}>
         {children}
       </ScrollView>
       {footer}
     </SafeAreaView>
+  );
+}
+export function PageHeading({
+  heading,
+  action,
+  onBack,
+}: {
+  heading: string;
+  action?: ReactNode;
+  onBack?: () => void;
+}) {
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4 }}>
+      {onBack ? <BackLink onPress={onBack} /> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <Text accessibilityRole="header" style={[type.heading, { flexShrink: 1 }]}>
+          {heading}
+        </Text>
+        {action}
+      </View>
+    </View>
   );
 }
 export function useTransactionOptions(c: Credentials) {

@@ -24,7 +24,7 @@ appId: app.trackcrow.mobile.dev
 
 - tapOn: Rules
 - extendedWaitUntil:
-    visible: \d+ rules
+    visible: Automatically categorize your transactions
     timeout: 15000
 - assertVisible: Juniper groceries
 - waitForAnimationToEnd
@@ -39,8 +39,8 @@ appId: app.trackcrow.mobile.dev
 - assertVisible: Rule name
 - waitForAnimationToEnd
 - takeScreenshot: 11-rule-editor
-- tapOn: Close
+- tapOn: Back
 - extendedWaitUntil:
-    notVisible: Edit rule
+    visible: Automatically categorize your transactions
     timeout: 5000
 - tapOn: Back

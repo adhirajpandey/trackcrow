@@ -100,10 +100,11 @@ export function useClassification(
           categories={categories}
           recentCategoryUuids={recentCategoryUuids}
           selected={target?.categoryUuid}
+          selectedSubcategory={target?.subcategoryUuid}
           onClose={() => setTarget(null)}
-          onSelect={(categoryUuid) => {
+          onSelect={(categoryUuid, subcategoryUuid) => {
             if (target && !mutation.isPending)
-              mutation.mutate({ txn: target, input: { categoryUuid, subcategoryUuid: null } });
+              mutation.mutate({ txn: target, input: { categoryUuid, subcategoryUuid } });
           }}
         />
         {prompt ? (
@@ -124,7 +125,7 @@ export function IgnoreRecipient({
   onClose,
 }: {
   credentials: Credentials;
-  transaction: Transaction;
+  transaction: Pick<Transaction, 'recipientUuid' | 'recipientDisplayName'>;
   onClose: () => void;
 }) {
   const toast = useToast();

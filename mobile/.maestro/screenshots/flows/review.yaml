@@ -2,13 +2,16 @@ appId: app.trackcrow.mobile.dev
 ---
 - tapOn:
     id: tab-transactions
-- tapOn: Open review queue
+- tapOn: \d+ transactions to review
 - extendedWaitUntil:
-    visible: \d+ remaining
+    visible: \d+ transactions? needs? your attention
     timeout: 15000
+- tapOn:
+    id: review-row-0
 - extendedWaitUntil:
-    visible: Choose a category
+    visible: Review Transaction
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: 07-review
+- tapOn: Back
 - tapOn: Back

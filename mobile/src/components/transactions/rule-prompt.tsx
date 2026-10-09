@@ -3,14 +3,15 @@ import { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Sheet } from '../sheet';
-import { Button, InlineError, Panel, type } from '../ui';
+import { ArrowRight } from 'lucide-react-native';
+import { Button, Checkbox, Chip, InfoNote, InlineError, Panel, type } from '../ui';
 import { useToast } from '../toast-host';
 import { ApiError, getJson, type Credentials } from '../../lib/api/client';
 import { fetchRecipientDetail } from '../../lib/api/recipients';
 import { createRule, updateRule } from '../../lib/api/rules';
 import { categorizeTransaction, fetchTransactions, type Transaction } from '../../lib/api/transactions';
 import { errorMessage, useInvalidateLedger } from './shared';
-import { colors } from '../../theme';
+import { colors, radii } from '../../theme';
 export type RulePromptSelection = {
   transaction: Transaction;
   categoryUuid: string;
@@ -33,6 +34,7 @@ export function RulePrompt({
   const [remainingIds, setRemainingIds] = useState<string[] | null>(null);
   const [progress, setProgress] = useState('');
   const [filedTotal, setFiledTotal] = useState(0);
+  const [open, setOpen] = useState(true);
   const toast = useToast();
   const invalidate = useInvalidateLedger(c);
   const context = useQuery({
@@ -107,7 +109,7 @@ export function RulePrompt({
       toast({
         message: filed ? `Rule saved. Filed ${filed} transactions.` : 'Rule saved for future imports.',
       });
-      onClose();
+      setOpen(false);
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === 'RULE_RECIPIENT_CONFLICT') {
@@ -120,7 +122,7 @@ export function RulePrompt({
   return (
     <>
       <Sheet
-        open
+        open={open}
         title="Automate classification"
         onClose={() => {
           if (!save.isPending) onClose();
@@ -130,12 +132,18 @@ export function RulePrompt({
           <Text style={type.heading}>
             Always file {txn.recipientDisplayName} under {selection.category}?
           </Text>
-          <Text style={type.body}>Future imports from this recipient will use {selection.category}.</Text>
+          <Panel tone="mint" style={{ padding: 14, gap: 8 }}>
+            <Text style={type.muted}>If recipient is {txn.recipientDisplayName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ArrowRight size={16} color={colors.foreground} />
+              <Chip label={selection.category} tone="paper" />
+            </View>
+          </Panel>
           {existing ? (
-            <Text style={type.body}>
-              This recipient already has a rule. Replace its action with this category?
-            </Text>
-          ) : null}
+            <InfoNote>This recipient already has a rule. Saving replaces its action with this category.</InfoNote>
+          ) : (
+            <Text style={type.muted}>Future imports from this recipient will use {selection.category}.</Text>
+          )}
           {context.isError ? (
             <InlineError message={errorMessage(context.error)} onRetry={() => void context.refetch()} />
           ) : null}
@@ -148,10 +156,22 @@ export function RulePrompt({
                 setAlsoFile(!alsoFile);
                 setRemainingIds(null);
               }}
-              style={{ minHeight: 44, paddingVertical: 8 }}
+              style={{
+                minHeight: 52,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                paddingHorizontal: 12,
+                borderWidth: 1.5,
+                borderColor: colors.border,
+                borderRadius: radii.md,
+                backgroundColor: alsoFile ? colors.paperMint : colors.card,
+              }}
             >
-              <Text style={type.body}>
-                {alsoFile ? '☑' : '☐'} Also file {count} uncategorized from {txn.recipientDisplayName}
+              <Checkbox checked={alsoFile} />
+              <Text style={[type.body, { flex: 1 }]}>
+                Also file {count} uncategorized {count === 1 ? 'transaction' : 'transactions'} from{' '}
+                {txn.recipientDisplayName}
               </Text>
             </Pressable>
           ) : null}
@@ -166,7 +186,16 @@ export function RulePrompt({
               {errorMessage(save.error)}
             </Text>
           ) : null}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
           <Button
+            label="Not now"
+            variant="secondary"
+            disabled={save.isPending}
+            style={{ flex: 1 }}
+            onPress={() => setOpen(false)}
+          />
+          <Button
+            style={{ flex: 2 }}
             label={
               save.isPending
                 ? 'Saving…'
@@ -179,7 +208,7 @@ export function RulePrompt({
             disabled={save.isPending || !context.data}
             onPress={() => save.mutate()}
           />
-          <Button label="Not now" variant="secondary" disabled={save.isPending} onPress={onClose} />
+          </View>
         </BottomSheetScrollView>
       </Sheet>
       <Modal visible={save.isPending} transparent onRequestClose={() => undefined}>

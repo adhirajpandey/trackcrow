@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
+import { Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/app-header';
 import { EmptyState } from '../../components/empty-state';
-import { CategoryBars, TrendChart } from '../../components/insights/charts';
+import { SelectRow } from '../../components/form-controls';
+import { SelectSheet } from '../../components/select-sheet';
+import { CategoryBars, SpendingBreakdown, SpendingChart } from '../../components/insights/charts';
 import { LedgerRow } from '../../components/transactions/ledger-row';
 import { PeriodRangeSheet } from '../../components/transactions/period-range-sheet';
 import { TransactionSession, errorMessage } from '../../components/transactions/shared';
-import { Button, InlineError, Panel, SectionHeader, Skeleton, TextLink, type } from '../../components/ui';
+import { InlineError, Panel, SectionHeader, Skeleton, TextLink, type } from '../../components/ui';
 import type { Credentials } from '../../lib/api/client';
 import { fetchSummary, fetchCategorySpending, fetchPeriodSpending } from '../../lib/api/dashboard';
 import { fetchTransactions } from '../../lib/api/transactions';
@@ -39,15 +42,17 @@ function Section({
   query,
   children,
   height = 180,
+  right,
 }: {
   title: string;
+  right?: ReactNode;
   query: { isPending: boolean; isError: boolean; error: unknown; refetch: () => unknown };
   children: ReactNode;
   height?: number;
 }) {
   return (
     <View style={{ gap: 10 }}>
-      <SectionHeader title={title} />
+      <SectionHeader title={title} right={right} />
       {query.isPending ? (
         <Skeleton height={height} />
       ) : query.isError ? (
@@ -63,6 +68,7 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
   const [period, setPeriod] = useState<InsightPeriod>('this-month');
   const [custom, setCustom] = useState<DayRange>();
   const [customOpen, setCustomOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const days = insightRange(period, new Date(), custom);
   const range = dateRange(days.startDate, days.endDate)!;
@@ -126,6 +132,7 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
   const previousTotal = previous.data?.totalSpend ?? 0;
   const change = total - previousTotal;
   const buckets = trendBuckets(days, granularity, trend.data ?? []);
+  const cadence = granularity === 'day' ? 'Daily' : granularity === 'week' ? 'Weekly' : 'Monthly';
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader section="Insights" />
@@ -133,16 +140,19 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
         contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}
       >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {insightPeriods.map(([value, label]) => (
-            <Button
-              key={value}
-              label={`${period === value ? '✓ ' : ''}${label}`}
-              variant={period === value ? 'primary' : 'secondary'}
-              onPress={() => (value === 'custom' ? setCustomOpen(true) : setPeriod(value))}
-            />
-          ))}
-        </View>
+        <SelectRow
+          label="Period"
+          icon={Calendar}
+          chevron="down"
+          value={
+            period === 'custom'
+              ? `${dayLabel(days.startDate)} – ${dayLabel(days.endDate)}`
+              : insightPeriods.find(([value]) => value === period)?.[1]
+          }
+          placeholder="This month"
+          chosen={period !== 'this-month'}
+          onPress={() => setPeriodOpen(true)}
+        />
         <Text style={type.muted}>
           {dayLabel(days.startDate)} – {dayLabel(days.endDate)} · IST
         </Text>
@@ -190,16 +200,14 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
             />
           )}
         </Section>
-        <Section title="Spending over time" query={trend} height={240}>
+        <Section title={`${cadence} spending`} query={trend} height={240}>
           {trend.data?.some((row) => row.transactionCount > 0) ? (
-            <>
-              <Text style={type.body}>
-                Daily average:{' '}
-                {formatCurrency(trend.data.reduce((sum, row) => sum + row.totalSpend, 0) / rangeDays(days))}{' '}
-                across {rangeDays(days)} days
-              </Text>
-              <TrendChart buckets={buckets} onSelect={(bucket) => openTransactions(bucket)} />
-            </>
+            <SpendingChart
+              key={`${days.startDate}:${days.endDate}`}
+              buckets={buckets}
+              granularity={granularity}
+              average={trend.data.reduce((sum, row) => sum + row.totalSpend, 0) / rangeDays(days)}
+            />
           ) : (
             <EmptyState
               title="No spending yet"
@@ -207,8 +215,18 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
             />
           )}
         </Section>
-        <Section title="Largest transactions" query={largest} height={360}>
-          <TextLink label="See all" onPress={() => openTransactions()} />
+        {trend.data?.some((row) => row.transactionCount > 0) ? (
+          <View style={{ gap: 10 }}>
+            <SectionHeader title={`${cadence} breakdown`} />
+            <SpendingBreakdown buckets={buckets} granularity={granularity} onSelect={(bucket) => openTransactions(bucket)} />
+          </View>
+        ) : null}
+        <Section
+          title="Largest transactions"
+          query={largest}
+          height={360}
+          right={<TextLink label="View all" onPress={() => openTransactions()} />}
+        >
           {largest.data?.transactions.length ? (
             largest.data.transactions.map((txn) => (
               <Pressable
@@ -221,11 +239,12 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
                   pointerEvents="none"
                   accessibilityElementsHidden
                   importantForAccessibility="no-hide-descendants"
-                  style={{ marginHorizontal: -16 }}
+                  style={{ marginHorizontal: -16, marginBottom: -10 }}
                 >
                   <LedgerRow
                     transaction={txn}
                     disabled
+                    showActions={false}
                     onClassify={() => undefined}
                     onIgnore={() => undefined}
                   />
@@ -237,6 +256,20 @@ function Insights({ credentials: c }: { credentials: Credentials }) {
           )}
         </Section>
       </ScrollView>
+      <SelectSheet
+        open={periodOpen}
+        title="Period"
+        searchable={false}
+        options={insightPeriods.map(([value, label]) => ({
+          value,
+          label: value === 'custom' ? 'Custom range…' : label,
+        }))}
+        selected={period}
+        onClose={() => setPeriodOpen(false)}
+        onSelect={(value) =>
+          value === 'custom' ? setCustomOpen(true) : setPeriod(value as InsightPeriod)
+        }
+      />
       {customOpen ? (
         <PeriodRangeSheet
           startDate={days.startDate}

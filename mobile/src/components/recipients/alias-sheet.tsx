@@ -1,12 +1,14 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useMutation } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { openRule } from '../rules/open-rule';
 import { useState } from 'react';
 import { Modal, Text, View } from 'react-native';
 import { ApiError, type Credentials } from '../../lib/api/client';
 import { addRecipientAlias, type AliasInput, type AliasTransferImpact } from '../../lib/api/recipients';
 import { formatCurrency } from '../../lib/format';
+import { ChoiceChip } from '../choice-chip';
 import { ConfirmDialog } from '../confirm-dialog';
+import { FormField } from '../form-controls';
 import { Sheet } from '../sheet';
 import { SheetTextField } from './sheet-text-field';
 import { useToast } from '../toast-host';
@@ -49,18 +51,21 @@ export function AliasSheet({ credentials: c, recipientUuid, onClose }: {
   return <>
     <Sheet open title="Add alias" onClose={() => { if (!save.isPending) onClose(); }}>
       <BottomSheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {(['UPI_ID', 'CARD_MERCHANT', 'TEXT'] as const).map(kind => <Button key={kind}
-            label={`${aliasType === kind ? '✓ ' : ''}${kind.replaceAll('_', ' ')}`}
-            variant="secondary" disabled={save.isPending} onPress={() => { setType(kind); save.reset(); setRuleConflict(null); }} />)}
-        </View>
-        <SheetTextField label="Alias" value={value} autoCapitalize="none" maxLength={200} editable={!save.isPending}
+        <FormField label="Type">
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {([['UPI_ID', 'UPI ID'], ['CARD_MERCHANT', 'Card merchant'], ['TEXT', 'Text']] as const).map(([kind, label]) => (
+              <ChoiceChip key={kind} label={label} selected={aliasType === kind}
+                onPress={() => { if (save.isPending) return; setType(kind); save.reset(); setRuleConflict(null); }} />
+            ))}
+          </View>
+        </FormField>
+        <SheetTextField label="Alias" placeholder={aliasType === 'UPI_ID' ? 'name@bank' : aliasType === 'CARD_MERCHANT' ? 'Merchant name on card SMS' : 'Text in the SMS'} value={value} autoCapitalize="none" maxLength={200} editable={!save.isPending}
           onChangeText={text => { setValue(text); save.reset(); setRuleConflict(null); }} />
         {save.isError ? <Text accessibilityRole="alert" style={type.error}>{errorMessage(save.error)}</Text> : null}
         {ruleConflict ? <>
           <Text style={type.body}>Both recipients have enabled rules. Resolve the rule conflict before merging, then retry adding the alias.</Text>
           <Button label="Open target rule" variant="secondary" onPress={() => {
-            onClose(); router.push({ pathname: '/rules', params: { ruleUuid: ruleConflict } });
+            onClose(); openRule(ruleConflict);
           }} />
         </> : null}
         <Button label={save.isPending ? 'Adding…' : 'Add alias'} disabled={!value.trim() || save.isPending}

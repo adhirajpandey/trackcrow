@@ -1,84 +1,180 @@
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { ChevronRight } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '../../components/empty-state';
-import { RecipientFilterSheet } from '../../components/recipients/filter-sheet';
+import { FilterButton } from '../../components/filter-button';
+import { RecipientFilterSheet, defaultRecipientOptions } from '../../components/recipients/filter-sheet';
 import { LedgerPage } from '../../components/recipients/shared';
-import { TextField } from '../../components/text-field';
+import { SearchField } from '../../components/search-field';
 import { Button, Chip, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { TransactionSession, errorMessage } from '../../components/transactions/shared';
 import type { Credentials } from '../../lib/api/client';
-import { fetchRecipients, type RecipientFilters } from '../../lib/api/recipients';
+import { fetchRecipients, type Recipient } from '../../lib/api/recipients';
 import { formatCurrency } from '../../lib/format';
 import { queryKeys } from '../../lib/query-keys';
-import { emptyRecipientBounds, parseRecipientBounds } from '../../lib/recipient-filters';
+import { parseRecipientBounds } from '../../lib/recipient-filters';
+import { colors, fonts } from '../../theme';
 
 export default function RecipientsScreen() {
-  return <TransactionSession>{c => <Recipients credentials={c} />}</TransactionSession>;
+  return <TransactionSession>{(c) => <Recipients credentials={c} />}</TransactionSession>;
 }
+
 function Recipients({ credentials: c }: { credentials: Credentials }) {
   const [search, setSearch] = useState('');
   const [q, setQuery] = useState('');
-  const [sortBy, setSort] = useState<RecipientFilters['sortBy']>('displayName');
-  const [sortOrder, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [bounds, setBounds] = useState({ ...emptyRecipientBounds });
+  const [options, setOptions] = useState(defaultRecipientOptions);
   const [filterOpen, setFilterOpen] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setQuery(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
+  const { bounds, sortBy, sortOrder } = options;
   const filters = { q, sortBy, sortOrder, size: 30, ...parseRecipientBounds(bounds).filters };
+  const filtered =
+    Object.values(bounds).some(Boolean) ||
+    sortBy !== defaultRecipientOptions.sortBy ||
+    sortOrder !== defaultRecipientOptions.sortOrder;
   const query = useInfiniteQuery({
     queryKey: queryKeys.recipients(c.apiUrl, filters),
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) => fetchRecipients(c, { ...filters, page: pageParam }, signal),
-    getNextPageParam: page => page.hasNext ? page.page + 1 : undefined,
+    getNextPageParam: (page) => (page.hasNext ? page.page + 1 : undefined),
   });
-  return <LedgerPage title="Recipients">
-    <FlashList key={JSON.stringify(filters)}
-      data={query.data?.pages.flatMap(page => page.recipients) ?? []}
-      keyExtractor={item => item.uuid}
-      keyboardShouldPersistTaps="handled"
-      refreshing={query.isRefetching && !query.isFetchingNextPage}
-      onRefresh={() => void query.refetch()}
-      onEndReached={() => { if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError) void query.fetchNextPage(); }}
-      onEndReachedThreshold={0.4}
-      ListHeaderComponent={<View style={{ padding: 16, gap: 12 }}>
-        <TextField label="Search recipients" placeholder="Name, alias or note" value={search} onChangeText={setSearch} />
-        <Button label={Object.values(bounds).some(Boolean) ? 'Filters · Active' : 'Filters'}
-          variant="secondary" onPress={() => setFilterOpen(true)} />
-        <ScrollView horizontal contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
-          {([['displayName', 'Name'], ['transactionCount', 'Count'], ['totalAmount', 'Total']] as const)
-            .map(([key, label]) => <Button key={key} label={sortBy === key ? `✓ ${label}` : label}
-              variant="secondary" onPress={() => { setSort(key); setOrder(key === 'displayName' ? 'asc' : 'desc'); }} />)}
-          <Button label={sortOrder === 'asc' ? 'Ascending' : 'Descending'} variant="secondary"
-            onPress={() => setOrder(sortOrder === 'asc' ? 'desc' : 'asc')} />
-        </ScrollView>
-        {query.data ? <Text style={type.muted}>{query.data.pages[0].total} recipients</Text> : null}
-        {query.isPending ? <Skeleton height={100} /> : null}
-      </View>}
-      renderItem={({ item }) => <Pressable accessibilityRole="button"
-        accessibilityLabel={`${item.displayName}, ${item.transactionCount} transactions, ${formatCurrency(item.totalAmount)}`}
-        onPress={() => router.push({ pathname: '/recipients/[id]', params: { id: item.uuid } })}>
-        <Panel style={{ marginHorizontal: 16, marginBottom: 10, padding: 14, gap: 8 }}>
-          <Text style={type.heading}>{item.displayName}</Text>
-          <Text style={type.body}>{item.transactionCount} transactions · {formatCurrency(item.totalAmount)}</Text>
-          {item.note ? <Text numberOfLines={2} style={type.muted}>{item.note}</Text> : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {item.aliases.map(alias => <Chip key={alias.uuid} label={alias.value} />)}
+  return (
+    <LedgerPage title="Recipients" heading="Recipients">
+      <FlashList
+        key={JSON.stringify(filters)}
+        data={query.data?.pages.flatMap((page) => page.recipients) ?? []}
+        keyExtractor={(item) => item.uuid}
+        keyboardShouldPersistTaps="handled"
+        refreshing={query.isRefetching && !query.isFetchingNextPage}
+        onRefresh={() => void query.refetch()}
+        onEndReached={() => {
+          if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError) void query.fetchNextPage();
+        }}
+        onEndReachedThreshold={0.4}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <View style={styles.controls}>
+              <View style={styles.search}>
+                <SearchField
+                  label="Search recipients"
+                  placeholder="Name, alias or note"
+                  value={search}
+                  onChangeText={setSearch}
+                  autoCapitalize="none"
+                />
+              </View>
+              <FilterButton active={filtered} onPress={() => setFilterOpen(true)} />
+            </View>
+            {query.data ? (
+              <Text style={type.muted}>
+                {query.data.pages[0].total} {query.data.pages[0].total === 1 ? 'recipient' : 'recipients'}
+              </Text>
+            ) : null}
+            {query.isPending ? <Skeleton height={100} /> : null}
           </View>
-        </Panel>
-      </Pressable>}
-      ListEmptyComponent={query.isSuccess ? <View style={{ padding: 16 }}><EmptyState
-        title="No recipients" message="Try another search or clear your filters." /></View> : null}
-      ListFooterComponent={<View style={{ padding: 16, gap: 12 }}>
-        {query.isError ? <InlineError message={errorMessage(query.error)}
-          onRetry={() => void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch())} /> : null}
-        {query.hasNextPage ? <Button label={query.isFetchingNextPage ? 'Loading…' : 'Load more recipients'}
-          variant="secondary" disabled={query.isFetching} onPress={() => void query.fetchNextPage()} /> : null}
-      </View>} />
-    {filterOpen ? <RecipientFilterSheet value={bounds} onApply={setBounds} onClose={() => setFilterOpen(false)} /> : null}
-  </LedgerPage>;
+        }
+        renderItem={({ item }) => <RecipientRow recipient={item} />}
+        ListEmptyComponent={
+          query.isSuccess ? (
+            <View style={styles.padded}>
+              <EmptyState title="No recipients" message="Try another search or clear your filters." />
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          <View style={styles.footer}>
+            {query.isError ? (
+              <InlineError
+                message={errorMessage(query.error)}
+                onRetry={() => void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch())}
+              />
+            ) : null}
+            {query.hasNextPage ? (
+              <Button
+                label={query.isFetchingNextPage ? 'Loading…' : 'Load more recipients'}
+                variant="secondary"
+                disabled={query.isFetching}
+                onPress={() => void query.fetchNextPage()}
+              />
+            ) : null}
+          </View>
+        }
+      />
+      {filterOpen ? (
+        <RecipientFilterSheet
+          value={options}
+          onApply={(next) => {
+            setOptions(next);
+            setFilterOpen(false);
+          }}
+          onClose={() => setFilterOpen(false)}
+        />
+      ) : null}
+    </LedgerPage>
+  );
 }
+
+function RecipientRow({ recipient: item }: { recipient: Recipient }) {
+  const [alias, ...more] = item.aliases.filter(
+    (entry) => entry.value.toLocaleLowerCase() !== item.displayName.toLocaleLowerCase(),
+  );
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${item.displayName}, ${item.transactionCount} transactions, ${formatCurrency(item.totalAmount)} total paid`}
+      onPress={() => router.push({ pathname: '/recipients/[id]', params: { id: item.uuid } })}
+    >
+      <Panel style={styles.row}>
+        <View style={styles.rowText}>
+          <View style={styles.line}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.displayName}
+            </Text>
+            <Text style={[type.number, styles.amount]}>{formatCurrency(item.totalAmount)}</Text>
+          </View>
+          <View style={styles.line}>
+            <Text style={[type.muted, styles.flex]}>
+              {item.transactionCount} {item.transactionCount === 1 ? 'transaction' : 'transactions'}
+            </Text>
+            <Text style={type.muted}>Total paid</Text>
+          </View>
+          {alias ? (
+            <View style={styles.aliases}>
+              <Chip label={alias.value} />
+              {more.length ? <Text style={type.muted}>+{more.length}</Text> : null}
+            </View>
+          ) : null}
+        </View>
+        <ChevronRight size={18} color={colors.foreground} />
+      </Panel>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: { padding: 16, gap: 12 },
+  controls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  search: { flex: 1 },
+  padded: { padding: 16 },
+  footer: { padding: 16, gap: 12 },
+  row: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  rowText: { flex: 1, gap: 4 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name: { flex: 1, fontFamily: fonts.bold, fontSize: 16, color: colors.foreground },
+  amount: { fontSize: 16 },
+  flex: { flex: 1 },
+  aliases: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+});
