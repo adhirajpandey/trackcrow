@@ -35,6 +35,8 @@ jobs:
 
       - name: Install pods
         working-directory: mobile/ios
+        env:
+          USE_FRAMEWORKS: static
         run: pod install
 
       - name: Build
