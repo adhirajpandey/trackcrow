@@ -13,7 +13,7 @@ import { useCredentials } from './credentials';
 import { smsImporter } from './sms-import-native';
 import { createSmsPermission, type SmsPermission } from './sms-permission';
 import type { SmsImportStatus } from './sms-import';
-import { useSmsConfig } from './sms-config';
+import { useSmsConfig } from './use-sms-config';
 import { DEFAULT_API_URL, onboarding, useSetupMode, canImportSms } from './onboarding';
 
 const PERMISSION_KEY = 'trackcrow.smsPermissionDecision';

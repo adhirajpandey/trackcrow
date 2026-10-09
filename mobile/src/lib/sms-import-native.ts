@@ -1,17 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid } from 'react-native';
 import { onboarding, canImportStoredSms } from './onboarding';
-import { requireNativeModule } from 'expo';
+import { requireOptionalNativeModule } from 'expo';
 import { readStoredCredentials } from './credential-store';
 import { createSmsImporter, type IncomingSms } from './sms-import';
 
 const QUEUE_KEY = 'trackcrow.smsImports.v1';
-const native = requireNativeModule<{ sessionFingerprint(apiUrl: string, token: string): string }>('TrackCrowSms');
+const native = requireOptionalNativeModule<{ sessionFingerprint(apiUrl: string, token: string): string }>('TrackCrowSms');
 
 export const smsImporter = createSmsImporter({
   readCredentials: async () => {
     const credentials = await readStoredCredentials();
-    if (!credentials) return null;
+    if (!credentials || !native) return null;
     return { ...credentials, owner: native.sessionFingerprint(credentials.apiUrl, credentials.token) };
   },
   canImport: async (credentials) => {
