@@ -8,6 +8,15 @@ appId: app.trackcrow.mobile.dev
     visible: Spent in .*|Welcome to TrackCrow|Connect TrackCrow|connect this phone
     timeout: 180000
 - openLink: trackcrow-dev://settings
+# The dev client can open its tools menu over the app; close it.
+- extendedWaitUntil:
+    visible: connect this phone|Runtime version.*
+    timeout: 15000
+- runFlow:
+    when:
+      visible: Runtime version.*
+    commands:
+      - tapOn: Close
 - extendedWaitUntil:
     visible: connect this phone
     timeout: 15000
@@ -33,9 +42,8 @@ appId: app.trackcrow.mobile.dev
 - tapOn:
     id: access-token-input
 - inputText: ${SCREENSHOT_TOKEN}
-# hideKeyboard fails on the secure token field. Settings scrolls back to the top, and a tap
-# outside the inputs dismisses the keyboard.
-- tapOn: connect this phone
+# hideKeyboard fails on the secure token field; Android Back dismisses the keyboard.
+- pressKey: Back
 - scrollUntilVisible:
     element: Connect with token
 - tapOn: Connect with token
