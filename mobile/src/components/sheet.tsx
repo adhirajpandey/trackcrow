@@ -63,6 +63,7 @@ export function Sheet({ open, title, onClose, children, footer, onBack }: SheetP
       snapPoints={['75%']}
       enableDynamicSizing={false}
       enablePanDownToClose
+      topInset={insets.top}
       animateOnMount={!reducedMotion}
       onDismiss={() => {
         presented.current = false;
@@ -74,7 +75,7 @@ export function Sheet({ open, title, onClose, children, footer, onBack }: SheetP
       handleIndicatorStyle={{ backgroundColor: colors.border }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
+      android_keyboardInputMode="adjustPan"
     >
       {/* A plain view fills the fixed snap point, so long content scrolls inside the sheet. */}
       <View
