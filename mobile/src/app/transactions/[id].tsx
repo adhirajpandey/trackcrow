@@ -161,8 +161,8 @@ function TransactionEditor({
           },
         ]
       : []),
-    ...(txn.locationRaw
-      ? [{ value: 'maps', label: 'Open location in Maps', description: txn.locationRaw, icon: MapPin }]
+    ...(mapsLinks(txn.locationRaw).length
+      ? [{ value: 'maps', label: 'Open location in Maps', description: txn.locationRaw?.trim(), icon: MapPin }]
       : []),
   ];
   async function suggest() {
@@ -201,6 +201,7 @@ function TransactionEditor({
     }
     if (action === 'maps') {
       const [app, web] = mapsLinks(txn.locationRaw);
+      if (!app) return;
       void Linking.openURL(app)
         .catch(() => Linking.openURL(web))
         .catch(() => toast({ message: 'Could not open Maps.' }));
