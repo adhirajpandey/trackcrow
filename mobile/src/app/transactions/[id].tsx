@@ -19,6 +19,7 @@ import { StickySaveBar } from '../../components/sticky-save-bar';
 import { useToast } from '../../components/toast-host';
 import { Button, HeaderIconButton, InlineError, Panel, Skeleton, type } from '../../components/ui';
 import { useClassification } from '../../components/transactions/actions';
+import { mapsLinks } from '../../lib/maps-links';
 import { TransactionFormFields } from '../../components/transactions/form-fields';
 import { openRule } from '../../components/rules/open-rule';
 import { SummaryPanel } from '../../components/transactions/summary-panel';
@@ -198,10 +199,12 @@ function TransactionEditor({
         });
       else classification.openCategory(txn);
     }
-    if (action === 'maps')
-      void Linking.openURL(
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(txn.locationRaw!)}`,
-      ).catch(() => toast({ message: 'Could not open Maps.' }));
+    if (action === 'maps') {
+      const [app, web] = mapsLinks(txn.locationRaw);
+      void Linking.openURL(app)
+        .catch(() => Linking.openURL(web))
+        .catch(() => toast({ message: 'Could not open Maps.' }));
+    }
   }
   return (
     <TransactionPage
