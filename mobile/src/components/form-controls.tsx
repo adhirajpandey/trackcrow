@@ -76,6 +76,7 @@ export function SelectRow({
   chosen = false,
   disabled = false,
   readOnly = false,
+  trailing,
   onPress,
   onClear,
 }: {
@@ -88,10 +89,12 @@ export function SelectRow({
   chosen?: boolean;
   disabled?: boolean;
   readOnly?: boolean;
+  /** Replaces the chevron, for rows that open something other than a picker. */
+  trailing?: LucideIcon;
   onPress: () => void;
   onClear?: () => void;
 }) {
-  const Chevron = chevron === 'down' ? ChevronDown : ChevronRight;
+  const Chevron = trailing ?? (chevron === 'down' ? ChevronDown : ChevronRight);
   const tint = disabled ? colors.mutedForeground : colors.foreground;
   return (
     <View style={[styles.box, chosen && styles.chosen, disabled && styles.disabled]}>

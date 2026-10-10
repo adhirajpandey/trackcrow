@@ -199,13 +199,14 @@ function TransactionEditor({
         });
       else classification.openCategory(txn);
     }
-    if (action === 'maps') {
-      const [app, web] = mapsLinks(txn.locationRaw);
-      if (!app) return;
-      void Linking.openURL(app)
-        .catch(() => Linking.openURL(web))
-        .catch(() => toast({ message: 'Could not open Maps.' }));
-    }
+    if (action === 'maps') openMaps();
+  }
+  function openMaps() {
+    const [app, web] = mapsLinks(txn.locationRaw);
+    if (!app) return;
+    void Linking.openURL(app)
+      .catch(() => Linking.openURL(web))
+      .catch(() => toast({ message: 'Could not open Maps.' }));
   }
   return (
     <TransactionPage
@@ -246,6 +247,7 @@ function TransactionEditor({
         dateLabel="Date and Time (IST)"
         disabled={busy}
         readOnly={!editing}
+        onOpenLocation={mapsLinks(txn.locationRaw).length ? openMaps : undefined}
         recipient={
           <SelectRow
             label="Recipient"

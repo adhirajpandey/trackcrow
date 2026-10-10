@@ -1,5 +1,5 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { Calendar } from 'lucide-react-native';
+import { Calendar, MapPin } from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
 import type { Category } from '../../lib/api/categories';
 import type { Account } from '../../lib/api/accounts';
@@ -114,6 +114,7 @@ export function TransactionFormFields({
   autoFocusAmount = false,
   disabled = false,
   readOnly = false,
+  onOpenLocation,
 }: {
   draft: TransactionDraft;
   onChange: (draft: TransactionDraft) => void;
@@ -128,6 +129,8 @@ export function TransactionFormFields({
   autoFocusAmount?: boolean;
   disabled?: boolean;
   readOnly?: boolean;
+  /** When set, the read-only location row opens Maps instead of doing nothing. */
+  onOpenLocation?: () => void;
 }) {
   const [picker, setPicker] = useState<TransactionPicker | null>(null);
   const [editing, setEditing] = useState<TextField | null>(null);
@@ -225,7 +228,16 @@ export function TransactionFormFields({
       </FormField>
       {textFields.map((field) => (
         <FormField key={field.key} label={field.label} optional>
-          {detail ? (
+          {detail && readOnly && field.key === 'locationRaw' && onOpenLocation ? (
+            <SelectRow
+              label="Open location in Maps"
+              value={draft.locationRaw}
+              placeholder="—"
+              disabled={disabled}
+              trailing={MapPin}
+              onPress={onOpenLocation}
+            />
+          ) : detail ? (
             <SelectRow
               label={field.label}
               value={draft[field.key] || undefined}
