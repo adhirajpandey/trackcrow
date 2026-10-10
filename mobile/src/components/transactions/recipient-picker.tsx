@@ -1,6 +1,6 @@
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Plus } from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { createRecipient, fetchRecipients } from '../../lib/api/recipients';
@@ -26,6 +26,8 @@ export function RecipientPicker({
   const [search, setSearch] = useState(''),
     [debounced, setDebounced] = useState('');
   const client = useQueryClient();
+  const [open, setOpen] = useState(true);
+  const picked = useRef<SelectedRecipient | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -53,17 +55,23 @@ export function RecipientPicker({
     mutationFn: () => createRecipient(c, search.trim()),
     onSuccess: (recipient) => {
       void client.invalidateQueries({ queryKey: queryKeys.recipients(c.apiUrl) });
-      onSelect(recipient);
-      onClose();
+      select(recipient);
     },
   });
   function select(recipient: SelectedRecipient) {
-    onSelect(recipient);
-    onClose();
+    picked.current = recipient;
+    setOpen(false);
   }
   const results = query.data?.pages.flatMap((page) => page.recipients) ?? [];
   return (
-    <Sheet open title="Recipient" onClose={onClose}>
+    <Sheet
+      open={open}
+      title="Recipient"
+      onClose={() => {
+        if (picked.current) onSelect(picked.current);
+        onClose();
+      }}
+    >
       <SearchField
         inSheet
         label="Search or create recipient"

@@ -48,6 +48,7 @@ export function TextEditSheet({
       }
     >
       <FormInput
+        inSheet
         accessibilityLabel={title}
         placeholder={placeholder}
         multiline={multiline}
