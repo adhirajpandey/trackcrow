@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MenuRow } from '../components/menu-row';
+import { PaymentLocationPanel } from '../components/payment-location';
 import { TransactionPage } from '../components/transactions/shared';
 import { useSmsIngestion } from '../lib/sms-ingestion';
 import { onboarding } from '../lib/onboarding';
@@ -151,6 +152,7 @@ export default function SettingsScreen() {
               }
               badge={colors.muted}
             />
+            <PaymentLocationPanel />
             <MenuRow
               icon={Activity}
               label="Open diagnostics"

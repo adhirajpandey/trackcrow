@@ -9,7 +9,7 @@
     "android": {
       "predictiveBackGestureEnabled": false,
       "package": "app.trackcrow.mobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "blockedPermissions": [
         "android.permission.READ_SMS",
         "android.permission.RECORD_AUDIO"
@@ -17,7 +17,10 @@
       "allowBackup": false,
       "permissions": [
         "android.permission.RECEIVE_SMS",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "scheme": "trackcrow",

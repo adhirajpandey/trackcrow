@@ -11,13 +11,14 @@ import { useCredentials } from '../lib/credentials';
 import { DEFAULT_API_URL, normalizeApiUrl } from '../lib/api/client';
 import { sendDiagnosticReport, type DiagnosticReport } from '../lib/api/diagnostics';
 import { debugLog } from '../lib/debug-log';
-import { useSmsIngestion } from '../lib/sms-ingestion';
+import { usePaymentLocation, useSmsIngestion } from '../lib/sms-ingestion';
 import { validateSmsConfig } from '../lib/sms-config';
 import { colors, fonts } from '../theme';
 
 export default function DiagnosticsScreen() {
   const { state } = useCredentials();
   const sms = useSmsIngestion();
+  const location = usePaymentLocation();
   const toast = useToast();
   const credentials = state.status === 'ready' ? state.credentials : null;
   const apiUrl = credentials?.apiUrl ?? DEFAULT_API_URL;
@@ -61,6 +62,9 @@ export default function DiagnosticsScreen() {
     smsConfigLastFetch: config.lastFetch,
     pendingQueueItems: sms.pending,
     lastImportAt: sms.lastImportAt,
+    // Setting and permission state only; coordinates never enter a report.
+    paymentLocationEnabled: location.enabled,
+    paymentLocationState: location.state,
     signedIn: credentials !== null,
   };
   const appVersion = Constants.expoConfig?.version ?? 'unknown';
@@ -100,6 +104,7 @@ export default function DiagnosticsScreen() {
     ['SMS import', sms.enabled ? 'On' : 'Off · manual tracking'],
     ['SMS config', String(config.version)],
     ['Last config fetch', config.lastFetch ? new Date(config.lastFetch).toLocaleString() : 'Not recorded'],
+    ['Payment location', location.state, location.state === 'needs_background' || location.state === 'blocked'],
     ['Pending queue', String(sms.pending)],
     ['Last import', sms.lastImportAt ? new Date(sms.lastImportAt).toLocaleString() : 'No imports yet'],
     ['Account', credentials ? 'Signed in' : 'Signed out'],
