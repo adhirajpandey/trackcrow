@@ -1,909 +1,115 @@
+import type { DashboardPageData } from "@/server/page-data/dashboard-page-data";
+
 import {
-  buildBiggestChangeCard,
-  buildChartDisplayPeriods,
-  buildChartBuckets,
-  buildMostFrequentRecipient,
-  buildChartTicks,
-  buildChartTooltip,
-  buildDashboardInsights,
-  buildLargeTransactionsHref,
-  buildMetricComparisons,
-  buildPeriodTransactionsHref,
-  buildRecentTransactionMeta,
-  buildRecentTransactionsSummary,
-  buildTransactionsHref,
-  buildSuggestedRules,
+  buildCalendarDays,
   buildUncategorizedTransactionsHref,
-  buildWhatChangedSummary,
+  buildWeeks,
   formatCompactCurrency,
-  formatComparisonDelta,
+  formatCompactDateRange,
   formatCurrency,
   formatDashboardRangeLabel,
-  formatPeriodLabel,
-  getAveragePeriodSpend,
-  getCategoryShare,
-  getPeakPeriod,
-  getPeriodBounds,
-  getPeriodLabelStep,
-  getTopCategoryInsight,
+  formatIstTime,
+  formatShare,
+  formatShortDate,
+  getCalendarRange,
+  getComparisonLabel,
+  getRangeName,
+  getSpendTier,
+  median,
+  toIstDay,
 } from "./dashboard-view-model";
 
-const range = {
-  value: "this-month" as const,
-  label: "This month",
-  startDate: "2026-06-01",
-  endDate: "2026-06-21",
-  granularity: "day" as const,
-};
+const range = (overrides: Partial<DashboardPageData["range"]>): DashboardPageData["range"] => ({
+  value: "last-month",
+  label: "Last month",
+  startDate: "2026-10-01",
+  endDate: "2026-10-31",
+  granularity: "day",
+  ...overrides,
+});
 
 describe("dashboard view model", () => {
-  it("builds a label cadence based on point count", () => {
-    expect(getPeriodLabelStep(4)).toBe(1);
-    expect(getPeriodLabelStep(8)).toBe(2);
-    expect(getPeriodLabelStep(12)).toBe(3);
-    expect(getPeriodLabelStep(24)).toBe(4);
-    expect(getPeriodLabelStep(30)).toBe(5);
+  it("formats currency in full and in compact form without rounding ₹2.5K up", () => {
+    expect(formatCurrency(156121.56)).toBe("₹1,56,122");
+    expect(formatCompactCurrency(480)).toBe("₹480");
+    expect(formatCompactCurrency(2500)).toBe("₹2.5K");
+    expect(formatCompactCurrency(42399)).toBe("₹42K");
+    expect(formatCompactCurrency(156121)).toBe("₹1.6L");
   });
 
-  it("picks the period with the highest total", () => {
+  it("reports small shares as <1 rather than 0", () => {
+    expect(formatShare(564, 156121)).toBe("<1");
+    expect(formatShare(0, 156121)).toBe("0");
+    expect(formatShare(42399, 156121)).toBe("27");
+  });
+
+  it("takes the median of an odd and an even number of days", () => {
+    expect(median([5, 1, 3])).toBe(3);
+    expect(median([1, 2, 3, 10])).toBe(2.5);
+    expect(median([])).toBe(0);
+  });
+
+  it("formats timestamps in IST regardless of the machine's time zone", () => {
+    expect(toIstDay("2026-10-30T19:01:48.000Z")).toBe("2026-10-31");
+    expect(formatIstTime("2026-10-30T19:01:48.000Z")).toBe("00:31");
+    expect(formatShortDate("2026-10-30T19:01:48.000Z")).toBe("31 Oct 2026");
+  });
+
+  it("formats date ranges like the rest of the dashboard", () => {
+    expect(formatCompactDateRange("2026-10-01", "2026-10-31")).toBe("Oct 1–31, 2026");
+    expect(formatCompactDateRange("2026-08-09", "2026-11-06")).toBe("Aug 9 – Nov 6, 2026");
+    expect(formatCompactDateRange("2025-11-07", "2026-11-06")).toBe("Nov 7, 2025 – Nov 6, 2026");
+  });
+
+  it("keeps this month's future days in the grid but stops data at today", () => {
+    const calendar = getCalendarRange(range({ value: "this-month", label: "This month", startDate: "2026-11-01", endDate: "2026-11-06" }), "2026-11-06", []);
+    expect(calendar).toEqual({ start: "2026-11-01", end: "2026-11-06", gridEnd: "2026-11-30", layout: "month" });
+
+    const days = buildCalendarDays(calendar, [{ day: "2026-11-03", totalSpend: 45074, transactionCount: 7, uncategorizedCount: 7 }]);
+    expect(days).toHaveLength(30);
+    expect(days[2]).toEqual({ day: "2026-11-03", total: 45074, count: 7, uncategorizedCount: 7, future: false });
+    expect(days[6]).toMatchObject({ day: "2026-11-07", future: true });
+  });
+
+  it("switches to the year layout past about three months, and starts all time at the first day with data", () => {
+    expect(getCalendarRange(range({ value: "last-90-days", startDate: "2026-08-09", endDate: "2026-11-06" }), "2026-11-06", []).layout).toBe("month");
+    expect(getCalendarRange(range({ value: "last-12-months", startDate: "2025-11-07", endDate: "2026-11-06" }), "2026-11-06", []).layout).toBe("year");
     expect(
-      getPeakPeriod([
-        { period: "2025-01", totalSpend: 100, transactionCount: 1 },
-        { period: "2025-02", totalSpend: 350, transactionCount: 2 },
-        { period: "2025-03", totalSpend: 280, transactionCount: 3 },
+      getCalendarRange(range({ value: "all-time", label: "All time", startDate: null, endDate: null }), "2026-11-06", [
+        { day: "2024-03-02", totalSpend: 10, transactionCount: 1, uncategorizedCount: 0 },
       ])
-    ).toEqual({
-      period: "2025-02",
-      totalSpend: 350,
-      transactionCount: 2,
+    ).toMatchObject({ start: "2024-03-02", end: "2026-11-06", layout: "year" });
+  });
+
+  it("builds Monday-first weeks that cover the range", () => {
+    const weeks = buildWeeks("2026-10-01", "2026-10-31");
+    expect(weeks[0][0]).toBe("2026-09-28");
+    expect(weeks.at(-1)?.at(-1)).toBe("2026-11-01");
+    expect(weeks).toHaveLength(5);
+  });
+
+  it("maps spend to the legend tiers", () => {
+    expect(getSpendTier(0)).toBe(0);
+    expect(getSpendTier(480)).toBe(1);
+    expect(getSpendTier(2100)).toBe(2);
+    expect(getSpendTier(5734)).toBe(3);
+    expect(getSpendTier(42399)).toBe(4);
+  });
+
+  it("names the comparison and the range in plain words", () => {
+    const calendar = getCalendarRange(range({}), "2026-11-06", []);
+    const comparison = (kind: NonNullable<DashboardPageData["comparison"]>["kind"]) => ({
+      kind,
+      rangeLabel: "",
+      startDate: "2026-09-01",
+      endDate: "2026-09-30",
+      summary: { totalSpend: 0, transactionCount: 0, categorizedCount: 0, uncategorizedCount: 0, averageSpend: 0 },
     });
-  });
-
-  it("builds rounded chart ticks from nice steps", () => {
-    expect(buildChartTicks(34000)).toEqual([
-      { ratio: 0, value: 0 },
-      { ratio: 1 / 4, value: 10000 },
-      { ratio: 1 / 2, value: 20000 },
-      { ratio: 3 / 4, value: 30000 },
-      { ratio: 1, value: 40000 },
-    ]);
-    expect(buildChartTicks(58000)).toEqual([
-      { ratio: 0, value: 0 },
-      { ratio: 1 / 3, value: 20000 },
-      { ratio: 2 / 3, value: 40000 },
-      { ratio: 1, value: 60000 },
-    ]);
-    expect(buildChartTicks(74000)).toEqual([
-      { ratio: 0, value: 0 },
-      { ratio: 1 / 3, value: 25000 },
-      { ratio: 2 / 3, value: 50000 },
-      { ratio: 1, value: 75000 },
-    ]);
-  });
-
-  it("formats period labels for month, day, and year buckets", () => {
-    expect(formatPeriodLabel("2025-07")).toEqual({
-      primary: "Jul",
-      secondary: "2025",
-    });
-    expect(formatPeriodLabel("2025-07-14")).toEqual({
-      primary: "14 Jul",
-      secondary: "2025",
-    });
-    expect(formatPeriodLabel("2025")).toEqual({ primary: "2025", secondary: null });
-  });
-
-  it("formats selected dashboard date ranges for display", () => {
-    expect(
-      formatDashboardRangeLabel({
-        value: "last-12-months",
-        label: "Last 12 months",
-        startDate: "2025-07-01",
-        endDate: "2026-06-21",
-        granularity: "month",
-      })
-    ).toBe("Last 12 months · Jul 1, 2025–Jun 21, 2026");
-    expect(
-      formatDashboardRangeLabel({
-        value: "last-30-days",
-        label: "Last 30 days",
-        startDate: "2026-05-23",
-        endDate: "2026-06-21",
-        granularity: "day",
-      })
-    ).toBe("Last 30 days · May 23–Jun 21, 2026");
-    expect(
-      formatDashboardRangeLabel({
-        value: "this-month",
-        label: "This month",
-        startDate: "2026-07-01",
-        endDate: "2026-07-15",
-        granularity: "day",
-      })
-    ).toBe("This month · Jul 1–15, 2026");
-    expect(
-      formatDashboardRangeLabel({
-        value: "all-time",
-        label: "All time",
-        startDate: null,
-        endDate: null,
-        granularity: "year",
-      })
-    ).toBe("All time");
-  });
-
-  it("excludes uncategorized and transfer-style categories from biggest category", () => {
-    expect(
-      getTopCategoryInsight(
-        [
-          { category: "Uncategorized", totalSpend: 70000, transactionCount: 20, topSubcategory: null },
-          { category: "Transfers", totalSpend: 20000, transactionCount: 5, topSubcategory: null },
-          {
-            category: "Essentials",
-            totalSpend: 600,
-            transactionCount: 5,
-            topSubcategory: { name: "Groceries", totalSpend: 400, transactionCount: 3 },
-          },
-          { category: "Food", totalSpend: 400, transactionCount: 4, topSubcategory: null },
-        ],
-        1000
-      )
-    ).toEqual({
-      category: "Essentials",
-      totalSpend: 600,
-      transactionCount: 5,
-      topSubcategory: { name: "Groceries", totalSpend: 400, transactionCount: 3 },
-      share: 60,
-    });
-    expect(
-      getTopCategoryInsight(
-        [
-          { category: "Uncategorized", totalSpend: 70000, transactionCount: 20, topSubcategory: null },
-          { category: "Internal transfers", totalSpend: 20000, transactionCount: 5, topSubcategory: null },
-        ],
-        90000
-      )
-    ).toBeNull();
-    expect(getCategoryShare(125, 500)).toBe(25);
-  });
-
-  it("formats INR values with Indian grouping and compact lakh scale", () => {
-    expect(formatCurrency(1882624)).toBe("\u20b918,82,624");
-    expect(formatCompactCurrency(1882624, { style: "kpi" })).toBe("\u20b918.8L");
-    expect(formatCompactCurrency(76800, { style: "chart" })).toBe("\u20b977K");
-    expect(formatCompactCurrency(300000, { style: "kpi" })).toBe("\u20b93.0L");
-    expect(formatCompactCurrency(598)).toBe("\u20b9598");
-  });
-
-  it("formats comparison deltas for metric cards", () => {
-    expect(formatComparisonDelta(1500, 1000)).toBe("50% higher");
-    expect(formatComparisonDelta(900, 1000)).toBe("10% lower");
-    expect(formatComparisonDelta(1000.04, 1000)).toBe("About the same");
-    expect(formatComparisonDelta(0, 0)).toBe("No spending in either period");
-    expect(formatComparisonDelta(500, null)).toBe("No comparison available");
-  });
-
-  it("builds transaction drilldown links", () => {
-    expect(
-      buildTransactionsHref({
-        startDate: "2026-06-01",
-        endDate: "2026-06-21",
-        category: "Food",
-        status: null,
-      })
-    ).toBe("/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Food");
-  });
-
-  it("builds largest transaction links with the selected preset range", () => {
-    expect(buildLargeTransactionsHref(range)).toBe(
-      "/transactions?range=this-month&review=large&sortBy=amount&sortOrder=desc"
-    );
-  });
-
-  it("preserves custom dates in largest transaction links", () => {
-    expect(
-      buildLargeTransactionsHref({
-        ...range,
-        value: "custom",
-      })
-    ).toBe(
-      "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-21&review=large&sortBy=amount&sortOrder=desc"
-    );
-  });
-
-  it("omits dates from all-time largest transaction links", () => {
-    expect(
-      buildLargeTransactionsHref({
-        ...range,
-        value: "all-time",
-        startDate: null,
-        endDate: null,
-      })
-    ).toBe(
-      "/transactions?range=all-time&review=large&sortBy=amount&sortOrder=desc"
-    );
-  });
-
-  it("builds recent transaction metadata without repeated uncategorized text", () => {
-    expect(
-      buildRecentTransactionMeta("Food", "2026-06-20T06:15:00.000Z", {
-        now: new Date("2026-06-20T12:00:00.000Z"),
-      })
-    ).toEqual({
-      timestampLabel: "20 Jun 2026 11:45 am",
-      dateLabel: "20 Jun 2026",
-      timeLabel: "11:45 am",
-      isSameDay: true,
-      categoryLabel: "Food",
-      needsCategory: false,
-    });
-    expect(
-      buildRecentTransactionMeta(null, "2026-06-18T00:00:00.000Z", {
-        now: new Date("2026-06-20T12:00:00.000Z"),
-      })
-    ).toEqual({
-      timestampLabel: "18 Jun 2026 5:30 am",
-      dateLabel: "18 Jun 2026",
-      timeLabel: "5:30 am",
-      isSameDay: false,
-      categoryLabel: "Uncategorized",
-      needsCategory: true,
-    });
-  });
-
-  it("builds the recent transaction section summary", () => {
-    expect(
-      buildRecentTransactionsSummary({
-        transactionCount: 10,
-      })
-    ).toBe("10 recent");
-    expect(
-      buildRecentTransactionsSummary({
-        transactionCount: 4,
-      })
-    ).toBe("4 recent");
-  });
-
-  it("builds uncategorized drilldown links", () => {
-    expect(buildUncategorizedTransactionsHref(range)).toBe(
-      "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized"
-    );
-  });
-
-  it("builds chart bucket transaction links", () => {
-    expect(getPeriodBounds("2026-06-01", "day")).toEqual({
-      startDate: "2026-06-01",
-      endDate: "2026-06-01",
-    });
-    expect(getPeriodBounds("2026-06-01", "week")).toEqual({
-      startDate: "2026-06-01",
-      endDate: "2026-06-07",
-    });
-    expect(getPeriodBounds("2026-06", "month")).toEqual({
-      startDate: "2026-06-01",
-      endDate: "2026-06-30",
-    });
-    expect(getPeriodBounds("2026", "year")).toEqual({
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
-    });
-    expect(buildPeriodTransactionsHref("2026-06", "month")).toBe(
-      "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-30"
-    );
-  });
-
-  it("calculates average period spend", () => {
-    expect(
-      getAveragePeriodSpend([
-        { period: "2025-01", totalSpend: 100, transactionCount: 1 },
-        { period: "2025-02", totalSpend: 300, transactionCount: 2 },
-      ])
-    ).toBe(200);
-  });
-
-  it("builds dashboard insights from current and comparison data", () => {
-    expect(
-      buildDashboardInsights({
-        summary: {
-          totalSpend: 1500,
-          transactionCount: 4,
-          categorizedCount: 3,
-          uncategorizedCount: 1,
-          averageSpend: 375,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 1000,
-            transactionCount: 3,
-            categorizedCount: 3,
-            uncategorizedCount: 0,
-            averageSpend: 333,
-          },
-          spendingByCategory: [
-            { category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null },
-          ],
-        },
-        categories: [
-          { category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null },
-          { category: "Food", totalSpend: 600, transactionCount: 2, topSubcategory: null },
-        ],
-        importIssueCount: 2,
-        range,
-        sectionStatus: {
-          transactions: "ready",
-          categories: "incomplete",
-          imports: "attention",
-          comparison: "ready",
-        },
-      })
-    ).toEqual([
-      {
-        label: "Uncategorized",
-        value: "1 transaction still needs a category",
-        helper: "Review transactions in this range that still need a category.",
-        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&status=uncategorized",
-        tone: "attention",
-      },
-      {
-        label: "Category leader",
-        value: "Travel",
-        helper: "60% of categorized spending \u00b7 \u20b9900",
-        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
-        tone: "neutral",
-      },
-      {
-        label: "Import health",
-        value: "2 issues flagged",
-        helper: "Failed or unreadable messages are waiting for review.",
-        href: null,
-        tone: "attention",
-      },
-      {
-        label: "Category shift",
-        value: "Food to Travel",
-        helper: "Compared with 2026-05-01 to 2026-05-31",
-        href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
-        tone: "neutral",
-      },
-    ]);
-  });
-
-  it("builds a period-over-period summary for sustained increases", () => {
-    expect(
-      buildWhatChangedSummary({
-        summary: {
-          totalSpend: 1500,
-          transactionCount: 4,
-          categorizedCount: 3,
-          uncategorizedCount: 1,
-          averageSpend: 375,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 1000,
-            transactionCount: 3,
-            categorizedCount: 3,
-            uncategorizedCount: 0,
-            averageSpend: 333,
-          },
-          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null }],
-        },
-        periods: [
-          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 450, transactionCount: 1 },
-          { period: "2026-06-03", totalSpend: 650, transactionCount: 2 },
-        ],
-      })
-    ).toEqual({
-      title: "Vs May 1–31, 2026",
-      value: "50% higher",
-      helper: "Up by \u20b9500 compared with May 1–31, 2026.",
-      tone: "increase",
-    });
-  });
-
-  it("tempers the summary when one peak drives the increase", () => {
-    expect(
-      buildWhatChangedSummary({
-        summary: {
-          totalSpend: 1470,
-          transactionCount: 10,
-          categorizedCount: 9,
-          uncategorizedCount: 1,
-          averageSpend: 147,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 1000,
-            transactionCount: 8,
-            categorizedCount: 8,
-            uncategorizedCount: 0,
-            averageSpend: 125,
-          },
-          spendingByCategory: [{ category: "Food", totalSpend: 500, transactionCount: 3, topSubcategory: null }],
-        },
-        periods: [
-          { period: "2026-06-01", totalSpend: 80, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 120, transactionCount: 1 },
-          { period: "2026-06-03", totalSpend: 950, transactionCount: 4 },
-          { period: "2026-06-04", totalSpend: 160, transactionCount: 2 },
-          { period: "2026-06-05", totalSpend: 160, transactionCount: 2 },
-        ],
-      })
-    ).toEqual({
-      title: "Vs May 1–31, 2026",
-      value: "Up, driven by one spike",
-      helper:
-        "47% higher overall. Most of the lift came from 03 Jun 2026; latest closed at \u20b9160 vs \u20b9294 average.",
-      tone: "increase",
-    });
-  });
-
-  it("handles flat periods without awkward delta copy", () => {
-    expect(
-      buildWhatChangedSummary({
-        summary: {
-          totalSpend: 1000,
-          transactionCount: 4,
-          categorizedCount: 4,
-          uncategorizedCount: 0,
-          averageSpend: 250,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 1000,
-            transactionCount: 4,
-            categorizedCount: 4,
-            uncategorizedCount: 0,
-            averageSpend: 250,
-          },
-          spendingByCategory: [{ category: "Food", totalSpend: 600, transactionCount: 2, topSubcategory: null }],
-        },
-        periods: [
-          { period: "2026-06-01", totalSpend: 200, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 300, transactionCount: 1 },
-          { period: "2026-06-03", totalSpend: 500, transactionCount: 2 },
-        ],
-      })
-    ).toEqual({
-      title: "Vs May 1–31, 2026",
-      value: "About the same",
-      helper: "About the same as May 1–31, 2026.",
-      tone: "neutral",
-    });
-  });
-
-  it("keeps the no-previous-period fallback", () => {
-    expect(
-      buildWhatChangedSummary({
-        summary: {
-          totalSpend: 400,
-          transactionCount: 2,
-          categorizedCount: 2,
-          uncategorizedCount: 0,
-          averageSpend: 200,
-        },
-        comparison: null,
-        periods: [
-          { period: "2026-06-01", totalSpend: 150, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 250, transactionCount: 1 },
-        ],
-      })
-    ).toEqual({
-      title: "Comparison",
-      value: "Not available",
-      helper: "Add more history to compare this range.",
-      tone: "neutral",
-    });
-  });
-
-  it("keeps the new-activity fallback when the previous period had no spend", () => {
-    expect(
-      buildWhatChangedSummary({
-        summary: {
-          totalSpend: 500,
-          transactionCount: 2,
-          categorizedCount: 2,
-          uncategorizedCount: 0,
-          averageSpend: 250,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 0,
-            transactionCount: 0,
-            categorizedCount: 0,
-            uncategorizedCount: 0,
-            averageSpend: 0,
-          },
-          spendingByCategory: [],
-        },
-        periods: [
-          { period: "2026-06-01", totalSpend: 200, transactionCount: 1 },
-          { period: "2026-06-02", totalSpend: 300, transactionCount: 1 },
-        ],
-      })
-    ).toEqual({
-      title: "Vs May 1–31, 2026",
-      value: "New spending",
-      helper: "New spending activity compared with May 1–31, 2026.",
-      tone: "increase",
-    });
-  });
-
-  it("builds the biggest-change rail card", () => {
-    expect(
-      buildBiggestChangeCard({
-        summary: {
-          totalSpend: 1500,
-          transactionCount: 4,
-          categorizedCount: 3,
-          uncategorizedCount: 1,
-          averageSpend: 375,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 1000,
-            transactionCount: 3,
-            categorizedCount: 3,
-            uncategorizedCount: 0,
-            averageSpend: 333,
-          },
-          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null }],
-        },
-        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null }],
-        range,
-      })
-    ).toEqual({
-      label: "Category shift",
-      value: "Travel is now your top known category",
-      helper: "Compared with 01 May - 31 May",
-      href: "/transactions?startDate=2026-06-01&endDate=2026-06-21&category=Travel",
-      tone: "neutral",
-    });
-  });
-
-  it("builds lightweight suggested rules from frequent recipients", () => {
-    expect(
-      buildSuggestedRules({
-        recipients: [
-          { recipientUuid: "rcp-cafe", recipient: "B ten cafe sec 56", paymentCount: 5, totalAmount: 2450 },
-          { recipientUuid: "rcp-devi", recipient: "Hamanthi Devi", paymentCount: 4, totalAmount: 1600 },
-        ],
-      })
-    ).toEqual([
-      {
-        recipient: "B ten cafe sec 56",
-        action: "Create rule",
-        href: "/rules?create=1&recipient=rcp-cafe",
-        paymentCount: 5,
-        totalAmount: 2450,
-      },
-      {
-        recipient: "Hamanthi Devi",
-        action: "Create rule",
-        href: "/rules?create=1&recipient=rcp-devi",
-        paymentCount: 4,
-        totalAmount: 1600,
-      },
-    ]);
-  });
-
-  it("builds chart tooltip payloads and buckets", () => {
-    expect(
-      buildChartTooltip({
-        period: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-      })
-    ).toEqual({
-      title: "02 Jun 2026",
-      amountLabel: "\u20b91,100",
-      transactionLabel: "3 transactions",
-    });
-
-    expect(
-      buildChartBuckets({
-        periods: [
-          {
-            period: "2026-06-01",
-            totalSpend: 400,
-            transactionCount: 1,
-            isFuture: false,
-            isPlaceholder: false,
-          },
-          {
-            period: "2026-06-02",
-            totalSpend: 1100,
-            transactionCount: 3,
-            isFuture: false,
-            isPlaceholder: false,
-          },
-        ],
-        peakPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-        latestPeriod: { period: "2026-06-02", totalSpend: 1100, transactionCount: 3 },
-        chartMax: 1200,
-        periodLabelStep: 1,
-        granularity: "day",
-      })[0]
-    ).toMatchObject({
-      href: "/transactions?range=custom&startDate=2026-06-01&endDate=2026-06-01",
-      showLabel: true,
-      tooltip: {
-        title: "01 Jun 2026",
-        amountLabel: "\u20b9400",
-        transactionLabel: "1 transactions",
-      },
-    });
-  });
-
-  it("keeps the final chart label clear of the preceding interval label", () => {
-    const periods = Array.from({ length: 14 }, (_, index) => ({
-      period: `2026-07-${String(index + 1).padStart(2, "0")}`,
-      totalSpend: index * 100,
-      transactionCount: index,
-      isFuture: false,
-      isPlaceholder: false,
-    }));
-
-    const buckets = buildChartBuckets({
-      periods,
-      peakPeriod: periods[13],
-      latestPeriod: periods[13],
-      chartMax: 1300,
-      periodLabelStep: 3,
-      granularity: "day",
-    });
-
-    expect(
-      buckets.flatMap((bucket, index) => (bucket.showLabel ? [index] : []))
-    ).toEqual([0, 3, 6, 9, 13]);
-  });
-
-  it("keeps chart bucket heights truly proportional for small values", () => {
-    const buckets = buildChartBuckets({
-      periods: [
-        {
-          period: "2026-06-01",
-          totalSpend: 0,
-          transactionCount: 0,
-          isFuture: false,
-          isPlaceholder: true,
-        },
-        {
-          period: "2026-06-02",
-          totalSpend: 76,
-          transactionCount: 1,
-          isFuture: false,
-          isPlaceholder: false,
-        },
-        {
-          period: "2026-06-03",
-          totalSpend: 2391,
-          transactionCount: 7,
-          isFuture: false,
-          isPlaceholder: false,
-        },
-      ],
-      peakPeriod: { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
-      latestPeriod: { period: "2026-06-03", totalSpend: 2391, transactionCount: 7 },
-      chartMax: 40000,
-      periodLabelStep: 1,
-      granularity: "day",
-    });
-
-    expect(buckets[0]?.height).toBe(0);
-    expect(buckets[1]?.height).toBeCloseTo(0.19, 2);
-    expect(buckets[2]?.height).toBeCloseTo(5.98, 2);
-  });
-
-  it("builds top-card comparisons from previous-period data", () => {
-    expect(
-      buildMetricComparisons({
-        summary: {
-          totalSpend: 1500,
-          transactionCount: 4,
-          categorizedCount: 3,
-          uncategorizedCount: 1,
-          averageSpend: 375,
-        },
-        comparison: {
-          kind: "previous-equal-length",
-          rangeLabel: "2026-05-01 to 2026-05-31",
-          startDate: "2026-05-01",
-          endDate: "2026-05-31",
-          summary: {
-            totalSpend: 1000,
-            transactionCount: 3,
-            categorizedCount: 3,
-            uncategorizedCount: 0,
-            averageSpend: 300,
-          },
-          spendingByCategory: [{ category: "Food", totalSpend: 700, transactionCount: 2, topSubcategory: null }],
-        },
-        categories: [{ category: "Travel", totalSpend: 900, transactionCount: 2, topSubcategory: null }],
-      })
-    ).toEqual({
-      totalSpend: "50% higher than May 1–31, 2026",
-      averageSpend: "25% higher",
-      biggestCategory: "Food to Travel",
-    });
-  });
-
-  it("expands this-month to the full calendar month without diluting raw metrics", () => {
-    const julyRange = {
-      value: "this-month" as const,
-      label: "This month",
-      startDate: "2026-07-01",
-      endDate: "2026-07-01",
-      granularity: "day" as const,
-    };
-    const rawPeriods = [{ period: "2026-07-01", totalSpend: 57067, transactionCount: 5 }];
-
-    const displayPeriods = buildChartDisplayPeriods({
-      range: julyRange,
-      periods: rawPeriods,
-    });
-
-    expect(displayPeriods).toHaveLength(31);
-    expect(displayPeriods[0]).toEqual({
-      period: "2026-07-01",
-      totalSpend: 57067,
-      transactionCount: 5,
-      isFuture: false,
-      isPlaceholder: false,
-    });
-    expect(displayPeriods[1]).toEqual({
-      period: "2026-07-02",
-      totalSpend: 0,
-      transactionCount: 0,
-      isFuture: true,
-      isPlaceholder: true,
-    });
-    expect(displayPeriods[30]).toEqual({
-      period: "2026-07-31",
-      totalSpend: 0,
-      transactionCount: 0,
-      isFuture: true,
-      isPlaceholder: true,
-    });
-    expect(getAveragePeriodSpend(rawPeriods)).toBe(57067);
-    expect(getPeakPeriod(rawPeriods)).toEqual(rawPeriods[0]);
-  });
-
-  it("fills missing elapsed days with zero buckets", () => {
-    expect(
-      buildChartDisplayPeriods({
-        range: {
-          value: "custom",
-          label: "2026-06-01 to 2026-06-03",
-          startDate: "2026-06-01",
-          endDate: "2026-06-03",
-          granularity: "day",
-        },
-        periods: [
-          { period: "2026-06-01", totalSpend: 400, transactionCount: 1 },
-          { period: "2026-06-03", totalSpend: 900, transactionCount: 2 },
-        ],
-      })
-    ).toEqual([
-      {
-        period: "2026-06-01",
-        totalSpend: 400,
-        transactionCount: 1,
-        isFuture: false,
-        isPlaceholder: false,
-      },
-      {
-        period: "2026-06-02",
-        totalSpend: 0,
-        transactionCount: 0,
-        isFuture: false,
-        isPlaceholder: true,
-      },
-      {
-        period: "2026-06-03",
-        totalSpend: 900,
-        transactionCount: 2,
-        isFuture: false,
-        isPlaceholder: false,
-      },
-    ]);
-  });
-
-  it("keeps future chart buckets non-clickable while preserving drilldowns for elapsed days", () => {
-    const buckets = buildChartBuckets({
-      periods: [
-        {
-          period: "2026-07-01",
-          totalSpend: 57067,
-          transactionCount: 5,
-          isFuture: false,
-          isPlaceholder: false,
-        },
-        {
-          period: "2026-07-02",
-          totalSpend: 0,
-          transactionCount: 0,
-          isFuture: true,
-          isPlaceholder: true,
-        },
-      ],
-      peakPeriod: { period: "2026-07-01", totalSpend: 57067, transactionCount: 5 },
-      latestPeriod: { period: "2026-07-01", totalSpend: 57067, transactionCount: 5 },
-      chartMax: 60000,
-      periodLabelStep: 1,
-      granularity: "day",
-    });
-
-    expect(buckets[0]).toMatchObject({
-      href: "/transactions?range=custom&startDate=2026-07-01&endDate=2026-07-01",
-      isFuture: false,
-      isPlaceholder: false,
-    });
-    expect(buckets[1]).toMatchObject({
-      href: null,
-      isFuture: true,
-      isPlaceholder: true,
-    });
-  });
-
-  it("keeps recipient sparse states separate from real repeated recipients", () => {
-    expect(buildMostFrequentRecipient({ recipients: [] })).toBeNull();
-
-    expect(
-      buildMostFrequentRecipient({
-        recipients: [
-          {
-            recipientUuid: "rcp-electric",
-            recipient: "Electric Co",
-            paymentCount: 3,
-            totalAmount: 2400,
-          },
-        ],
-      })
-    ).toMatchObject({
-      action: "Create rule",
-      href: "/rules?create=1&recipient=rcp-electric",
-      helper: "Good candidate for a rule",
-    });
-
-    expect(
-      buildMostFrequentRecipient({
-        recipients: [
-          {
-            recipientUuid: "rcp-unknown",
-            recipient: "Unknown recipient",
-            paymentCount: 3,
-            totalAmount: 2400,
-          },
-        ],
-      })
-    ).toMatchObject({
-      action: "Review",
-      href: "/recipients/rcp-unknown",
-      helper: "Review repeated payments",
-    });
+    expect(getComparisonLabel(comparison("previous-calendar-month"), calendar)).toBe("September");
+    expect(getComparisonLabel(comparison("previous-month-to-date"), calendar)).toBe("the same days last month");
+    expect(getComparisonLabel(comparison("previous-equal-length"), calendar)).toBe("the previous 31 days");
+    expect(getRangeName(range({}), calendar)).toBe("October");
+    expect(formatDashboardRangeLabel(range({}), calendar)).toBe("Last month · Oct 1–31, 2026");
+    expect(buildUncategorizedTransactionsHref(calendar)).toBe("/transactions?startDate=2026-10-01&endDate=2026-10-31&status=uncategorized");
   });
 });

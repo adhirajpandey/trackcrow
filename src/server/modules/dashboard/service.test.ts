@@ -13,6 +13,7 @@ jest.mock("@/lib/prisma-rewrite", () => ({
 }));
 
 import {
+  getDashboardActivity,
   getDashboardSummary,
   getFrequentRecipients,
   getLargeTransactionCount,
@@ -304,5 +305,36 @@ describe("dashboard service", () => {
         },
       ],
     });
+  });
+  it("builds IST day totals and recipient activity from one read", async () => {
+    mockPrisma.transaction.findMany.mockResolvedValueOnce([
+      // 18:45 UTC is 00:15 IST the next day.
+      { amount: 100, timestamp: new Date("2026-10-01T18:45:00.000Z"), categoryId: null, category: null, recipientName: null, recipientRaw: "BIRAJ", recipient: { uuid: "rcp-1", displayName: "Biraj Borah" } },
+      { amount: 50, timestamp: new Date("2026-10-02T05:00:00.000Z"), categoryId: 3, category: { name: "Food" }, recipientName: null, recipientRaw: "BIRAJ", recipient: { uuid: "rcp-1", displayName: "Biraj Borah" } },
+      { amount: 200, timestamp: new Date("2026-10-02T06:00:00.000Z"), categoryId: 4, category: { name: "Shopping" }, recipientName: null, recipientRaw: "BIRAJ", recipient: { uuid: "rcp-1", displayName: "Biraj Borah" } },
+      { amount: 26540, timestamp: new Date("2026-10-02T13:19:00.000Z"), categoryId: null, category: null, recipientName: "NAVJYOT SINGH", recipientRaw: "NAVJYOT", recipient: null },
+    ]);
+
+    const result = await getDashboardActivity({ userUuid: "user-1" });
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        days: [{ day: "2026-10-02", totalSpend: 26890, transactionCount: 4, uncategorizedCount: 2 }],
+        recipients: [
+          { recipientUuid: null, recipient: "NAVJYOT SINGH", transactionCount: 1, totalAmount: 26540, uncategorizedCount: 1, uncategorizedAmount: 26540, categories: [], days: [["2026-10-02", 26540]] },
+          { recipientUuid: "rcp-1", recipient: "Biraj Borah", transactionCount: 3, totalAmount: 350, uncategorizedCount: 1, uncategorizedAmount: 100, categories: ["Food", "Shopping"], days: [["2026-10-02", 350]] },
+        ],
+      },
+    });
+    expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userUuid: "user-1" }, orderBy: { timestamp: "asc" } })
+    );
+  });
+
+  it("reports a failed activity read without throwing", async () => {
+    mockPrisma.transaction.findMany.mockRejectedValueOnce(new Error("db down"));
+
+    await expect(getDashboardActivity({ userUuid: "user-1" })).resolves.toEqual({ ok: false, error: "INTERNAL_ERROR" });
   });
 });
