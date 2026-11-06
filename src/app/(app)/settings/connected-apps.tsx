@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { useConnectionsQuery } from "@/features/oauth/queries";
 import { useRevokeConnectionMutation } from "@/features/oauth/mutations";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/common/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const date = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString() : "Never";
+const date = (value: string | null) => (value ? formatDate(value) : "Never");
 const MAX_TIMER_MS = 2_147_000_000;
 
 export function ConnectedApps() {
