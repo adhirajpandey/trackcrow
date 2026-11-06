@@ -43,6 +43,17 @@ The app runs at `http://localhost:3000` by default. Sign in with the Google acco
 
 `prisma/seed.sql` is a one-time sample of production taken in September 2026. It holds about 200 transactions from the previous six months across every category, source, type, classification, and account, plus the recipients, identifiers, rules, and SMS imports they reference. Rules named `seed: ...` (needs repair, disabled, deleted) and one `FAILED` import are added edge cases. A second placeholder user holds copies of 20 rows for checking that users can't see each other's data. The seed is not refreshed from production. Edit it by hand when a migration changes seeded tables.
 
+## UI Screenshots
+
+`scripts/screenshot_pages.py` captures the web app at desktop and mobile sizes against the local app and database. It signs in as `TRACKCROW_AUTOMATION_SESSION_USER_EMAIL` by minting a local session, and captures the public landing page signed out. It runs on Windows, macOS, and Linux.
+
+```bash
+uv run --with playwright python scripts/screenshot_pages.py --list
+uv run --with playwright python scripts/screenshot_pages.py --all --sizes desktop mobile --browser-mode headless
+```
+
+Images land in `TRACKCROW_UI_IMAGE_OUTPUT_DIR`, one numbered file per scrolled screen.
+
 ## Build And Test Commands
 
 ```bash

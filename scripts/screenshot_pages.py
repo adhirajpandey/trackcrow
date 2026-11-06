@@ -117,6 +117,7 @@ class PageCapture:
   clicked_output_slug: str | None = None
   clicked_heading: str | None = None
   clicked_wait_selector: str | None = None
+  requires_session: bool = True
 
 
 @dataclass(frozen=True)
@@ -164,11 +165,12 @@ def build_page_captures() -> dict[str, PageCapture]:
       alias="landing",
       path="/",
       output_slug="landing",
-      heading="Turn every payment alert into spending clarity.",
-      click_target_name="See how it works",
+      heading="Payments come in. TrackCrow sorts them out.",
+      click_target_name="See it in action",
       clicked_output_slug="landing-workflow",
-      clicked_heading="The workflow",
+      clicked_heading="From payment ping to sorted spend.",
       clicked_wait_selector="#workflow",
+      requires_session=False,
     ),
     "dashboard": PageCapture(
       alias="dashboard",
@@ -428,7 +430,12 @@ def capture_for_size(
   try:
     page = prepare_page(context, size_preset, session["token"], config)
     for page_capture in pages:
+      # Signed-in visitors are redirected away from public pages, so capture those without the session.
+      if not page_capture.requires_session:
+        context.clear_cookies()
       capture_page(page, page_capture, size_preset, config)
+      if not page_capture.requires_session:
+        context.add_cookies([build_session_cookie(session["token"], config.base_url)])
   finally:
     context.close()
 
@@ -521,6 +528,14 @@ const { PrismaClient } = require('./src/generated/prisma-rewrite');
 
 
 def terminate_existing_automation_browser(config: RuntimeConfig) -> None:
+  if os.name != "nt":
+    subprocess.run(
+      ["pkill", "-f", "--", f"--user-data-dir={config.automation_user_data_dir}"],
+      check=False,
+      capture_output=True,
+    )
+    return
+
   user_data_dir = str(config.automation_user_data_dir).replace("\\", "\\\\").replace("'", "''")
   command = f"""
 (Get-CimInstance Win32_Process |
@@ -599,7 +614,8 @@ def build_clicked_output_base_name(page_capture: PageCapture, size_preset: Viewp
 
 
 def clear_existing_indexed_outputs(base_name: str, config: RuntimeConfig) -> None:
-  for path in config.output_dir.glob(f"{base_name}-*.png"):
+  # Match only this page's numbered files, so "transaction" never clears "transaction-new".
+  for path in config.output_dir.glob(f"{base_name}-[0-9][0-9].png"):
     path.unlink()
 
 
