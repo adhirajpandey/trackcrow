@@ -56,30 +56,64 @@
   --paper-shadow: 4px 5px 0 #171714;
 }
 
-* {
-  box-sizing: border-box;
-  border-color: var(--border);
-}
+/* Element defaults sit in the base layer so Tailwind utilities (border colours, font weights,
+   link colours, cursors) can override them. */
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
 
-html,
-body {
-  min-height: 100%;
-}
+  html,
+  body {
+    min-height: 100%;
+  }
 
-body {
-  min-height: 100vh;
-  margin: 0;
-  background-color: var(--background);
-  background-image: radial-gradient(rgba(23, 23, 20, 0.13) 0.65px, transparent 0.65px);
-  background-size: 18px 18px;
-  color: var(--foreground);
-  font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: 0;
-  overflow-x: clip;
-}
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background-color: var(--background);
+    background-image: radial-gradient(rgba(23, 23, 20, 0.13) 0.65px, transparent 0.65px);
+    background-size: 18px 18px;
+    color: var(--foreground);
+    font-family: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0;
+    overflow-x: clip;
+  }
 
-#__next {
-  min-height: 100%;
+  #__next {
+    min-height: 100%;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
 }
 
 .overflow-wrap-anywhere {
@@ -94,36 +128,6 @@ body {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-a[href],
-button:not(:disabled),
-[role="button"]:not([aria-disabled="true"]),
-[role="link"]:not([aria-disabled="true"]),
-summary {
-  cursor: pointer;
-}
-
-button:disabled,
-[aria-disabled="true"] {
-  cursor: not-allowed;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-::selection {
-  background: var(--primary);
-  color: var(--primary-foreground);
 }
 
 @keyframes landing-reveal {
