@@ -188,7 +188,8 @@ type GridProps = {
   onKeyDown: (event: KeyboardEvent, day: string) => void;
 };
 
-export function MonthGrid({ calendar, byDay, today, selected, onPick, onKeyDown, compact = false }: GridProps & { today: string; compact?: boolean }) {
+/** `tabStop` is the day that takes Tab focus when no day is selected, as in the compact dashboard grid. */
+export function MonthGrid({ calendar, byDay, today, selected, onPick, onKeyDown, compact = false, tabStop }: GridProps & { today: string; compact?: boolean; tabStop?: string }) {
   const weeks = buildWeeks(calendar.start, calendar.gridEnd);
   const dense = byDay.size > 40;
   const weekTotals = weeks.map((week) => week.reduce((sum, day) => sum + (byDay.get(day)?.total ?? 0), 0));
@@ -234,7 +235,7 @@ export function MonthGrid({ calendar, byDay, today, selected, onPick, onKeyDown,
                   aria-current={dayKey === today ? "date" : undefined}
                   aria-label={cellLabel(day)}
                   title={day.future ? "Still to come" : undefined}
-                  tabIndex={isSelected ? 0 : -1}
+                  tabIndex={isSelected || (!selected && dayKey === tabStop) ? 0 : -1}
                   disabled={day.future}
                   onClick={() => onPick(dayKey)}
                   onKeyDown={(event) => onKeyDown(event, dayKey)}

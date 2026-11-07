@@ -12,15 +12,16 @@ import { DashboardCardInfo } from "./dashboard-card-info";
 
 /** True when the media query matches; false during server render. */
 export function useMediaQuery(query: string) {
-  return useSyncExternalStore(
-    (onChange) => {
+  // A stable subscribe keeps useSyncExternalStore from resubscribing on every render.
+  const subscribe = useCallback(
+    (onChange: () => void) => {
       const list = window.matchMedia(query);
       list.addEventListener("change", onChange);
       return () => list.removeEventListener("change", onChange);
     },
-    () => window.matchMedia(query).matches,
-    () => false
+    [query]
   );
+  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false);
 }
 
 export const focusRing =
@@ -141,7 +142,10 @@ export function CategoryMenu({
 
   useEffect(() => {
     if (!open) return;
-    const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>("[aria-checked=true], [role=menuitemradio]")?.focus());
+    const frame = requestAnimationFrame(() => {
+      const menu = menuRef.current;
+      (menu?.querySelector<HTMLButtonElement>("[role=menuitemradio][aria-checked=true]") ?? menu?.querySelector<HTMLButtonElement>("[role=menuitemradio]"))?.focus();
+    });
     return () => cancelAnimationFrame(frame);
   }, [open]);
 

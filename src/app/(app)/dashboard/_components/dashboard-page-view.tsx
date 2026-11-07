@@ -3,7 +3,7 @@
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, type KeyboardEvent, type ReactNode } from "react";
 
 import { tidyRecipientName } from "@/common/recipient-name";
 import { AppPageHeader } from "@/components/product/app-page-header";
@@ -20,6 +20,7 @@ import { dashboardPanelClassName } from "./dashboard-style";
 import { DashboardMobileTimePeriodRow, DashboardTimeframePicker } from "./dashboard-timeframe-picker";
 import { CategoryMenu, CategoryPill, focusRing, PanelNote } from "./dashboard-ui";
 import {
+  addDays,
   buildCalendarDays,
   buildWeeks,
   formatCompactCurrency,
@@ -133,6 +134,15 @@ function AtAGlance({ data, calendar, days, className }: { data: DashboardPageDat
   }, [days]);
   const maxMonth = Math.max(...months.map(([, total]) => total), 1);
   const openDay = (day: string) => router.push(insightsHref(data.range, { tab: "calendar", day }));
+  // No day is selected here, so one day holds the Tab stop and arrow keys move focus between days.
+  const tabStop = data.today < calendar.start ? calendar.start : data.today > calendar.end ? calendar.end : data.today;
+  const moveFocus = (event: KeyboardEvent, day: string) => {
+    const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    if (!(event.key in steps)) return;
+    event.preventDefault();
+    const grid = (event.currentTarget as HTMLElement).closest('[role="grid"]');
+    grid?.querySelector<HTMLButtonElement>(`[data-day="${addDays(day, steps[event.key])}"]:not(:disabled)`)?.focus();
+  };
   const name = getRangeName(data.range, calendar);
 
   return (
@@ -140,7 +150,7 @@ function AtAGlance({ data, calendar, days, className }: { data: DashboardPageDat
       <CardHeader title={`${name.replace(/^./, (letter) => letter.toUpperCase())} at a glance`} sub="Tap a day to open it in Insights." href={insightsHref(data.range, { tab: "calendar" })} linkLabel="Calendar" />
       <div className="mt-4 grid gap-5 sm:grid-cols-[minmax(0,1fr)_170px] sm:items-center">
         {calendar.layout === "month" ? (
-          <MonthGrid compact calendar={calendar} byDay={byDay} today={data.today} selected="" onPick={openDay} onKeyDown={() => undefined} />
+          <MonthGrid compact calendar={calendar} byDay={byDay} today={data.today} selected="" tabStop={tabStop} onPick={openDay} onKeyDown={moveFocus} />
         ) : (
           <div className="grid h-36 items-end gap-1.5" style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0,1fr))` }}>
             {months.map(([month, total]) => (
