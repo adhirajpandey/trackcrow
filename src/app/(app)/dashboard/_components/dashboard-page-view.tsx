@@ -3,7 +3,7 @@
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, type KeyboardEvent, type ReactNode } from "react";
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { tidyRecipientName } from "@/common/recipient-name";
 import { AppPageHeader } from "@/components/product/app-page-header";
@@ -134,14 +134,18 @@ function AtAGlance({ data, calendar, days, className }: { data: DashboardPageDat
   }, [days]);
   const maxMonth = Math.max(...months.map(([, total]) => total), 1);
   const openDay = (day: string) => router.push(insightsHref(data.range, { tab: "calendar", day }));
-  // No day is selected here, so one day holds the Tab stop and arrow keys move focus between days.
-  const tabStop = data.today < calendar.start ? calendar.start : data.today > calendar.end ? calendar.end : data.today;
+  // No day is selected here, so one day holds the Tab stop. Arrow keys move focus, and the Tab stop follows it.
+  const [focusDay, setFocusDay] = useState<string | null>(null);
+  const tabStop = focusDay && byDay.has(focusDay) ? focusDay : data.today < calendar.start ? calendar.start : data.today > calendar.end ? calendar.end : data.today;
   const moveFocus = (event: KeyboardEvent, day: string) => {
     const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
     if (!(event.key in steps)) return;
     event.preventDefault();
-    const grid = (event.currentTarget as HTMLElement).closest('[role="grid"]');
-    grid?.querySelector<HTMLButtonElement>(`[data-day="${addDays(day, steps[event.key])}"]:not(:disabled)`)?.focus();
+    const next = addDays(day, steps[event.key]);
+    const target = (event.currentTarget as HTMLElement).closest('[role="grid"]')?.querySelector<HTMLButtonElement>(`[data-day="${next}"]:not(:disabled)`);
+    if (!target) return;
+    setFocusDay(next);
+    target.focus();
   };
   const name = getRangeName(data.range, calendar);
 
