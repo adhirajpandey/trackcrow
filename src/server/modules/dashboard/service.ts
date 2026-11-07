@@ -370,7 +370,7 @@ export async function getLargeTransactionCount(
 }
 
 export async function getRecentLargeTransactions(
-  input: DashboardRangeInput & { take?: number }
+  input: DashboardRangeInput & { take?: number; uncategorizedOnly?: boolean }
 ): Promise<
   ServiceResult<
     Array<{
@@ -388,6 +388,7 @@ export async function getRecentLargeTransactions(
   const where = {
     userUuid: input.userUuid,
     ...buildDateFilter(input),
+    ...(input.uncategorizedOnly ? { categoryId: null } : {}),
   };
 
   try {
@@ -602,12 +603,23 @@ export type DashboardRecipientActivity = {
   days: Array<[string, number]>;
 };
 
-/** Daily totals and per-recipient activity for one range, from a single read of the range's transactions. */
+export type DashboardPatternCell = {
+  /** Monday is 0. */
+  weekday: number;
+  /** Hour of day in IST, 0–23. */
+  hour: number;
+  totalSpend: number;
+  transactionCount: number;
+  /** Up to three recipients paid most often in this slot. */
+  topRecipients: Array<{ recipient: string; totalSpend: number; transactionCount: number }>;
+};
+
+/** Daily totals, per-recipient activity and weekday-by-hour patterns for one range, from a single read of its transactions. */
 export async function getDashboardActivity(
   input: DashboardRangeInput
 ): Promise<
   ServiceResult<
-    { days: DashboardDayActivity[]; recipients: DashboardRecipientActivity[] },
+    { days: DashboardDayActivity[]; recipients: DashboardRecipientActivity[]; patterns: DashboardPatternCell[] },
     "INTERNAL_ERROR"
   >
 > {
@@ -632,6 +644,7 @@ export async function getDashboardActivity(
     });
 
     const days = new Map<string, DashboardDayActivity>();
+    const patterns = new Map<number, Omit<DashboardPatternCell, "topRecipients"> & { recipients: Map<string, { totalSpend: number; transactionCount: number }> }>();
     const recipients = new Map<
       string,
       Omit<DashboardRecipientActivity, "categories" | "days"> & {
@@ -678,6 +691,18 @@ export async function getDashboardActivity(
       }
       recipient.days.set(day, (recipient.days.get(day) ?? 0) + amount);
       recipients.set(key, recipient);
+
+      const ist = new Date(transaction.timestamp.getTime() + IST_OFFSET_MINUTES * 60 * 1000);
+      const weekday = (ist.getUTCDay() + 6) % 7;
+      const hour = ist.getUTCHours();
+      const cell = patterns.get(weekday * 24 + hour) ?? { weekday, hour, totalSpend: 0, transactionCount: 0, recipients: new Map() };
+      cell.totalSpend += amount;
+      cell.transactionCount += 1;
+      const paid = cell.recipients.get(label) ?? { totalSpend: 0, transactionCount: 0 };
+      paid.totalSpend += amount;
+      paid.transactionCount += 1;
+      cell.recipients.set(label, paid);
+      patterns.set(weekday * 24 + hour, cell);
     }
 
     return ok({
@@ -689,6 +714,15 @@ export async function getDashboardActivity(
           days: [...recipient.days.entries()],
         }))
         .sort((left, right) => right.totalAmount - left.totalAmount),
+      patterns: [...patterns.values()]
+        .sort((left, right) => left.weekday * 24 + left.hour - (right.weekday * 24 + right.hour))
+        .map(({ recipients: paid, ...cell }) => ({
+          ...cell,
+          topRecipients: [...paid.entries()]
+            .map(([recipient, totals]) => ({ recipient, ...totals }))
+            .sort((left, right) => right.transactionCount - left.transactionCount || right.totalSpend - left.totalSpend)
+            .slice(0, 3),
+        })),
     });
   } catch (error) {
     logger.error(
