@@ -17,25 +17,40 @@ function persistRange(range: DashboardRangeValue) {
   document.cookie = `${dashboardRangeCookieName}=${range}; path=/; max-age=31536000; samesite=lax`;
 }
 
-function buildDashboardUrl(range: DashboardRangeValue, startDate?: string, endDate?: string) {
-  const params = new URLSearchParams({ range });
+function buildDashboardUrl(
+  range: DashboardRangeValue,
+  startDate?: string,
+  endDate?: string,
+  path = "/dashboard",
+  extraParams: Record<string, string> = {}
+) {
+  const params = new URLSearchParams({ ...extraParams, range });
   if (range === "custom" && startDate && endDate) {
     params.set("startDate", startDate);
     params.set("endDate", endDate);
   }
 
-  return `/dashboard?${params.toString()}`;
+  return `${path}?${params.toString()}`;
 }
+
+type RangeTarget = {
+  /** Page the picker navigates to; the range is shared through a cookie. */
+  path?: string;
+  /** Params to keep, such as the Insights tab. */
+  extraParams?: Record<string, string>;
+};
 
 export function DashboardMobileTimePeriodRow({
   value,
   startDate,
   endDate,
+  path,
+  extraParams,
 }: {
   value: DashboardRangeValue;
   startDate: string | null;
   endDate: string | null;
-}) {
+} & RangeTarget) {
   const router = useRouter();
 
   return (
@@ -47,7 +62,7 @@ export function DashboardMobileTimePeriodRow({
       endDate={endDate}
       onSelect={(range, nextStartDate, nextEndDate) => {
         persistRange(range);
-        router.push(buildDashboardUrl(range, nextStartDate, nextEndDate));
+        router.push(buildDashboardUrl(range, nextStartDate, nextEndDate, path, extraParams));
       }}
       renderMenuInPortal
     />
@@ -58,11 +73,13 @@ export function DashboardTimeframePicker({
   value,
   startDate,
   endDate,
+  path,
+  extraParams,
 }: {
   value: DashboardRangeValue;
   startDate: string | null;
   endDate: string | null;
-}) {
+} & RangeTarget) {
   return (
     <TimeframePicker
       value={value}
@@ -70,7 +87,7 @@ export function DashboardTimeframePicker({
       endDate={endDate}
       quickRanges={quickDashboardRanges}
       secondaryRanges={secondaryDashboardRanges}
-      buildHref={buildDashboardUrl}
+      buildHref={(range, start, end) => buildDashboardUrl(range, start, end, path, extraParams)}
       persistSelection={persistRange}
       showQuickRanges
       idPrefix="dashboard"

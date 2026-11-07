@@ -1,10 +1,15 @@
 "use client";
 
-import { ArrowRight, Check, ChevronDown, ChevronRight, Search, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, ChevronRight, ExternalLink, Pencil, Search, X } from "lucide-react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import type { CategoryOption } from "@/common/types";
+import { tidyRecipientName } from "@/common/recipient-name";
+import { toast } from "@/components/ui/sonner";
+import { ApiClientError, apiPatch } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardCategorize } from "@/features/dashboard/mutations";
@@ -12,8 +17,8 @@ import { useDashboardTransactions } from "@/features/dashboard/queries";
 import { cn } from "@/lib/utils";
 import type { DashboardRecipientActivity, DashboardTransactionDto } from "@/server/page-data/dashboard-page-data";
 
-import { dashboardInnerTableClassName, dashboardPanelClassName, dashboardTableHeaderClassName } from "./dashboard-style";
-import { CategoryMenu, CategoryPill, focusRing, InfoTip, PanelNote, segmentClassName, segmentItemClassName } from "./dashboard-ui";
+import { dashboardInnerTableClassName, dashboardPanelClassName, dashboardTableHeaderClassName } from "@/app/(app)/dashboard/_components/dashboard-style";
+import { CategoryMenu, CategoryPill, focusRing, InfoTip, PanelNote, segmentClassName, segmentItemClassName } from "@/app/(app)/dashboard/_components/dashboard-ui";
 import {
   addDays,
   addMonths,
@@ -28,7 +33,7 @@ import {
   pluralize,
   toIstDay,
   type CalendarRange,
-} from "./dashboard-view-model";
+} from "@/app/(app)/dashboard/_components/dashboard-view-model";
 
 type Sort = "total" | "count" | "days";
 const PAGE = 12;
@@ -94,7 +99,7 @@ function Rhythm({ recipient, buckets, unit, small = false }: { recipient: Dashbo
   );
 }
 
-export function DashboardPeopleView({
+export function InsightsRecipients({
   calendar,
   recipients,
   largest,
@@ -130,14 +135,14 @@ export function DashboardPeopleView({
     [recipients, sort]
   );
   const search = query.trim().toLowerCase();
-  const filtered = sorted.filter((recipient) => (!reviewOnly || recipient.uncategorizedCount > 0 || keyOf(recipient) === openKey) && (!search || recipient.recipient.toLowerCase().includes(search)));
+  const filtered = sorted.filter((recipient) => (!reviewOnly || recipient.uncategorizedCount > 0 || keyOf(recipient) === openKey) && (!search || recipient.recipient.toLowerCase().includes(search) || tidyRecipientName(recipient.recipient).toLowerCase().includes(search)));
   const shown = showAll || search ? filtered : filtered.slice(0, PAGE);
   const regulars = [...recipients].filter((recipient) => recipient.days.length >= 4).sort((left, right) => right.days.length - left.days.length).slice(0, 5);
   const allCategorized = reviewOnly && !recipients.some((recipient) => recipient.uncategorizedCount > 0);
   const range = `${formatDayShort(calendar.start)} to ${formatDayShort(calendar.end)}`;
 
   return (
-    <div id="dashboard-panel-people" role="tabpanel" aria-labelledby="dashboard-tab-people" className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div id="insights-panel-recipients" role="tabpanel" aria-labelledby="insights-tab-recipients" className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className={cn(dashboardPanelClassName, "p-4 sm:p-5")}>
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative block min-w-[220px] flex-1">
@@ -216,7 +221,7 @@ export function DashboardPeopleView({
                       <span className="min-w-0">
                         <span className="flex items-center gap-1.5">
                           <ChevronRight className={cn("h-4 w-4 shrink-0 text-secondary-foreground transition-transform", open && "rotate-90")} aria-hidden />
-                          <span className="text-sm font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">{recipient.recipient}</span>
+                          <span title={recipient.recipient} className="text-sm font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">{tidyRecipientName(recipient.recipient)}</span>
                         </span>
                         <span className="block pl-[22px] text-xs text-secondary-foreground tabular-nums">
                           {pluralize(recipient.transactionCount, "transaction")} on {pluralize(recipient.days.length, "day")}
@@ -250,7 +255,7 @@ export function DashboardPeopleView({
             {regulars.map((recipient) => (
               <li key={keyOf(recipient)} className="py-2.5">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-semibold">{recipient.recipient}</span>
+                  <span title={recipient.recipient} className="min-w-0 truncate text-sm font-semibold">{tidyRecipientName(recipient.recipient)}</span>
                   <span className="shrink-0 text-xs text-secondary-foreground tabular-nums">{recipient.days.length} days · {formatCurrency(recipient.totalAmount)}</span>
                 </div>
                 <div className="mt-1.5"><Rhythm recipient={recipient} buckets={buckets} unit={unit} small /></div>
@@ -266,7 +271,7 @@ export function DashboardPeopleView({
               <li key={transaction.uuid}>
                 <button type="button" onClick={() => onPickDay(toIstDay(transaction.timestamp))} className={cn("-mx-2 flex w-[calc(100%+16px)] items-center justify-between gap-3 rounded-[6px] px-2 py-2.5 text-left transition-colors hover:bg-[var(--paper-mint)]", focusRing)}>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{transaction.recipient}</span>
+                    <span className="block truncate text-sm font-semibold">{tidyRecipientName(transaction.recipient)}</span>
                     <span className="inline-flex items-center gap-1 text-xs text-secondary-foreground">
                       {formatDayFull(toIstDay(transaction.timestamp))} <ArrowRight className="h-3 w-3" aria-hidden /> see the day
                     </span>
@@ -319,6 +324,7 @@ function RecipientDetail({
 
   return (
     <div className="border-t-2 border-border/15 bg-background/60 px-4 pb-4 pt-3 sm:px-5">
+      <RecipientNameBar recipientUuid={recipient.recipientUuid} name={recipient.recipient} />
       {query.isError ? (
         <PanelNote title="Couldn’t load these transactions." action={<Button variant="secondary" size="sm" onClick={() => void query.refetch()}><span className="font-bold">Try again</span></Button>} />
       ) : query.isPending ? (
@@ -341,14 +347,14 @@ function RecipientDetail({
                 </p>
                 <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-sm">
                   <input type="checkbox" checked={rule} onChange={(event) => setRule(event.target.checked)} className="h-4 w-4 cursor-pointer accent-[#171714]" />
-                  Also categorize future payments to {recipient.recipient}
+                  Also categorize future payments to {tidyRecipientName(recipient.recipient)}
                 </label>
               </div>
               <CategoryMenu
                 label={
                   partial
                     ? `Applies to the ${pluralize(uncategorized.length, "uncategorized transaction")} among the first ${transactions.length} loaded. Later ones stay as they are.`
-                    : `Applies to ${pluralize(uncategorized.length, "uncategorized transaction")} to ${recipient.recipient}.`
+                    : `Applies to ${pluralize(uncategorized.length, "uncategorized transaction")} to ${tidyRecipientName(recipient.recipient)}.`
                 }
                 categories={categories}
                 current={null}
@@ -356,8 +362,8 @@ function RecipientDetail({
                   void categorize({
                     transactions: uncategorized.map((transaction) => ({ uuid: transaction.uuid, categoryUuid: null, subcategoryUuid: null })),
                     choice,
-                    description: `${pluralize(uncategorized.length, "transaction")} to ${recipient.recipient}`,
-                    rule: rule ? { recipientUuid: recipient.recipientUuid!, recipient: recipient.recipient } : null,
+                    description: `${pluralize(uncategorized.length, "transaction")} to ${tidyRecipientName(recipient.recipient)}`,
+                    rule: rule ? { recipientUuid: recipient.recipientUuid!, recipient: tidyRecipientName(recipient.recipient) } : null,
                   })
                 }
                 trigger={({ open, toggle, ref }) => (
@@ -402,5 +408,83 @@ function RecipientDetail({
         </>
       )}
     </div>
+  );
+}
+
+/** Recipient name with an inline rename. The field starts with the tidied name, so fixing capitals is one tap. */
+function RecipientNameBar({ recipientUuid, name }: { recipientUuid: string; name: string }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(() => tidyRecipientName(name));
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const next = value.trim();
+    if (!next) return setError("Enter a name.");
+    if (next === name) return setEditing(false);
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPatch(`/api/recipients/${recipientUuid}`, { displayName: next });
+      await queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      router.refresh();
+      setEditing(false);
+      toast({ tone: "success", title: "Recipient renamed", description: `Now shown as ${next}. Past and future payments use the new name.` });
+    } catch (caught) {
+      setError(caught instanceof ApiClientError && caught.status === 409 ? "Another recipient already has this name." : "Couldn’t rename. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="min-w-0 text-secondary-foreground">
+          Bank name: <span className="font-medium text-foreground [overflow-wrap:anywhere]">{name}</span>
+        </span>
+        <button type="button" onClick={() => setEditing(true)} className={cn("inline-flex min-h-9 items-center gap-1 rounded-[6px] px-1.5 underline underline-offset-4 hover:bg-secondary", focusRing)}>
+          <Pencil className="h-3.5 w-3.5" aria-hidden />
+          <span className="font-semibold">Rename</span>
+        </button>
+        <Link href={`/recipients/${recipientUuid}`} className={cn("inline-flex min-h-9 items-center gap-1 rounded-[6px] px-1.5 text-secondary-foreground underline underline-offset-4 hover:bg-secondary hover:text-foreground", focusRing)}>
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          <span className="font-semibold">Recipient page</span>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <label className="min-w-0 flex-1">
+        <span className="sr-only">Recipient name</span>
+        <input
+          autoFocus
+          value={value}
+          maxLength={200}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setEditing(false);
+          }}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `rename-error-${recipientUuid}` : undefined}
+          className={cn("h-10 w-full rounded-[8px] border-2 border-border bg-card px-3 text-sm text-foreground", focusRing)}
+        />
+        {error ? <span id={`rename-error-${recipientUuid}`} role="alert" className="mt-1 block text-xs font-semibold text-destructive">{error}</span> : null}
+      </label>
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={saving}><span className="font-bold">{saving ? "Saving…" : "Save name"}</span></Button>
+        <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(false)}><span className="font-bold">Cancel</span></Button>
+      </div>
+    </form>
   );
 }
