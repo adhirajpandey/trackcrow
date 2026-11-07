@@ -100,9 +100,18 @@ export function useDashboardCategorize() {
         }
 
         const undo = async () => {
-          await runInBatches(updated, (target) => setCategory(target, target.categoryUuid, target.subcategoryUuid));
-          if (rule) await apiDelete(`/api/rules/${rule.uuid}`).catch(() => undefined);
+          const restoreFailures = await runInBatches(updated, (target) => setCategory(target, target.categoryUuid, target.subcategoryUuid));
+          const ruleRemoved = rule ? await apiDelete(`/api/rules/${rule.uuid}`).then(() => true, () => false) : true;
           await refresh();
+
+          const problems = [
+            restoreFailures.length ? `${restoreFailures.length} of ${updated.length} couldn’t be restored` : null,
+            ruleRemoved ? null : "the new rule is still active; delete it in Rules",
+          ].filter((problem): problem is string => Boolean(problem));
+          if (problems.length) {
+            toast({ tone: "error", title: "Undo incomplete", description: `${problems.join("; ")}.`.replace(/^./, (letter) => letter.toUpperCase()) });
+            return;
+          }
           toast({ tone: "info", title: "Change undone", description: `${request.description} restored.` });
         };
 

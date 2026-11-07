@@ -303,6 +303,9 @@ function RecipientDetail({
   const { categorize, pending } = useDashboardCategorize();
   const transactions = query.data?.transactions ?? [];
   const uncategorized = transactions.filter((transaction) => !transaction.categoryUuid);
+  // Only the first 100 load; bulk actions and their wording then cover the loaded ones.
+  const total = query.data?.total ?? transactions.length;
+  const partial = total > transactions.length;
   const shown = showAll ? transactions : transactions.slice(0, 6);
   const allHref = buildTransactionsHref({ startDate: calendar.start, endDate: calendar.end, ...(recipient.recipientUuid ? { recipientUuid: recipient.recipientUuid } : { q: recipient.recipient }) });
 
@@ -328,7 +331,11 @@ function RecipientDetail({
             <div className="mb-3 flex flex-col gap-3 rounded-[8px] border-2 border-border bg-[var(--paper-yellow)] p-3 text-[#171714] sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm">
-                  <span className="font-bold">{uncategorized.length === transactions.length ? `All ${uncategorized.length}` : `${uncategorized.length} of ${transactions.length}`} uncategorized</span>
+                  <span className="font-bold">
+                    {partial
+                      ? `${uncategorized.length} uncategorized in the first ${transactions.length} of ${total}`
+                      : `${uncategorized.length === transactions.length ? `All ${uncategorized.length}` : `${uncategorized.length} of ${transactions.length}`} uncategorized`}
+                  </span>
                   {" · "}{formatCurrency(uncategorized.reduce((sum, transaction) => sum + transaction.amount, 0))}
                   {uncategorized.length < transactions.length ? ". Categorized ones keep their category." : ""}
                 </p>
@@ -338,7 +345,11 @@ function RecipientDetail({
                 </label>
               </div>
               <CategoryMenu
-                label={`Applies to ${pluralize(uncategorized.length, "uncategorized transaction")} to ${recipient.recipient}.`}
+                label={
+                  partial
+                    ? `Applies to the ${pluralize(uncategorized.length, "uncategorized transaction")} among the first ${transactions.length} loaded. Later ones stay as they are.`
+                    : `Applies to ${pluralize(uncategorized.length, "uncategorized transaction")} to ${recipient.recipient}.`
+                }
                 categories={categories}
                 current={null}
                 onPick={(choice) =>
