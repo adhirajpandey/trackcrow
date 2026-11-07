@@ -52,7 +52,7 @@ uv run --with playwright python scripts/screenshot_pages.py --list
 uv run --with playwright python scripts/screenshot_pages.py --all --sizes desktop mobile --browser-mode headless
 ```
 
-Images land in `TRACKCROW_UI_IMAGE_OUTPUT_DIR`, one numbered file per scrolled screen.
+Images land in `TRACKCROW_UI_IMAGE_OUTPUT_DIR`, one numbered file per scrolled screen. Add `--full-page` to save each page as one tall `{size}-{page}-full.png` image instead, with the desktop sidebar spanning its full height.
 
 ## Build And Test Commands
 

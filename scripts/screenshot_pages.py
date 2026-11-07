@@ -7,6 +7,7 @@ Common commands:
   python scripts/screenshot_pages.py --all --sizes desktop
   python scripts/screenshot_pages.py --all --sizes mobile --browser-mode headless
   python scripts/screenshot_pages.py --all --sizes mobile --browser-mode headfull
+  python scripts/screenshot_pages.py --pages dashboard --sizes desktop mobile --full-page
 
 Detail-page environment variables keep their legacy `_ID` names but must now contain UUIDs:
   TRACKCROW_AUTOMATION_TRANSACTION_ID
@@ -35,6 +36,7 @@ ENV_FILE = ROOT_DIR / ".env"
 DEFAULT_BASE_URL = "http://localhost:3000"
 DEFAULT_DESKTOP_VIEWPORT = (1920, 1080)
 DEFAULT_MOBILE_VIEWPORT = (390, 844)
+FULL_PAGE_MAX_RESIZE_ATTEMPTS = 3
 
 
 def load_env_file(path: Path) -> None:
@@ -140,6 +142,7 @@ class CliOptions:
   pages: list[PageCapture]
   size_presets: list[ViewportPreset]
   headless: bool
+  full_page: bool
 
 
 VIEWPORT_PRESETS: dict[str, ViewportPreset] = {
@@ -177,6 +180,12 @@ def build_page_captures() -> dict[str, PageCapture]:
       path="/dashboard",
       output_slug="dashboard",
       heading="Dashboard",
+    ),
+    "insights": PageCapture(
+      alias="insights",
+      path="/insights",
+      output_slug="insights",
+      heading="Insights",
     ),
     "transactions": PageCapture(
       alias="transactions",
@@ -271,6 +280,11 @@ def build_parser() -> argparse.ArgumentParser:
     choices=("headless", "headful", "headfull"),
     help="Override browser visibility for this run.",
   )
+  parser.add_argument(
+    "--full-page",
+    action="store_true",
+    help="Capture each page as one tall {size}-{page}-full.png image instead of numbered scrolled screens.",
+  )
   return parser
 
 
@@ -305,7 +319,15 @@ def main(argv: list[str] | None = None) -> int:
         terminate_existing_automation_browser(config)
 
       for size_preset in options.size_presets:
-        capture_for_size(playwright.chromium, size_preset, options.pages, session, config, options.headless)
+        capture_for_size(
+          playwright.chromium,
+          size_preset,
+          options.pages,
+          session,
+          config,
+          options.headless,
+          full_page=options.full_page,
+        )
   except PlaywrightError as error:
     print(f"Playwright error: {error}", file=sys.stderr)
     return 1
@@ -338,6 +360,7 @@ def resolve_cli_options(
     pages=resolve_pages(args.pages, page_captures, capture_all=args.all),
     size_presets=resolve_sizes(args.sizes),
     headless=resolve_headless_mode(args.browser_mode, config),
+    full_page=args.full_page,
   )
 
 
@@ -389,6 +412,7 @@ def print_available_options() -> None:
   for alias, page_path in (
     ("landing", "/"),
     ("dashboard", "/dashboard"),
+    ("insights", "/insights"),
     ("transactions", "/transactions"),
     ("recipients", "/recipients"),
     ("transaction", "/transactions/{TRACKCROW_AUTOMATION_TRANSACTION_ID}"),
@@ -411,6 +435,7 @@ def print_available_options() -> None:
 
   print()
   print("Use --all to capture every available page alias.")
+  print("Use --full-page to capture one tall image per page instead of numbered scrolled screens.")
 
 
 def capture_for_size(
@@ -420,6 +445,8 @@ def capture_for_size(
   session: dict[str, str],
   config: RuntimeConfig,
   headless: bool,
+  *,
+  full_page: bool,
 ) -> None:
   context = chromium.launch_persistent_context(
     user_data_dir=str(config.automation_user_data_dir),
@@ -433,7 +460,7 @@ def capture_for_size(
       # Signed-in visitors are redirected away from public pages, so capture those without the session.
       if not page_capture.requires_session:
         context.clear_cookies()
-      capture_page(page, page_capture, size_preset, config)
+      capture_page(page, page_capture, size_preset, config, full_page=full_page)
       if not page_capture.requires_session:
         context.add_cookies([build_session_cookie(session["token"], config.base_url)])
   finally:
@@ -568,15 +595,24 @@ def capture_page(
   page_capture: PageCapture,
   size_preset: ViewportPreset,
   config: RuntimeConfig,
+  *,
+  full_page: bool,
 ) -> None:
   url = f"{config.base_url}{page_capture.path}"
   base_name = build_output_base_name(page_capture, size_preset)
+  output_name = f"{base_name}-full.png" if full_page else f"{base_name}-*.png"
 
-  print(f"Capturing {url} [{size_preset.alias}] -> {base_name}-*.png")
+  print(f"Capturing {url} [{size_preset.alias}] -> {output_name}")
   page.goto(url, wait_until="domcontentloaded")
   ensure_logged_in(page, url)
   wait_for_page_content(page, page_capture.heading)
   reset_scroll_position(page, config)
+
+  # One tall image already shows every section, so it skips the clicked state as well.
+  if full_page:
+    capture_full_page(page, config.output_dir / output_name, config)
+    return
+
   clear_existing_indexed_outputs(base_name, config)
   capture_scrolled_sequence(page, base_name, config)
 
@@ -685,6 +721,54 @@ def capture_scrolled_sequence(page: Page, base_name: str, config: RuntimeConfig)
     screenshot_index += 1
 
   raise RuntimeError(f"Exceeded screenshot guard for page base name: {base_name}")
+
+
+def capture_full_page(page: Page, output_path: Path, config: RuntimeConfig) -> None:
+  # Playwright's full_page stitching keeps the original viewport, so the sticky, one-screen-tall
+  # sidebar ends mid-image. Growing the viewport to the document height lets it span the page.
+  original_viewport = page.viewport_size
+  if original_viewport is None:
+    raise RuntimeError("Full-page capture needs a fixed viewport size.")
+
+  fits_document = False
+  try:
+    fits_document = fit_viewport_to_document(page, original_viewport["width"], original_viewport["height"], config)
+    if fits_document:
+      page.screenshot(path=str(output_path), full_page=False)
+  finally:
+    page.set_viewport_size(original_viewport)
+
+  if fits_document:
+    return
+
+  # Sections sized in viewport units, such as a full-screen hero, grow with every resize.
+  print(f"  Page height follows the viewport; stitching {output_path.name} at the original size instead.")
+  wait_for_layout_settle(page, config)
+  page.screenshot(path=str(output_path), full_page=True)
+
+
+def fit_viewport_to_document(page: Page, width: int, height: int, config: RuntimeConfig) -> bool:
+  viewport_height = height
+  for _ in range(FULL_PAGE_MAX_RESIZE_ATTEMPTS):
+    document_height = measure_document_height(page)
+    if document_height <= viewport_height:
+      return True
+
+    viewport_height = document_height
+    page.set_viewport_size({"width": width, "height": viewport_height})
+    wait_for_layout_settle(page, config)
+
+  return measure_document_height(page) <= viewport_height
+
+
+def measure_document_height(page: Page) -> int:
+  return page.evaluate("() => document.documentElement.scrollHeight")
+
+
+def wait_for_layout_settle(page: Page, config: RuntimeConfig) -> None:
+  # Two animation frames let layout and resize observers run before the usual settle delay.
+  page.evaluate("() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
+  page.wait_for_timeout(config.post_scroll_settle_ms)
 
 
 if __name__ == "__main__":
