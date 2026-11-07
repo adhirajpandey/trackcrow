@@ -321,6 +321,13 @@ describe("dashboard service", () => {
       ok: true,
       data: {
         days: [{ day: "2026-10-02", totalSpend: 26890, transactionCount: 4, uncategorizedCount: 2 }],
+        patterns: [
+          // 2 Oct 2026 is a Friday (weekday 4): 00:15, 10:30, 11:30 and 18:49 IST.
+          { weekday: 4, hour: 0, totalSpend: 100, transactionCount: 1, topRecipients: [{ recipient: "Biraj Borah", totalSpend: 100, transactionCount: 1 }] },
+          { weekday: 4, hour: 10, totalSpend: 50, transactionCount: 1, topRecipients: [{ recipient: "Biraj Borah", totalSpend: 50, transactionCount: 1 }] },
+          { weekday: 4, hour: 11, totalSpend: 200, transactionCount: 1, topRecipients: [{ recipient: "Biraj Borah", totalSpend: 200, transactionCount: 1 }] },
+          { weekday: 4, hour: 18, totalSpend: 26540, transactionCount: 1, topRecipients: [{ recipient: "NAVJYOT SINGH", totalSpend: 26540, transactionCount: 1 }] },
+        ],
         recipients: [
           { recipientUuid: null, recipient: "NAVJYOT SINGH", transactionCount: 1, totalAmount: 26540, uncategorizedCount: 1, uncategorizedAmount: 26540, categories: [], days: [["2026-10-02", 26540]] },
           { recipientUuid: "rcp-1", recipient: "Biraj Borah", transactionCount: 3, totalAmount: 350, uncategorizedCount: 1, uncategorizedAmount: 100, categories: ["Food", "Shopping"], days: [["2026-10-02", 350]] },

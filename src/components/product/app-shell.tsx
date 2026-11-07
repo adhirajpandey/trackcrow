@@ -4,14 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import {
-  Gauge,
-  LogOut,
-  ReceiptText,
-  ScrollText,
-  Settings,
-  Users,
-} from "lucide-react";
+import { ChartColumnBig, Gauge, LogOut, ReceiptText, ScrollText, Settings, Users } from "lucide-react";
 import { useState } from "react";
 
 import { BrandMark } from "@/components/product/brand-mark";
@@ -28,6 +21,7 @@ const signOutCallbackUrl = "/";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: Gauge },
+  { href: "/insights", label: "Insights", icon: ChartColumnBig },
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
   { href: "/recipients", label: "Recipients", icon: Users },
   { href: "/rules", label: "Rules", icon: ScrollText },

@@ -52,7 +52,7 @@ uv run --with playwright python scripts/screenshot_pages.py --list
 uv run --with playwright python scripts/screenshot_pages.py --all --sizes desktop mobile --browser-mode headless
 ```
 
-Images land in `TRACKCROW_UI_IMAGE_OUTPUT_DIR`, one numbered file per scrolled screen.
+Images land in `TRACKCROW_UI_IMAGE_OUTPUT_DIR`, one numbered file per scrolled screen. Add `--full-page` to save each page as one tall `{size}-{page}-full.png` image instead, with the desktop sidebar spanning its full height.
 
 ## Build And Test Commands
 
@@ -225,7 +225,7 @@ Apply `20260915_track_accounts` during a coordinated write pause after taking a 
 ## Current runtime notes
 
 - authenticated app pages use a shared shell from `src/app/(app)/layout.tsx`
-- implemented page-data reads currently back dashboard, transactions, transaction detail, transaction create, recipients, and recipient detail routes
+- implemented page-data reads currently back dashboard, insights, transactions, transaction detail, transaction create, recipients, and recipient detail routes
 - `/settings` manages accounts and scoped personal API tokens
 - `/mcp` runs stateless MCP v2 with legacy stateless compatibility
 - Next.js remote image loading is currently enabled for `lh3.googleusercontent.com`

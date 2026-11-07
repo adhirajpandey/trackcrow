@@ -1,4 +1,6 @@
-import type { DashboardDayActivity, DashboardPageData } from "@/server/page-data/dashboard-page-data";
+import type { DashboardDayActivity, SpendingPageBase } from "@/server/page-data/dashboard-page-data";
+
+type DashboardPageData = Pick<SpendingPageBase, "range" | "comparison">;
 
 const rupeeSymbol = "₹";
 export const DASHBOARD_TIME_ZONE = "Asia/Kolkata";
@@ -208,6 +210,14 @@ export function getRangeName(range: DashboardPageData["range"], calendar: Calend
   if (range.value === "this-month") return "this month";
   if (range.value === "custom") return "this range";
   return range.label.toLowerCase();
+}
+
+/** Compact name for tight spots, such as "10% of Oct". */
+export function getRangeShortName(range: DashboardPageData["range"], calendar: CalendarRange) {
+  if (range.value === "last-month") return formatMonthShort(calendar.start);
+  if (range.value === "this-month") return "this month";
+  if (range.value === "custom") return "range";
+  return range.label.replace(/^Last /, "").toLowerCase();
 }
 
 /* ---------- links ---------- */

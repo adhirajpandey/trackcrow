@@ -16,6 +16,7 @@ TrackCrow has six top-level surfaces:
 Current authenticated page routes are:
 
 - `/dashboard`
+- `/insights`
 - `/transactions`
 - `/transactions/new`
 - `/transactions/[id]`
@@ -24,7 +25,7 @@ Current authenticated page routes are:
 - `/rules`
 - `/settings`
 
-`/settings` manages accounts, scoped personal API tokens, and OAuth Connected Apps. `/categories` is not a current App Router page even though category APIs already exist.
+`/dashboard` is a short summary of the selected range. `/insights` holds the detailed Calendar, Recipients, and Patterns views and shares the dashboard's range through a cookie. `/settings` manages accounts, scoped personal API tokens, and OAuth Connected Apps. `/categories` is not a current App Router page even though category APIs already exist.
 
 ## Backend Boundaries
 
