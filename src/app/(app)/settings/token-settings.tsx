@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { AccountOption } from "@/common/types";
+import { formatDate } from "@/common/utils";
 import { AccountSettings } from "./account-settings";
 import { ConnectedApps } from "./connected-apps";
 
@@ -39,7 +40,7 @@ function approximateDate(value: string | null) {
   if (days <= 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 30) return `${days} days ago`;
-  return new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", month: "short", year: "numeric" }).format(new Date(value));
 }
 
 export function TokenSettings({ initialTokens, initialAccounts, mcpUrl }: { initialTokens: TokenRecord[]; initialAccounts: AccountOption[]; mcpUrl: string }) {
@@ -127,7 +128,7 @@ export function TokenSettings({ initialTokens, initialAccounts, mcpUrl }: { init
                 {!token.revokedAt ? <Button variant="secondary" onClick={() => void revokeToken(token.uuid)}>Revoke</Button> : null}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">{token.scopes.map((scope) => <span key={scope} className="rounded bg-secondary px-2 py-1 text-xs font-semibold"><Check className="mr-1 inline h-3 w-3" />{scopeLabels[scope]}</span>)}</div>
-              <p className="mt-3 text-xs text-secondary-foreground">Created {new Date(token.createdAt).toLocaleDateString()} · Last used {approximateDate(token.lastUsedAt)}</p>
+              <p className="mt-3 text-xs text-secondary-foreground">Created {formatDate(token.createdAt)} · Last used {approximateDate(token.lastUsedAt)}</p>
             </div>
           ))}
         </CardContent>

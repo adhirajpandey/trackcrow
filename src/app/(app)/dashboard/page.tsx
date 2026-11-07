@@ -14,5 +14,5 @@ export default async function DashboardPage(props: DashboardPageProps) {
     persistedRange: cookieStore.get(dashboardRangeCookieName)?.value ?? null,
   });
 
-  return <DashboardPageView data={data} />;
+  return <DashboardPageView key={`${data.range.value}:${data.range.startDate}:${data.range.endDate}`} data={data} />;
 }

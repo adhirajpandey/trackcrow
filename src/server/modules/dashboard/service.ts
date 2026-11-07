@@ -582,3 +582,123 @@ export async function getFrequentRecipients(
     return fail("INTERNAL_ERROR");
   }
 }
+
+export type DashboardDayActivity = {
+  day: string;
+  totalSpend: number;
+  transactionCount: number;
+  uncategorizedCount: number;
+};
+
+export type DashboardRecipientActivity = {
+  recipientUuid: string | null;
+  recipient: string;
+  transactionCount: number;
+  totalAmount: number;
+  uncategorizedCount: number;
+  uncategorizedAmount: number;
+  categories: string[];
+  /** IST day and the amount paid to this recipient that day, oldest first. */
+  days: Array<[string, number]>;
+};
+
+/** Daily totals and per-recipient activity for one range, from a single read of the range's transactions. */
+export async function getDashboardActivity(
+  input: DashboardRangeInput
+): Promise<
+  ServiceResult<
+    { days: DashboardDayActivity[]; recipients: DashboardRecipientActivity[] },
+    "INTERNAL_ERROR"
+  >
+> {
+  const where = {
+    userUuid: input.userUuid,
+    ...buildDateFilter(input),
+  };
+
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where,
+      select: {
+        amount: true,
+        timestamp: true,
+        categoryId: true,
+        category: { select: { name: true } },
+        recipientName: true,
+        recipientRaw: true,
+        recipient: { select: { uuid: true, displayName: true } },
+      },
+      orderBy: { timestamp: "asc" },
+    });
+
+    const days = new Map<string, DashboardDayActivity>();
+    const recipients = new Map<
+      string,
+      Omit<DashboardRecipientActivity, "categories" | "days"> & {
+        categories: Set<string>;
+        days: Map<string, number>;
+      }
+    >();
+
+    for (const transaction of transactions) {
+      const amount = Number(transaction.amount);
+      const day = getPeriodKey(transaction.timestamp, "day");
+      const uncategorized = transaction.categoryId === null;
+
+      const dayEntry = days.get(day) ?? { day, totalSpend: 0, transactionCount: 0, uncategorizedCount: 0 };
+      dayEntry.totalSpend += amount;
+      dayEntry.transactionCount += 1;
+      if (uncategorized) dayEntry.uncategorizedCount += 1;
+      days.set(day, dayEntry);
+
+      const label = getCanonicalRecipientLabel({
+        recipientName: transaction.recipientName,
+        recipientDisplayName: transaction.recipient?.displayName,
+        recipientRaw: transaction.recipientRaw,
+        fallbackLabel: "Unknown payee",
+      });
+      const key = transaction.recipient?.uuid ? `uuid:${transaction.recipient.uuid}` : `label:${label}`;
+      const recipient = recipients.get(key) ?? {
+        recipientUuid: transaction.recipient?.uuid ?? null,
+        recipient: label,
+        transactionCount: 0,
+        totalAmount: 0,
+        uncategorizedCount: 0,
+        uncategorizedAmount: 0,
+        categories: new Set<string>(),
+        days: new Map<string, number>(),
+      };
+      recipient.transactionCount += 1;
+      recipient.totalAmount += amount;
+      if (uncategorized) {
+        recipient.uncategorizedCount += 1;
+        recipient.uncategorizedAmount += amount;
+      } else if (transaction.category?.name) {
+        recipient.categories.add(transaction.category.name);
+      }
+      recipient.days.set(day, (recipient.days.get(day) ?? 0) + amount);
+      recipients.set(key, recipient);
+    }
+
+    return ok({
+      days: [...days.values()],
+      recipients: [...recipients.values()]
+        .map((recipient) => ({
+          ...recipient,
+          categories: [...recipient.categories].sort(),
+          days: [...recipient.days.entries()],
+        }))
+        .sort((left, right) => right.totalAmount - left.totalAmount),
+    });
+  } catch (error) {
+    logger.error(
+      {
+        event: "dashboard.activity.db_failed",
+        userId: input.userUuid,
+        message: "Failed to load dashboard activity",
+      },
+      error
+    );
+    return fail("INTERNAL_ERROR");
+  }
+}

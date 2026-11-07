@@ -1,6 +1,5 @@
 import "server-only";
 
-import { LARGE_TRANSACTION_THRESHOLD } from "@/features/dashboard/constants";
 import type { CategoryOption } from "@/common/types";
 import type { DashboardGranularity, DashboardRangeValue } from "@/features/dashboard/query-state";
 import {
@@ -11,15 +10,14 @@ import { requirePageSessionUser } from "@/server/auth/session";
 import { toCategoryOption } from "@/server/modules/categories/helpers";
 import { listCategoriesForUser } from "@/server/modules/categories/service";
 import {
-  getFrequentRecipients,
+  getDashboardActivity,
   getDashboardSummary,
-  getImportHealth,
-  getLargeTransactionCount,
-  getRecentTransactions,
   getRecentLargeTransactions,
-  getSpendingByCategory,
-  getSpendingByPeriod,
+  type DashboardDayActivity,
+  type DashboardRecipientActivity,
 } from "@/server/modules/dashboard/service";
+
+export type { DashboardDayActivity, DashboardRecipientActivity };
 
 export type DashboardSummaryDto = {
   totalSpend: number;
@@ -29,38 +27,7 @@ export type DashboardSummaryDto = {
   averageSpend: number;
 };
 
-export type DashboardCategorySpendDto = {
-  category: string;
-  totalSpend: number;
-  transactionCount: number;
-  topSubcategory: {
-    name: string;
-    totalSpend: number;
-    transactionCount: number;
-  } | null;
-};
-
-export type DashboardPeriodSpendDto = {
-  period: string;
-  totalSpend: number;
-  transactionCount: number;
-};
-
-export type DashboardImportHealthDto = {
-  parsedCount: number;
-  failedCount: number;
-  unparseableCount: number;
-  ignoredCount: number;
-};
-
-export type DashboardSectionStatus = {
-  transactions: "ready" | "empty" | "error";
-  categories: "ready" | "empty" | "incomplete" | "error";
-  imports: "ready" | "empty" | "attention" | "error";
-  comparison: "ready" | "unavailable";
-};
-
-export type DashboardRecentTransactionDto = {
+export type DashboardTransactionDto = {
   uuid: string;
   recipient: string;
   category: string | null;
@@ -70,16 +37,17 @@ export type DashboardRecentTransactionDto = {
   source: string;
 };
 
-export type DashboardFrequentRecipientDto = {
-  recipientUuid: string | null;
-  recipient: string;
-  paymentCount: number;
-  totalAmount: number;
-};
+export type DashboardComparisonKind =
+  | "same-period-last-year"
+  | "previous-month-to-date"
+  | "previous-calendar-month"
+  | "previous-equal-length";
 
 export type DashboardPageData = {
   status: "ready" | "error";
   message: string | null;
+  /** Today's date in IST, YYYY-MM-DD, so server and browser agree on "today". */
+  today: string;
   range: {
     value: DashboardRangeValue;
     label: string;
@@ -87,31 +55,25 @@ export type DashboardPageData = {
     endDate: string | null;
     granularity: DashboardGranularity;
   };
-  rangeLabel: string;
   user: {
     name: string | null;
     email: string | null;
     image: string | null;
   };
   summary: DashboardSummaryDto;
-  importHealth: DashboardImportHealthDto;
-  largeTransactionCount: number;
-  importIssueCount: number;
-  sectionStatus: DashboardSectionStatus;
   comparison: {
-    kind: "same-period-last-year" | "previous-month-to-date" | "previous-calendar-month" | "previous-equal-length";
+    kind: DashboardComparisonKind;
     rangeLabel: string;
     startDate: string;
     endDate: string;
     summary: DashboardSummaryDto;
-    spendingByCategory: DashboardCategorySpendDto[];
   } | null;
-  spendingByCategory: DashboardCategorySpendDto[];
-  spendingByPeriod: DashboardPeriodSpendDto[];
-  frequentRecipients: DashboardFrequentRecipientDto[];
+  /** Days with at least one transaction, oldest first. */
+  days: DashboardDayActivity[];
+  /** Every recipient paid in the range, largest total first. */
+  recipients: DashboardRecipientActivity[];
+  largestTransactions: DashboardTransactionDto[];
   categoryOptions: CategoryOption[];
-  recentLargeTransactions: DashboardRecentTransactionDto[];
-  recentTransactions: DashboardRecentTransactionDto[];
 };
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -119,6 +81,8 @@ type DashboardPageOptions = {
   persistedRange?: string | null;
   now?: Date;
 };
+
+const IST_OFFSET_MS = 330 * 60 * 1000;
 
 const emptySummary: DashboardSummaryDto = {
   totalSpend: 0,
@@ -128,78 +92,8 @@ const emptySummary: DashboardSummaryDto = {
   averageSpend: 0,
 };
 
-const emptyImportHealth: DashboardImportHealthDto = {
-  parsedCount: 0,
-  failedCount: 0,
-  unparseableCount: 0,
-  ignoredCount: 0,
-};
-
-const emptySectionStatus: DashboardSectionStatus = {
-  transactions: "error",
-  categories: "error",
-  imports: "error",
-  comparison: "unavailable",
-};
-
-function getDashboardSectionStatus(input: {
-  summary: DashboardSummaryDto;
-  importHealth: DashboardImportHealthDto;
-  hasComparison: boolean;
-}): DashboardSectionStatus {
-  const importCount =
-    input.importHealth.parsedCount +
-    input.importHealth.failedCount +
-    input.importHealth.unparseableCount +
-    input.importHealth.ignoredCount;
-  const importIssueCount =
-    input.importHealth.failedCount + input.importHealth.unparseableCount;
-  const hasTransactions = input.summary.transactionCount > 0;
-  const hasCategorizedTransactions = input.summary.categorizedCount > 0;
-
-  return {
-    transactions: hasTransactions ? "ready" : "empty",
-    categories: !hasTransactions
-      ? "empty"
-      : input.summary.uncategorizedCount > 0
-        ? "incomplete"
-        : hasCategorizedTransactions
-          ? "ready"
-          : "empty",
-    imports:
-      importCount === 0
-        ? "empty"
-        : importIssueCount > 0
-          ? "attention"
-          : "ready",
-    comparison: input.hasComparison ? "ready" : "unavailable",
-  };
-}
-
-function emptyDashboardData(
-  user: DashboardPageData["user"],
-  range: DashboardPageData["range"],
-  message: string
-): DashboardPageData {
-  return {
-    status: "error",
-    message,
-    range,
-    rangeLabel: range.label,
-    user,
-    summary: emptySummary,
-    importHealth: emptyImportHealth,
-    largeTransactionCount: 0,
-    importIssueCount: 0,
-    sectionStatus: emptySectionStatus,
-    comparison: null,
-    spendingByCategory: [],
-    spendingByPeriod: [],
-    frequentRecipients: [],
-    categoryOptions: [],
-    recentLargeTransactions: [],
-    recentTransactions: [],
-  };
+export function getIstToday(now: Date = new Date()) {
+  return new Date(now.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 export async function getDashboardPageData(
@@ -225,129 +119,63 @@ export async function getDashboardPageData(
     email: sessionUser.email,
     image: sessionUser.image,
   };
+  const today = getIstToday(options.now);
   const rangeInput = {
     userUuid: sessionUser.userUuid,
     startDate: rangeState.serviceStartDate,
     endDate: rangeState.serviceEndDate,
   };
 
-  const [
-    summary,
-    spendingByCategory,
-    importHealth,
-    largeTransactionCount,
-    frequentRecipients,
-    categories,
-    recentLargeTransactions,
-    recentTransactions,
-  ] = await Promise.all([
-      getDashboardSummary(rangeInput),
-      getSpendingByCategory(rangeInput),
-      getImportHealth(rangeInput),
-      getLargeTransactionCount({
-        ...rangeInput,
-        minimumAmount: LARGE_TRANSACTION_THRESHOLD,
-      }),
-      getFrequentRecipients({
-        ...rangeInput,
-        take: 7,
-      }),
-      listCategoriesForUser({
-        userUuid: sessionUser.userUuid,
-      }),
-      getRecentLargeTransactions({
-        ...rangeInput,
-        take: 5,
-      }),
-      getRecentTransactions({
-        ...rangeInput,
-        take: 10,
-      }),
-    ]);
+  const [summary, activity, largestTransactions, categories, previousSummary] = await Promise.all([
+    getDashboardSummary(rangeInput),
+    getDashboardActivity(rangeInput),
+    getRecentLargeTransactions({ ...rangeInput, take: 6 }),
+    listCategoriesForUser({ userUuid: sessionUser.userUuid }),
+    previousRange
+      ? getDashboardSummary({
+          userUuid: sessionUser.userUuid,
+          startDate: previousRange.serviceStartDate,
+          endDate: previousRange.serviceEndDate,
+        })
+      : Promise.resolve(null),
+  ]);
 
-  let spendingByPeriod = await getSpendingByPeriod({
-    ...rangeInput,
-    granularity: rangeState.granularity,
-  });
-
-  if (
-    rangeState.range === "all-time" &&
-    spendingByPeriod.ok &&
-    spendingByPeriod.data.length > 36
-  ) {
-    spendingByPeriod = await getSpendingByPeriod({
-      ...rangeInput,
-      granularity: "year",
-    });
-    range.granularity = "year";
-  }
-
-  if (
-    !summary.ok ||
-    !spendingByCategory.ok ||
-    !spendingByPeriod.ok ||
-    !importHealth.ok ||
-    !largeTransactionCount.ok ||
-    !frequentRecipients.ok ||
-    !categories.ok ||
-    !recentLargeTransactions.ok ||
-    !recentTransactions.ok
-  ) {
-    return emptyDashboardData(
-      user,
+  if (!summary.ok || !activity.ok || !largestTransactions.ok || !categories.ok) {
+    return {
+      status: "error",
+      message: "Couldn’t load the dashboard.",
+      today,
       range,
-      "Dashboard data is temporarily unavailable. Try again in a moment."
-    );
-  }
-
-  let comparison: DashboardPageData["comparison"] = null;
-  if (previousRange) {
-    const previousRangeInput = {
-      userUuid: sessionUser.userUuid,
-      startDate: previousRange.serviceStartDate,
-      endDate: previousRange.serviceEndDate,
+      user,
+      summary: emptySummary,
+      comparison: null,
+      days: [],
+      recipients: [],
+      largestTransactions: [],
+      categoryOptions: [],
     };
-    const [previousSummary, previousSpendingByCategory] = await Promise.all([
-      getDashboardSummary(previousRangeInput),
-      getSpendingByCategory(previousRangeInput),
-    ]);
-
-    if (previousSummary.ok && previousSpendingByCategory.ok) {
-      comparison = {
-        kind: previousRange.kind,
-        rangeLabel: previousRange.label,
-        startDate: previousRange.startDate,
-        endDate: previousRange.endDate,
-        summary: previousSummary.data,
-        spendingByCategory: previousSpendingByCategory.data,
-      };
-    }
   }
-
-  const importIssueCount = importHealth.data.failedCount + importHealth.data.unparseableCount;
-  const sectionStatus = getDashboardSectionStatus({
-    summary: summary.data,
-    importHealth: importHealth.data,
-    hasComparison: Boolean(comparison),
-  });
 
   return {
     status: "ready",
     message: null,
+    today,
     range,
-    rangeLabel: range.label,
     user,
     summary: summary.data,
-    importHealth: importHealth.data,
-    largeTransactionCount: largeTransactionCount.data,
-    importIssueCount,
-    sectionStatus,
-    comparison,
-    spendingByCategory: spendingByCategory.data,
-    spendingByPeriod: spendingByPeriod.data,
-    frequentRecipients: frequentRecipients.data,
+    comparison:
+      previousRange && previousSummary?.ok
+        ? {
+            kind: previousRange.kind,
+            rangeLabel: previousRange.label,
+            startDate: previousRange.startDate,
+            endDate: previousRange.endDate,
+            summary: previousSummary.data,
+          }
+        : null,
+    days: activity.data.days,
+    recipients: activity.data.recipients,
+    largestTransactions: largestTransactions.data,
     categoryOptions: categories.data.map(toCategoryOption),
-    recentLargeTransactions: recentLargeTransactions.data,
-    recentTransactions: recentTransactions.data,
   };
 }
