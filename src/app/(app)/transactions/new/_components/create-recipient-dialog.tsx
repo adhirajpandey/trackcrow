@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { useCreateRecipientMutation } from "@/features/recipients/mutations";
 import type {
-  RecipientCreateConflict,
   RecipientCreateDto,
 } from "@/features/recipients/types";
 import { ApiClientError, getApiClientErrorMessage } from "@/lib/api/client";
+
+import { recipientCreateTransition } from "./recipient-create-state";
 
 const inputClassName =
   "min-h-11 w-full rounded-[8px] border-2 border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-secondary-foreground/85 focus-visible:ring-2 focus-visible:ring-ring";
@@ -35,32 +36,41 @@ export function CreateRecipientDialog({
     recipient: Pick<RecipientCreateDto, "uuid" | "displayName">,
   ) => void;
 }) {
-  const [displayName, setDisplayName] = useState(suggestedName);
-  const [error, setError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<
-    RecipientCreateConflict["existingRecipient"] | null
-  >(null);
+  const [state, dispatch] = useReducer(recipientCreateTransition, {
+    status: "editing",
+    displayName: suggestedName,
+  });
+  const requestRef = useRef<object | null>(null);
   const mutation = useCreateRecipientMutation();
+  const { displayName } = state;
+  const error = state.status === "error" ? state.message : null;
+  const conflict = state.status === "conflict" ? state.recipient : null;
+  const submitting = state.status === "submitting";
+
+  useEffect(() => () => {
+    requestRef.current = null;
+  }, []);
 
   function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) requestRef.current = null;
     onOpenChange(nextOpen);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requestRef.current) return;
+    dispatch({ type: "submit" });
     const name = displayName.trim();
-    if (!name) {
-      setError("Recipient name is required");
-      return;
-    }
-
-    setError(null);
-    setConflict(null);
+    if (!name) return;
+    const request = {};
+    requestRef.current = request;
     try {
       const recipient = await mutation.mutateAsync({ displayName: name });
+      if (requestRef.current !== request) return;
       onSelect(recipient);
       onOpenChange(false);
     } catch (caught) {
+      if (requestRef.current !== request) return;
       if (caught instanceof ApiClientError && caught.status === 409) {
         const details = caught.body?.details;
         if (
@@ -77,20 +87,23 @@ export function CreateRecipientDialog({
             typeof existing.uuid === "string" &&
             typeof existing.displayName === "string"
           ) {
-            setConflict({
-              uuid: existing.uuid,
-              displayName: existing.displayName,
+            dispatch({
+              type: "conflict",
+              recipient: { uuid: existing.uuid, displayName: existing.displayName },
             });
             return;
           }
         }
       }
-      setError(
-        getApiClientErrorMessage(
+      dispatch({
+        type: "fail",
+        message: getApiClientErrorMessage(
           caught,
           "Unable to create this recipient right now.",
         ),
-      );
+      });
+    } finally {
+      if (requestRef.current === request) requestRef.current = null;
     }
   }
 
@@ -112,7 +125,8 @@ export function CreateRecipientDialog({
               name="displayName"
               autoComplete="off"
               value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
+              disabled={submitting}
+              onChange={(event) => dispatch({ type: "edit", displayName: event.target.value })}
               className={`${inputClassName} mt-2`}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? "recipient-create-error" : undefined}
@@ -154,15 +168,15 @@ export function CreateRecipientDialog({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? (
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
               ) : null}
-              {mutation.isPending ? "Creating…" : "Create Recipient"}
+              {submitting ? "Creating…" : "Create Recipient"}
             </Button>
           </DialogFooter>
         </form>

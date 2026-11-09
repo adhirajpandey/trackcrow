@@ -146,6 +146,7 @@ These are the current durable rules distilled from the archived frontend TRD:
 
 - Jest is configured through [jest.config.mjs](../jest.config.mjs).
 - Test files live next to the code they exercise.
+- Tests use the Node environment by default. Component regressions can opt into `jest-environment-jsdom` with a file-level `@jest-environment jsdom` docblock and mount through React DOM. Mock network mutations so these tests never reach the API.
 - Current coverage is strongest in `src/common`, `src/server/modules`, and `src/server/page-data`.
 - `jest.setup.ts` installs `crypto` for tests and mocks the logger.
 

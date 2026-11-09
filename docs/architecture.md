@@ -1,6 +1,6 @@
 # TrackCrow Architecture
 
-This document describes the Next.js monolith and its independent Android client.
+This document describes the Next.js monolith and its independent Android client. See [State machines](state-machines.md) for workflow states, transition owners, recovery invariants, and the current audit decisions.
 
 ## Runtime Shape
 

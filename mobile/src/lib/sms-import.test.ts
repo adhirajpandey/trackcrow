@@ -73,7 +73,7 @@ for (const [name, response] of [['created', 201], ['ignored', 201], ['duplicate'
   });
 }
 
-for (const response of [500, 503, 429, 408]) {
+for (const response of [500, 503, 429, 408, 202, 204, 301, 404, 405, 409, 413]) {
   test(`keeps the same key after HTTP ${response} and drains it on retry`, async () => {
     const f = fixture();
     f.setPost(async () => response);
@@ -85,6 +85,25 @@ for (const response of [500, 503, 429, 408]) {
     assert.deepEqual(f.requests[1], f.requests[0]);
   });
 }
+
+test('an unexpected response stops the drain without losing or skipping pending messages', async () => {
+  const f = fixture();
+  f.setPost(async () => 503);
+  await f.importer.handleIncoming(message());
+  await f.importer.handleIncoming(message(2));
+  const before = f.requests.length;
+  f.setPost(async () => 404);
+  await f.importer.drain();
+  assert.equal(f.requests.length, before + 1);
+  assert.equal(f.importer.getSnapshot().pending, 2);
+  assert.equal(f.importer.getSnapshot().lastImportAt, null);
+  f.setPost(async () => 201);
+  await f.importer.drain();
+  assert.deepEqual(f.requests.slice(before).map((request) => request.data.idempotencyKey), [
+    message().idempotencyKey, message().idempotencyKey, message(2).idempotencyKey,
+  ]);
+  assert.equal(f.importer.getSnapshot().pending, 0);
+});
 
 test('retains an offline message and drains older items on the next headless run', async () => {
   const f = fixture();

@@ -69,6 +69,20 @@ function readQueue(raw: string | null, owner: string, now: number): QueueState {
   }
 }
 
+export type SmsResponseOutcome =
+  | { type: 'imported' }
+  | { type: 'discarded' }
+  | { type: 'auth-rejected'; status: 401 | 403 }
+  | { type: 'retry' };
+
+/** Only acknowledged imports and known invalid payloads may remove queued text. */
+export function smsResponseOutcome(status: number): SmsResponseOutcome {
+  if (status === 200 || status === 201) return { type: 'imported' };
+  if (status === 400 || status === 422) return { type: 'discarded' };
+  if (status === 401 || status === 403) return { type: 'auth-rejected', status };
+  return { type: 'retry' };
+}
+
 export function createSmsImporter(deps: SmsImportDeps) {
   let tail: Promise<unknown> = Promise.resolve();
   let generation = 0;
@@ -172,20 +186,21 @@ export function createSmsImporter(deps: SmsImportDeps) {
         break;
       }
       if (run !== generation || (await deps.readCredentials())?.owner !== credentials.owner) return;
-      if (response >= 500 || response === 408 || response === 429) {
+      const outcome = smsResponseOutcome(response);
+      if (outcome.type === 'retry') {
         debugLog.write('sms.drain.retry', { status: response, pending: state.items.length }, 'warn');
         break;
       }
-      if (response === 401 || response === 403) {
+      if (outcome.type === 'auth-rejected') {
         // This queue belongs to the rejected session. Do not retain or keep sending its SMS.
         state.items = [];
-        state.authError = response;
+        state.authError = outcome.status;
         debugLog.write('sms.drain.auth_error', { status: response }, 'error');
       } else {
         state.items.shift();
         debugLog.write('sms.drain.ok', { status: response, pending: state.items.length });
         // Created, ignored and duplicate succeed. 422 is terminal but not an import.
-        if (response === 200 || response === 201) state.lastImportAt = deps.now();
+        if (outcome.type === 'imported') state.lastImportAt = deps.now();
       }
       await save(state, run);
       if (state.authError) break;
